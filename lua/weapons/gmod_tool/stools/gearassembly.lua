@@ -2,10 +2,39 @@
 gearasmlib.SQLCreateTable("GEARASSEMBLY_PIECES",{{1},{2},{3},{1,4},{1,2},{2,4},{1,2,3}},true)
 
 ------ PIECES ------
---- Sligwolf Rerailers ---
-gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/Mechanics/gears2/gear_12t1.mdl",  "PHX Regular", "#", 0 , "13.9, 0, 0.0", "", "0.024772670120001,-0.0039097801782191,3.7019141529981e-008"})
-gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/Mechanics/gears2/bevel_18t1.mdl", "PHX Bevel"  , "#", 45, "17.3, 0, 1.3", "", "-0.033187858760357,0.0065126456320286,-1.0525280237198"})
-gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/Mechanics/gears2/vert_18t1.mdl",  "PHX Regular", "#", 90, "19.7, 0, 5.6", "", "-9.3372744913722e-007,-1.4464712876361e-006,-1.4973667860031"})
+--- PHX Gear
+gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/Mechanics/gears2/gear_12t1.mdl", "PHX Regular", "#", 0, "14, 0, 0", "", " 0.024772670120001, -0.0039097801782191,  3.7019141529981e-008"})
+gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/mechanics/gears2/gear_12t3.mdl", "PHX Regular", "#", 0, "14, 0, 0", "", "-0.00028943095821887,0.010859239846468,   0.0029602686408907"  })
+gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/mechanics/gears2/gear_12t2.mdl", "PHX Regular", "#", 0, "14, 0, 0", "", "-0.017006939277053,  0.0030655609443784, -0.00057022727560252" })
+gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/mechanics/gears2/gear_18t1.mdl", "PHX Regular", "#", 0, "20, 0, 0", "", " 0.0069116964004934, 0.0010486841201782, -0.00013630707690027" })
+gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/mechanics/gears2/gear_18t2.mdl", "PHX Regular", "#", 0, "20, 0, 0", "", "-0.010480961762369, -0.00094905123114586,-0.00027210538974032" })
+gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/mechanics/gears2/gear_18t3.mdl", "PHX Regular", "#", 0, "20, 0, 0", "", "-0.0040156506001949, 0.0044087348505855, -0.0016298928530887"  })
+gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/mechanics/gears2/gear_24t1.mdl", "PHX Regular", "#", 0, "26, 0, 0", "", "0.0005555086536333,0.0018403908470646,7.969097350724e-005"})
+gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/mechanics/gears2/gear_24t2.mdl", "PHX Regular", "#", 0, "26, 0, 0", "", "0.0001849096006481,-0.002116076881066,0.00092169753042981"})
+gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/mechanics/gears2/gear_24t3.mdl", "PHX Regular", "#", 0, "26, 0, 0", "", "-0.0039519360288978,-0.00076565862400457,0.00095280521782115"})
+gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/mechanics/gears2/gear_36t1.mdl", "PHX Regular", "#", 0, "38, 0, 0", "", "-0.013952384702861,-0.015051824972034,-3.6770456063095e-005"})
+gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/mechanics/gears2/gear_36t2.mdl", "PHX Regular", "#", 0, "38, 0, 0", "", "-0.001660150825046,0.0067499200813472,7.3757772042882e-005"})
+gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/mechanics/gears2/gear_36t3.mdl", "PHX Regular", "#", 0, "38, 0, 0", "", "-0.012223065830767,-0.0013654727954417,-0.00044102084939368"})
+gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/mechanics/gears2/gear_48t1.mdl", "PHX Regular", "#", 0, "50, 0, 0", "", "0.0015389173058793,0.003474734723568,0.00028770981589332"})
+gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/mechanics/gears2/gear_48t2.mdl", "PHX Regular", "#", 0, "50, 0, 0", "", "0.0030889171175659,-0.00082554836990312,-8.9276603830513e-005"})
+gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/mechanics/gears2/gear_48t3.mdl", "PHX Regular", "#", 0, "50, 0, 0", "", "-0.00083220232045278,-0.00013183639384806,-0.0028226880822331"})
+gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/mechanics/gears2/gear_60t1.mdl", "PHX Regular", "#", 0, "62, 0, 0", "", "0.017997905611992,-0.008360886014998,0.00023668861831538"})
+gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/mechanics/gears2/gear_60t2.mdl", "PHX Regular", "#", 0, "62, 0, 0", "", "-0.0077802902087569,0.0077699818648398,-0.00011245282075834"})
+gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/mechanics/gears2/gear_60t3.mdl", "PHX Regular", "#", 0, "62, 0, 0", "", "-0.00085410091560334,0.0053461473435163,-0.00029574517975561"})
+--- PHX Vertical
+gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/Mechanics/gears2/vert_18t1.mdl", "PHX Vertical", "#", 90, "19.78, 0, 5.6", "", "-9.3372744913722e-007,-1.4464712876361e-006,-1.4973667860031"})
+gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/mechanics/gears2/vert_12t1.mdl", "PHX Vertical", "#", 90, "13.78, 0, 5.6", "", "-6.1126132777645e-007,4.6880626314305e-007,-1.4130713939667"})
+gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/mechanics/gears2/vert_24t1.mdl", "PHX Vertical", "#", 90, "25.78, 0, 5.6", "", "-0.0046720593236387,-0.0090785603970289,-1.5481045246124"})
+gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/mechanics/gears2/vert_36t1.mdl", "PHX Vertical", "#", 90, "37.78, 0, 5.6", "", "0.0043581933714449,-0.00018005351012107,-1.6056708097458"})
+--- PHX Bevel
+gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/mechanics/gears2/bevel_12t1.mdl", "PHX Bevel", "#", 45, "12.2, 0, 1.3", "", "-0.0026455507613719,-0.0061479024589062,-0.87438750267029"})
+gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/Mechanics/gears2/bevel_18t1.mdl", "PHX Bevel", "#", 45, "17.3, 0, 1.3", "", "-0.033187858760357,0.0065126456320286,-1.0525280237198"})
+gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/mechanics/gears2/bevel_24t1.mdl", "PHX Bevel", "#", 45, "23.3, 0, 1.3", "", "-0.0011872322065756,0.0026002936065197,-0.86795377731323"})
+gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/mechanics/gears2/bevel_36t1.mdl", "PHX Bevel", "#", 45, "34.8, 0, 1.3", "", "0.00066847755806521,0.0034906349610537,-0.86690950393677"})
+gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/mechanics/gears2/bevel_48t1.mdl", "PHX Bevel", "#", 45, "46.7, 0, 1.3", "", "-0.012435931712389,-0.012925148941576,-0.73237001895905"})
+gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/mechanics/gears2/bevel_60t1.mdl", "PHX Bevel", "#", 45, "58.6, 0, 1.3", "", "-9.5774739747867e-005,0.0057542459107935,-0.7312148809433"})
+
+
 
 TOOL.Category   = "Construction"   -- Name of the category
 TOOL.Name       = "#Gear Assembly" -- Name to display
@@ -14,6 +43,7 @@ TOOL.ConfigName = ""               -- Config file name (nil for default)
 
 TOOL.ClientConVar = {
   [ "mass"      ] = "25000",
+  [ "mode"      ] = "asdf",
   [ "model"     ] = "models/props_phx/trains/tracks/track_1x.mdl",
   [ "nextx"     ] = "0",
   [ "nexty"     ] = "0",
@@ -198,6 +228,17 @@ local function PrintNotify(pPly,sText,sNotifType)
   end
 end
 
+function PrintModifOffsetMC(ePiece,stSpawn)
+  if(not ePiece) then print("N/A") end
+  local MC = gearasmlib.GetMCWorld(ePiece,stSpawn.HRec.M.U)
+  local OffW = stSpawn.OPos - MC
+  local BasS = Angle()
+        BasS:Set(stSpawn.SAng)
+        BasS:RotateAroundAxis(stSpawn.SAng:Up(),180)
+        OffW:Set(gearasmlib.DecomposeByAngle(OffW,BasS))
+        print(OffW)
+end
+
 function TOOL:LeftClick( Trace )
   if(CLIENT) then return true end
   if(not Trace) then return false end
@@ -272,18 +313,18 @@ function TOOL:LeftClick( Trace )
   local trRec   = gearasmlib.CacheQueryPiece(trModel)
   local hdRec   = gearasmlib.CacheQueryPiece(model)
   
-  if(not( trRec and hdRec)) then return false end
+  if(not trRec) then return false end
 
-  if(gearasmlib.PlyLoadKey(ply,"USE") and trRec) then
+  if(gearasmlib.PlyLoadKey(ply,"USE")) then
     -- IN_Use: Use the VALID Trace.Entity as a piece
     PrintNotify(ply,"Model: "..gearasmlib.GetModelFileName(trModel).." selected !","GENERIC")
     ply:ConCommand("gearassembly_model "..trModel.."\n")
     return true
   end
+  
+  if(not hdRec) then return false end
 
-  if(hdRec and
-     trRec and
-     count > 1 and
+  if(count > 1 and
      gearasmlib.PlyLoadKey(ply,"SPEED")
   ) then
      -- IN_Speed: Switch the tool mode
@@ -418,6 +459,7 @@ function TOOL:LeftClick( Trace )
         .."\n   hdModel: "..gearasmlib.GetModelFileName(model).."\n")
         return true
       end
+      PrintModifOffsetMC(ePiece,stSpawn)
       undo.Create("Last Track Assembly")
       SetupPiece(ePiece,freeze,engravity)
       EmitSoundPly(ply)
@@ -564,7 +606,7 @@ function TOOL:DrawHUD()
         txPos.x = surface.ScreenWidth() / 2 + 10
         txPos.y = surface.ScreenHeight()/ 2 + 10
         surface.SetFont("Trebuchet18")
-        DrawTextRowColor(txPos,"Mod POS: "..tostring(stSpawn.MPos))
+        DrawTextRowColor(txPos,"Mod POS: "..tostring(stSpawn.MPos),stDrawColors.Black)
         DrawTextRowColor(txPos,"Mod ANG: "..tostring(stSpawn.MAng))
         DrawTextRowColor(txPos,"Spn POS: "..tostring(stSpawn.SPos))
         DrawTextRowColor(txPos,"Spn ANG: "..tostring(stSpawn.SAng))
@@ -642,56 +684,50 @@ function TOOL:DrawToolScreen(w, h)
     return
   end
   DrawTextRowColor(txPos,"Holds Model: Valid")
-  local NoID    = "N"
-  local NoAV    = "N/A"
-  local pointid = self:GetClientNumber("pointid") or 0
-  local pnextid = self:GetClientNumber("pnextid") or 0
-  local actrad  = math.Clamp(self:GetClientNumber("activrad") or 1,1,150)
-  local trEnt   = Trace.Entity
-  local trMaxCN, trModel, trOID, trRLen
+  local NoAV  = "N/A"
+  local mode  = self:GetClientInfo("mode") or "Sugoi !"
+  local trEnt = Trace.Entity
+  local trOrig, trModel, trMesh, trRad
+  local X = 0
+  local Y = 0
+  local Z = 0
   if(trEnt and trEnt:IsValid()) then
     if(gearasmlib.IsOther(trEnt)) then return end
           trModel = trEnt:GetModel()
     local trRec   = gearasmlib.CacheQueryPiece(trModel)
-    local igntyp  = self:GetClientNumber("igntyp") or 0
-    local flatten = self:GetClientNumber("flatten") or 0
-    local nextpic = math.Clamp(self:GetClientNumber("nextpic") or 0,-360,360)
-    local nextyaw = math.Clamp(self:GetClientNumber("nextyaw") or 0,-360,360)
-    local nextrol = math.Clamp(self:GetClientNumber("nextrol") or 0,-360,360)
-    local rotbase = math.Clamp(self:GetClientNumber("rotbase") or 0,-360,360)
-    local nextx   = self:GetClientNumber("nextx") or 0
-    local nexty   = self:GetClientNumber("nexty") or 0
-    local nextz   = self:GetClientNumber("nextz") or 0
-    local stSpawn = gearasmlib.GetENTSpawn(trEnt,rotbase,model,igntyp,
-                                           Vector(nextx,nexty,nextz),
-                                           Angle(nextpic,nextyaw,nextrol))
-    if(stSpawn) then
-      trOID  = stSpawn.OID
-    end
+          trModel = gearasmlib.GetModelFileName(trModel)
     if(trRec) then
-      trMaxCN = trRec.MaxCN
-      trModel = gearasmlib.GetModelFileName(trModel)
+      trMesh = tostring(gearasmlib.RoundValue(trRec.Mesh,0.01)) or NoAV
+      trOrig = Vector()
+      trOrig:Set(trRec.O.U)
+      trRad = gearasmlib.RoundValue(trRec.O.U:Length(),0.1)
+      X = trOrig[cvX]
+      X = gearasmlib.RoundValue(X,0.1)
+      Y = trOrig[cvY]
+      Y = gearasmlib.RoundValue(Y,0.1)
+      Z = trOrig[cvZ]
+      Z = gearasmlib.RoundValue(Z,0.1)
+      trOrig = "["..tostring(X)..","..tostring(Y)..","..tostring(Z).."]"
     end
   end
-  actrad = gearasmlib.RoundValue(actrad,0.01)
-  DrawTextRowColor(txPos,"HM: " ..gearasmlib.GetModelFileName(model))
-  DrawTextRowColor(txPos,"TM: " ..(trModel     or NoAV))
-  DrawTextRowColor(txPos,"ID: ["..(trMaxCN     or NoID)
-                        .."] "  ..(trOID       or NoID)
-                        .." >> "..(pointid     or NoID)
-                        .. " (" ..(pnextid     or NoID)
-                        ..") [" ..(hdRec.MaxCN or NoID)
-                        .."]")
-  DrawTextRowColor(txPos,"CurAR: "..(trRLen or NoAV),stDrawColors.Yello)
-  DrawTextRowColor(txPos,"MaxCL: "..actrad.."<[150.00]",stDrawColors.Cyan)
-  local nRad = math.Clamp(h - txPos.y - txPos.h,0,256) / 2
-  local cPos = math.Clamp(h - nRad - (txPos.h  / 2),0,256)
-  if(trRLen) then
-    surface.DrawCircle( cPos, cPos, math.Clamp(trRLen/150,0,1)*nRad, stDrawColors.Yello)
-  end
+  local hdOrig = Vector()
+        hdOrig:Set(hdRec.O.U)
+        X = hdOrig[cvX]
+        X = gearasmlib.RoundValue(X,0.1)
+        Y = hdOrig[cvY]
+        Y = gearasmlib.RoundValue(Y,0.1)
+        Z = hdOrig[cvZ]
+        Z = gearasmlib.RoundValue(Z,0.1)
+        hdOrig = "["..tostring(X) ..",".. tostring(Y)..","..tostring(Z).."]"
+  local hdRad = gearasmlib.RoundValue(hdRec.O.U:Length(),0.1)
+  local Ratio = (trRad or 0) / hdRad
+  DrawTextRowColor(txPos,"TM: " .. (trModel or NoAV),stDrawColors.Green)
+  DrawTextRowColor(txPos,"TS: " .. (trOrig or NoAV) .. ">" .. (trMesh or NoAV))
+  DrawTextRowColor(txPos,"HM: " .. (gearasmlib.GetModelFileName(model) or NoAV),stDrawColors.Magen)
+  DrawTextRowColor(txPos,"HS: " .. (hdOrig or NoAV) .. ">" .. tostring(gearasmlib.RoundValue(hdRec.Mesh,0.01) or NoAV))
+  DrawTextRowColor(txPos,"Ratio: " .. gearasmlib.RoundValue(Ratio,0.01)..">"..(trRad or NoAV).."/"..hdRad,stDrawColors.Yello)
+  DrawTextRowColor(txPos,"Stack mode: "..mode,stDrawColors.Red)
   local sTime = tostring(os.date())
-  surface.DrawCircle( cPos, cPos, math.Clamp(actrad/150,0,1)*nRad, stDrawColors.Cyan)
-  surface.DrawCircle( cPos, cPos, nRad, stDrawColors.Magen)
   DrawTextRowColor(txPos,string.sub(sTime,1,8),stDrawColors.White)
   DrawTextRowColor(txPos,string.sub(sTime,10,17))
 end
@@ -704,7 +740,7 @@ function TOOL.BuildCPanel( CPanel )
   local Combo         = {}
   Combo["Label"]      = "#Presets"
   Combo["MenuButton"] = "1"
-  Combo["Folder"]     = "GEARASSEMBLY"
+  Combo["Folder"]     = "gearassembly"
   Combo["CVars"]      = {}
   Combo["CVars"][ 1]  = "gearassembly_mass"
   Combo["CVars"][ 2]  = "gearassembly_model"

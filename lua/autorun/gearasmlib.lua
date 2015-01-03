@@ -1528,8 +1528,8 @@ function SQLExportIntoDSV(sSuffix,sTable,sDelim)
 end
 
 function SetMCWorld(oEnt,vMCL,vMCW)
-  if(not vMCL) then return end
   if(not vMCW) then return end
+  if(not vMCL) then return end
   if(not (oEnt and oEnt:IsValid())) then return end
   local vPos = Vector()
         vPos:Set(vMCL)
@@ -1540,6 +1540,8 @@ function SetMCWorld(oEnt,vMCL,vMCW)
 end
 
 function GetMCWorld(oEnt,vMCL)
+  if(not vMCL) then return end
+  if(not (oEnt and oEnt:IsValid())) then return end
   local vMCW = Vector()
         vMCW:Set(vMCL)
         vMCW:Rotate(oEnt:GetAngles())
@@ -1648,7 +1650,7 @@ function GetENTSpawn(trEnt,nRotAng,hdModel,enIgnTyp,ucsPos,ucsAng)
 	stSpawn.OPos:Add(trPos)
 	--- Do F,R,U
 	stSpawn.R:Set(stSpawn.OAng:Right())
-  stSpawn.OAng:RotateAroundAxis(stSpawn.R,trRec.Mesh + hdRec.Mesh + ucsAng[caP])
+  stSpawn.OAng:RotateAroundAxis(stSpawn.R,trRec.Mesh + ucsAng[caP])
 	stSpawn.F:Set(stSpawn.OAng:Forward())
 	stSpawn.OAng:RotateAroundAxis(stSpawn.F,ucsAng[caR])
 	stSpawn.R:Set(stSpawn.OAng:Right())
@@ -1661,6 +1663,7 @@ function GetENTSpawn(trEnt,nRotAng,hdModel,enIgnTyp,ucsPos,ucsAng)
 	--Get Hold model stuff
   stSpawn.TAng:Set(hdRec.A.U)
 	stSpawn.TAng:RotateAroundAxis(stSpawn.TAng:Up(),180)
+  stSpawn.TAng:RotateAroundAxis(stSpawn.TAng:Right(),-hdRec.Mesh)
   stSpawn.TPos:Set(hdRec.O.U)
 	stSpawn.TPos:Mul(-1)
   stSpawn.MPos:Set(DecomposeByAngle(stSpawn.TPos,stSpawn.TAng))
