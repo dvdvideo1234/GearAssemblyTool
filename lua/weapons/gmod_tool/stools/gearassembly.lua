@@ -43,7 +43,7 @@ TOOL.ConfigName = ""               -- Config file name (nil for default)
 
 TOOL.ClientConVar = {
   [ "mass"      ] = "25000",
-  [ "mode"      ] = "asdf",
+  [ "mode"      ] = "1",
   [ "model"     ] = "models/props_phx/trains/tracks/track_1x.mdl",
   [ "nextx"     ] = "0",
   [ "nexty"     ] = "0",
@@ -52,7 +52,7 @@ TOOL.ClientConVar = {
   [ "freeze"    ] = "0",
   [ "advise"    ] = "1",
   [ "igntyp"    ] = "0",
-  [ "rotbase"   ] = "0",
+  [ "rotpivot"   ] = "0",
   [ "nextpic"   ] = "0",
   [ "nextyaw"   ] = "0",
   [ "nextrol"   ] = "0",
@@ -82,6 +82,13 @@ local stDrawColors = {
   Yello = Color(255,255, 0 ,255),
   White = Color(255,255,255,255),
   Black = Color( 0 , 0 , 0 ,255)
+}
+
+local stToolMode = {
+  Max = 3,
+  [1] = "Stack around pivot",
+  [2] = "Stack forward based",
+  [3] = "Direct axis constraint"
 }
 
 --- Because Vec[1] is actually faster than Vec.X
@@ -138,13 +145,13 @@ local file              = file
 if CLIENT then
   language.Add( "Tool.gearassembly.name", "Gear Assembly" )
   language.Add( "Tool.gearassembly.desc", "Assembles gears to mesh together" )
-  language.Add( "Tool.gearassembly.0", "Left Click to continue the track, Right to change active position, Reload to remove a piece" )
-  language.Add( "Cleanup.gearassembly", "Track Assembly" )
+  language.Add( "Tool.gearassembly.0", "Left click to stack, Right to change mode, Reload to remove a piece" )
+  language.Add( "Cleanup.gearassembly", "Gear Assembly" )
   language.Add( "Cleaned.gearassemblys", "Cleaned up all Pieces" )
 
   local function ResetOffsets( ply, command, arguments )
     -- Reset all of the offset options to zero
-    ply:ConCommand( "gearassembly_rotbase 0\n" )
+    ply:ConCommand( "gearassembly_rotpivot 0\n" )
     ply:ConCommand( "gearassembly_nextpic 0\n" )
     ply:ConCommand( "gearassembly_nextyaw 0\n" )
     ply:ConCommand( "gearassembly_nextrol 0\n" )
@@ -239,6 +246,15 @@ function PrintModifOffsetMC(ePiece,stSpawn)
         print(OffW)
 end
 
+function GetToolMode(sMode)
+  if(not sMode) then return 1 end
+  if(not tonumber(sMode)) then return 1 end
+  Mode = tonumber(sMode)
+  if(Mode > stToolMode.Max) then Mode = 1 end
+  if(Mode < 1) then Mode = stToolMode.Max end
+  return Mode
+end
+
 function TOOL:LeftClick( Trace )
   if(CLIENT) then return true end
   if(not Trace) then return false end
@@ -248,10 +264,11 @@ function TOOL:LeftClick( Trace )
   local freeze    = self:GetClientNumber("freeze") or 0
   local igntyp    = self:GetClientNumber("igntyp") or 0
   local mass      = math.Clamp(self:GetClientNumber("mass"),1,50000)
+  local mode      = GetToolMode(self:GetClientInfo("mode"))
   local nextpic   = math.Clamp(self:GetClientNumber("nextpic") or 0,-360,360)
   local nextyaw   = math.Clamp(self:GetClientNumber("nextyaw") or 0,-360,360)
   local nextrol   = math.Clamp(self:GetClientNumber("nextrol") or 0,-360,360)
-  local rotbase   = math.Clamp(self:GetClientNumber("rotbase") or 0,-360,360)
+  local rotpivot  = math.Clamp(self:GetClientNumber("rotpivot") or 0,-360,360)
   local nextx     = self:GetClientNumber("nextx") or 0
   local nexty     = self:GetClientNumber("nexty") or 0
   local nextz     = self:GetClientNumber("nextz") or 0
@@ -328,7 +345,7 @@ function TOOL:LeftClick( Trace )
      gearasmlib.PlyLoadKey(ply,"SPEED")
   ) then
      -- IN_Speed: Switch the tool mode
-    local stSpawn = gearasmlib.GetENTSpawn(trEnt,rotbase,model,igntyp,
+    local stSpawn = gearasmlib.GetENTSpawn(trEnt,rotpivot,model,igntyp,
                                            Vector(nextx,nexty,nextz),
                                            Angle(nextpic,nextyaw,nextrol))
     if(not stSpawn) then return false end
@@ -363,7 +380,7 @@ function TOOL:LeftClick( Trace )
           ePieceN:SetAngles(stSpawn.SAng)
           SetupPiece(ePieceN,freeze,engravity)
           undo.AddEntity(ePieceN)
-          local stSpawn = gearasmlib.GetENTSpawn(trEnt,rotbase,model,igntyp,
+          local stSpawn = gearasmlib.GetENTSpawn(trEnt,rotpivot,model,igntyp,
                                                  Vector(nextx,nexty,nextz),
                                                  Angle(nextpic,nextyaw,nextrol))
           if(not stSpawn) then
@@ -440,7 +457,7 @@ function TOOL:LeftClick( Trace )
     return false
   end
   
-  local stSpawn = gearasmlib.GetENTSpawn(trEnt,rotbase,model,igntyp,
+  local stSpawn = gearasmlib.GetENTSpawn(trEnt,rotpivot,model,igntyp,
                                          Vector(nextx,nexty,nextz),
                                          Angle(nextpic,nextyaw,nextrol))
   if(stSpawn) then
@@ -474,12 +491,21 @@ function TOOL:LeftClick( Trace )
 end
 
 function TOOL:RightClick( Trace )
-  -- Change the active point
+  -- Change the tool mode
   if(CLIENT) then return true end
-  local model   = self:GetClientInfo("model")
-  if(not util.IsValidModel(model)) then return false end
-  local hdRec = gearasmlib.CacheQueryPiece(model)
-  if(not hdRec) then return false end
+  local Dir = 1
+  local ply = self:GetOwner()
+  if(not ply) then return false end
+  gearasmlib.PlyLoadKey(ply)
+  if(gearasmlib.PlyLoadKey(ply,"SPEED")) then
+    Dir = -1
+  end
+  local mode = GetToolMode(self:GetClientInfo("mode"))
+  mode = mode + Dir
+  if(mode > stToolMode.Max) then mode = 1 end
+  if(mode < 1) then mode = stToolMode.Max end
+  ply:ConCommand( "gearassembly_mode "..mode.."\n" )
+  PrintNotify(ply,"Mode: "..stToolMode[mode].." !","GENERIC")
 end
 
 function TOOL:Reload(Trace)
@@ -564,12 +590,12 @@ function TOOL:DrawHUD()
     local nextpic   = math.Clamp(self:GetClientNumber("nextpic") or 0,-360,360)
     local nextyaw   = math.Clamp(self:GetClientNumber("nextyaw") or 0,-360,360)
     local nextrol   = math.Clamp(self:GetClientNumber("nextrol") or 0,-360,360)
-    local rotbase   = math.Clamp(self:GetClientNumber("rotbase") or 0,-360,360)
+    local rotpivot   = math.Clamp(self:GetClientNumber("rotpivot") or 0,-360,360)
     if(trEnt and trEnt:IsValid()) then
       if(gearasmlib.IsOther(trEnt)) then return end
       local actrad  = math.Clamp(self:GetClientNumber("activrad") or 1,1,150)
       local igntyp  = self:GetClientNumber("igntyp") or 0
-      local stSpawn = gearasmlib.GetENTSpawn(trEnt,rotbase,model,igntyp,
+      local stSpawn = gearasmlib.GetENTSpawn(trEnt,rotpivot,model,igntyp,
                                              Vector(nextx,nexty,nextz),
                                              Angle(nextpic,nextyaw,nextrol))
       if(not stSpawn) then return end
@@ -612,9 +638,6 @@ function TOOL:DrawHUD()
         DrawTextRowColor(txPos,"Spn ANG: "..tostring(stSpawn.SAng))
       end
     elseif(Trace.HitWorld) then
-      local mcspawn  = self:GetClientNumber("mcspawn") or 0
-      local autoffsz = self:GetClientNumber("autoffsz") or 0
-      local ydegsnp  = math.Clamp(self:GetClientNumber("ydegsnp"),0,180)
       local addinfo = self:GetClientNumber("addinfo") or 0
       local RadScale = math.Clamp(800 / (Trace.HitPos - ply:GetPos()):Length(),1,100)
       local aAng = ply:GetAimVector():Angle()
@@ -685,7 +708,7 @@ function TOOL:DrawToolScreen(w, h)
   end
   DrawTextRowColor(txPos,"Holds Model: Valid")
   local NoAV  = "N/A"
-  local mode  = self:GetClientInfo("mode") or "Sugoi !"
+  local mode  = GetToolMode(self:GetClientInfo("mode"))
   local trEnt = Trace.Entity
   local trOrig, trModel, trMesh, trRad
   local X = 0
@@ -721,12 +744,12 @@ function TOOL:DrawToolScreen(w, h)
         hdOrig = "["..tostring(X) ..",".. tostring(Y)..","..tostring(Z).."]"
   local hdRad = gearasmlib.RoundValue(hdRec.O.U:Length(),0.1)
   local Ratio = (trRad or 0) / hdRad
-  DrawTextRowColor(txPos,"TM: " .. (trModel or NoAV),stDrawColors.Green)
-  DrawTextRowColor(txPos,"TS: " .. (trOrig or NoAV) .. ">" .. (trMesh or NoAV))
-  DrawTextRowColor(txPos,"HM: " .. (gearasmlib.GetModelFileName(model) or NoAV),stDrawColors.Magen)
-  DrawTextRowColor(txPos,"HS: " .. (hdOrig or NoAV) .. ">" .. tostring(gearasmlib.RoundValue(hdRec.Mesh,0.01) or NoAV))
-  DrawTextRowColor(txPos,"Ratio: " .. gearasmlib.RoundValue(Ratio,0.01)..">"..(trRad or NoAV).."/"..hdRad,stDrawColors.Yello)
-  DrawTextRowColor(txPos,"Stack mode: "..mode,stDrawColors.Red)
+  DrawTextRowColor(txPos,"TM: "..(trModel or NoAV),stDrawColors.Green)
+  DrawTextRowColor(txPos,"TS: "..(trOrig or NoAV) .. ">" .. (trMesh or NoAV))
+  DrawTextRowColor(txPos,"HM: "..(gearasmlib.GetModelFileName(model) or NoAV),stDrawColors.Magen)
+  DrawTextRowColor(txPos,"HS: "..(hdOrig or NoAV) .. ">" .. tostring(gearasmlib.RoundValue(hdRec.Mesh,0.01) or NoAV))
+  DrawTextRowColor(txPos,"Rt: "..gearasmlib.RoundValue(Ratio,0.01)..">"..(trRad or NoAV).."/"..hdRad,stDrawColors.Yello)
+  DrawTextRowColor(txPos,"Md: "..stToolMode[mode],stDrawColors.Red)
   local sTime = tostring(os.date())
   DrawTextRowColor(txPos,string.sub(sTime,1,8),stDrawColors.White)
   DrawTextRowColor(txPos,string.sub(sTime,10,17))
@@ -743,20 +766,20 @@ function TOOL.BuildCPanel( CPanel )
   Combo["Folder"]     = "gearassembly"
   Combo["CVars"]      = {}
   Combo["CVars"][ 1]  = "gearassembly_mass"
-  Combo["CVars"][ 2]  = "gearassembly_model"
-  Combo["CVars"][ 6]  = "gearassembly_count"
-  Combo["CVars"][ 7]  = "gearassembly_freeze"
-  Combo["CVars"][ 8]  = "gearassembly_advise"
-  Combo["CVars"][ 9]  = "gearassembly_igntyp"
-  Combo["CVars"][17]  = "gearassembly_nextpic"
-  Combo["CVars"][17]  = "gearassembly_nextyaw"
-  Combo["CVars"][17]  = "gearassembly_nextrol"
-  Combo["CVars"][18]  = "gearassembly_enghost"
-  Combo["CVars"][23]  = "gearassembly_engravity"
-  Combo["CVars"][24]  = "gearassembly_physmater"
-  Combo["CVars"][ 3]  = "gearassembly_nextx"
-  Combo["CVars"][ 4]  = "gearassembly_nexty"
-  Combo["CVars"][ 5]  = "gearassembly_nextz"
+  Combo["CVars"][ 2]  = "gearassembly_mode"
+  Combo["CVars"][ 3]  = "gearassembly_model"
+  Combo["CVars"][ 4]  = "gearassembly_count"
+  Combo["CVars"][ 5]  = "gearassembly_freeze"
+  Combo["CVars"][ 6]  = "gearassembly_advise"
+  Combo["CVars"][ 7]  = "gearassembly_igntyp"
+  Combo["CVars"][ 8]  = "gearassembly_nextpic"
+  Combo["CVars"][ 9]  = "gearassembly_nextyaw"
+  Combo["CVars"][10]  = "gearassembly_nextrol"
+  Combo["CVars"][11]  = "gearassembly_nextx"
+  Combo["CVars"][12]  = "gearassembly_nexty"
+  Combo["CVars"][13]  = "gearassembly_nextz"
+  Combo["CVars"][14]  = "gearassembly_enghost"
+  Combo["CVars"][15]  = "gearassembly_engravity"
 
   CPanel:AddControl("ComboBox",Combo)
   CurY = CurY + 25
@@ -865,7 +888,7 @@ function TOOL.BuildCPanel( CPanel )
             Type    = "Float",
             Min     = -360,
             Max     =  360,
-            Command = "gearassembly_rotbase"})
+            Command = "gearassembly_rotpivot"})
             
   CPanel:AddControl("Slider", {
             Label   = "Piece rotation: ",
@@ -1008,11 +1031,11 @@ function TOOL:UpdateGhost(oEnt, Ply)
       local nextpic = math.Clamp(self:GetClientNumber("nextpic") or 0,-360,360)
       local nextyaw = math.Clamp(self:GetClientNumber("nextyaw") or 0,-360,360)
       local nextrol = math.Clamp(self:GetClientNumber("nextrol") or 0,-360,360)
-      local rotbase = math.Clamp(self:GetClientNumber("rotbase") or 0,-360,360)
+      local rotpivot = math.Clamp(self:GetClientNumber("rotpivot") or 0,-360,360)
       local nextx   = self:GetClientNumber("nextx") or 0
       local nexty   = self:GetClientNumber("nexty") or 0
       local nextz   = self:GetClientNumber("nextz") or 0
-      local stSpawn = gearasmlib.GetENTSpawn(trEnt,rotbase,model,igntyp,
+      local stSpawn = gearasmlib.GetENTSpawn(trEnt,rotpivot,model,igntyp,
                                              Vector(nextx,nexty,nextz),
                                              Angle(nextpic,nextyaw,nextrol))
       if(not stSpawn) then return end
