@@ -101,6 +101,7 @@ local LibSpawn = {
     MAng = Angle (),
     TPos = Vector(),
     TAng = Angle (),
+    DAng = Angle (),
     HRec = 0,
     TRec = 0,
   },
@@ -114,6 +115,11 @@ local LibSpawn = {
     SPos = Vector(),
     MAng = Angle (),
     MPos = Vector(),
+    HRec = 0
+  },
+  ["NOR"] = {
+    SPos = Vector(),
+    SAng = Angle (),
     HRec = 0
   }
 }
@@ -1551,6 +1557,24 @@ end
 
 ----------------------------- AssemblyLib SNAPPING ------------------------------
 
+function GetNORSpawn(stTrace, sModel, nZ, nYaw)
+  if(not stTrace) then return nil end
+  local hdRec  = CacheQueryPiece(sModel)
+  if(not hdRec) then return nil end
+  local Z   = nZ or 0
+  local Yaw = nYaw or 0
+  local stSpawn = LibSpawn["NOR"]
+  stSpawn.HRec = hdRec
+  stSpawn.SAng:Set(stTrace.HitNormal:Angle())
+  stSpawn.SAng[caP] = stSpawn.SAng[caP] + 90 + hdRec.A.U[caP]
+  stSpawn.SAng[caY] = stSpawn.SAng[caY] + hdRec.A.U[caY]
+  stSpawn.SAng[caR] = stSpawn.SAng[caR] + hdRec.A.U[caR]
+  stSpawn.SAng:RotateAroundAxis(stTrace.HitNormal,nYaw)
+  stSpawn.SPos:Set(nZ * stTrace.HitNormal)
+  stSpawn.SPos:Add(stTrace.HitPos)
+  return stSpawn
+end
+
 --[[
  * This function is the backbone of the tool for Trace.HitWorld
  * Calculates SPos, SAng based on the DB inserts and input parameters
@@ -1599,9 +1623,9 @@ function GetMAPSpawn(hdModel,ucsPos,ucsAng,offPos,offAng)
   stSpawn.R:Set(ucsAng:Right())
   -- Make Spawn Ang
   stSpawn.SAng:Set(ucsAng)
-  stSpawn.SAng:RotateAroundAxis(-stSpawn.R,stSpawn.MAng[caP] * hdRec.A.S[csX])
-  stSpawn.SAng:RotateAroundAxis(-stSpawn.U,stSpawn.MAng[caY] * hdRec.A.S[csY])
-  stSpawn.SAng:RotateAroundAxis(-stSpawn.F,stSpawn.MAng[caR] * hdRec.A.S[csZ])
+  stSpawn.SAng:RotateAroundAxis(stSpawn.R,stSpawn.MAng[caP] * hdRec.A.S[csX])
+  stSpawn.SAng:RotateAroundAxis(stSpawn.U,stSpawn.MAng[caY] * hdRec.A.S[csY])
+  stSpawn.SAng:RotateAroundAxis(stSpawn.F,stSpawn.MAng[caR] * hdRec.A.S[csZ])
   return stSpawn
 end
 
@@ -1635,15 +1659,15 @@ function GetENTSpawn(trEnt,nRotAng,hdModel,enIgnTyp,ucsPos,ucsAng)
   if(enIgnTyp   == 0 and
      trRec.Type ~= hdRec.Type ) then return nil end
 
-  --local trPos = trEnt:LocalToWorld(trEnt:OBBCenter())
   local trPos = GetMCWorld(trEnt,trRec.M.U)
-  local trAng = trEnt:LocalToWorldAngles(trRec.A.U)
+  local trAng = trEnt:LocalToWorldAngles(-trRec.A.U)
+        trAng:RotateAroundAxis(trAng:Up(),-nRotAng)
+        
   -- We have the next Piece Offset
   local stSpawn = LibSpawn["ENT"]
 
 	--- Do Origin UCS World angle
 	stSpawn.OAng:Set(trAng)
-  stSpawn.OAng:RotateAroundAxis(trAng:Up(),-nRotAng)
 	--Do origin !
 	stSpawn.OPos:Set(trRec.O.U)
 	stSpawn.OPos:Rotate(stSpawn.OAng)
@@ -1660,22 +1684,23 @@ function GetENTSpawn(trEnt,nRotAng,hdModel,enIgnTyp,ucsPos,ucsAng)
 	--Save our records
 	stSpawn.HRec = hdRec
 	stSpawn.TRec = trRec
+  ----- Everything is OK !!!!
+  stSpawn.DAng:Set(trAng)
+  stSpawn.DAng:RotateAroundAxis(stSpawn.DAng:Right(),trRec.Mesh+hdRec.Mesh+ucsAng[caP])
 	--Get Hold model stuff
-  stSpawn.TAng:Set(hdRec.A.U)
-	stSpawn.TAng:RotateAroundAxis(stSpawn.TAng:Up(),180)
-  stSpawn.TAng:RotateAroundAxis(stSpawn.TAng:Right(),-hdRec.Mesh)
-  stSpawn.TPos:Set(hdRec.O.U)
-	stSpawn.TPos:Mul(-1)
-  stSpawn.MPos:Set(DecomposeByAngle(stSpawn.TPos,stSpawn.TAng))
+  stSpawn.MAng:Set(-hdRec.A.U)
+	stSpawn.MAng:RotateAroundAxis(stSpawn.MAng:Up(),180)
+  stSpawn.MAng:RotateAroundAxis(stSpawn.MAng:Right(),-hdRec.Mesh)
+  stSpawn.MPos:Set(hdRec.O.U)
+	stSpawn.MPos:Mul(-1)
+  stSpawn.MPos:Set(DecomposeByAngle(stSpawn.MPos,stSpawn.MAng))
 	--Do Spawn Angle
-	stSpawn.MAng:Set(stSpawn.TAng) --- Use in DRAW
   stSpawn.SAng:Set(stSpawn.OAng)
-	stSpawn.SAng:RotateAroundAxis(-stSpawn.R,stSpawn.MAng[caP] * hdRec.A.S[csX])
-	stSpawn.SAng:RotateAroundAxis(-stSpawn.U,stSpawn.MAng[caY] * hdRec.A.S[csY])
-	stSpawn.SAng:RotateAroundAxis(-stSpawn.F,stSpawn.MAng[caR] * hdRec.A.S[csZ])
-	stSpawn.SAng:RotateAroundAxis(stSpawn.SAng:Up(),-ucsAng[caY] + 180)
+	stSpawn.SAng:RotateAroundAxis(stSpawn.R,-stSpawn.MAng[caP] * hdRec.A.S[csX])
+	stSpawn.SAng:RotateAroundAxis(stSpawn.U,-stSpawn.MAng[caY] * hdRec.A.S[csY])
+	stSpawn.SAng:RotateAroundAxis(stSpawn.F,-stSpawn.MAng[caR] * hdRec.A.S[csZ])
+  stSpawn.SAng:RotateAroundAxis(stSpawn.DAng:Up(),ucsAng[caY] + 180)
   stSpawn.TAng:Set(trAng)
-  stSpawn.TAng:RotateAroundAxis(trAng:Up(),-nRotAng)
   stSpawn.TPos:Set(trPos)
 	--Do Spawn Pos
   stSpawn.SPos:Set(stSpawn.OPos)

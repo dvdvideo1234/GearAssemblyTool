@@ -1,6 +1,9 @@
 -- INITIALIZE DB
 gearasmlib.SQLCreateTable("GEARASSEMBLY_PIECES",{{1},{2},{3},{1,4},{1,2},{2,4},{1,2,3}},true)
 
+------- DEV -------
+gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/props_wasteland/wheel02b.mdl",   "Development", "#", 45, "65, 0, 0", "0, 0, -90", "0.29567885398865,0.3865530192852,-0.36239844560623"})
+
 ------ PIECES ------
 --- PHX Gear
 gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/Mechanics/gears2/gear_12t1.mdl", "PHX Regular", "#", 0, "14, 0, 0", "", " 0.024772670120001, -0.0039097801782191,  3.7019141529981e-008"})
@@ -52,7 +55,7 @@ TOOL.ClientConVar = {
   [ "freeze"    ] = "0",
   [ "advise"    ] = "1",
   [ "igntyp"    ] = "0",
-  [ "rotpivot"   ] = "0",
+  [ "rotpiv"    ] = "0",
   [ "nextpic"   ] = "0",
   [ "nextyaw"   ] = "0",
   [ "nextrol"   ] = "0",
@@ -86,9 +89,9 @@ local stDrawColors = {
 
 local stToolMode = {
   Max = 3,
-  [1] = "Stack around pivot",
+  [1] = "Direct prop spawn",
   [2] = "Stack forward based",
-  [3] = "Direct axis constraint"
+  [3] = "Stack around pivot"
 }
 
 --- Because Vec[1] is actually faster than Vec.X
@@ -151,7 +154,7 @@ if CLIENT then
 
   local function ResetOffsets( ply, command, arguments )
     -- Reset all of the offset options to zero
-    ply:ConCommand( "gearassembly_rotpivot 0\n" )
+    ply:ConCommand( "gearassembly_rotpiv 0\n" )
     ply:ConCommand( "gearassembly_nextpic 0\n" )
     ply:ConCommand( "gearassembly_nextyaw 0\n" )
     ply:ConCommand( "gearassembly_nextrol 0\n" )
@@ -236,7 +239,7 @@ local function PrintNotify(pPly,sText,sNotifType)
 end
 
 function PrintModifOffsetMC(ePiece,stSpawn)
-  if(not ePiece) then print("N/A") end
+  if(not (ePiece and stSpawn)) then print("N/A") end
   local MC = gearasmlib.GetMCWorld(ePiece,stSpawn.HRec.M.U)
   local OffW = stSpawn.OPos - MC
   local BasS = Angle()
@@ -268,7 +271,7 @@ function TOOL:LeftClick( Trace )
   local nextpic   = math.Clamp(self:GetClientNumber("nextpic") or 0,-360,360)
   local nextyaw   = math.Clamp(self:GetClientNumber("nextyaw") or 0,-360,360)
   local nextrol   = math.Clamp(self:GetClientNumber("nextrol") or 0,-360,360)
-  local rotpivot  = math.Clamp(self:GetClientNumber("rotpivot") or 0,-360,360)
+  local rotpiv    = math.Clamp(self:GetClientNumber("rotpiv") or 0,-360,360)
   local nextx     = self:GetClientNumber("nextx") or 0
   local nexty     = self:GetClientNumber("nexty") or 0
   local nextz     = self:GetClientNumber("nextz") or 0
@@ -278,6 +281,34 @@ function TOOL:LeftClick( Trace )
   local engravity = self:GetClientNumber("engravity") or 0
   local ply       = self:GetOwner()
   gearasmlib.PlyLoadKey(ply)
+  if(mode == 1) then
+    local ePiece = eMakePiece(model,Trace.HitPos,Angle(),mass,bgrpids)
+    if(not ePiece) then return false end
+    local vBBMin  = ePiece:OBBMins()
+    local stSpawn = gearasmlib.GetNORSpawn(Trace,model,nextz - vBBMin[cvZ],nextyaw)
+    if(not stSpawn) then return false end
+    ePiece:SetAngles(stSpawn.SAng)
+    if(util.IsInWorld(stSpawn.SPos)) then
+      gearasmlib.SetMCWorld(ePiece,stSpawn.HRec.M.U,stSpawn.SPos)
+    else
+      ePiece:Remove()
+      PrintNotify(ply,"Position out of map bounds!","ERROR")
+      gearasmlib.Log("GEARASSEMBLY: Additioal Error INFO"
+      .."\n   Event  : Spawning when Trace.HitWorld"
+      .."\n   MCspawn: "..mcspawn
+      .."\n   Player : "..ply:Nick()
+      .."\n   hdModel: "..gearasmlib.GetModelFileName(model).."\n")
+      return true
+    end
+    undo.Create("Last Track Assembly")
+    SetupPiece(ePiece,freeze,engravity)
+    EmitSoundPly(ply)
+    undo.AddEntity(ePiece)
+    undo.SetPlayer(ply)
+    undo.SetCustomUndoText( "Undone Assembly ( World Spawn )" )
+    undo.Finish()
+    return true
+  end
   if(Trace.HitWorld) then
   -- Spawn it on the map ...
     local ePiece = eMakePiece(model,Trace.HitPos,Angle(),mass,bgrpids)
@@ -345,7 +376,7 @@ function TOOL:LeftClick( Trace )
      gearasmlib.PlyLoadKey(ply,"SPEED")
   ) then
      -- IN_Speed: Switch the tool mode
-    local stSpawn = gearasmlib.GetENTSpawn(trEnt,rotpivot,model,igntyp,
+    local stSpawn = gearasmlib.GetENTSpawn(trEnt,rotpiv,model,igntyp,
                                            Vector(nextx,nexty,nextz),
                                            Angle(nextpic,nextyaw,nextrol))
     if(not stSpawn) then return false end
@@ -380,7 +411,7 @@ function TOOL:LeftClick( Trace )
           ePieceN:SetAngles(stSpawn.SAng)
           SetupPiece(ePieceN,freeze,engravity)
           undo.AddEntity(ePieceN)
-          local stSpawn = gearasmlib.GetENTSpawn(trEnt,rotpivot,model,igntyp,
+          local stSpawn = gearasmlib.GetENTSpawn(trEnt,rotpiv,model,igntyp,
                                                  Vector(nextx,nexty,nextz),
                                                  Angle(nextpic,nextyaw,nextrol))
           if(not stSpawn) then
@@ -457,7 +488,7 @@ function TOOL:LeftClick( Trace )
     return false
   end
   
-  local stSpawn = gearasmlib.GetENTSpawn(trEnt,rotpivot,model,igntyp,
+  local stSpawn = gearasmlib.GetENTSpawn(trEnt,rotpiv,model,igntyp,
                                          Vector(nextx,nexty,nextz),
                                          Angle(nextpic,nextyaw,nextrol))
   if(stSpawn) then
@@ -579,23 +610,33 @@ function TOOL:DrawHUD()
   local ply   = LocalPlayer()
   local Trace = ply:GetEyeTrace()
   if(adv ~= 0) then
-    local scrH = surface.ScreenHeight()
-    local scrW = surface.ScreenWidth()
     if(not Trace) then return end
+    local scrH    = surface.ScreenHeight()
+    local scrW    = surface.ScreenWidth()
     local trEnt   = Trace.Entity
+    local mode    = GetToolMode(self:GetClientInfo("mode"))
     local model   = self:GetClientInfo("model")
     local nextx   = self:GetClientNumber("nextx") or 0
     local nexty   = self:GetClientNumber("nexty") or 0
     local nextz   = self:GetClientNumber("nextz") or 0
-    local nextpic   = math.Clamp(self:GetClientNumber("nextpic") or 0,-360,360)
-    local nextyaw   = math.Clamp(self:GetClientNumber("nextyaw") or 0,-360,360)
-    local nextrol   = math.Clamp(self:GetClientNumber("nextrol") or 0,-360,360)
-    local rotpivot   = math.Clamp(self:GetClientNumber("rotpivot") or 0,-360,360)
-    if(trEnt and trEnt:IsValid()) then
+    local nextpic = math.Clamp(self:GetClientNumber("nextpic") or 0,-360,360)
+    local nextyaw = math.Clamp(self:GetClientNumber("nextyaw") or 0,-360,360)
+    local nextrol = math.Clamp(self:GetClientNumber("nextrol") or 0,-360,360)
+    local rotpiv  = math.Clamp(self:GetClientNumber("rotpiv") or 0,-360,360)
+    if(mode == 1) then
+      local stSpawn  = gearasmlib.GetNORSpawn(Trace,model,nextz,nextyaw)
+      if(not stSpawn) then return false end
+      local RadScale = math.Clamp(800 / (Trace.HitPos - ply:GetPos()):Length(),1,100)
+      local Os = Trace.HitPos:ToScreen()
+      local Zs = (Trace.HitPos + 15 * Trace.HitNormal):ToScreen()
+      DrawLineColor(Os,Zs,stDrawColors.Blue,scrW,scrH)
+      surface.DrawCircle( Os.x, Os.y, RadScale, stDrawColors.Blue)
+      return
+    elseif(trEnt and trEnt:IsValid()) then
       if(gearasmlib.IsOther(trEnt)) then return end
       local actrad  = math.Clamp(self:GetClientNumber("activrad") or 1,1,150)
       local igntyp  = self:GetClientNumber("igntyp") or 0
-      local stSpawn = gearasmlib.GetENTSpawn(trEnt,rotpivot,model,igntyp,
+      local stSpawn = gearasmlib.GetENTSpawn(trEnt,rotpiv,model,igntyp,
                                              Vector(nextx,nexty,nextz),
                                              Angle(nextpic,nextyaw,nextrol))
       if(not stSpawn) then return end
@@ -607,26 +648,26 @@ function TOOL:DrawHUD()
       stSpawn.U:Mul(15)
       stSpawn.U:Add(stSpawn.OPos)
       local RadScale = math.Clamp(800 / (Trace.HitPos - ply:GetPos()):Length(),1,100)
-      local Os = stSpawn.OPos:ToScreen()
-      local Ss = stSpawn.SPos:ToScreen()
-      local Sa = (stSpawn.SPos + 15 * stSpawn.SAng:Up()):ToScreen()
+      local Op = stSpawn.OPos:ToScreen()
+      local Sp = stSpawn.SPos:ToScreen()
+      local Du = (stSpawn.SPos + 15 * stSpawn.DAng:Up()):ToScreen()
       local Tp = stSpawn.TPos:ToScreen()
       local Tu = (stSpawn.TPos + 15 * stSpawn.TAng:Up()):ToScreen()
       local Xs = stSpawn.F:ToScreen()
       local Ys = stSpawn.R:ToScreen()
       local Zs = stSpawn.U:ToScreen()
       -- Draw UCS
-      DrawLineColor(Os,Xs,stDrawColors.Red  ,scrW,scrH)
-      DrawLineColor(Os,Ys,stDrawColors.Green,scrW,scrH)
-      DrawLineColor(Os,Zs,stDrawColors.Blue ,scrW,scrH)
+      DrawLineColor(Op,Xs,stDrawColors.Red  ,scrW,scrH)
+      DrawLineColor(Op,Ys,stDrawColors.Green,scrW,scrH)
+      DrawLineColor(Op,Zs,stDrawColors.Blue ,scrW,scrH)
       DrawLineColor(Tp,Tu,stDrawColors.Yello,scrW,scrH)
-      DrawLineColor(Tp,Os,stDrawColors.Green,scrW,scrH)
-      surface.DrawCircle( Os.x, Os.y, RadScale, stDrawColors.Yello)
+      DrawLineColor(Tp,Op,stDrawColors.Green,scrW,scrH)
+      surface.DrawCircle( Op.x, Op.y, RadScale, stDrawColors.Yello)
       surface.DrawCircle( Tp.x, Tp.y, RadScale, stDrawColors.Green)
       -- Draw Spawn
-      DrawLineColor(Os,Ss,stDrawColors.Magen,scrW,scrH)
-      DrawLineColor(Ss,Sa,stDrawColors.Cyan,scrW,scrH)
-      surface.DrawCircle( Ss.x, Ss.y, RadScale, stDrawColors.Magen)
+      DrawLineColor(Op,Sp,stDrawColors.Magen,scrW,scrH)
+      DrawLineColor(Sp,Du,stDrawColors.Cyan,scrW,scrH)
+      surface.DrawCircle( Sp.x, Sp.y, RadScale, stDrawColors.Magen)
       if(addinfo ~= 0) then
         local txPos = {x = 0, y = 0, w = 0, h = 0}
         txPos.x = surface.ScreenWidth() / 2 + 10
@@ -888,7 +929,7 @@ function TOOL.BuildCPanel( CPanel )
             Type    = "Float",
             Min     = -360,
             Max     =  360,
-            Command = "gearassembly_rotpivot"})
+            Command = "gearassembly_rotpiv"})
             
   CPanel:AddControl("Slider", {
             Label   = "Piece rotation: ",
@@ -992,14 +1033,27 @@ function TOOL:MakeGhostEntity( sModel, vPos, aAngle )
   self.GhostEntity:SetColor( Color( 255, 255, 255, 150 ) )
 end
 
-function TOOL:UpdateGhost(oEnt, Ply)
+function TOOL:UpdateGhost(oEnt, oPly)
   if not oEnt then return end
   if not oEnt:IsValid() then return end
-  local Trace = util.TraceLine(util.GetPlayerTrace(Ply))
+  local Trace = util.TraceLine(util.GetPlayerTrace(oPly))
   if(not Trace) then return end
   local trEnt = Trace.Entity
   oEnt:SetNoDraw(true)
-  if(Trace.HitWorld) then
+  if(GetToolMode(self:GetClientInfo("mode")) == 1) then
+    local model = self:GetClientInfo("model") or ""
+    local nextz   = self:GetClientNumber("nextz") or 0
+    local nextyaw = math.Clamp(self:GetClientNumber("nextyaw") or 0,-360,360)
+    local vBBMin  = oEnt:OBBMins()
+    local stSpawn = gearasmlib.GetNORSpawn(Trace,model,nextz-vBBMin[cvZ],nextyaw)
+    if(not stSpawn) then return end
+    oEnt:SetRenderMode(RENDERMODE_TRANSALPHA)
+    oEnt:SetColor(Color(255, 255, 255, 150 ))
+    gearasmlib.SetMCWorld(oEnt,stSpawn.HRec.M.U,stSpawn.SPos)
+    oEnt:SetAngles(stSpawn.SAng)
+    oEnt:SetNoDraw(false)
+    return
+  elseif(Trace.HitWorld) then
     local model     = self:GetClientInfo("model")
     local nextpic   = math.Clamp(self:GetClientNumber("nextpic") or 0,-360,360)
     local nextyaw   = math.Clamp(self:GetClientNumber("nextyaw") or 0,-360,360)
@@ -1007,7 +1061,7 @@ function TOOL:UpdateGhost(oEnt, Ply)
     local nextx     = self:GetClientNumber("nextx") or 0
     local nexty     = self:GetClientNumber("nexty") or 0
     local nextz     = self:GetClientNumber("nextz") or 0
-    local aAng      = Ply:GetAimVector():Angle()
+    local aAng      = oPly:GetAimVector():Angle()
           aAng[caP] = 0
           aAng[caR] = 0
     local stSpawn = gearasmlib.GetMAPSpawn(model,Trace.HitPos,aAng,
@@ -1031,11 +1085,11 @@ function TOOL:UpdateGhost(oEnt, Ply)
       local nextpic = math.Clamp(self:GetClientNumber("nextpic") or 0,-360,360)
       local nextyaw = math.Clamp(self:GetClientNumber("nextyaw") or 0,-360,360)
       local nextrol = math.Clamp(self:GetClientNumber("nextrol") or 0,-360,360)
-      local rotpivot = math.Clamp(self:GetClientNumber("rotpivot") or 0,-360,360)
+      local rotpiv  = math.Clamp(self:GetClientNumber("rotpiv") or 0,-360,360)
       local nextx   = self:GetClientNumber("nextx") or 0
       local nexty   = self:GetClientNumber("nexty") or 0
       local nextz   = self:GetClientNumber("nextz") or 0
-      local stSpawn = gearasmlib.GetENTSpawn(trEnt,rotpivot,model,igntyp,
+      local stSpawn = gearasmlib.GetENTSpawn(trEnt,rotpiv,model,igntyp,
                                              Vector(nextx,nexty,nextz),
                                              Angle(nextpic,nextyaw,nextrol))
       if(not stSpawn) then return end
