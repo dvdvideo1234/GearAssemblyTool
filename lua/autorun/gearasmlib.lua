@@ -954,10 +954,10 @@ function SQLInsertRecord(sTable,tData)
           tData[3] = Model2Name(tData[1])
         end
       else
-        tData[3] = "Some Track Piece"
+        tData[3] = "Some Gear Piece"
       end
     else
-      tData[3] = "Some Track Piece"
+      tData[3] = "Some Gear Piece"
     end
   end
 
@@ -1093,12 +1093,12 @@ function AttachKillTimer(oTable,sKey,sTabName,nDuration,sMessage)
   end
 end
 
-function RestartTimer(sKey,sTabName)
-  if(not ( sKey and sTabName )) then return false end
-  if(not (type(sKey    ) == "string" and
-          type(sTabName) == "string")
+function RestartTimer(sTable,sKey)
+  if(not (sTable and sKey)) then return false end
+  if(not (type(sTable) == "string" and
+          type(sKey)   == "string")
   ) then return false end
-  local Key = sTabName.."_"..sKey
+  local Key = sTable.."_"..sKey
   if(not timer.Exists(Key)) then return false end
   return timer.Start(Key)
 end
@@ -1115,8 +1115,8 @@ function CacheQueryPiece(sModel)
   local stTable = LibTables[sTable]
   local stPiece = LibCache[sTable][sModel]
   if(stPiece) then
-    if(stPiece.MaxCN and (stPiece.MaxCN > 0)) then
-      RestartTimer(sModel,sTable,"CacheQueryPiece")
+    if(stPiece.Here) then
+      RestartTimer(sTable,sModel)
       return LibCache[sTable][sModel]
     end
     return nil
@@ -1134,7 +1134,7 @@ function CacheQueryPiece(sModel)
       stPiece.Type = qRec[stTable[2][1]]
       stPiece.Name = qRec[stTable[3][1]]
       stPiece.Mesh = qRec[stTable[4][1]]
-      stPiece.MaxCN = 1
+      stPiece.Here = true
       stPiece.A = {U = Angle (), S = {[csX] = 1,[csY] = 1,[csZ] = 1,[csD] = true}}
       stPiece.O = {U = Vector(), S = {[csX] = 1,[csY] = 1,[csZ] = 1,[csD] = true}}
       stPiece.M = {U = Vector(), S = {[csX] = 1,[csY] = 1,[csZ] = 1,[csD] = true}}
@@ -1203,7 +1203,7 @@ function CacheQueryPiece(sModel)
       end
       return stPiece
     else
-      stPiece.MaxCN = 0
+      stPiece.Here = false
     end
   else
     Log("CacheQueryPiece: "..LibSQLBuildError)

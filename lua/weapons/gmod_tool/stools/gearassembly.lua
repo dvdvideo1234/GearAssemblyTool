@@ -37,8 +37,6 @@ gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/mechanics/gears2/bevel
 gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/mechanics/gears2/bevel_48t1.mdl", "PHX Bevel", "#", 45, "46.7, 0, 1.3", "", "-0.012435931712389,-0.012925148941576,-0.73237001895905"})
 gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/mechanics/gears2/bevel_60t1.mdl", "PHX Bevel", "#", 45, "58.6, 0, 1.3", "", "-9.5774739747867e-005,0.0057542459107935,-0.7312148809433"})
 
-
-
 TOOL.Category   = "Construction"   -- Name of the category
 TOOL.Name       = "#Gear Assembly" -- Name to display
 TOOL.Command    = nil              -- Command on click (nil for default)
@@ -52,6 +50,7 @@ TOOL.ClientConVar = {
   [ "nexty"     ] = "0",
   [ "nextz"     ] = "0",
   [ "count"     ] = "1",
+  [ "contyp"    ] = "1"
   [ "freeze"    ] = "0",
   [ "advise"    ] = "1",
   [ "igntyp"    ] = "0",
@@ -92,6 +91,15 @@ local stToolMode = {
   [1] = "Direct prop spawn",
   [2] = "Stack forward based",
   [3] = "Stack around pivot"
+}
+
+local stConstraintType = {
+  Max = 5
+  [1] = {Name = "Free Spawn", Make = nil},
+  [2] = {Name = "Weld Piece" , Make = constraint.Weld},
+  [3] = {Name = "WeldGround", Make = nil},
+  [4] = {Name = "Axis Piece" , Make = constraint.Axis},
+  [5] = {Name = "BallSocket", Make = constraint.Ballsocket}
 }
 
 --- Because Vec[1] is actually faster than Vec.X
@@ -145,7 +153,7 @@ local file              = file
 
 ------------- LOCAL FUNCTIONS AND STUFF ----------------
 
-if CLIENT then
+if(CLIENT)then
   language.Add( "Tool.gearassembly.name", "Gear Assembly" )
   language.Add( "Tool.gearassembly.desc", "Assembles gears to mesh together" )
   language.Add( "Tool.gearassembly.0", "Left click to stack, Right to change mode, Reload to remove a piece" )
@@ -166,15 +174,21 @@ if CLIENT then
   txToolgunBackground = surface.GetTextureID( "vgui/white" )
 end
 
-if SERVER then
+if(SERVER)then
   cleanup.Register("GEARASSEMBLYs")
 end
 
-local function SnapAngleYaw(aAng, nYSnap)
-  if(aAng and nYSnap and (nYSnap > 0)) then
-    aAng[caY] = gearasmlib.SnapValue(aAng[caY],nYSnap)
+local function LoadDupePieceWeldGround(Ply,oEnt,tData)
+  if tData.WeldGround then
+    oEnt:SetMoveType(MOVETYPE_NONE)
+    oEnt:SetUnFreezable(true)
+    oEnt.PhysgunDisabled = true
+    oEnt:GetPhysicsObject():EnableMotion(false)
+    duplicator.StoreEntityModifier(oEnt,"gearassembly_weldgnd",{WeldGround = true })
   end
 end
+
+duplicator.RegisterEntityModifier( "gearassembly_weldgnd", LoadDupePieceWeldGround )
 
 local function eMakePiece(sModel,vPos,aAng,nMass,sBgrpIDs)
   -- You never know .. ^_^
@@ -249,13 +263,58 @@ function PrintModifOffsetMC(ePiece,stSpawn)
         print(OffW)
 end
 
-function GetToolMode(sMode)
+function BorderCvar(stSettings,sMode)
   if(not sMode) then return 1 end
   if(not tonumber(sMode)) then return 1 end
   Mode = tonumber(sMode)
-  if(Mode > stToolMode.Max) then Mode = 1 end
-  if(Mode < 1) then Mode = stToolMode.Max end
+  if(Mode > stSettings.Max) then Mode = 1 end
+  if(Mode < 1) then Mode = stSettings.Max end
   return Mode
+end
+
+function ConstraintMaster(eBase,ePiece,nID,nNoCollid,nForceLim,vAxisDir)
+  local ConstID = nID or 1
+  local NoCollid = nNoCollid or 0
+  local ForceLim = nForceLim or 0
+  if(not (ePiece and eBase) then return nil end
+  local ConstInfo = stConstraintType[nID]
+  pyPiece = ePiece:GetPhysicsObject()
+  pyBase  = eBase:GetPhysicsObject()
+  if(not (pyPiece and pyBase and ConstInfo)) then return nil end
+  local Const
+  local MCLPiece = pyPiece:GetMassCenter()
+  -- Check for "Free Spawn" ( No constraints ) , coz nothing to be done after it.
+  if(nID == 1) then return true end
+  if(nID == 2) then
+    -- http://wiki.garrysmod.com/page/constraint/Weld
+    Const = ConstInfo.Make(eBase,ePiece,0,0,ForceLim,(nNoCollid ~= 0),false )
+  elseif(nID = 3) then
+    -- Weld Ground is my custom child ...
+    pyPiece:EnableMotion(false)
+    ePiece:SetUnFreezable(true)
+    ePiece.PhysgunDisabled = true
+    duplicator.StoreEntityModifier(ePiece,"gearassembly_weldgnd",{WeldGround = true})
+    return true -- It is not actual constraint, but only a state.
+  elseif(nID == 4 and vAxisDir) then
+    -- http://wiki.garrysmod.com/page/constraint/Axis
+    local MCWPiece = ePiece:LocalToWorld(MCLPiece)
+    local AxisWOffset = Vector()
+          AxisWOffset:Add(MCWPiece)
+          AxisWOffset:Add(vAxisDir)
+    Const = ConstInfo.Make(eBase,ePiece,0,0,
+                           eBase:WorldToLocal(MCWPiece),
+                           ePiece:WorldToLocal(MCWPiece),
+                           ePiece:WorldToLocal(AxisWOffset),
+                           ForceLim,0,0,nNoCollid,true)
+  elseif(nID == 5) then
+    -- http://wiki.garrysmod.com/page/constraint/Ballsocket
+    Const = ConstInfo.Make(eBase,ePiece,0,0,MCLPiece,ForceLim,0,nNoCollid)
+  end
+  if(Const) then
+    print("ConstraintMaster: "..ConstInfo[n].." created !")
+    ePiece:DeleteOnRemove(Const)
+  end
+  return Const
 end
 
 function TOOL:LeftClick( Trace )
@@ -267,7 +326,7 @@ function TOOL:LeftClick( Trace )
   local freeze    = self:GetClientNumber("freeze") or 0
   local igntyp    = self:GetClientNumber("igntyp") or 0
   local mass      = math.Clamp(self:GetClientNumber("mass"),1,50000)
-  local mode      = GetToolMode(self:GetClientInfo("mode"))
+  local mode      = BorderCvar(stToolMode,self:GetClientInfo("mode"))
   local nextpic   = math.Clamp(self:GetClientNumber("nextpic") or 0,-360,360)
   local nextyaw   = math.Clamp(self:GetClientNumber("nextyaw") or 0,-360,360)
   local nextrol   = math.Clamp(self:GetClientNumber("nextrol") or 0,-360,360)
@@ -282,6 +341,7 @@ function TOOL:LeftClick( Trace )
   local ply       = self:GetOwner()
   gearasmlib.PlyLoadKey(ply)
   if(mode == 1) then
+    -- Direct Snapping
     local ePiece = eMakePiece(model,Trace.HitPos,Angle(),mass,bgrpids)
     if(not ePiece) then return false end
     local vBBMin  = ePiece:OBBMins()
@@ -300,15 +360,16 @@ function TOOL:LeftClick( Trace )
       .."\n   hdModel: "..gearasmlib.GetModelFileName(model).."\n")
       return true
     end
-    undo.Create("Last Track Assembly")
+    undo.Create("Last Gear Assembly")
     SetupPiece(ePiece,freeze,engravity)
     EmitSoundPly(ply)
     undo.AddEntity(ePiece)
     undo.SetPlayer(ply)
-    undo.SetCustomUndoText( "Undone Assembly ( World Spawn )" )
+    undo.SetCustomUndoText( "Undone Assembly ( Direct Snap )" )
     undo.Finish()
     return true
   end
+  
   if(Trace.HitWorld) then
   -- Spawn it on the map ...
     local ePiece = eMakePiece(model,Trace.HitPos,Angle(),mass,bgrpids)
@@ -336,7 +397,7 @@ function TOOL:LeftClick( Trace )
         .."\n   hdModel: "..gearasmlib.GetModelFileName(model).."\n")
         return true
       end
-      undo.Create("Last Track Assembly")
+      undo.Create("Last Gear Assembly")
       SetupPiece(ePiece,freeze,engravity)
       EmitSoundPly(ply)
       undo.AddEntity(ePiece)
@@ -364,7 +425,7 @@ function TOOL:LeftClick( Trace )
   if(not trRec) then return false end
 
   if(gearasmlib.PlyLoadKey(ply,"USE")) then
-    -- IN_Use: Use the VALID Trace.Entity as a piece
+    -- IN_USE: Use the VALID Trace.Entity as a piece
     PrintNotify(ply,"Model: "..gearasmlib.GetModelFileName(trModel).." selected !","GENERIC")
     ply:ConCommand("gearassembly_model "..trModel.."\n")
     return true
@@ -373,76 +434,33 @@ function TOOL:LeftClick( Trace )
   if(not hdRec) then return false end
 
   if(count > 1 and
-     gearasmlib.PlyLoadKey(ply,"SPEED")
+     gearasmlib.PlyLoadKey(ply,"SPEED") and
+     mode > 1 and mode <= stToolMode.Max
   ) then
-     -- IN_Speed: Switch the tool mode
+    -- IN_SPEED: Switch the tool mode
     local stSpawn = gearasmlib.GetENTSpawn(trEnt,rotpiv,model,igntyp,
                                            Vector(nextx,nexty,nextz),
                                            Angle(nextpic,nextyaw,nextrol))
     if(not stSpawn) then return false end
-    if(stSpawn.HRec.MaxCN > 1) then
-      local ePieceN, ePieceO
-      local i       = count
-      local nTrys   = staatts
-      undo.Create("Last Track Assembly")
-      ePieceO = trEnt
-      while(i > 0) do
-        ePieceN = eMakePiece(model,ePieceO:GetPos(),Angle(),mass,bgrpids)
-        if(ePieceN) then
-          if(util.IsInWorld(stSpawn.SPos)) then
-            ePieceN:SetPos(stSpawn.SPos)
-          else
-            ePieceN:Remove()
-            PrintNotify(ply,"Position out of map bounds!","ERROR")
-            gearasmlib.Log("GEARASSEMBLY: Additioal Error INFO"
-            .."\n   Event  : Stacking when available"
-            .."\n   Iterats: "..tostring(count-i)
-            .."\n   StackTr: "..tostring( nTrys ).." ?= "..tostring(staatts)
-            .."\n   pointID: "..tostring(pointid).." >> "..tostring(pnextid)
-            .."\n   Player : "..ply:Nick()
-            .."\n   trModel: "..gearasmlib.GetModelFileName(trModel)
-            .."\n   hdModel: "..gearasmlib.GetModelFileName(model).. "\n")
-            EmitSoundPly(ply)
-            undo.SetPlayer(ply)
-            undo.SetCustomUndoText( "Undone Assembly ( Stack #"..tostring(count-i).." )" )
-            undo.Finish()
-            return true
-          end
-          ePieceN:SetAngles(stSpawn.SAng)
-          SetupPiece(ePieceN,freeze,engravity)
-          undo.AddEntity(ePieceN)
-          local stSpawn = gearasmlib.GetENTSpawn(trEnt,rotpiv,model,igntyp,
-                                                 Vector(nextx,nexty,nextz),
-                                                 Angle(nextpic,nextyaw,nextrol))
-          if(not stSpawn) then
-            PrintNotify(ply,"Cannot obtain spawn data!","ERROR")
-            gearasmlib.Log("GEARASSEMBLY: Additioal Error INFO"
-            .."\n   Event  : Invalid User data"
-            .."\n   Iterats: "..tostring(count-i)
-            .."\n   StackTr: "..tostring( nTrys ).." ?= "..tostring(staatts)
-            .."\n   pointID: "..tostring(pointid).." >> "..tostring(pnextid)
-            .."\n   Player : "..ply:Nick()
-            .."\n   trModel: "..gearasmlib.GetModelFileName(trModel)
-            .."\n   hdModel: "..gearasmlib.GetModelFileName(model).. "\n")
-            EmitSoundPly(ply)
-            undo.SetPlayer(ply)
-            undo.SetCustomUndoText( "Undone Assembly ( Stack #"..tostring(count-i).." )" )
-            undo.Finish()
-            return true
-          end
-          ePieceO = ePieceN
-          i = i - 1
-          nTrys = staatts
+    undo.Create("Last Gear Assembly")
+    local ePieceN, ePieceO
+    local i     = count
+    local nTrys = staatts
+    local dRot  = 360 / count
+    ePieceO = trEnt
+    while(i > 0) do
+      ePieceN = eMakePiece(model,ePieceO:GetPos(),Angle(),mass,bgrpids)
+      if(ePieceN) then
+        if(util.IsInWorld(stSpawn.SPos)) then
+          gearasmlib.SetMCWorld(ePieceN,stSpawn.HRec.M.U,stSpawn.SPos)
         else
-          nTrys = nTrys - 1
-        end
-        if(nTrys <= 0) then
-          PrintNotify(ply,"Spawn attemts ran off!","ERROR")
+          ePieceN:Remove()
+          PrintNotify(ply,"Position out of map bounds!","ERROR")
           gearasmlib.Log("GEARASSEMBLY: Additioal Error INFO"
-          .."\n   Event   : Failed to allocate memory for a piece"
+          .."\n   Event  : Stacking > Position out of map bounds"
+          .."\n   Mode   : "..stToolMode[mode]
           .."\n   Iterats: "..tostring(count-i)
           .."\n   StackTr: "..tostring( nTrys ).." ?= "..tostring(staatts)
-          .."\n   pointID: "..tostring(pointid).." >> "..tostring(pnextid)
           .."\n   Player : "..ply:Nick()
           .."\n   trModel: "..gearasmlib.GetModelFileName(trModel)
           .."\n   hdModel: "..gearasmlib.GetModelFileName(model).. "\n")
@@ -452,40 +470,63 @@ function TOOL:LeftClick( Trace )
           undo.Finish()
           return true
         end
-      end
-      EmitSoundPly(ply)
-      undo.SetPlayer(ply)
-      undo.SetCustomUndoText( "Undone Assembly ( Stack #"..tostring(count-i).." )" )
-      undo.Finish()
-      return true
-    elseif(stSpawn.HRec.MaxCN == 1) then
-      gearasmlib.Log("GEARASSEMBLY: Model "..model.." is non-stackable, spawning instead !!")
-      ePiece = eMakePiece(model,Trace.HitPos,Angle(),mass,bgrpids)
-      if(ePiece) then
-        if(util.IsInWorld(stSpawn.SPos)) then
-          ePiece:SetPos(stSpawn.SPos)
-        else
-          ePiece:Remove()
-          PrintNotify(ply,"Position out of map bounds !","ERROR")
+        ePieceN:SetAngles(stSpawn.SAng)
+        SetupPiece(ePieceN,freeze,engravity)
+        undo.AddEntity(ePieceN)
+        if(mode == 2) then
+          stSpawn = gearasmlib.GetENTSpawn(ePieceN,rotpiv,model,igntyp,
+                                           Vector(nextx,nexty,nextz),
+                                           Angle(nextpic,nextyaw,nextrol))
+          ePieceO = ePieceN
+        elseif(mode == 3) then
+          stSpawn = gearasmlib.GetENTSpawn(trEnt,rotpiv,model,igntyp,
+                                           Vector(nextx,nexty,nextz),
+                                           Angle(nextpic,nextyaw,nextrol))
+          rotpiv = rotpiv + dRot
+        end
+        if(not stSpawn) then
+          PrintNotify(ply,"Failed to obtain spawn data!","ERROR")
           gearasmlib.Log("GEARASSEMBLY: Additioal Error INFO"
-          .."\n   Event  : Stacking when non available ( spawning instead )"
+          .."\n   Event  : Stacking > Failed to obtain spawn data"
+          .."\n   Mode   : "..stToolMode[mode]
+          .."\n   Iterats: "..tostring(count-i)
+          .."\n   StackTr: "..tostring( nTrys ).." ?= "..tostring(staatts)
           .."\n   Player : "..ply:Nick()
           .."\n   trModel: "..gearasmlib.GetModelFileName(trModel)
           .."\n   hdModel: "..gearasmlib.GetModelFileName(model).. "\n")
+          EmitSoundPly(ply)
+          undo.SetPlayer(ply)
+          undo.SetCustomUndoText( "Undone Assembly ( Stack #"..tostring(count-i).." )" )
+          undo.Finish()
           return true
         end
-        ePiece:SetAngles(stSpawn.SAng)
-        undo.Create("Last Track Assembly")
-        SetupPiece(ePiece,freeze,engravity)
+        i = i - 1
+        nTrys = staatts
+      else
+        nTrys = nTrys - 1
+      end
+      if(nTrys <= 0) then
+        PrintNotify(ply,"Make attemts ran off!","ERROR")
+        gearasmlib.Log("GEARASSEMBLY: Additioal Error INFO"
+        .."\n   Event  : Stacking > Failed to allocate memory for a piece"
+        .."\n   Mode   : "..stToolMode[mode]
+        .."\n   Iterats: "..tostring(count-i)
+        .."\n   StackTr: "..tostring( nTrys ).." ?= "..tostring(staatts)
+        .."\n   Player : "..ply:Nick()
+        .."\n   trModel: "..gearasmlib.GetModelFileName(trModel)
+        .."\n   hdModel: "..gearasmlib.GetModelFileName(model).. "\n")
         EmitSoundPly(ply)
-        undo.AddEntity(ePiece)
         undo.SetPlayer(ply)
-        undo.SetCustomUndoText( "Undone Assembly ( Spawn Instead )" )
+        undo.SetCustomUndoText( "Undone Assembly ( Stack #"..tostring(count-i).." )" )
         undo.Finish()
         return true
       end
     end
-    return false
+    EmitSoundPly(ply)
+    undo.SetPlayer(ply)
+    undo.SetCustomUndoText( "Undone Assembly ( Stack #"..tostring(count-i).." )" )
+    undo.Finish()
+    return true
   end
   
   local stSpawn = gearasmlib.GetENTSpawn(trEnt,rotpiv,model,igntyp,
@@ -508,7 +549,7 @@ function TOOL:LeftClick( Trace )
         return true
       end
       PrintModifOffsetMC(ePiece,stSpawn)
-      undo.Create("Last Track Assembly")
+      undo.Create("Last Gear Assembly")
       SetupPiece(ePiece,freeze,engravity)
       EmitSoundPly(ply)
       undo.AddEntity(ePiece)
@@ -531,7 +572,7 @@ function TOOL:RightClick( Trace )
   if(gearasmlib.PlyLoadKey(ply,"SPEED")) then
     Dir = -1
   end
-  local mode = GetToolMode(self:GetClientInfo("mode"))
+  local mode = BorderCvar(stToolMode,self:GetClientInfo("mode"))
   mode = mode + Dir
   if(mode > stToolMode.Max) then mode = 1 end
   if(mode < 1) then mode = stToolMode.Max end
@@ -614,7 +655,7 @@ function TOOL:DrawHUD()
     local scrH    = surface.ScreenHeight()
     local scrW    = surface.ScreenWidth()
     local trEnt   = Trace.Entity
-    local mode    = GetToolMode(self:GetClientInfo("mode"))
+    local mode    = BorderCvar(stToolMode,self:GetClientInfo("mode"))
     local model   = self:GetClientInfo("model")
     local nextx   = self:GetClientNumber("nextx") or 0
     local nexty   = self:GetClientNumber("nexty") or 0
@@ -749,7 +790,7 @@ function TOOL:DrawToolScreen(w, h)
   end
   DrawTextRowColor(txPos,"Holds Model: Valid")
   local NoAV  = "N/A"
-  local mode  = GetToolMode(self:GetClientInfo("mode"))
+  local mode  = BorderCvar(stToolMode,self:GetClientInfo("mode"))
   local trEnt = Trace.Entity
   local trOrig, trModel, trMesh, trRad
   local X = 0
@@ -810,6 +851,7 @@ function TOOL.BuildCPanel( CPanel )
   Combo["CVars"][ 2]  = "gearassembly_mode"
   Combo["CVars"][ 3]  = "gearassembly_model"
   Combo["CVars"][ 4]  = "gearassembly_count"
+  Combo["CVars"][ 4]  = "gearassembly_contyp"
   Combo["CVars"][ 5]  = "gearassembly_freeze"
   Combo["CVars"][ 6]  = "gearassembly_advise"
   Combo["CVars"][ 7]  = "gearassembly_igntyp"
@@ -878,6 +920,23 @@ function TOOL.BuildCPanel( CPanel )
   CurY = CurY + pTree:GetTall() + 2
   print("GEARASSEMBLY: Found #"..tostring(Cnt-1).." piece items.")
 
+  -- http://wiki.garrysmod.com/page/Category:DComboBox
+  local pConsType = vgui.Create("DComboBox")
+        pConsType:SetPos(2, CurY)
+        pConsType:SetTall(18)
+        pConsType:SetValue("<Select Constraint TYPE>")
+        CurY = CurY + pComboPhysType:GetTall() + 2
+  local Cnt = 1
+  while(stConstraintType[Cnt]) do
+    local Val = stConstraintType[Cnt]
+    pComboPhysType:AddChoice(Val.Name)
+    pComboPhysType.OnSelect = function( panel, index, value )
+      RunConsoleCommand("gearassembly_contyp",Cnt)
+    end
+    Cnt = Cnt + 1
+  end
+  CPanel:AddItem(pConsType)
+  
   -- http://wiki.garrysmod.com/page/Category:DTextEntry
   local pText = vgui.Create("DTextEntry")
         pText:SetPos( 2, 300 )
@@ -1040,8 +1099,8 @@ function TOOL:UpdateGhost(oEnt, oPly)
   if(not Trace) then return end
   local trEnt = Trace.Entity
   oEnt:SetNoDraw(true)
-  if(GetToolMode(self:GetClientInfo("mode")) == 1) then
-    local model = self:GetClientInfo("model") or ""
+  if(BorderCvar(stToolMode,self:GetClientInfo("mode")) == 1) then
+    local model   = self:GetClientInfo("model") or ""
     local nextz   = self:GetClientNumber("nextz") or 0
     local nextyaw = math.Clamp(self:GetClientNumber("nextyaw") or 0,-360,360)
     local vBBMin  = oEnt:OBBMins()
