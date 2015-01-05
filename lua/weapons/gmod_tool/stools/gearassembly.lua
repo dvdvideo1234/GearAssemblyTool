@@ -50,7 +50,7 @@ TOOL.ClientConVar = {
   [ "nexty"     ] = "0",
   [ "nextz"     ] = "0",
   [ "count"     ] = "1",
-  [ "contyp"    ] = "1"
+  [ "contyp"    ] = "1",
   [ "freeze"    ] = "0",
   [ "advise"    ] = "1",
   [ "igntyp"    ] = "0",
@@ -94,11 +94,11 @@ local stToolMode = {
 }
 
 local stConstraintType = {
-  Max = 5
+  Max = 5,
   [1] = {Name = "Free Spawn", Make = nil},
-  [2] = {Name = "Weld Piece" , Make = constraint.Weld},
+  [2] = {Name = "Weld Piece", Make = constraint.Weld},
   [3] = {Name = "WeldGround", Make = nil},
-  [4] = {Name = "Axis Piece" , Make = constraint.Axis},
+  [4] = {Name = "Axis Piece", Make = constraint.Axis},
   [5] = {Name = "BallSocket", Make = constraint.Ballsocket}
 }
 
@@ -179,12 +179,11 @@ if(SERVER)then
 end
 
 local function LoadDupePieceWeldGround(Ply,oEnt,tData)
-  if tData.WeldGround then
+  if tData.NoPhysgun then
     oEnt:SetMoveType(MOVETYPE_NONE)
     oEnt:SetUnFreezable(true)
     oEnt.PhysgunDisabled = true
-    oEnt:GetPhysicsObject():EnableMotion(false)
-    duplicator.StoreEntityModifier(oEnt,"gearassembly_weldgnd",{WeldGround = true })
+    duplicator.StoreEntityModifier(oEnt,"gearassembly_weldgnd",{NoPhysgun = true })
   end
 end
 
@@ -272,49 +271,51 @@ function BorderCvar(stSettings,sMode)
   return Mode
 end
 
-function ConstraintMaster(eBase,ePiece,nID,nNoCollid,nForceLim,vAxisDir)
-  local ConstID = nID or 1
+function ConstraintMaster(eBase,ePiece,nID,nNoCollid,nForceLim,vAxisNorm)
+  local ConstID  = nID or 1
   local NoCollid = nNoCollid or 0
   local ForceLim = nForceLim or 0
-  if(not (ePiece and eBase) then return nil end
-  local ConstInfo = stConstraintType[nID]
-  pyPiece = ePiece:GetPhysicsObject()
-  pyBase  = eBase:GetPhysicsObject()
-  if(not (pyPiece and pyBase and ConstInfo)) then return nil end
-  local Const
-  local MCLPiece = pyPiece:GetMassCenter()
-  -- Check for "Free Spawn" ( No constraints ) , coz nothing to be done after it.
+  if(not stConstraintType[ConstID]) then return false end
+  local ConstInfo = stConstraintType[ConstID]
   if(nID == 1) then return true end
-  if(nID == 2) then
-    -- http://wiki.garrysmod.com/page/constraint/Weld
-    Const = ConstInfo.Make(eBase,ePiece,0,0,ForceLim,(nNoCollid ~= 0),false )
-  elseif(nID = 3) then
+  if(not (ePiece and ePiece:IsValid())) then return false end
+  if(nID == 3) then
     -- Weld Ground is my custom child ...
-    pyPiece:EnableMotion(false)
     ePiece:SetUnFreezable(true)
     ePiece.PhysgunDisabled = true
-    duplicator.StoreEntityModifier(ePiece,"gearassembly_weldgnd",{WeldGround = true})
+    duplicator.StoreEntityModifier(ePiece,"gearassembly_weldgnd",{NoPhysgun = true})
     return true -- It is not actual constraint, but only a state.
-  elseif(nID == 4 and vAxisDir) then
+  end
+  if(not (eBase and eBase:IsValid())) then return false end
+  local Const
+  -- Check for "Free Spawn" ( No constraints ) , coz nothing to be done after it.
+  if(nID == 2) then
+    -- http://wiki.garrysmod.com/page/constraint/Weld
+    Const = ConstInfo.Make(ePiece,eBase,0,0,ForceLim,(nNoCollid ~= 0),false )
+  elseif(nID == 4 and vAxisNorm) then
     -- http://wiki.garrysmod.com/page/constraint/Axis
-    local MCWPiece = ePiece:LocalToWorld(MCLPiece)
-    local AxisWOffset = Vector()
-          AxisWOffset:Add(MCWPiece)
-          AxisWOffset:Add(vAxisDir)
-    Const = ConstInfo.Make(eBase,ePiece,0,0,
-                           eBase:WorldToLocal(MCWPiece),
-                           ePiece:WorldToLocal(MCWPiece),
-                           ePiece:WorldToLocal(AxisWOffset),
-                           ForceLim,0,0,nNoCollid,true)
+    local pyPiece = ePiece:GetPhysicsObject()
+    if(not (pyPiece and pyPiece:IsValid())) then return false end
+    local LPos1 = pyPiece:GetMassCenter()
+    local LPos2 = ePiece:LocalToWorld(LPos1)
+          LPos2:Add(vAxisNorm)
+          LPos2:Set(eBase:WorldToLocal(LPos2))       
+    Const = ConstInfo.Make(ePiece,eBase,0,0,
+                           LPos1,
+                           LPos2,
+                           ForceLim,0,0,nNoCollid)
   elseif(nID == 5) then
     -- http://wiki.garrysmod.com/page/constraint/Ballsocket
-    Const = ConstInfo.Make(eBase,ePiece,0,0,MCLPiece,ForceLim,0,nNoCollid)
+    local pyPiece = ePiece:GetPhysicsObject()
+    if(not (pyPiece and pyPiece:IsValid())) then return false end
+    Const = ConstInfo.Make(eBase,ePiece,0,0,pyPiece:GetMassCenter(),ForceLim,0,nNoCollid)
   end
   if(Const) then
-    print("ConstraintMaster: "..ConstInfo[n].." created !")
+    print("ConstraintMaster: "..ConstInfo.Name.." created !")
     ePiece:DeleteOnRemove(Const)
+    return true
   end
-  return Const
+  return false
 end
 
 function TOOL:LeftClick( Trace )
@@ -327,6 +328,7 @@ function TOOL:LeftClick( Trace )
   local igntyp    = self:GetClientNumber("igntyp") or 0
   local mass      = math.Clamp(self:GetClientNumber("mass"),1,50000)
   local mode      = BorderCvar(stToolMode,self:GetClientInfo("mode"))
+  local contyp    = BorderCvar(stConstraintType,self:GetClientInfo("contyp"))  
   local nextpic   = math.Clamp(self:GetClientNumber("nextpic") or 0,-360,360)
   local nextyaw   = math.Clamp(self:GetClientNumber("nextyaw") or 0,-360,360)
   local nextrol   = math.Clamp(self:GetClientNumber("nextrol") or 0,-360,360)
@@ -358,10 +360,12 @@ function TOOL:LeftClick( Trace )
       .."\n   MCspawn: "..mcspawn
       .."\n   Player : "..ply:Nick()
       .."\n   hdModel: "..gearasmlib.GetModelFileName(model).."\n")
-      return true
+      return false
     end
     undo.Create("Last Gear Assembly")
     SetupPiece(ePiece,freeze,engravity)
+    print("Constr ID: "..contyp)
+    ConstraintMaster(trEnt,ePiece,contyp,0,0,Trace.HitNormal)
     EmitSoundPly(ply)
     undo.AddEntity(ePiece)
     undo.SetPlayer(ply)
@@ -925,13 +929,13 @@ function TOOL.BuildCPanel( CPanel )
         pConsType:SetPos(2, CurY)
         pConsType:SetTall(18)
         pConsType:SetValue("<Select Constraint TYPE>")
-        CurY = CurY + pComboPhysType:GetTall() + 2
+        CurY = CurY + pConsType:GetTall() + 2
   local Cnt = 1
   while(stConstraintType[Cnt]) do
     local Val = stConstraintType[Cnt]
-    pComboPhysType:AddChoice(Val.Name)
-    pComboPhysType.OnSelect = function( panel, index, value )
-      RunConsoleCommand("gearassembly_contyp",Cnt)
+    pConsType:AddChoice(Val.Name)
+    pConsType.OnSelect = function( panel, index, value )
+      RunConsoleCommand("gearassembly_contyp",index)
     end
     Cnt = Cnt + 1
   end
