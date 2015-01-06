@@ -105,21 +105,13 @@ local LibSpawn = {
     HRec = 0,
     TRec = 0,
   },
-  ["MAP"] = {
-    F    = Vector(),
-    R    = Vector(),
-    U    = Vector(),
-    OPos = Vector(),
-    OAng = Angle (),
-    SAng = Angle (),
-    SPos = Vector(),
-    MAng = Angle (),
-    MPos = Vector(),
-    HRec = 0
-  },
   ["NOR"] = {
+    F    = Vector(),
+    R    = Vector(), 
+    U    = Vector(),
     SPos = Vector(),
     SAng = Angle (),
+    DAng = Angle (),
     HRec = 0
   }
 }
@@ -258,6 +250,28 @@ end
 function RoundValue(exact, frac)
     local q,f = math.modf(exact/frac)
     return frac * (q + (f > 0.5 and 1 or 0))
+end
+
+function SelBorderVal(sValue,stSettings,anyMaxKey)
+  if(not (sValue and anyMaxKey)) then return 1 end
+  if(not tonumber(sValue)) then return 1 end
+  Value = tonumber(sValue)
+  if(Value > stSettings[anyMaxKey]) then Value = 1 end
+  if(Value < 1) then Value = stSettings[anyMaxKey] end
+  return Value
+end
+
+function PrintNotify(pPly,sText,sNotifType)
+  if(not pPly) then return end
+  if(SERVER) then
+    pPly:SendLua("GAMEMODE:AddNotify(\""..sText.."\", NOTIFY_"..sNotifType..", 6)")
+    pPly:SendLua("surface.PlaySound(\"ambient/water/drip"..math.random(1, 4)..".wav\")")
+  end
+end
+
+function EmitSoundPly(pPly)
+  if(not pPly) then return end
+  pPly:EmitSound("physics/metal/metal_canister_impact_hard"..math.floor(math.random(3))..".wav")
 end
 
 function SnapValue(nVal, nSnap)
@@ -614,7 +628,10 @@ function PlyLoadKey(pPly, sKey)
       ["ZOOM"]    = false,
       ["LEFT"]    = false,
       ["RIGHT"]   = false,
-      ["WALK"]    = false
+      ["WALK"]    = false,
+      ["MWHEEL"]  = 0,
+      ["MPOSDX"]  = 0,
+      ["MPOXDY"]  = 0
     }
   end
   local Cache = LibCache["PLAYERKEYDOWN"]
@@ -647,6 +664,9 @@ function PlyLoadKey(pPly, sKey)
   Cache["LEFT"]    = Command:KeyDown(IN_LEFT      )
   Cache["RIGHT"]   = Command:KeyDown(IN_RIGHT     )
   Cache["WALK"]    = Command:KeyDown(IN_WALK      )
+  Cache["MWHEEL"]  = Command:GetMouseWheel()
+  Cache["MPOXDX"]  = Command:GetMouseX()
+  Cache["MPOSDY"]  = Command:GetMouseY()
   return nil
 end
 
@@ -1557,75 +1577,38 @@ end
 
 ----------------------------- AssemblyLib SNAPPING ------------------------------
 
-function GetNORSpawn(stTrace, sModel, nZ, nYaw)
+--[[
+ * This function is the backbone of the tool for Trace.Normal
+ * Calculates SPos, SAng based on the DB inserts and input parameters
+ * stTrace       = Trace result
+ * sModel        = Piece model
+ * vOPos         = Offset position
+ * aOAng         = Offset angle
+]]--
+
+function GetNORSpawn(stTrace, sModel, vOPos, aOAng)
   if(not stTrace) then return nil end
   local hdRec  = CacheQueryPiece(sModel)
   if(not hdRec) then return nil end
-  local Z   = nZ or 0
-  local Yaw = nYaw or 0
   local stSpawn = LibSpawn["NOR"]
   stSpawn.HRec = hdRec
-  stSpawn.SAng:Set(stTrace.HitNormal:Angle())
-  stSpawn.SAng[caP] = stSpawn.SAng[caP] + 90 + hdRec.A.U[caP]
-  stSpawn.SAng[caY] = stSpawn.SAng[caY] + hdRec.A.U[caY]
-  stSpawn.SAng[caR] = stSpawn.SAng[caR] + hdRec.A.U[caR]
-  stSpawn.SAng:RotateAroundAxis(stTrace.HitNormal,nYaw)
-  stSpawn.SPos:Set(nZ * stTrace.HitNormal)
-  stSpawn.SPos:Add(stTrace.HitPos)
-  return stSpawn
-end
-
---[[
- * This function is the backbone of the tool for Trace.HitWorld
- * Calculates SPos, SAng based on the DB inserts and input parameters
- * ucsPos        = Base UCS Pos
- * ucsAng        = Base UCS Ang
- * hdPointID     = Client Point ID
- * hdModel       = Client Model
- * offPos        = Pos Offset
- * offAng        = AngleOffset
-]]--
-function GetMAPSpawn(hdModel,ucsPos,ucsAng,offPos,offAng)
-  if(not (ucsPos    and
-          ucsAng    and
-          hdModel   and
-          offPos    and
-          offAng )
-  ) then return nil end
-
-  if(not util.IsValidModel(hdModel)) then return nil end
-
-  local hdRec = CacheQueryPiece(hdModel)
-
-  if(not hdRec) then return nil end
-
-  local stSpawn = LibSpawn["MAP"]
-
-  stSpawn.HRec = hdRec
-  stSpawn.MAng:Set(hdRec.A.U)
-  stSpawn.MPos:Set(hdRec.O.U)
-  -- Orient the UCS
-  stSpawn.F:Set(ucsAng:Forward())
-  stSpawn.R:Set(ucsAng:Right())
-  stSpawn.U:Set(ucsAng:Up())
-  --- Offset NOW !
-  stSpawn.SPos:Set(ucsPos)
-  stSpawn.SPos:Add(stSpawn.F * offPos[cvX])
-  stSpawn.SPos:Add(stSpawn.R * offPos[cvY])
-  stSpawn.SPos:Add(stSpawn.U * offPos[cvZ])
-  stSpawn.OPos:Set(stSpawn.SPos)
-  --- UCS
-  ucsAng:RotateAroundAxis(stSpawn.R,offAng[caP])
-  ucsAng:RotateAroundAxis(stSpawn.F,offAng[caR])
-  stSpawn.U:Set(ucsAng:Up())
-  ucsAng:RotateAroundAxis(stSpawn.U,offAng[caY])
-  stSpawn.F:Set(ucsAng:Forward())
-  stSpawn.R:Set(ucsAng:Right())
-  -- Make Spawn Ang
-  stSpawn.SAng:Set(ucsAng)
-  stSpawn.SAng:RotateAroundAxis(stSpawn.R,stSpawn.MAng[caP] * hdRec.A.S[csX])
-  stSpawn.SAng:RotateAroundAxis(stSpawn.U,stSpawn.MAng[caY] * hdRec.A.S[csY])
-  stSpawn.SAng:RotateAroundAxis(stSpawn.F,stSpawn.MAng[caR] * hdRec.A.S[csZ])
+  stSpawn.DAng:Set(stTrace.HitNormal:Angle())
+  stSpawn.DAng[caP] = stSpawn.DAng[caP] + 90
+  stSpawn.F:Set(stSpawn.DAng:Forward())
+  stSpawn.R:Set(stSpawn.DAng:Right())
+  stSpawn.DAng:RotateAroundAxis(stSpawn.R,aOAng[caP])
+  stSpawn.DAng:RotateAroundAxis(stSpawn.F,aOAng[caR])
+  stSpawn.DAng:RotateAroundAxis(stSpawn.DAng:Up(),aOAng[caY])
+  stSpawn.F:Set(stSpawn.DAng:Forward())
+  stSpawn.R:Set(stSpawn.DAng:Right())
+  stSpawn.U:Set(stSpawn.DAng:Up())
+  stSpawn.SAng[caP] = stSpawn.DAng[caP] + hdRec.A.U[caP]
+  stSpawn.SAng[caY] = stSpawn.DAng[caY] + hdRec.A.U[caY]
+  stSpawn.SAng[caR] = stSpawn.DAng[caR] + hdRec.A.U[caR]
+  stSpawn.SPos:Set(stTrace.HitPos)
+  stSpawn.SPos:Add(vOPos[cvX] * stSpawn.F)
+  stSpawn.SPos:Add(vOPos[cvY] * stSpawn.R)
+  stSpawn.SPos:Add(vOPos[cvZ] * stSpawn.U)
   return stSpawn
 end
 
