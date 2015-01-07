@@ -321,19 +321,20 @@ local function SetupPiece(eBase,ePiece,vPos,vNorm,nID,nNoCollid,nForceLim,nFreez
   if(not (pyBase and pyBase:IsValid())) then return true end
   if(ConID == 7) then
     -- http://wiki.garrysmod.com/page/constraint/AdvBallsocket
+    local Min,Mid,Max = 0.01,50,180
     local LPos1 = pyBase:GetMassCenter()
     local LPos2 = pyPiece:GetMassCenter()
-    local C = ConstrInfo.Make(ePiece,eBase,0,0,LPos1,LPos2,ForceLim,0,-180,-0.01,-0.01,180,0.01,0.01,0,0,0,0,NoCollid)
+    local C = ConstrInfo.Make(ePiece,eBase,0,0,LPos1,LPos2,ForceLim,0,-Max,-0.01,-0.01,Max,0.01,0.01,0,0,0,0,NoCollid)
     return HookConstraintsOnRemove(ConID,eBase,ePiece,{C},1)
   elseif(ConID == 8) then
     local LPos1 = pyBase:GetMassCenter()
     local LPos2 = pyPiece:GetMassCenter()
-		local C = ConstrInfo.Make(ePiece,eBase,0,0,LPos1,LPos2,ForceLim,0,-0.01,-180,-0.01,0.01,180,0.01,0,0,0,0,NoCollid)
+		local C = ConstrInfo.Make(ePiece,eBase,0,0,LPos1,LPos2,ForceLim,0,-0.01,-Max,-0.01,0.01,Max,0.01,0,0,0,0,NoCollid)
     return HookConstraintsOnRemove(ConID,eBase,ePiece,{C},1)
   elseif(ConID == 9) then
     local LPos1 = pyBase:GetMassCenter()
     local LPos2 = pyPiece:GetMassCenter()
-		local C = ConstrInfo.Make(ePiece,eBase,0,0,LPos1,LPos2,ForceLim,0,-0.01,-0.01,-180,0.01,0.01,180,0,0,0,0,NoCollid)
+		local C = ConstrInfo.Make(ePiece,eBase,0,0,LPos1,LPos2,ForceLim,0,-0.01,-0.01,-Max,0.01,0.01,Max,0,0,0,0,NoCollid)
     return HookConstraintsOnRemove(ConID,eBase,ePiece,{C},1)
   end
   return true --Wrong "ConID"
