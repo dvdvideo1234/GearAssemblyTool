@@ -37,39 +37,7 @@ gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/mechanics/gears2/bevel
 gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/mechanics/gears2/bevel_48t1.mdl", "PHX Bevel", "#", 45, "46.7, 0, 1.3", "", "-0.012435931712389,-0.012925148941576,-0.73237001895905"})
 gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/mechanics/gears2/bevel_60t1.mdl", "PHX Bevel", "#", 45, "58.6, 0, 1.3", "", "-9.5774739747867e-005,0.0057542459107935,-0.7312148809433"})
 
-TOOL.Category   = "Construction"   -- Name of the category
-TOOL.Name       = "#Gear Assembly" -- Name to display
-TOOL.Command    = nil              -- Command on click (nil for default)
-TOOL.ConfigName = ""               -- Config file name (nil for default)
-
-TOOL.ClientConVar = {
-  [ "mass"      ] = "25000",
-  [ "model"     ] = "models/props_phx/trains/tracks/track_1x.mdl",
-  [ "nextx"     ] = "0",
-  [ "nexty"     ] = "0",
-  [ "nextz"     ] = "0",
-  [ "count"     ] = "1",
-  [ "contyp"    ] = "1",
-  [ "stmode"    ] = "1",
-  [ "freeze"    ] = "0",
-  [ "advise"    ] = "1",
-  [ "igntyp"    ] = "0",
-  [ "rotpiv"    ] = "0",
-  [ "nextpic"   ] = "0",
-  [ "nextyaw"   ] = "0",
-  [ "nextrol"   ] = "0",
-  [ "enghost"   ] = "0",
-  [ "addinfo"   ] = "0",
-  [ "debugen"   ] = "0",
-  [ "maxlogs"   ] = "10000",
-  [ "logfile"   ] = "gearasmlib_log",
-  [ "bgrpids"   ] = "",
-  [ "exportdb"  ] = "0",
-  [ "maxstatts" ] = "3",
-  [ "engravity" ] = "1"
-}
-
------------------ TOOL Parameters ----------------
+----------------- TOOL Global Parameters ----------------
 
 --- Toolgun Background texture ID reference
 local txToolgunBackground
@@ -93,13 +61,14 @@ local stStackMode = {
 }
 
 local stConstraintType = {
-  ["MAX"] = 6,
+  ["MAX"] = 7,
   [1] = {Name = "Free Spawn", Make = nil},
-  [2] = {Name = "WeldGround", Make = nil},
+  [2] = {Name = "No PhysGun", Make = nil},
   [3] = {Name = "Weld Piece", Make = constraint.Weld},
   [4] = {Name = "Axis Piece", Make = constraint.Axis},
-  [5] = {Name = "BallSocket(HM)", Make = constraint.Ballsocket},
-  [6] = {Name = "BallSocket(TM)", Make = constraint.Ballsocket}
+  [5] = {Name = "BallSocket-HM", Make = constraint.Ballsocket},
+  [6] = {Name = "BallSocket-TM", Make = constraint.Ballsocket},
+  [7] = {Name = "Link Rotation", Make = constraint.AdvBallsocket}
 }
 
 --- Because Vec[1] is actually faster than Vec.X
@@ -156,7 +125,7 @@ local file              = file
 if(CLIENT)then
   language.Add( "Tool.gearassembly.name", "Gear Assembly" )
   language.Add( "Tool.gearassembly.desc", "Assembles gears to mesh together" )
-  language.Add( "Tool.gearassembly.0", "Left click to stack, Right to change mode, Reload to remove a piece" )
+  language.Add( "Tool.gearassembly.0", "Left click to spawn/stack, Right to change mode, Reload to remove a piece" )
   language.Add( "Cleanup.gearassembly", "Gear Assembly" )
   language.Add( "Cleaned.gearassemblys", "Cleaned up all Pieces" )
 
@@ -174,20 +143,55 @@ if(CLIENT)then
   txToolgunBackground = surface.GetTextureID( "vgui/white" )
 end
 
+TOOL.Category   = "Construction"            -- Name of the category
+TOOL.Name       = "#Tool.gearassembly.name" -- Name to display
+TOOL.Command    = nil                       -- Command on click (nil for default)
+TOOL.ConfigName = nil                       -- Config file name (nil for default)
+TOOL.AddToMenu  = true
+
+TOOL.ClientConVar = {
+  [ "mass"      ] = "25000",
+  [ "model"     ] = "models/props_phx/trains/tracks/track_1x.mdl",
+  [ "nextx"     ] = "0",
+  [ "nexty"     ] = "0",
+  [ "nextz"     ] = "0",
+  [ "count"     ] = "1",
+  [ "contyp"    ] = "1",
+  [ "stmode"    ] = "1",
+  [ "freeze"    ] = "0",
+  [ "advise"    ] = "1",
+  [ "igntyp"    ] = "0",
+  [ "rotpiv"    ] = "0",
+  [ "nextpic"   ] = "0",
+  [ "nextyaw"   ] = "0",
+  [ "nextrol"   ] = "0",
+  [ "enghost"   ] = "0",
+  [ "addinfo"   ] = "0",
+  [ "debugen"   ] = "0",
+  [ "maxlogs"   ] = "10000",
+  [ "logfile"   ] = "gearasmlib_log",
+  [ "bgrpids"   ] = "",
+  [ "exportdb"  ] = "0",
+  [ "maxstatts" ] = "3",
+  [ "engravity" ] = "1"
+  [ "nocollide" ] = "0"
+  [ "forcelim"  ] = "1"
+}
+
 if(SERVER)then
   cleanup.Register("GEARASSEMBLYs")
 end
 
-local function LoadDupePieceWeldGround(Ply,oEnt,tData)
+local function LoadDupePieceNoPhysgun(Ply,oEnt,tData)
   if tData.NoPhysgun then
     oEnt:SetMoveType(MOVETYPE_NONE)
     oEnt:SetUnFreezable(true)
     oEnt.PhysgunDisabled = true
-    duplicator.StoreEntityModifier(oEnt,"gearassembly_weldgnd",{NoPhysgun = true })
+    duplicator.StoreEntityModifier(oEnt,"gearassembly_nophysgun",{NoPhysgun = true })
   end
 end
 
-duplicator.RegisterEntityModifier( "gearassembly_weldgnd", LoadDupePieceWeldGround )
+duplicator.RegisterEntityModifier( "gearassembly_nophysgun", LoadDupePieceNoPhysgun )
 
 local function eMakePiece(sModel,vPos,aAng,nMass,sBgrpIDs)
   -- You never know .. ^_^
@@ -222,23 +226,7 @@ local function eMakePiece(sModel,vPos,aAng,nMass,sBgrpIDs)
   return nil
 end
 
-local function SetupPiece(ePiece,nFr,nG)
-  --- Bordered with UNDO functions !!!
-  if(ePiece and ePiece:IsValid()) then
-    local pyPiece = ePiece:GetPhysicsObject()
-    if(pyPiece and pyPiece:IsValid()) then
-      if(nFr and nFr == 0) then
-        pyPiece:EnableMotion(true)
-      end
-      if(not (nG and nG ~= 0)) then
-        construct.SetPhysProp(nil,ePiece,0,pyPiece,{GravityToggle = false})
-      end
-      construct.SetPhysProp(nil,ePiece,0,pyPiece,{Material = "gmod_ice"})
-    end
-  end
-end
-
-function PrintModifOffsetMC(ePiece,stSpawn)
+local function PrintModifOffsetMC(ePiece,stSpawn)
   if(not (ePiece and stSpawn)) then print("N/A") end
   local MC = gearasmlib.GetMCWorld(ePiece,stSpawn.HRec.M.U)
   local OffW = stSpawn.OPos - MC
@@ -249,57 +237,91 @@ function PrintModifOffsetMC(ePiece,stSpawn)
         print(OffW)
 end
 
-function ConstraintMaster(stTrace,ePiece,nID,nNoCollid,nForceLim)
-  local ConstID = nID or 1
-  if(not stConstraintType[ConstID]) then return false end
-  if(not stTrace) then return false end
+-- Returns Error Trigger
+local function AddConstraints(nID,oBas,oEnt,arCTable,nMax)
+  if(not (arCTable and nMax)) then return true end
+  if(nMax < 1) then return true end
+  local Ind = 1
+  while(Ind <= nMax) do
+    if(not arCTable[Ind]) then return true end
+    oEnt:DeleteOnRemove(arCTable[Ind])
+    oBas:DeleteOnRemove(arCTable[Ind])
+    Ind = Ind + 1
+  end
+  print("AddConstraint: Processed "..(Ind-1).." of "..nMax..".")
+  return false
+end
+
+-- Returns Error Trigger
+local function SetupPiece(eBase,ePiece,vPos,vNorm,nID,nNoCollid,nForceLim,nFreeze,nGrav)
+  local ConstID = tonumber(nID) or 1
+  if(not stConstraintType[ConstID]) then return true end
   local ConstrInfo = stConstraintType[ConstID]
   -- Check for "Free Spawn" ( No constraints ) , coz nothing to be done after it.
-  if(nID == 1) then return true end
-  local ePiece = stTrace.Entity
-  if(not (ePiece and ePiece:IsValid())) then return false end
-  if(nID == 2) then
+  if(ConstID == 1) then return true end
+  if(not (ePiece and ePiece:IsValid())) then return true end
+  if(ConstID == 2) then
     -- Weld Ground is my custom child ...
     ePiece:SetUnFreezable(true)
     ePiece.PhysgunDisabled = true
-    duplicator.StoreEntityModifier(ePiece,"gearassembly_weldgnd",{NoPhysgun = true})
-    return true -- It is not actual constraint, but only a state.
+    duplicator.StoreEntityModifier(ePiece,"gearassembly_nophysgun",{NoPhysgun = true})
+    return false -- It is not actual constraint, but only a state.
   end
-  if(not (eBase and eBase:IsValid())) then return false end
-  local Con
+  if(not (eBase and eBase:IsValid())) then return true end
+  if(gearasmlib.IsOther(eBase)) then return true end
   local NoCollid = nNoCollid or 0
   local ForceLim = nForceLim or 0
-  if(nID == 3) then
+  if(ConstID == 3) then
     -- http://wiki.garrysmod.com/page/constraint/Weld
-    Con = ConstrInfo.Make(ePiece,eBase,0,0,ForceLim,(NoCollid ~= 0),false )
-  elseif(nID == 4 and stTrace.HitNormal) then
+    local C = ConstrInfo.Make(ePiece,eBase,0,0,ForceLim,(NoCollid ~= 0),false )
+    return AddConstraints(ConstID,eBase,ePiece,{C},1)
+  end
+  local pyPiece = ePiece:GetPhysicsObject()
+  if(not (pyPiece and pyPiece:IsValid())) then return true end
+  local Freeze = nFreeze or 0
+  local Grav   = nGrav   or 0
+  construct.SetPhysProp(nil,ePiece,0,pyPiece,{Material = "gmod_ice"})
+  if(nFreeze and Freeze == 0) then
+    pyPiece:EnableMotion(true)
+  end
+  if(not (Grav and nG ~= 0)) then
+    construct.SetPhysProp(nil,ePiece,0,pyPiece,{GravityToggle = false})
+  end
+  if(ConstID == 4 and vNorm) then
     -- http://wiki.garrysmod.com/page/constraint/Axis
-    local pyPiece = ePiece:GetPhysicsObject()
-    if(not (pyPiece and pyPiece:IsValid())) then return false end
     local LPos1 = pyPiece:GetMassCenter()
     local LPos2 = ePiece:LocalToWorld(LPos1)
-          LPos2:Add(stTrace.HitNormal)
+          LPos2:Add(vNorm)
           LPos2:Set(eBase:WorldToLocal(LPos2))       
-    Con = ConstrInfo.Make(ePiece,eBase,0,0,
-                          LPos1,LPos2,
-                          ForceLim,0,0,NoCollid)
-  elseif(nID == 5) then
+    local C = ConstrInfo.Make(ePiece,eBase,0,0,
+                              LPos1,LPos2,
+                              ForceLim,0,0,NoCollid)
+    return AddConstraints(ConstID,eBase,ePiece,{C},1)
+  elseif(ConstID == 5) then
     -- http://wiki.garrysmod.com/page/constraint/Ballsocket ( HD )
     local pyPiece = ePiece:GetPhysicsObject()
-    if(not (pyPiece and pyPiece:IsValid())) then return false end
-    Con = ConstrInfo.Make(eBase,ePiece,0,0,pyPiece:GetMassCenter(),ForceLim,0,NoCollid)
-  elseif(nID == 6 and stTrace.HitPos) then
+    if(not (pyPiece and pyPiece:IsValid())) then return true end
+    local C = ConstrInfo.Make(eBase,ePiece,0,0,pyPiece:GetMassCenter(),ForceLim,0,NoCollid)
+    return AddConstraints(ConstID,eBase,ePiece,{C},1)
+  elseif(ConstID == 6 and vPos) then
     -- http://wiki.garrysmod.com/page/constraint/Ballsocket ( TR )
-    local vLPos2 = ePiece:WorldToLocal(stTrace.HitPos)
-    Con = ConstrInfo.Make(eBase,ePiece,0,0,vLPos2,ForceLim,0,NoCollid)
+    local vLPos2 = ePiece:WorldToLocal(vPos)
+    local C = ConstrInfo.Make(eBase,ePiece,0,0,vLPos2,ForceLim,0,NoCollid)
+    return AddConstraints(ConstID,eBase,ePiece,{C},1)
+  elseif(ConstID == 7) then
+    -- http://wiki.garrysmod.com/page/constraint/AdvBallsocket
+    local pyPiece = ePiece:GetPhysicsObject()
+    if(not (pyPiece and pyPiece:IsValid())) then return true end
+    local pyBase = ePiece:GetPhysicsObject()
+    if(not (pyBase and pyBase:IsValid())) then return true end
+    local LPos1 = pyBase:GetMassCenter()
+    local LPos2 = pyPiece:GetMassCenter()
+    local C1 = ConstrInfo.Make(pyBase,pyPiece,0,0,LPos1,LPos2,ForceLim, 0, 0, -180, -180, 0, 180, 180, 50, 0, 0, 1,NoCollid)
+		local C2 = ConstrInfo.Make(pyBase,pyPiece,0,0,LPos1,LPos2,ForceLim, 0, -180, 0, -180, 180, 0, 180, 0, 50, 0, 1,NoCollid)
+		local C3 = ConstrInfo.Make(pyBase,pyPiece,0,0,LPos1,LPos2,ForceLim, 0, -180, -180, 0, 180, 180, 0, 0, 0, 50, 1,NoCollid)
+		return AddConstraints(ConstID,eBase,ePiece,{C1,C2,C3},3)
   end
-  if(Con) then
-    -- Constraint removal is done by ENT:DeleteOnRemove()
-    print("ConstraintMaster: "..ConstrInfo.Name.." created !")
-    ePiece:DeleteOnRemove(Con)
-    return true
-  end
-  return false
+  return true
 end
 
 function TOOL:LeftClick( Trace )
@@ -307,12 +329,13 @@ function TOOL:LeftClick( Trace )
   if(not Trace) then return false end
   if(not Trace.Hit) then return false end
   local trEnt     = Trace.Entity
+  local eBase     = self:GetEnt(1) or trEnt
   local model     = self:GetClientInfo("model")
   local freeze    = self:GetClientNumber("freeze") or 0
   local igntyp    = self:GetClientNumber("igntyp") or 0
   local mass      = math.Clamp(self:GetClientNumber("mass"),1,50000)
-  local stmode    = gearasmlib.SelBorderVal(self:GetClientInfo("stmode"),stStackMode,"MAX")
-  local contyp    = gearasmlib.SelBorderVal(self:GetClientInfo("contyp"),stConstraintType,"MAX")  
+  local stmode    = gearasmlib.GetCorrectID(self:GetClientInfo("stmode"),stStackMode)
+  local contyp    = gearasmlib.GetCorrectID(self:GetClientInfo("contyp"),stConstraintType)  
   local nextpic   = math.Clamp(self:GetClientNumber("nextpic") or 0,-360,360)
   local nextyaw   = math.Clamp(self:GetClientNumber("nextyaw") or 0,-360,360)
   local nextrol   = math.Clamp(self:GetClientNumber("nextrol") or 0,-360,360)
@@ -324,7 +347,9 @@ function TOOL:LeftClick( Trace )
   local staatts   = math.Clamp(self:GetClientNumber("maxstaatts"),1,5)
   local bgrpids   = self:GetClientInfo("bgrpids") or ""
   local engravity = self:GetClientNumber("engravity") or 0
-  local ply       = self:GetOwner()
+  local nocollide = self:GetClientNumber("nocollide") or 0
+  local forcelim  = math.Clamp(self:GetClientNumber("forcelim") or 0,0,100000)
+  local ply       = self:GetOwner() 
   gearasmlib.PlyLoadKey(ply) 
   if(not gearasmlib.PlyLoadKey(ply,"SPEED")) then
     -- Direct Snapping
@@ -348,14 +373,14 @@ function TOOL:LeftClick( Trace )
       return false
     end
     undo.Create("Last Gear Assembly")
-    SetupPiece(ePiece,freeze,engravity)
     print("Constr ID: "..contyp)
-    ConstraintMaster(Trace,ePiece,contyp,0,0)
+    SetupPiece(eBase,ePiece,stSpawn.SPos,stSpawn.DAng:Up(),contyp,freeze,engravity)
     gearasmlib.EmitSoundPly(ply)
     undo.AddEntity(ePiece)
     undo.SetPlayer(ply)
     undo.SetCustomUndoText( "Undone Assembly ( Direct Snap )" )
     undo.Finish()
+    eBase = self:GetEnt(1)
     return true
   end
   -- Hit Prop
@@ -421,7 +446,7 @@ function TOOL:LeftClick( Trace )
           return true
         end
         ePieceN:SetAngles(stSpawn.SAng)
-        SetupPiece(ePieceN,freeze,engravity)
+        SetupPiece(eBase,ePiece,stSpawn.SPos,stSpawn.DAng:Up(),contyp,freeze,engravity)
         undo.AddEntity(ePieceN)
         if(stmode == 1) then
           stSpawn = gearasmlib.GetENTSpawn(ePieceN,rotpiv,model,igntyp,
@@ -500,7 +525,7 @@ function TOOL:LeftClick( Trace )
       end
       PrintModifOffsetMC(ePiece,stSpawn)
       undo.Create("Last Gear Assembly")
-      SetupPiece(ePiece,freeze,engravity)
+      SetupPiece(eBase,ePiece,stSpawn.SPos,stSpawn.DAng:Up(),contyp,freeze,engravity)
       gearasmlib.EmitSoundPly(ply)
       undo.AddEntity(ePiece)
       undo.SetPlayer(ply)
@@ -515,37 +540,39 @@ end
 function TOOL:RightClick( Trace )
   -- Change the tool mode
   if(CLIENT) then return true end
+  if(not Trace) then return nil end
   local ply = self:GetOwner()
-  if(not ply) then return false end
   gearasmlib.PlyLoadKey(ply)
   if(gearasmlib.PlyLoadKey(ply,"SPEED")) then
-    if(not Trace) then return nil end
     local trEnt = Trace.Entity
     if(Trace.HitWorld) then
-      -- begin Clear Stored Base
-      -- end
-      svEnt:SetRenderMode(RENDERMODE_TRANSALPHA)
-      svEnt:SetColor(Color(255,255,255,255))
-      gearasmlib.PrintNotify(ply,"Anchor RES: ["..svEnt:EntIndex().."] "..
-                  gearasmlib.GetModelFileName(svEnt:GetModel()),"GENERIC")
+      local svEnt = self:GetEnt(1)
+      if(svEnt) then
+        svEnt:SetRenderMode(RENDERMODE_TRANSALPHA)
+        svEnt:SetColor(Color(255,255,255,255))
+      end
+      gearasmlib.PrintNotify(ply,"Anchor: CLR !","GENERIC")
+      self:ClearObjects()
       return true
     elseif(trEnt and trEnt:IsValid())
+      local svEnt = self:GetEnt(1)
+      if(svEnt) then 
+        svEnt:SetRenderMode(RENDERMODE_TRANSALPHA)
+        svEnt:SetColor(Color(255,255,255,255))
+      end
       self:ClearObjects()
-      svEnt:SetRenderMode(RENDERMODE_TRANSALPHA)
-      svEnt:SetColor(Color(255,255,255,255))
-      -- end
       pyEnt = trEnt:GetPhysicsObject()
       if(not (pyEnt and pyEnt:IsValid())) then return false end
-      self:SetObject(1,trEnt,Trace.HitPos,pyEnt,Trace.PhysBone,Trace.HitNormal)
+      self:SetObject(1,trEnt,Trace.HitPos,pyEnt,Trace.PhysicsBone,Trace.HitNormal)
       trEnt:SetRenderMode(RENDERMODE_TRANSALPHA)
       trEnt:SetColor(Color(180,255,150,255))
-      gearasmlib.PrintNotify(ply,"Anchor SET: ["..trEnt:EntIndex().."] "..
+      gearasmlib.PrintNotify(ply,"Anchor: SET ["..trEnt:EntIndex().."] "..
                   gearasmlib.GetModelFileName(trEnt:GetModel()),"GENERIC")
       return true
     end
     return false
   end
-  local stmode = gearasmlib.SelBorderVal(self:GetClientInfo("stmode"),stStackMode,"MAX")
+  local stmode = gearasmlib.GetCorrectID(self:GetClientInfo("stmode"),stStackMode)
   stmode = stmode + 1
   if(stmode > stStackMode.Max) then stmode = 1 end
   if(stmode < 1) then stmode = stStackMode.Max end
@@ -618,6 +645,21 @@ local function DrawLineColor(PosS,PosE,stColor,w,h)
   surface.DrawLine(PosS.x,PosS.y,PosE.x,PosE.y)
 end
 
+local function DrawAdditionalInfo(stSpawn)
+  if(not stSpawn) then return end
+  local txPos = {x = 0, y = 0, w = 0, h = 0}
+  txPos.x = surface.ScreenWidth() / 2 + 10
+  txPos.y = surface.ScreenHeight()/ 2 + 10
+  surface.SetFont("Trebuchet18")
+  DrawTextRowColor(txPos,"Org POS: "..tostring(stSpawn.OPos),stDrawColors.Black)
+  DrawTextRowColor(txPos,"Org ANG: "..tostring(stSpawn.OAng))
+  DrawTextRowColor(txPos,"Dom ANG: "..tostring(stSpawn.DAng))
+  DrawTextRowColor(txPos,"Mod POS: "..tostring(stSpawn.MPos))
+  DrawTextRowColor(txPos,"Mod ANG: "..tostring(stSpawn.MAng))
+  DrawTextRowColor(txPos,"Spn POS: "..tostring(stSpawn.SPos))
+  DrawTextRowColor(txPos,"Spn ANG: "..tostring(stSpawn.SAng))
+end
+
 function TOOL:DrawHUD()
   if(SERVER) then return end
   local adv   = self:GetClientNumber("advise") or 0
@@ -636,7 +678,9 @@ function TOOL:DrawHUD()
     local nextyaw = math.Clamp(self:GetClientNumber("nextyaw") or 0,-360,360)
     local nextrol = math.Clamp(self:GetClientNumber("nextrol") or 0,-360,360)
     local rotpiv  = math.Clamp(self:GetClientNumber("rotpiv") or 0,-360,360)
-    gearasmlib.PlyLoadKey(ply)
+    local addinfo = self:GetClientNumber("addinfo") or 0
+    local RadScale = gearasmlib.GetViewRadius(ply,Trace.HitPos)
+    gearasmlib.PlyLoadKey(ply)    
     if(trEnt and trEnt:IsValid() and gearasmlib.PlyLoadKey(ply,"SPEED")) then
       if(gearasmlib.IsOther(trEnt)) then return end
       local igntyp  = self:GetClientNumber("igntyp") or 0
@@ -644,14 +688,12 @@ function TOOL:DrawHUD()
                                              Vector(nextx,nexty,nextz),
                                              Angle(nextpic,nextyaw,nextrol))
       if(not stSpawn) then return end
-      local addinfo = self:GetClientNumber("addinfo") or 0
       stSpawn.F:Mul(15)
       stSpawn.F:Add(stSpawn.OPos)
       stSpawn.R:Mul(15)
       stSpawn.R:Add(stSpawn.OPos)
       stSpawn.U:Mul(15)
       stSpawn.U:Add(stSpawn.OPos)
-      local RadScale = math.Clamp(800 / (Trace.HitPos - ply:GetPos()):Length(),1,100)
       local Op = stSpawn.OPos:ToScreen()
       local Sp = stSpawn.SPos:ToScreen()
       local Du = (stSpawn.SPos + 15 * stSpawn.DAng:Up()):ToScreen()
@@ -670,24 +712,16 @@ function TOOL:DrawHUD()
       surface.DrawCircle( Tp.x, Tp.y, RadScale, stDrawColors.Green)
       -- Draw Spawn
       DrawLineColor(Op,Sp,stDrawColors.Magen,scrW,scrH)
-      DrawLineColor(Sp,Du,stDrawColors.Cyan,scrW,scrH)
+      DrawLineColor(Sp,Du,stDrawColors.Cyan ,scrW,scrH)
       surface.DrawCircle( Sp.x, Sp.y, RadScale, stDrawColors.Magen)
       if(addinfo ~= 0) then
-        local txPos = {x = 0, y = 0, w = 0, h = 0}
-        txPos.x = surface.ScreenWidth() / 2 + 10
-        txPos.y = surface.ScreenHeight()/ 2 + 10
-        surface.SetFont("Trebuchet18")
-        DrawTextRowColor(txPos,"Mod POS: "..tostring(stSpawn.MPos),stDrawColors.Black)
-        DrawTextRowColor(txPos,"Mod ANG: "..tostring(stSpawn.MAng))
-        DrawTextRowColor(txPos,"Spn POS: "..tostring(stSpawn.SPos))
-        DrawTextRowColor(txPos,"Spn ANG: "..tostring(stSpawn.SAng))
+        DrawAdditionalInfo(stSpawn)
       end
     else
       local stSpawn  = gearasmlib.GetNORSpawn(Trace,model,Vector(nextx,nexty,nextz),
                                               Angle(nextpic,nextyaw,nextrol))
       if(not stSpawn) then return false end
       local addinfo = self:GetClientNumber("addinfo") or 0
-      local RadScale = math.Clamp(800 / (Trace.HitPos - ply:GetPos()):Length(),1,100)
       local Os = stSpawn.SPos:ToScreen()
       local Xs = (stSpawn.SPos + 15 * stSpawn.F):ToScreen()
       local Ys = (stSpawn.SPos + 15 * stSpawn.R):ToScreen()
@@ -697,15 +731,7 @@ function TOOL:DrawHUD()
       DrawLineColor(Os,Zs,stDrawColors.Blue,scrW,scrH)
       surface.DrawCircle( Os.x, Os.y, RadScale, stDrawColors.Yello)
       if(addinfo ~= 0) then
-        local txPos = {x = 0, y = 0, w = 0, h = 0}
-        txPos.x = surface.ScreenWidth() / 2 + 10
-        txPos.y = surface.ScreenHeight()/ 2 + 10
-        surface.SetFont("Trebuchet18")
-        DrawTextRowColor(txPos,"Origin : " ..tostring(stSpawn.OPos),stDrawColors.Black)
-        DrawTextRowColor(txPos,"Mod POS: " ..tostring(stSpawn.MPos))
-        DrawTextRowColor(txPos,"Mod ANG: " ..tostring(stSpawn.MAng))
-        DrawTextRowColor(txPos,"Spn POS: " ..tostring(stSpawn.SPos))
-        DrawTextRowColor(txPos,"Spn ANG: " ..tostring(stSpawn.SAng))
+        DrawAdditionalInfo(stSpawn)
       end
     end
   end
@@ -736,7 +762,7 @@ function TOOL:DrawToolScreen(w, h)
   end
   DrawTextRowColor(txPos,"Holds Model: Valid")
   local NoAV  = "N/A"
-  local stmode  = gearasmlib.SelBorderVal(self:GetClientInfo("stmode"),stStackMode,"MAX")
+  local stmode  = gearasmlib.GetCorrectID(self:GetClientInfo("stmode"),stStackMode)
   local trEnt = Trace.Entity
   local trOrig, trModel, trMesh, trRad
   local X = 0
@@ -776,8 +802,8 @@ function TOOL:DrawToolScreen(w, h)
   DrawTextRowColor(txPos,"TS: "..(trOrig or NoAV) .. ">" .. (trMesh or NoAV))
   DrawTextRowColor(txPos,"HM: "..(gearasmlib.GetModelFileName(model) or NoAV),stDrawColors.Magen)
   DrawTextRowColor(txPos,"HS: "..(hdOrig or NoAV) .. ">" .. tostring(gearasmlib.RoundValue(hdRec.Mesh,0.01) or NoAV))
-  DrawTextRowColor(txPos,"Rt: "..gearasmlib.RoundValue(Ratio,0.01)..">"..(trRad or NoAV).."/"..hdRad,stDrawColors.Yello)
-  DrawTextRowColor(txPos,"Sm: "..stStackMode[stmode],stDrawColors.Red)
+  DrawTextRowColor(txPos,"Ratio: "..gearasmlib.RoundValue(Ratio,0.01).." > "..(trRad or NoAV).."/"..hdRad,stDrawColors.Yello)
+  DrawTextRowColor(txPos,"Stack mode: "..stStackMode[stmode],stDrawColors.Red)
   local sTime = tostring(os.date())
   DrawTextRowColor(txPos,string.sub(sTime,1,8),stDrawColors.White)
   DrawTextRowColor(txPos,string.sub(sTime,10,17))
@@ -809,6 +835,8 @@ function TOOL.BuildCPanel( CPanel )
   Combo["CVars"][13]  = "gearassembly_nextz"
   Combo["CVars"][14]  = "gearassembly_enghost"
   Combo["CVars"][15]  = "gearassembly_engravity"
+  Combo["CVars"][14]  = "gearassembly_nocollide"
+  Combo["CVars"][15]  = "gearassembly_forcelim"
 
   CPanel:AddControl("ComboBox",Combo)
   CurY = CurY + 25
@@ -977,13 +1005,20 @@ function TOOL.BuildCPanel( CPanel )
             Min     = -100,
             Max     =  100,
             Command = "gearassembly_nextz"})
-
+            
+  CPanel:AddControl("Slider", {
+            Label   = "Force Limit: ",
+            Type    = "Float",
+            Min     = -100,
+            Max     =  100,
+            Command = "gearassembly_forcelim"})
+            
   CPanel:AddControl("Checkbox", {
             Label   = "Enable pieces gravity",
             Command = "gearassembly_engravity"})
 
   CPanel:AddControl("Checkbox", {
-            Label   = "NoCollide new pieces",
+            Label   = "NoCollide new pieces to the anchor",
             Command = "gearassembly_nocollide"})
 
   CPanel:AddControl("Checkbox", {

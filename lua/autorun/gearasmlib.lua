@@ -194,7 +194,7 @@ function LOGPath(sPath)
 end
 
 function IsOther(oEnt)
-  if(not oEnt) then return true end
+  if(not oEnt)         then return true end
   if(oEnt:IsRagdoll()) then return true end
   if(oEnt:IsVehicle()) then return true end
   if(oEnt:IsPlayer())  then return true end
@@ -252,12 +252,16 @@ function RoundValue(exact, frac)
     return frac * (q + (f > 0.5 and 1 or 0))
 end
 
-function SelBorderVal(sValue,stSettings,anyMaxKey)
-  if(not (sValue and anyMaxKey)) then return 1 end
+function GetViewRadius(plPly,vPos)
+  if(not (vPos and plPly)) then return 0 end
+  return math.Clamp(500 / (vPos - plPly:GetPos()):Length(),1,100)
+end
+
+function GetCorrectID(sValue,stSettings)
   if(not tonumber(sValue)) then return 1 end
   Value = tonumber(sValue)
-  if(Value > stSettings[anyMaxKey]) then Value = 1 end
-  if(Value < 1) then Value = stSettings[anyMaxKey] end
+  if(Value > stSettings["MAX"]) then Value = 1 end
+  if(Value < 1) then Value = stSettings["MAX"] end
   return Value
 end
 
@@ -637,7 +641,14 @@ function PlyLoadKey(pPly, sKey)
   local Cache = LibCache["PLAYERKEYDOWN"]
   if(not pPly) then
     for k,_ in pairs(Cache) do
-      Cache[k] = false
+      local sTyp = type(Cache[k])
+      if(sTyp = "boolean") then
+        Cache[k] = false
+      elseif(sTyp = "number") then
+        Cache[k] = 0
+      elseif(sTyp = "string") then
+        Cache[k] = ""
+      end
     end
     return nil
   end
@@ -1668,8 +1679,8 @@ function GetENTSpawn(trEnt,nRotAng,hdModel,enIgnTyp,ucsPos,ucsAng)
 	stSpawn.HRec = hdRec
 	stSpawn.TRec = trRec
   ----- Everything is OK !!!!
-  stSpawn.DAng:Set(trAng)
-  stSpawn.DAng:RotateAroundAxis(stSpawn.DAng:Right(),trRec.Mesh+hdRec.Mesh+ucsAng[caP])
+  stSpawn.DAng:Set(stSpawn.OAng)
+  stSpawn.DAng:RotateAroundAxis(stSpawn.DAng:Right(),hdRec.Mesh)
 	--Get Hold model stuff
   stSpawn.MAng:Set(-hdRec.A.U)
 	stSpawn.MAng:RotateAroundAxis(stSpawn.MAng:Up(),180)
