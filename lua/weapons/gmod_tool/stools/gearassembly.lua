@@ -42,6 +42,9 @@ gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/mechanics/gears2/bevel
 --- Toolgun Background texture ID reference
 local txToolgunBackground
 
+--- Anchor Name
+local sEntAnchor = ""
+
 --- Render Base Colors
 local stDrawColors = {
   Red   = Color(255, 0 , 0 ,255),
@@ -61,14 +64,17 @@ local stStackMode = {
 }
 
 local stConstraintType = {
-  ["MAX"] = 7,
-  [1] = {Name = "Free Spawn", Make = nil},
-  [2] = {Name = "No PhysGun", Make = nil},
-  [3] = {Name = "Weld Piece", Make = constraint.Weld},
-  [4] = {Name = "Axis Piece", Make = constraint.Axis},
-  [5] = {Name = "BallSocket-HM", Make = constraint.Ballsocket},
-  [6] = {Name = "BallSocket-TM", Make = constraint.Ballsocket},
-  [7] = {Name = "Link Rotation", Make = constraint.AdvBallsocket}
+  ["MAX"] = 9,
+  [1]  = {Name = "Free Spawn"  , Make = nil},
+  [2]  = {Name = "No PhysGun"  , Make = nil},
+  [3]  = {Name = "Weld Piece"  , Make = constraint.Weld},
+  [4]  = {Name = "Axis Piece"  , Make = constraint.Axis},
+  [5]  = {Name = "Ball-Sock HM", Make = constraint.Ballsocket},
+  [6]  = {Name = "Ball-Sock TM", Make = constraint.Ballsocket},
+  [7]  = {Name = "Lock X Spin" , Make = constraint.AdvBallsocket},
+  [8]  = {Name = "Lock Y Spin" , Make = constraint.AdvBallsocket},
+  [9]  = {Name = "Lock Z Spin" , Make = constraint.AdvBallsocket},
+  [10] = {Name = "Parent Piece", Make = nil}
 }
 
 --- Because Vec[1] is actually faster than Vec.X
@@ -237,8 +243,8 @@ local function PrintModifOffsetMC(ePiece,stSpawn)
         print(OffW)
 end
 
--- Returns Error Trigger
-local function AddConstraints(nID,oBas,oEnt,arCTable,nMax)
+-- Returns Error Trigger ( False = No Error)
+local function HookConstraintsOnRemove(nID,oBas,oEnt,arCTable,nMax)
   if(not (arCTable and nMax)) then return true end
   if(nMax < 1) then return true end
   local Ind = 1
@@ -252,15 +258,16 @@ local function AddConstraints(nID,oBas,oEnt,arCTable,nMax)
   return false
 end
 
--- Returns Error Trigger
+-- Returns Error Trigger ( False = No Error)
 local function SetupPiece(eBase,ePiece,vPos,vNorm,nID,nNoCollid,nForceLim,nFreeze,nGrav)
-  local ConstID = tonumber(nID) or 1
-  if(not stConstraintType[ConstID]) then return true end
-  local ConstrInfo = stConstraintType[ConstID]
+  local ConID = tonumber(nID) or 1
+  if(not stConstraintType[ConID]) then return true end
+  local ConstrInfo = stConstraintType[ConID]
   -- Check for "Free Spawn" ( No constraints ) , coz nothing to be done after it.
-  if(ConstID == 1) then return true end
+  if(ConID == 1) then return false end
   if(not (ePiece and ePiece:IsValid())) then return true end
-  if(ConstID == 2) then
+  if(gearasmlib.IsOther(ePiece)) then return true end
+  if(ConID == 2) then
     -- Weld Ground is my custom child ...
     ePiece:SetUnFreezable(true)
     ePiece.PhysgunDisabled = true
@@ -271,10 +278,13 @@ local function SetupPiece(eBase,ePiece,vPos,vNorm,nID,nNoCollid,nForceLim,nFreez
   if(gearasmlib.IsOther(eBase)) then return true end
   local NoCollid = nNoCollid or 0
   local ForceLim = nForceLim or 0
-  if(ConstID == 3) then
+  if(ConID == 3) then
     -- http://wiki.garrysmod.com/page/constraint/Weld
-    local C = ConstrInfo.Make(ePiece,eBase,0,0,ForceLim,(NoCollid ~= 0),false )
-    return AddConstraints(ConstID,eBase,ePiece,{C},1)
+    local C = ConstrInfo.Make(ePiece,eBase,0,0,ForceLim,(NoCollid ~= 0),false)
+    return HookConstraintsOnRemove(ConID,eBase,ePiece,{C},1)
+  elseif(ConID == 10) then 
+    -- http://wiki.garrysmod.com/page/Entity/SetParent
+    ePiece:SetParent(eBase)
   end
   local pyPiece = ePiece:GetPhysicsObject()
   if(not (pyPiece and pyPiece:IsValid())) then return true end
@@ -287,7 +297,7 @@ local function SetupPiece(eBase,ePiece,vPos,vNorm,nID,nNoCollid,nForceLim,nFreez
   if(not (Grav and nG ~= 0)) then
     construct.SetPhysProp(nil,ePiece,0,pyPiece,{GravityToggle = false})
   end
-  if(ConstID == 4 and vNorm) then
+  if(ConID == 4 and vNorm) then
     -- http://wiki.garrysmod.com/page/constraint/Axis
     local LPos1 = pyPiece:GetMassCenter()
     local LPos2 = ePiece:LocalToWorld(LPos1)
@@ -296,32 +306,37 @@ local function SetupPiece(eBase,ePiece,vPos,vNorm,nID,nNoCollid,nForceLim,nFreez
     local C = ConstrInfo.Make(ePiece,eBase,0,0,
                               LPos1,LPos2,
                               ForceLim,0,0,NoCollid)
-    return AddConstraints(ConstID,eBase,ePiece,{C},1)
-  elseif(ConstID == 5) then
+    return HookConstraintsOnRemove(ConID,eBase,ePiece,{C},1)
+  elseif(ConID == 5) then
     -- http://wiki.garrysmod.com/page/constraint/Ballsocket ( HD )
-    local pyPiece = ePiece:GetPhysicsObject()
-    if(not (pyPiece and pyPiece:IsValid())) then return true end
     local C = ConstrInfo.Make(eBase,ePiece,0,0,pyPiece:GetMassCenter(),ForceLim,0,NoCollid)
-    return AddConstraints(ConstID,eBase,ePiece,{C},1)
-  elseif(ConstID == 6 and vPos) then
+    return HookConstraintsOnRemove(ConID,eBase,ePiece,{C},1)
+  elseif(ConID == 6 and vPos) then
     -- http://wiki.garrysmod.com/page/constraint/Ballsocket ( TR )
     local vLPos2 = ePiece:WorldToLocal(vPos)
     local C = ConstrInfo.Make(eBase,ePiece,0,0,vLPos2,ForceLim,0,NoCollid)
-    return AddConstraints(ConstID,eBase,ePiece,{C},1)
-  elseif(ConstID == 7) then
+    return HookConstraintsOnRemove(ConID,eBase,ePiece,{C},1)
+  end
+  local pyBase = eBase:GetPhysicsObject()
+  if(not (pyBase and pyBase:IsValid())) then return true end
+  if(ConID == 7) then
     -- http://wiki.garrysmod.com/page/constraint/AdvBallsocket
-    local pyPiece = ePiece:GetPhysicsObject()
-    if(not (pyPiece and pyPiece:IsValid())) then return true end
-    local pyBase = ePiece:GetPhysicsObject()
-    if(not (pyBase and pyBase:IsValid())) then return true end
     local LPos1 = pyBase:GetMassCenter()
     local LPos2 = pyPiece:GetMassCenter()
-    local C1 = ConstrInfo.Make(pyBase,pyPiece,0,0,LPos1,LPos2,ForceLim, 0, 0, -180, -180, 0, 180, 180, 50, 0, 0, 1,NoCollid)
-		local C2 = ConstrInfo.Make(pyBase,pyPiece,0,0,LPos1,LPos2,ForceLim, 0, -180, 0, -180, 180, 0, 180, 0, 50, 0, 1,NoCollid)
-		local C3 = ConstrInfo.Make(pyBase,pyPiece,0,0,LPos1,LPos2,ForceLim, 0, -180, -180, 0, 180, 180, 0, 0, 0, 50, 1,NoCollid)
-		return AddConstraints(ConstID,eBase,ePiece,{C1,C2,C3},3)
+    local C = ConstrInfo.Make(ePiece,eBase,0,0,LPos1,LPos2,ForceLim,0,-180,-0.01,-0.01,180,0.01,0.01,0,0,0,0,NoCollid)
+    return HookConstraintsOnRemove(ConID,eBase,ePiece,{C},1)
+  elseif(ConID == 8) then
+    local LPos1 = pyBase:GetMassCenter()
+    local LPos2 = pyPiece:GetMassCenter()
+		local C = ConstrInfo.Make(ePiece,eBase,0,0,LPos1,LPos2,ForceLim,0,-0.01,-180,-0.01,0.01,180,0.01,0,0,0,0,NoCollid)
+    return HookConstraintsOnRemove(ConID,eBase,ePiece,{C},1)
+  elseif(ConID == 9) then
+    local LPos1 = pyBase:GetMassCenter()
+    local LPos2 = pyPiece:GetMassCenter()
+		local C = ConstrInfo.Make(ePiece,eBase,0,0,LPos1,LPos2,ForceLim,0,-0.01,-0.01,-180,0.01,0.01,180,0,0,0,0,NoCollid)
+    return HookConstraintsOnRemove(ConID,eBase,ePiece,{C},1)
   end
-  return true
+  return true --Wrong "ConID"
 end
 
 function TOOL:LeftClick( Trace )
@@ -552,6 +567,7 @@ function TOOL:RightClick( Trace )
         svEnt:SetColor(Color(255,255,255,255))
       end
       gearasmlib.PrintNotify(ply,"Anchor: CLR !","GENERIC")
+      sEntAnchor = ""
       self:ClearObjects()
       return true
     elseif(trEnt and trEnt:IsValid())
@@ -566,8 +582,8 @@ function TOOL:RightClick( Trace )
       self:SetObject(1,trEnt,Trace.HitPos,pyEnt,Trace.PhysicsBone,Trace.HitNormal)
       trEnt:SetRenderMode(RENDERMODE_TRANSALPHA)
       trEnt:SetColor(Color(180,255,150,255))
-      gearasmlib.PrintNotify(ply,"Anchor: SET ["..trEnt:EntIndex().."] "..
-                  gearasmlib.GetModelFileName(trEnt:GetModel()),"GENERIC")
+      sEntAnchor = "["..trEnt:EntIndex().."] "..gearasmlib.GetModelFileName(trEnt:GetModel())
+      gearasmlib.PrintNotify(ply,"Anchor: SET "..sEntAnchor,"GENERIC")
       return true
     end
     return false
@@ -803,6 +819,7 @@ function TOOL:DrawToolScreen(w, h)
   DrawTextRowColor(txPos,"HM: "..(gearasmlib.GetModelFileName(model) or NoAV),stDrawColors.Magen)
   DrawTextRowColor(txPos,"HS: "..(hdOrig or NoAV) .. ">" .. tostring(gearasmlib.RoundValue(hdRec.Mesh,0.01) or NoAV))
   DrawTextRowColor(txPos,"Ratio: "..gearasmlib.RoundValue(Ratio,0.01).." > "..(trRad or NoAV).."/"..hdRad,stDrawColors.Yello)
+  DrawTextRowColor(txPos,"Anchor: "..sEntAnchor,stDrawColors.Cyan)
   DrawTextRowColor(txPos,"Stack mode: "..stStackMode[stmode],stDrawColors.Red)
   local sTime = tostring(os.date())
   DrawTextRowColor(txPos,string.sub(sTime,1,8),stDrawColors.White)
