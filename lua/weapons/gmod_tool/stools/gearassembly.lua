@@ -344,7 +344,7 @@ function TOOL:LeftClick( Trace )
   if(not Trace) then return false end
   if(not Trace.Hit) then return false end
   local trEnt     = Trace.Entity
-  local eBase     = self:GetEnt(1) or trEnt
+  local eBase     = self:GetEnt(1)
   local model     = self:GetClientInfo("model")
   local freeze    = self:GetClientNumber("freeze") or 0
   local igntyp    = self:GetClientNumber("igntyp") or 0
@@ -368,6 +368,7 @@ function TOOL:LeftClick( Trace )
   gearasmlib.PlyLoadKey(ply) 
   if(not gearasmlib.PlyLoadKey(ply,"SPEED")) then
     -- Direct Snapping
+    if(not eBase) then eBase = trEnt end
     local ePiece = eMakePiece(model,Trace.HitPos,Angle(),mass,bgrpids)
     if(not ePiece) then return false end
     local vBBMin  = ePiece:OBBMins()
@@ -395,7 +396,6 @@ function TOOL:LeftClick( Trace )
     undo.SetPlayer(ply)
     undo.SetCustomUndoText( "Undone Assembly ( Direct Snap )" )
     undo.Finish()
-    eBase = self:GetEnt(1)
     return true
   end
   -- Hit Prop
