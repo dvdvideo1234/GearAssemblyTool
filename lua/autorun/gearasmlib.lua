@@ -259,7 +259,7 @@ end
 
 function GetCorrectID(sValue,stSettings)
   if(not tonumber(sValue)) then return 1 end
-  Value = tonumber(sValue)
+  local Value = tonumber(sValue)
   if(Value > stSettings["MAX"]) then Value = 1 end
   if(Value < 1) then Value = stSettings["MAX"] end
   return Value
