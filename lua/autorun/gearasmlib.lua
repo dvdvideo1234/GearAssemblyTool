@@ -632,21 +632,18 @@ function PlyLoadKey(pPly, sKey)
       ["ZOOM"]    = false,
       ["LEFT"]    = false,
       ["RIGHT"]   = false,
-      ["WALK"]    = false,
-      ["MWHEEL"]  = 0,
-      ["MPOSDX"]  = 0,
-      ["MPOXDY"]  = 0
+      ["WALK"]    = false
     }
   end
   local Cache = LibCache["PLAYERKEYDOWN"]
   if(not pPly) then
     for k,_ in pairs(Cache) do
       local sTyp = type(Cache[k])
-      if(sTyp = "boolean") then
+      if(sTyp == "boolean") then
         Cache[k] = false
-      elseif(sTyp = "number") then
+      elseif(sTyp == "number") then
         Cache[k] = 0
-      elseif(sTyp = "string") then
+      elseif(sTyp == "string") then
         Cache[k] = ""
       end
     end
@@ -655,29 +652,24 @@ function PlyLoadKey(pPly, sKey)
   if(sKey) then
     return Cache[tostring(sKey)]
   end
-  local Command = pPly:GetCurrentCommand()
-  if(not Command) then return nil end
-  Cache["ALTLFT"]  = Command:KeyDown(IN_ALT1      )
-  Cache["ALTRGH"]  = Command:KeyDown(IN_ALT2      )
-  Cache["ATTLFT"]  = Command:KeyDown(IN_ATTACK    )
-  Cache["ATTRGH"]  = Command:KeyDown(IN_ATTACK2   )
-  Cache["FORWARD"] = Command:KeyDown(IN_FORWARD   )
-  Cache["BACK"]    = Command:KeyDown(IN_BACK      )
-  Cache["MOVELFT"] = Command:KeyDown(IN_MOVELEFT  )
-  Cache["MOVERGH"] = Command:KeyDown(IN_MOVERIGHT )
-  Cache["RELOAD"]  = Command:KeyDown(IN_RELOAD    )
-  Cache["USE"]     = Command:KeyDown(IN_USE       )
-  Cache["DUCK"]    = Command:KeyDown(IN_DUCK      )
-  Cache["JUMP"]    = Command:KeyDown(IN_JUMP      )
-  Cache["SPEED"]   = Command:KeyDown(IN_SPEED     )
-  Cache["SCORE"]   = Command:KeyDown(IN_SCORE     )
-  Cache["ZOOM"]    = Command:KeyDown(IN_ZOOM      )
-  Cache["LEFT"]    = Command:KeyDown(IN_LEFT      )
-  Cache["RIGHT"]   = Command:KeyDown(IN_RIGHT     )
-  Cache["WALK"]    = Command:KeyDown(IN_WALK      )
-  Cache["MWHEEL"]  = Command:GetMouseWheel()
-  Cache["MPOXDX"]  = Command:GetMouseX()
-  Cache["MPOSDY"]  = Command:GetMouseY()
+  Cache["ALTLFT"]  = pPly:KeyDown(IN_ALT1      )
+  Cache["ALTRGH"]  = pPly:KeyDown(IN_ALT2      )
+  Cache["ATTLFT"]  = pPly:KeyDown(IN_ATTACK    )
+  Cache["ATTRGH"]  = pPly:KeyDown(IN_ATTACK2   )
+  Cache["FORWARD"] = pPly:KeyDown(IN_FORWARD   )
+  Cache["BACK"]    = pPly:KeyDown(IN_BACK      )
+  Cache["MOVELFT"] = pPly:KeyDown(IN_MOVELEFT  )
+  Cache["MOVERGH"] = pPly:KeyDown(IN_MOVERIGHT )
+  Cache["RELOAD"]  = pPly:KeyDown(IN_RELOAD    )
+  Cache["USE"]     = pPly:KeyDown(IN_USE       )
+  Cache["DUCK"]    = pPly:KeyDown(IN_DUCK      )
+  Cache["JUMP"]    = pPly:KeyDown(IN_JUMP      )
+  Cache["SPEED"]   = pPly:KeyDown(IN_SPEED     )
+  Cache["SCORE"]   = pPly:KeyDown(IN_SCORE     )
+  Cache["ZOOM"]    = pPly:KeyDown(IN_ZOOM      )
+  Cache["LEFT"]    = pPly:KeyDown(IN_LEFT      )
+  Cache["RIGHT"]   = pPly:KeyDown(IN_RIGHT     )
+  Cache["WALK"]    = pPly:KeyDown(IN_WALK      )
   return nil
 end
 

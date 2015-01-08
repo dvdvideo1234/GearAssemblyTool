@@ -184,8 +184,8 @@ TOOL.ClientConVar = {
   [ "bgrpids"   ] = "",
   [ "exportdb"  ] = "0",
   [ "maxstatts" ] = "3",
-  [ "engravity" ] = "1"
-  [ "nocollide" ] = "0"
+  [ "engravity" ] = "1",
+  [ "nocollide" ] = "0",
   [ "forcelim"  ] = "1"
 }
 
@@ -249,7 +249,7 @@ local function PrintModifOffsetMC(ePiece,stSpawn)
 end
 
 -- Returns Error Trigger ( False = No Error)
-local function HookConstraintsOnRemove(nID,oBas,oEnt,arCTable,nMax)
+local function HookConstraintsOnRemove(oBas,oEnt,arCTable,nMax)
   if(not (arCTable and nMax)) then return true end
   if(nMax < 1) then return true end
   local Ind = 1
@@ -265,39 +265,28 @@ end
 
 -- Returns Error Trigger ( False = No Error)
 local function CnstraintMaster(eBase,ePiece,vPos,vNorm,nID,nNoCollid,nForceLim,nFreeze,nGrav)
-  local ConID = tonumber(nID) or 1
+  local ConID    = tonumber(nID) or 1
+  local Freeze   = nFreeze       or 0
+  local Grav     = nGrav         or 0
+  local NoCollid = nNoCollid     or 0
+  local ForceLim = nForceLim     or 0
+  local IsIn     = false
   if(not stCType[ConID]) then return true end
   local ConstrInfo = stCType[ConID]
   -- Check for "Free Spawn" ( No constraints ) , coz nothing to be done after it.
-  if(ConID == 1) then return false end
+  if(not IsIn and ConID == 1) then IsIn = true end
   if(not (ePiece and ePiece:IsValid())) then return true end
   if(not constraint.CanConstrain(ePiece,0)) then return true end
   if(gearasmlib.IsOther(ePiece)) then return true end
-  if(ConID == 2) then
+  if(not IsIn and ConID == 2) then
     -- Weld Ground is my custom child ...
     ePiece:SetUnFreezable(true)
     ePiece.PhysgunDisabled = true
     duplicator.StoreEntityModifier(ePiece,"gearassembly_nophysgun",{NoPhysgun = true})
-    return false -- It is not actual constraint, but only a state.
-  end
-  if(not (eBase and eBase:IsValid())) then return true end
-  if(not constraint.CanConstrain(eBase,0)) then return true end
-  if(gearasmlib.IsOther(eBase)) then return true end
-  local NoCollid = nNoCollid or 0
-  local ForceLim = nForceLim or 0
-  if(ConID == 3) then
-    -- http://wiki.garrysmod.com/page/Entity/SetParent
-    ePiece:SetParent(eBase)
-    -- http://wiki.garrysmod.com/page/constraint/Weld
-  elseif(ConID == 4) then
-    -- http://wiki.garrysmod.com/page/constraint/Weld
-    local C = ConstrInfo.Make(ePiece,eBase,0,0,ForceLim,(NoCollid ~= 0),false)
-    return HookConstraintsOnRemove(ConID,eBase,ePiece,{C},1)
+    IsIn = true
   end
   local pyPiece = ePiece:GetPhysicsObject()
   if(not (pyPiece and pyPiece:IsValid())) then return true end
-  local Freeze = nFreeze or 0
-  local Grav   = nGrav   or 0
   construct.SetPhysProp(nil,ePiece,0,pyPiece,{Material = "gmod_ice"})
   if(nFreeze and Freeze == 0) then
     pyPiece:EnableMotion(true)
@@ -305,7 +294,20 @@ local function CnstraintMaster(eBase,ePiece,vPos,vNorm,nID,nNoCollid,nForceLim,n
   if(not (Grav and nG ~= 0)) then
     construct.SetPhysProp(nil,ePiece,0,pyPiece,{GravityToggle = false})
   end
-  if(ConID == 5 and vNorm) then
+  if(not (eBase and eBase:IsValid())) then return true end
+  if(not constraint.CanConstrain(eBase,0)) then return true end
+  if(gearasmlib.IsOther(eBase)) then return true end
+  if(not IsIn and ConID == 3) then
+    -- http://wiki.garrysmod.com/page/Entity/SetParent
+    ePiece:SetParent(eBase)
+    IsIn = true
+  elseif(not IsIn and ConID == 4) then
+    -- http://wiki.garrysmod.com/page/constraint/Weld
+    local C = ConstrInfo.Make(ePiece,eBase,0,0,ForceLim,(NoCollid ~= 0),false)
+    HookConstraintsOnRemove(eBase,ePiece,{C},1)
+    IsIn = true
+  end
+  if(not IsIn and ConID == 5 and vNorm) then
     -- http://wiki.garrysmod.com/page/constraint/Axis
     local LPos1 = pyPiece:GetMassCenter()
     local LPos2 = ePiece:LocalToWorld(LPos1)
@@ -314,16 +316,19 @@ local function CnstraintMaster(eBase,ePiece,vPos,vNorm,nID,nNoCollid,nForceLim,n
     local C = ConstrInfo.Make(ePiece,eBase,0,0,
                               LPos1,LPos2,
                               ForceLim,0,0,NoCollid)
-    return HookConstraintsOnRemove(ConID,eBase,ePiece,{C},1)
-  elseif(ConID == 6) then
+     HookConstraintsOnRemove(eBase,ePiece,{C},1)
+     IsIn = true
+  elseif(not IsIn and ConID == 6) then
     -- http://wiki.garrysmod.com/page/constraint/Ballsocket ( HD )
     local C = ConstrInfo.Make(eBase,ePiece,0,0,pyPiece:GetMassCenter(),ForceLim,0,NoCollid)
-    return HookConstraintsOnRemove(ConID,eBase,ePiece,{C},1)
-  elseif(ConID == 7 and vPos) then
+    HookConstraintsOnRemove(eBase,ePiece,{C},1)
+    IsIn = true
+  elseif(not IsIn and ConID == 7 and vPos) then
     -- http://wiki.garrysmod.com/page/constraint/Ballsocket ( TR )
-    local vLPos2 = ePiece:WorldToLocal(vPos)
-    local C = ConstrInfo.Make(eBase,ePiece,0,0,vLPos2,ForceLim,0,NoCollid)
-    return HookConstraintsOnRemove(ConID,eBase,ePiece,{C},1)
+    local vLPos2 = eBase:WorldToLocal(vPos)
+    local C = ConstrInfo.Make(ePiece,eBase,0,0,vLPos2,ForceLim,0,NoCollid)
+    HookConstraintsOnRemove(eBase,ePiece,{C},1)
+    IsIn = true
   end
   -- http://wiki.garrysmod.com/page/constraint/AdvBallsocket
   local pyBase = eBase:GetPhysicsObject()
@@ -331,29 +336,35 @@ local function CnstraintMaster(eBase,ePiece,vPos,vNorm,nID,nNoCollid,nForceLim,n
   local Min,Mid,Max = 0.01,50,180
   local LPos1 = pyBase:GetMassCenter()
   local LPos2 = pyPiece:GetMassCenter()
-  if(ConID == 8) then -- Lock X
-    local C = ConstrInfo.Make(ePiece,eBase,0,0,LPos1,LPos2,ForceLim,0,-Min,-Max,-Max,Min,Max,Max,0,0,0,0,NoCollid)
-    return HookConstraintsOnRemove(ConID,eBase,ePiece,{C},1)
-  elseif(ConID == 9) then -- Lock Y
+  if(not IsIn and ConID == 8) then -- Lock X
+    local C = ConstrInfo.Make(ePiece,eBase,0,0,LPos1,LPos2,ForceLim,0,-Min,-Max,-Max,Min,Max,Max,0,0,0,1,NoCollid)
+    HookConstraintsOnRemove(eBase,ePiece,{C},1)
+    IsIn = true
+  elseif(not IsIn and ConID == 9) then -- Lock Y
 		local C = ConstrInfo.Make(ePiece,eBase,0,0,LPos1,LPos2,ForceLim,0,-Max,-Min,-Max,Max,Min,Max,0,0,0,0,NoCollid)
-    return HookConstraintsOnRemove(ConID,eBase,ePiece,{C},1)
-  elseif(ConID == 10) then -- Lock Z
+    HookConstraintsOnRemove(eBase,ePiece,{C},1)
+    IsIn = true
+  elseif(not IsIn and ConID == 10) then -- Lock Z
 		local C = ConstrInfo.Make(ePiece,eBase,0,0,LPos1,LPos2,ForceLim,0,-Max,-Max,-Min,Max,Max,Min,0,0,0,0,NoCollid)
-    return HookConstraintsOnRemove(ConID,eBase,ePiece,{C},1)
-  elseif(ConID == 11) then -- Spin X
+    HookConstraintsOnRemove(eBase,ePiece,{C},1)
+    IsIn = true
+  elseif(not IsIn and ConID == 11) then -- Spin X
+    local C1 = ConstrInfo.Make(ePiece,eBase,0,0,LPos1,LPos2,ForceLim,0,-Max,-Min,-Min,Max, Min, Min,0,0,0,1,NoCollid)
+    local C2 = ConstrInfo.Make(ePiece,eBase,0,0,LPos1,LPos2,ForceLim,0,-Max, Min, Min,Max,-Min,-Min,0,0,0,1,NoCollid)
+    HookConstraintsOnRemove(eBase,ePiece,{C1,C2},2)
+    IsIn = true
+  elseif(not IsIn and ConID == 12) then -- Spin Y
     local C1 = ConstrInfo.Make(ePiece,eBase,0,0,LPos1,LPos2,ForceLim,0,-Min,-Max,-Max,Min,Max,Max,0,0,0,0,NoCollid)
     local C2 = ConstrInfo.Make(ePiece,eBase,0,0,LPos1,LPos2,ForceLim,0,-Min,-Max,-Max,Min,Max,Max,0,0,0,0,NoCollid)
-    return HookConstraintsOnRemove(ConID,eBase,ePiece,{C1,C2},2)
-  elseif(ConID == 12) then -- Spin Y
+    HookConstraintsOnRemove(eBase,ePiece,{C1,C2},2)
+    IsIn = true
+  elseif(not IsIn and ConID == 13) then -- Spin Z
     local C1 = ConstrInfo.Make(ePiece,eBase,0,0,LPos1,LPos2,ForceLim,0,-Min,-Max,-Max,Min,Max,Max,0,0,0,0,NoCollid)
     local C2 = ConstrInfo.Make(ePiece,eBase,0,0,LPos1,LPos2,ForceLim,0,-Min,-Max,-Max,Min,Max,Max,0,0,0,0,NoCollid)
-    return HookConstraintsOnRemove(ConID,eBase,ePiece,{C1,C2},2)
-  elseif(ConID == 13) then -- Spin Z
-    local C1 = ConstrInfo.Make(ePiece,eBase,0,0,LPos1,LPos2,ForceLim,0,-Min,-Max,-Max,Min,Max,Max,0,0,0,0,NoCollid)
-    local C2 = ConstrInfo.Make(ePiece,eBase,0,0,LPos1,LPos2,ForceLim,0,-Min,-Max,-Max,Min,Max,Max,0,0,0,0,NoCollid)
-    return HookConstraintsOnRemove(ConID,eBase,ePiece,{C1,C2},2)
+    HookConstraintsOnRemove(eBase,ePiece,{C1,C2},2)
+    IsIn = true
   end
-  return true --Wrong "ConID"
+  return (not IsIn)
 end
 
 function TOOL:LeftClick( Trace )
@@ -385,7 +396,7 @@ function TOOL:LeftClick( Trace )
   gearasmlib.PlyLoadKey(ply) 
   if(not gearasmlib.PlyLoadKey(ply,"SPEED")) then
     -- Direct Snapping
-    if(not eBase) then eBase = trEnt end
+    if(not (eBase and eBase:IsValid()) and (trEnt and trEnt:IsValid())) then eBase = trEnt end
     local ePiece = eMakePiece(model,Trace.HitPos,Angle(),mass,bgrpids)
     if(not ePiece) then return false end
     local vBBMin  = ePiece:OBBMins()
@@ -406,16 +417,8 @@ function TOOL:LeftClick( Trace )
       return false
     end
     undo.Create("Last Gear Assembly")
-    print("Constr ID: "..contyp)
-    if(CnstraintMaster(eBase,ePiece,stSpawn.SPos,stSpawn.DAng:Up(),contyp,freeze,engravity)) then
-      gearasmlib.PrintNotify(ply,"Failed to create constraint","UNDO")
-      gearasmlib.Log("GEARASSEMBLY: Additional Error INFO"
-      .."\n   Event  : Failed to create constraint HitNormal"
-      .."\n   Player : "..ply:Nick()
-      .."\n   ConType: "..stCType[contyp].Name
-      .."\n   Anchor : "..gearasmlib.GetModelFileName(eBase:GetModel())
-      .."\n   hdModel: "..gearasmlib.GetModelFileName(model)
-      .."\n")
+    if(CnstraintMaster(eBase,ePiece,Trace.HitPos,Trace.HitNormal,contyp,nocollide,forcelim,freeze,engravity)) then 
+      gearasmlib.PrintNotify(ply,"Ignore constraint "..stCType[contyp].Name..".","UNDO")
     end
     gearasmlib.EmitSoundPly(ply)
     undo.AddEntity(ePiece)
@@ -453,9 +456,10 @@ function TOOL:LeftClick( Trace )
 
   if(count > 1 and
      gearasmlib.PlyLoadKey(ply,"SPEED") and
-     stmode >= 1 and stmode <= stSMode["MAX"]
+     stmode >= 1 and
+     stmode <= stSMode["MAX"]
   ) then
-    -- IN_SPEED: Switch the tool mode
+    print(1)
     local stSpawn = gearasmlib.GetENTSpawn(trEnt,rotpiv,model,igntyp,
                                            Vector(nextx,nexty,nextz),
                                            Angle(nextpic,nextyaw,nextrol))
@@ -469,6 +473,7 @@ function TOOL:LeftClick( Trace )
     while(i > 0) do
       ePieceN = eMakePiece(model,ePieceO:GetPos(),Angle(),mass,bgrpids)
       if(ePieceN) then
+        ePieceN:SetAngles(stSpawn.SAng)
         if(util.IsInWorld(stSpawn.SPos)) then
           gearasmlib.SetMCWorld(ePieceN,stSpawn.HRec.M.U,stSpawn.SPos)
         else
@@ -491,26 +496,7 @@ function TOOL:LeftClick( Trace )
           undo.Finish()
           return true
         end
-        ePieceN:SetAngles(stSpawn.SAng)
-        if(CnstraintMaster(eBase,ePiece,stSpawn.SPos,stSpawn.DAng:Up(),contyp,freeze,engravity)) then
-          gearasmlib.PrintNotify(ply,"Failed to constrain gear!","UNDO")
-          gearasmlib.Log("GEARASSEMBLY: Additional Error INFO"
-          .."\n   Event  : Failed to constrain gear to Base"
-          .."\n   StMode : "..stSMode[stmode]
-          .."\n   Iterats: "..tostring(count-i)
-          .."\n   StackTr: "..tostring( nTrys ).." ?= "..tostring(staatts)
-          .."\n   Player : "..ply:Nick()
-          .."\n   DeltaRt: "..dRot
-          .."\n   Anchor : "..gearasmlib.GetModelFileName(bsModel)
-          .."\n   trModel: "..gearasmlib.GetModelFileName(trModel)
-          .."\n   hdModel: "..gearasmlib.GetModelFileName(model)
-          .."\n")
-          gearasmlib.EmitSoundPly(ply)
-          undo.SetPlayer(ply)
-          undo.SetCustomUndoText( "Undone Assembly ( Stack #"..tostring(count-i).." )" )
-          undo.Finish()
-          return true
-        end
+        CnstraintMaster(eBase,ePieceN,stSpawn.SPos,stSpawn.DAng:Up(),contyp,nocollide,forcelim,freeze,engravity)
         undo.AddEntity(ePieceN)
         if(stmode == 1) then
           stSpawn = gearasmlib.GetENTSpawn(ePieceN,rotpiv,model,igntyp,
@@ -597,24 +583,8 @@ function TOOL:LeftClick( Trace )
       end
       PrintModifOffsetMC(ePiece,stSpawn)
       undo.Create("Last Gear Assembly")
-      if(CnstraintMaster(eBase,ePiece,stSpawn.SPos,stSpawn.DAng:Up(),contyp,freeze,engravity))
-        gearasmlib.PrintNotify(ply,"Failed to constrain gear!","UNDO")
-        gearasmlib.Log("GEARASSEMBLY: Additional Error INFO"
-        .."\n   Event  : Failed to constrain gear to Base"
-        .."\n   StMode : "..stSMode[stmode]
-        .."\n   Iterats: "..tostring(count-i)
-        .."\n   StackTr: "..tostring( nTrys ).." ?= "..tostring(staatts)
-        .."\n   Player : "..ply:Nick()
-        .."\n   DeltaRt: "..dRot
-        .."\n   Anchor : "..gearasmlib.GetModelFileName(bsModel)
-        .."\n   trModel: "..gearasmlib.GetModelFileName(trModel)
-        .."\n   hdModel: "..gearasmlib.GetModelFileName(model)
-        .."\n")
-        gearasmlib.EmitSoundPly(ply)
-        undo.SetPlayer(ply)
-        undo.SetCustomUndoText( "Undone Assembly ( Stack #"..tostring(count-i).." )" )
-        undo.Finish()
-        return true        
+      if(CnstraintMaster(eBase,ePiece,Trace.HitPos,Trace.HitNormal,contyp,nocollide,forcelim,freeze,engravity)) then 
+        gearasmlib.PrintNotify(ply,"Ignore constraint "..stCType[contyp].Name..".","UNDO")
       end
       gearasmlib.EmitSoundPly(ply)
       undo.AddEntity(ePiece)
@@ -645,9 +615,9 @@ function TOOL:RightClick( Trace )
       sEntAnchor = ""
       self:ClearObjects()
       return true
-    elseif(trEnt and trEnt:IsValid())
+    elseif(trEnt and trEnt:IsValid()) then
       local svEnt = self:GetEnt(1)
-      if(svEnt) then 
+      if(svEnt and svEnt:IsValid()) then 
         svEnt:SetRenderMode(RENDERMODE_TRANSALPHA)
         svEnt:SetColor(Color(255,255,255,255))
       end
@@ -657,8 +627,8 @@ function TOOL:RightClick( Trace )
       self:SetObject(1,trEnt,Trace.HitPos,pyEnt,Trace.PhysicsBone,Trace.HitNormal)
       trEnt:SetRenderMode(RENDERMODE_TRANSALPHA)
       trEnt:SetColor(Color(180,255,150,255))
-      local trModel = gearasmlib.GetModelFileName(trEnt:GetModel()
-      sEntAnchor = "["..trEnt:EntIndex().."] "..trModel)
+      local trModel = gearasmlib.GetModelFileName(trEnt:GetModel())
+      sEntAnchor = "["..trEnt:EntIndex().."] "..trModel
       gearasmlib.PrintNotify(ply,"Anchor: SET "..trModel,"UNDO")
       return true
     end
@@ -771,7 +741,7 @@ function TOOL:DrawHUD()
     local nextyaw = math.Clamp(self:GetClientNumber("nextyaw") or 0,-360,360)
     local nextrol = math.Clamp(self:GetClientNumber("nextrol") or 0,-360,360)
     local RadScal = gearasmlib.GetViewRadius(ply,Trace.HitPos)
-    gearasmlib.PlyLoadKey(ply)    
+    gearasmlib.PlyLoadKey(ply)
     if(trEnt and trEnt:IsValid() and gearasmlib.PlyLoadKey(ply,"SPEED")) then
       if(gearasmlib.IsOther(trEnt)) then return end
       local igntyp  = self:GetClientNumber("igntyp") or 0
@@ -990,7 +960,7 @@ function TOOL.BuildCPanel( CPanel )
   local pConsType = vgui.Create("DComboBox")
         pConsType:SetPos(2, CurY)
         pConsType:SetTall(18)
-        pConsType:SetValue("<"..stCType["NAME"]..">")
+        pConsType:SetValue("<"..stCType["ACT"]..">")
         CurY = CurY + pConsType:GetTall() + 2
   local Cnt = 1
   while(stCType[Cnt]) do
@@ -1101,8 +1071,8 @@ function TOOL.BuildCPanel( CPanel )
   CPanel:AddControl("Slider", {
             Label   = "Force Limit: ",
             Type    = "Float",
-            Min     = -100,
-            Max     =  100,
+            Min     = 0,
+            Max     = 1000000,
             Command = "gearassembly_forcelim"})
             
   CPanel:AddControl("Checkbox", {
@@ -1204,7 +1174,6 @@ function TOOL:UpdateGhost(oEnt, oPly)
     local nextpic = math.Clamp(self:GetClientNumber("nextpic") or 0,-360,360)
     local nextyaw = math.Clamp(self:GetClientNumber("nextyaw") or 0,-360,360)
     local nextrol = math.Clamp(self:GetClientNumber("nextrol") or 0,-360,360)
-    local nEntRad = oEnt:EntRadius()
     local stSpawn = gearasmlib.GetNORSpawn(Trace,model,Vector(nextx,nexty,nextz),
                                            Angle(nextpic,nextyaw,nextrol))
     if(not stSpawn) then return end
