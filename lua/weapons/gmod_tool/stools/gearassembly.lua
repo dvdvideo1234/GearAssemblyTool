@@ -183,10 +183,11 @@ TOOL.ClientConVar = {
   [ "logfile"   ] = "gearasmlib_log",
   [ "bgrpids"   ] = "",
   [ "exportdb"  ] = "0",
+  [ "forcelim"  ] = "0",
+  [ "deltarot"  ] = "360",
   [ "maxstatts" ] = "3",
   [ "engravity" ] = "1",
-  [ "nocollide" ] = "0",
-  [ "forcelim"  ] = "1"
+  [ "nocollide" ] = "0"
 }
 
 if(SERVER)then
@@ -239,7 +240,7 @@ end
 
 local function PrintModifOffsetMC(ePiece,stSpawn)
   if(not (ePiece and stSpawn)) then print("N/A") end
-  local MC = gearasmlib.GetMCWorld(ePiece,stSpawn.HRec.M.U)
+  local MC = gearasmlib.vGetMCWorld(ePiece,stSpawn.HRec.M.U)
   local OffW = stSpawn.OPos - MC
   local BasS = Angle()
         BasS:Set(stSpawn.SAng)
@@ -259,12 +260,12 @@ local function HookConstraintsOnRemove(oBas,oEnt,arCTable,nMax)
     oBas:DeleteOnRemove(arCTable[Ind])
     Ind = Ind + 1
   end
-  print("AddConstraint: Processed "..(Ind-1).." of "..nMax..".")
+  print("AddConstraint: Done "..(Ind-1).." of "..nMax..".")
   return false
 end
 
 -- Returns Error Trigger ( False = No Error)
-local function CnstraintMaster(eBase,ePiece,vPos,vNorm,nID,nNoCollid,nForceLim,nFreeze,nGrav)
+local function ConstraintMaster(eBase,ePiece,vPos,vNorm,nID,nNoCollid,nForceLim,nFreeze,nGrav)
   local ConID    = tonumber(nID) or 1
   local Freeze   = nFreeze       or 0
   local Grav     = nGrav         or 0
@@ -341,11 +342,11 @@ local function CnstraintMaster(eBase,ePiece,vPos,vNorm,nID,nNoCollid,nForceLim,n
     HookConstraintsOnRemove(eBase,ePiece,{C},1)
     IsIn = true
   elseif(not IsIn and ConID == 9) then -- Lock Y
-		local C = ConstrInfo.Make(ePiece,eBase,0,0,LPos1,LPos2,ForceLim,0,-Max,-Min,-Max,Max,Min,Max,0,0,0,0,NoCollid)
+		local C = ConstrInfo.Make(ePiece,eBase,0,0,LPos1,LPos2,ForceLim,0,-Max,-Min,-Max,Max,Min,Max,0,0,0,1,NoCollid)
     HookConstraintsOnRemove(eBase,ePiece,{C},1)
     IsIn = true
   elseif(not IsIn and ConID == 10) then -- Lock Z
-		local C = ConstrInfo.Make(ePiece,eBase,0,0,LPos1,LPos2,ForceLim,0,-Max,-Max,-Min,Max,Max,Min,0,0,0,0,NoCollid)
+		local C = ConstrInfo.Make(ePiece,eBase,0,0,LPos1,LPos2,ForceLim,0,-Max,-Max,-Min,Max,Max,Min,0,0,0,1,NoCollid)
     HookConstraintsOnRemove(eBase,ePiece,{C},1)
     IsIn = true
   elseif(not IsIn and ConID == 11) then -- Spin X
@@ -354,13 +355,13 @@ local function CnstraintMaster(eBase,ePiece,vPos,vNorm,nID,nNoCollid,nForceLim,n
     HookConstraintsOnRemove(eBase,ePiece,{C1,C2},2)
     IsIn = true
   elseif(not IsIn and ConID == 12) then -- Spin Y
-    local C1 = ConstrInfo.Make(ePiece,eBase,0,0,LPos1,LPos2,ForceLim,0,-Min,-Max,-Max,Min,Max,Max,0,0,0,0,NoCollid)
-    local C2 = ConstrInfo.Make(ePiece,eBase,0,0,LPos1,LPos2,ForceLim,0,-Min,-Max,-Max,Min,Max,Max,0,0,0,0,NoCollid)
+    local C1 = ConstrInfo.Make(ePiece,eBase,0,0,LPos1,LPos2,ForceLim,0,-Min,-Max,-Min, Min,Max, Min,0,0,0,1,NoCollid)
+    local C2 = ConstrInfo.Make(ePiece,eBase,0,0,LPos1,LPos2,ForceLim,0, Min,-Max, Min,-Min,Max,-Min,0,0,0,1,NoCollid)
     HookConstraintsOnRemove(eBase,ePiece,{C1,C2},2)
     IsIn = true
   elseif(not IsIn and ConID == 13) then -- Spin Z
-    local C1 = ConstrInfo.Make(ePiece,eBase,0,0,LPos1,LPos2,ForceLim,0,-Min,-Max,-Max,Min,Max,Max,0,0,0,0,NoCollid)
-    local C2 = ConstrInfo.Make(ePiece,eBase,0,0,LPos1,LPos2,ForceLim,0,-Min,-Max,-Max,Min,Max,Max,0,0,0,0,NoCollid)
+    local C1 = ConstrInfo.Make(ePiece,eBase,0,0,LPos1,LPos2,ForceLim,0,-Min,-Min,-Max, Min, Min,Max,0,0,0,1,NoCollid)
+    local C2 = ConstrInfo.Make(ePiece,eBase,0,0,LPos1,LPos2,ForceLim,0, Min, Min,-Max,-Min,-Min,Max,0,0,0,1,NoCollid)
     HookConstraintsOnRemove(eBase,ePiece,{C1,C2},2)
     IsIn = true
   end
@@ -390,7 +391,8 @@ function TOOL:LeftClick( Trace )
   local nextpic   = math.Clamp(self:GetClientNumber("nextpic") or 0,-360,360)
   local nextyaw   = math.Clamp(self:GetClientNumber("nextyaw") or 0,-360,360)
   local nextrol   = math.Clamp(self:GetClientNumber("nextrol") or 0,-360,360)
-  local forcelim  = math.Clamp(self:GetClientNumber("forcelim") or 0,0,100000)
+  local deltarot  = math.Clamp(self:GetClientNumber("deltarot") or 0,-360,360)
+  local forcelim  = math.Clamp(self:GetClientNumber("forcelim") or 0,0,1000000)
   local stmode    = gearasmlib.GetCorrectID(self:GetClientInfo("stmode"),stSMode)
   local contyp    = gearasmlib.GetCorrectID(self:GetClientInfo("contyp"),stCType)  
   gearasmlib.PlyLoadKey(ply) 
@@ -417,7 +419,7 @@ function TOOL:LeftClick( Trace )
       return false
     end
     undo.Create("Last Gear Assembly")
-    if(CnstraintMaster(eBase,ePiece,Trace.HitPos,Trace.HitNormal,contyp,nocollide,forcelim,freeze,engravity)) then 
+    if(ConstraintMaster(eBase,ePiece,Trace.HitPos,Trace.HitNormal,contyp,nocollide,forcelim,freeze,engravity)) then 
       gearasmlib.PrintNotify(ply,"Ignore constraint "..stCType[contyp].Name..".","UNDO")
     end
     gearasmlib.EmitSoundPly(ply)
@@ -434,8 +436,9 @@ function TOOL:LeftClick( Trace )
   if(not gearasmlib.IsPhysTrace(Trace)) then return false end
   if(gearasmlib.IsOther(trEnt)) then return false end
 
+  local trPos   = trEnt:GetAngles()
+  local trAng   = trEnt:GetAngles()
   local trModel = trEnt:GetModel()
-  local trAngle = trEnt:GetAngles()
   local bsModel = "N/A"
   if(eBase and eBase:IsValid()) then bsModel = eBase:GetModel() end
 
@@ -459,17 +462,16 @@ function TOOL:LeftClick( Trace )
      stmode >= 1 and
      stmode <= stSMode["MAX"]
   ) then
-    print(1)
-    local stSpawn = gearasmlib.GetENTSpawn(trEnt,rotpiv,model,igntyp,
+    local stSpawn = gearasmlib.GetENTSpawn(trPos,trAng,trModel,
+                                           rotpiv,model,igntyp,
                                            Vector(nextx,nexty,nextz),
                                            Angle(nextpic,nextyaw,nextrol))
     if(not stSpawn) then return false end
     undo.Create("Last Gear Assembly")
-    local ePieceN, ePieceO
+    local ePieceN, ePieceO = nil, trEnt
     local i     = count
     local nTrys = staatts
-    local dRot  = 360 / count
-    ePieceO = trEnt
+    local dRot  = deltarot / count
     while(i > 0) do
       ePieceN = eMakePiece(model,ePieceO:GetPos(),Angle(),mass,bgrpids)
       if(ePieceN) then
@@ -496,18 +498,19 @@ function TOOL:LeftClick( Trace )
           undo.Finish()
           return true
         end
-        CnstraintMaster(eBase,ePieceN,stSpawn.SPos,stSpawn.DAng:Up(),contyp,nocollide,forcelim,freeze,engravity)
+        ConstraintMaster(eBase,ePieceN,stSpawn.SPos,stSpawn.DAng:Up(),contyp,nocollide,forcelim,freeze,engravity)
         undo.AddEntity(ePieceN)
         if(stmode == 1) then
-          stSpawn = gearasmlib.GetENTSpawn(ePieceN,rotpiv,model,igntyp,
+          stSpawn = gearasmlib.GetENTSpawn(ePieceN:GetPos(),ePieceN:GetAngles(),
+                                           trModel,rotpiv,model,igntyp,
                                            Vector(nextx,nexty,nextz),
                                            Angle(nextpic,nextyaw,nextrol))
           ePieceO = ePieceN
         elseif(stmode == 2) then
-          stSpawn = gearasmlib.GetENTSpawn(trEnt,rotpiv,model,igntyp,
+          trAng:RotateAroundAxis(stSpawn.TAng:Up(),dRot)
+          stSpawn = gearasmlib.GetENTSpawn(trPos,trAng,trModel,rotpiv,model,igntyp,
                                            Vector(nextx,nexty,nextz),
                                            Angle(nextpic,nextyaw,nextrol))
-          rotpiv = rotpiv + dRot
         end
         if(not stSpawn) then
           gearasmlib.PrintNotify(ply,"Failed to obtain spawn data!","ERROR")
@@ -536,7 +539,7 @@ function TOOL:LeftClick( Trace )
       if(nTrys <= 0) then
         gearasmlib.PrintNotify(ply,"Make attempts ran off!","ERROR")
         gearasmlib.Log("GEARASSEMBLY: Additional Error INFO"
-        .."\n   Event  : Failed to allocate memory for a piece"
+        .."\n   Event  : Stacking > Failed to allocate memory for a piece"
         .."\n   StMode : "..stSMode[stmode]
         .."\n   Iterats: "..tostring(count-i)
         .."\n   StackTr: "..tostring( nTrys ).." ?= "..tostring(staatts)
@@ -560,7 +563,7 @@ function TOOL:LeftClick( Trace )
     return true
   end
   
-  local stSpawn = gearasmlib.GetENTSpawn(trEnt,rotpiv,model,igntyp,
+  local stSpawn = gearasmlib.GetENTSpawn(trPos,trAng,trModel,rotpiv,model,igntyp,
                                          Vector(nextx,nexty,nextz),
                                          Angle(nextpic,nextyaw,nextrol))
   if(stSpawn) then
@@ -583,7 +586,7 @@ function TOOL:LeftClick( Trace )
       end
       PrintModifOffsetMC(ePiece,stSpawn)
       undo.Create("Last Gear Assembly")
-      if(CnstraintMaster(eBase,ePiece,Trace.HitPos,Trace.HitNormal,contyp,nocollide,forcelim,freeze,engravity)) then 
+      if(ConstraintMaster(eBase,ePiece,Trace.HitPos,Trace.HitNormal,contyp,nocollide,forcelim,freeze,engravity)) then 
         gearasmlib.PrintNotify(ply,"Ignore constraint "..stCType[contyp].Name..".","UNDO")
       end
       gearasmlib.EmitSoundPly(ply)
@@ -693,7 +696,7 @@ local function DrawTextRowColor(PosXY,TxT,stColor)
   PosXY.y = PosXY.y + PosXY.h
 end
 
-local function DrawLineColor(PosS,PosE,stColor,w,h)
+local function DrawLineColor(PosS,PosE,w,h,stColor)
   if(not (PosS and PosE)) then return end
   if(not (PosS.x and PosS.y and PosE.x and PosE.y)) then return end
   if(stColor) then
@@ -745,7 +748,10 @@ function TOOL:DrawHUD()
     if(trEnt and trEnt:IsValid() and gearasmlib.PlyLoadKey(ply,"SPEED")) then
       if(gearasmlib.IsOther(trEnt)) then return end
       local igntyp  = self:GetClientNumber("igntyp") or 0
-      local stSpawn = gearasmlib.GetENTSpawn(trEnt,rotpiv,model,igntyp,
+      local trPos   = trEnt:GetPos()
+      local trAng   = trEnt:GetAngles()
+      local trModel = trEnt:GetModel()
+      local stSpawn = gearasmlib.GetENTSpawn(trEnt,Ang,trModel,rotpiv,model,igntyp,
                                              Vector(nextx,nexty,nextz),
                                              Angle(nextpic,nextyaw,nextrol))
       if(not stSpawn) then return end
@@ -764,16 +770,16 @@ function TOOL:DrawHUD()
       local Ys = stSpawn.R:ToScreen()
       local Zs = stSpawn.U:ToScreen()
       -- Draw UCS
-      DrawLineColor(Op,Xs,stDrawDyes.Red  ,scrW,scrH)
-      DrawLineColor(Op,Ys,stDrawDyes.Green,scrW,scrH)
-      DrawLineColor(Op,Zs,stDrawDyes.Blue ,scrW,scrH)
-      DrawLineColor(Tp,Tu,stDrawDyes.Yello,scrW,scrH)
-      DrawLineColor(Tp,Op,stDrawDyes.Green,scrW,scrH)
+      DrawLineColor(Op,Xs,scrW,scrH,stDrawDyes.Red)
+      DrawLineColor(Op,Ys,scrW,scrH,stDrawDyes.Green)
+      DrawLineColor(Op,Zs,scrW,scrH,stDrawDyes.Blue)
+      DrawLineColor(Tp,Tu,scrW,scrH,stDrawDyes.Yello)
+      DrawLineColor(Tp,Op,scrW,scrH,stDrawDyes.Green)
       surface.DrawCircle( Op.x, Op.y, RadScal, stDrawDyes.Yello)
       surface.DrawCircle( Tp.x, Tp.y, RadScal, stDrawDyes.Green)
       -- Draw Spawn
-      DrawLineColor(Op,Sp,stDrawDyes.Magen,scrW,scrH)
-      DrawLineColor(Sp,Du,stDrawDyes.Cyan ,scrW,scrH)
+      DrawLineColor(Op,Sp,scrW,scrH,stDrawDyes.Magen)
+      DrawLineColor(Sp,Du,scrW,scrH,stDrawDyes.Cyan)
       surface.DrawCircle( Sp.x, Sp.y, RadScal, stDrawDyes.Magen)
       if(addinfo ~= 0) then
         DrawAdditionalInfo(stSpawn)
@@ -787,9 +793,9 @@ function TOOL:DrawHUD()
       local Xs = (stSpawn.SPos + 15 * stSpawn.F):ToScreen()
       local Ys = (stSpawn.SPos + 15 * stSpawn.R):ToScreen()
       local Zs = (stSpawn.SPos + 15 * stSpawn.U):ToScreen()
-      DrawLineColor(Os,Xs,stDrawDyes.Red,scrW,scrH)
-      DrawLineColor(Os,Ys,stDrawDyes.Green,scrW,scrH)
-      DrawLineColor(Os,Zs,stDrawDyes.Blue,scrW,scrH)
+      DrawLineColor(Os,Xs,scrW,scrH,stDrawDyes.Red)
+      DrawLineColor(Os,Ys,scrW,scrH,stDrawDyes.Green)
+      DrawLineColor(Os,Zs,scrW,scrH,stDrawDyes.Blue)
       surface.DrawCircle( Os.x, Os.y, RadScal, stDrawDyes.Yello)
       if(addinfo ~= 0) then
         DrawAdditionalInfo(stSpawn)
@@ -1027,6 +1033,13 @@ function TOOL.BuildCPanel( CPanel )
             Command = "gearassembly_rotpiv"})
             
   CPanel:AddControl("Slider", {
+            Label   = "End angle pivot: ",
+            Type    = "Float",
+            Min     = -360,
+            Max     =  360,
+            Command = "gearassembly_deltarot"})
+            
+  CPanel:AddControl("Slider", {
             Label   = "Piece rotation: ",
             Type    = "Float",
             Min     = -360,
@@ -1067,7 +1080,7 @@ function TOOL.BuildCPanel( CPanel )
             Min     = -100,
             Max     =  100,
             Command = "gearassembly_nextz"})
-            
+              
   CPanel:AddControl("Slider", {
             Label   = "Force Limit: ",
             Type    = "Float",
@@ -1156,7 +1169,10 @@ function TOOL:UpdateGhost(oEnt, oPly)
       local nextpic = math.Clamp(self:GetClientNumber("nextpic") or 0,-360,360)
       local nextyaw = math.Clamp(self:GetClientNumber("nextyaw") or 0,-360,360)
       local nextrol = math.Clamp(self:GetClientNumber("nextrol") or 0,-360,360)
-      local stSpawn = gearasmlib.GetENTSpawn(trEnt,rotpiv,model,igntyp,
+      local trPos   = trEnt:GetPos()
+      local trAng   = trEnt:GetAngles()
+      local trModel = trEnt:GetModel()
+      local stSpawn = gearasmlib.GetENTSpawn(trEnt,Ang,trModel,rotpiv,model,igntyp,
                                              Vector(nextx,nexty,nextz),
                                              Angle(nextpic,nextyaw,nextrol))
       if(not stSpawn) then return end

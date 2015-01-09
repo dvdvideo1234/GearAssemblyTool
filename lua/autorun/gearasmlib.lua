@@ -297,7 +297,7 @@ function SnapValue(nVal, nSnap)
   return Rez;
 end
 
-function GetMCWorldOffset(oEnt)
+function vGetMCWorldOffset(oEnt)
 -- Set the ENT's Angles first!
   local vOff = Vector()
   if(not oEnt) then return vOff end
@@ -1568,7 +1568,7 @@ function SetMCWorld(oEnt,vMCL,vMCW)
         oEnt:SetPos(vPos)
 end
 
-function GetMCWorld(oEnt,vMCL)
+function vGetMCWorld(oEnt,vMCL)
   if(not vMCL) then return end
   if(not (oEnt and oEnt:IsValid())) then return end
   local vMCW = Vector()
@@ -1576,6 +1576,27 @@ function GetMCWorld(oEnt,vMCL)
         vMCW:Rotate(oEnt:GetAngles())
         vMCW:Add(oEnt:GetPos())
   return vMCW
+end
+
+function vGetMCWorldPosAng(vPos,vAng,vMCL)
+  if(not (vMCL and vPos and vAng)) then return end
+  local vMCW = Vector()
+        vMCW:Set(vMCL)
+        vMCW:Rotate(vAng)
+        vMCW:Add(vPos)
+  return vMCW
+end
+
+function AddAngle(aBase, aAdd)
+  aBase[caP] = aBase[caP] + aAdd[caP]
+  aBase[caY] = aBase[caY] + aAdd[caY]
+  aBase[caR] = aBase[caR] + aAdd[caR]
+end
+
+function SubAngle(aBase, aSub)
+  aBase[caP] = aBase[caP] - aSub[caP]
+  aBase[caY] = aBase[caY] - aSub[caY]
+  aBase[caR] = aBase[caR] - aSub[caR]
 end
 
 ----------------------------- AssemblyLib SNAPPING ------------------------------
@@ -1624,8 +1645,10 @@ end
  * nPitch        = Addition Pitch
  * ucsPos        = Custom Pos offset
 ]]--
-function GetENTSpawn(trEnt,nRotAng,hdModel,enIgnTyp,ucsPos,ucsAng)
-  if(not ( trEnt      and
+function GetENTSpawn(trPos,trAng,trModel,nRotAng,hdModel,enIgnTyp,ucsPos,ucsAng)
+  if(not ( trPos      and
+           trAng      and
+           trModel    and
            nRotAng    and
            hdModel    and
            enIgnTyp   and
@@ -1633,11 +1656,7 @@ function GetENTSpawn(trEnt,nRotAng,hdModel,enIgnTyp,ucsPos,ucsAng)
            ucsPos )
   ) then return nil end
 
-  if(not util.IsValidModel(hdModel)) then return nil end
-  if(not trEnt:IsValid()) then return nil end	
-  if(IsOther(trEnt)) then return nil end
-
-  local trRec = CacheQueryPiece(trEnt:GetModel())
+  local trRec = CacheQueryPiece(trModel)
   local hdRec = CacheQueryPiece(hdModel)
 
   if(not ( trRec and hdRec )) then return nil end
@@ -1645,19 +1664,22 @@ function GetENTSpawn(trEnt,nRotAng,hdModel,enIgnTyp,ucsPos,ucsAng)
   if(enIgnTyp   == 0 and
      trRec.Type ~= hdRec.Type ) then return nil end
 
-  local trPos = GetMCWorld(trEnt,trRec.M.U)
-  local trAng = trEnt:LocalToWorldAngles(-trRec.A.U)
-        trAng:RotateAroundAxis(trAng:Up(),-nRotAng)
-        
   -- We have the next Piece Offset
   local stSpawn = LibSpawn["ENT"]
 
-	--- Do Origin UCS World angle
-	stSpawn.OAng:Set(trAng)
+  stSpawn.TPos:Set(vGetMCWorldPosAng(trPos,trAng,trRec.M.U))
+  stSpawn.TAng:Set(trAng)
+  -- Start
+  -- Make stSpawn.TAng:Set(trEnt:LocalToWorldAngles(-trRec.A.U))
+  SubAngle(stSpawn.TAng,trRec.A.U)
+  -- End
+  stSpawn.TAng:RotateAroundAxis(stSpawn.TAng:Up(),-nRotAng)
+  	--- Do Origin UCS World angle
+	stSpawn.OAng:Set(stSpawn.TAng)
 	--Do origin !
 	stSpawn.OPos:Set(trRec.O.U)
 	stSpawn.OPos:Rotate(stSpawn.OAng)
-	stSpawn.OPos:Add(trPos)
+	stSpawn.OPos:Add(stSpawn.TPos)
 	--- Do F,R,U
 	stSpawn.R:Set(stSpawn.OAng:Right())
   stSpawn.OAng:RotateAroundAxis(stSpawn.R,trRec.Mesh + ucsAng[caP])
@@ -1686,8 +1708,6 @@ function GetENTSpawn(trEnt,nRotAng,hdModel,enIgnTyp,ucsPos,ucsAng)
 	stSpawn.SAng:RotateAroundAxis(stSpawn.U,-stSpawn.MAng[caY] * hdRec.A.S[csY])
 	stSpawn.SAng:RotateAroundAxis(stSpawn.F,-stSpawn.MAng[caR] * hdRec.A.S[csZ])
   stSpawn.SAng:RotateAroundAxis(stSpawn.DAng:Up(),ucsAng[caY] + 180)
-  stSpawn.TAng:Set(trAng)
-  stSpawn.TPos:Set(trPos)
 	--Do Spawn Pos
   stSpawn.SPos:Set(stSpawn.OPos)
 	stSpawn.SPos:Add((hdRec.O.S[csX] * stSpawn.MPos[cvX] + ucsPos[cvX]) * stSpawn.F)
