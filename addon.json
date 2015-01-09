@@ -1,0 +1,11 @@
+{
+  "title"   :  "Track Assembly Tool",
+  "type"    :  "tool",
+  "tags"    :  [ "fun", "build" ],
+  "ignore"  :
+  [
+    "*.psd",
+    "*.vcproj",
+    "*.svn*"
+  ]
+}

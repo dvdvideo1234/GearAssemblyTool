@@ -528,6 +528,9 @@ function SetLogControl(nEn,nLines,sFile)
   LibDebugEn = nEn
   LibLogFile = sFile
   LibMaxLogs = nLines
+  if(not file.Exists(LibBASPath,"DATA") and (string.len(LibLogFile) > 0)) then
+    file.CreateDir(LibBASPath)
+  end
 end
 
 function Log(sStuff)
@@ -542,7 +545,7 @@ function Log(sStuff)
         LibCurLogs = 0
       end
     else
-      print("TRACKASSEMBLY LOG: "..tostring(sStuff))
+      print("GEARASSEMBLY LOG: "..tostring(sStuff))
     end
   end
 end
@@ -650,7 +653,10 @@ function PlyLoadKey(pPly, sKey)
     return nil
   end
   if(sKey) then
-    return Cache[tostring(sKey)]
+    if(sKey == "DEBUG") then
+      return Cache
+    end
+    return Cache[sKey]
   end
   Cache["ALTLFT"]  = pPly:KeyDown(IN_ALT1      )
   Cache["ALTRGH"]  = pPly:KeyDown(IN_ALT2      )

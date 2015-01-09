@@ -70,9 +70,6 @@ local RunConsoleCommand = RunConsoleCommand
 --- Toolgun Background texture ID reference
 local txToolgunBackground
 
---- Anchor Name
-local sEntAnchor = ""
-
 --- Render Base Colours
 local stDrawDyes = {
   Red   = Color(255, 0 , 0 ,255),
@@ -167,6 +164,7 @@ TOOL.ClientConVar = {
   [ "nexty"     ] = "0",
   [ "nextz"     ] = "0",
   [ "count"     ] = "1",
+  [ "anchor"    ] = "",
   [ "contyp"    ] = "1",
   [ "stmode"    ] = "1",
   [ "freeze"    ] = "0",
@@ -187,7 +185,7 @@ TOOL.ClientConVar = {
   [ "deltarot"  ] = "360",
   [ "maxstatts" ] = "3",
   [ "engravity" ] = "1",
-  [ "nocollide" ] = "0"
+  [ "nocollide" ] = "0",
 }
 
 if(SERVER)then
@@ -272,6 +270,7 @@ local function ConstraintMaster(eBase,ePiece,vPos,vNorm,nID,nNoCollid,nForceLim,
   local NoCollid = nNoCollid     or 0
   local ForceLim = nForceLim     or 0
   local IsIn     = false
+  print("ConstraintMaster: Creating "..stCType[ConID].Name..".")
   if(not stCType[ConID]) then return true end
   local ConstrInfo = stCType[ConID]
   -- Check for "Free Spawn" ( No constraints ) , coz nothing to be done after it.
@@ -395,8 +394,10 @@ function TOOL:LeftClick( Trace )
   local forcelim  = math.Clamp(self:GetClientNumber("forcelim") or 0,0,1000000)
   local stmode    = gearasmlib.GetCorrectID(self:GetClientInfo("stmode"),stSMode)
   local contyp    = gearasmlib.GetCorrectID(self:GetClientInfo("contyp"),stCType)  
-  gearasmlib.PlyLoadKey(ply) 
-  if(not gearasmlib.PlyLoadKey(ply,"SPEED")) then
+  gearasmlib.PlyLoadKey(ply)
+  gearasmlib.Print(gearasmlib.PlyLoadKey(ply,"DEBUG"),"Keys")
+  if(not gearasmlib.PlyLoadKey(ply,"SPEED") and
+     not gearasmlib.PlyLoadKey(ply,"DUCK")) then
     -- Direct Snapping
     if(not (eBase and eBase:IsValid()) and (trEnt and trEnt:IsValid())) then eBase = trEnt end
     local ePiece = eMakePiece(model,Trace.HitPos,Angle(),mass,bgrpids)
@@ -436,7 +437,7 @@ function TOOL:LeftClick( Trace )
   if(not gearasmlib.IsPhysTrace(Trace)) then return false end
   if(gearasmlib.IsOther(trEnt)) then return false end
 
-  local trPos   = trEnt:GetAngles()
+  local trPos   = trEnt:GetPos()
   local trAng   = trEnt:GetAngles()
   local trModel = trEnt:GetModel()
   local bsModel = "N/A"
@@ -448,8 +449,8 @@ function TOOL:LeftClick( Trace )
   
   if(not trRec) then return false end
 
-  if(gearasmlib.PlyLoadKey(ply,"USE")) then
-    -- IN_USE: Use the VALID Trace.Entity as a piece
+  if(gearasmlib.PlyLoadKey(ply,"DUCK")) then
+    -- USE: Use the VALID Trace.Entity as a piece
     gearasmlib.PrintNotify(ply,"Model: "..gearasmlib.GetModelFileName(trModel).." selected !","GENERIC")
     ply:ConCommand("gearassembly_model "..trModel.."\n")
     return true
@@ -507,7 +508,7 @@ function TOOL:LeftClick( Trace )
                                            Angle(nextpic,nextyaw,nextrol))
           ePieceO = ePieceN
         elseif(stmode == 2) then
-          trAng:RotateAroundAxis(stSpawn.TAng:Up(),dRot)
+          trAng:RotateAroundAxis(stSpawn.TAng:Up(),-dRot)
           stSpawn = gearasmlib.GetENTSpawn(trPos,trAng,trModel,rotpiv,model,igntyp,
                                            Vector(nextx,nexty,nextz),
                                            Angle(nextpic,nextyaw,nextrol))
@@ -586,7 +587,7 @@ function TOOL:LeftClick( Trace )
       end
       PrintModifOffsetMC(ePiece,stSpawn)
       undo.Create("Last Gear Assembly")
-      if(ConstraintMaster(eBase,ePiece,Trace.HitPos,Trace.HitNormal,contyp,nocollide,forcelim,freeze,engravity)) then 
+      if(ConstraintMaster(eBase,ePiece,stSpawn.SPos,stSpawn.DAng:Up(),contyp,nocollide,forcelim,freeze,engravity)) then 
         gearasmlib.PrintNotify(ply,"Ignore constraint "..stCType[contyp].Name..".","UNDO")
       end
       gearasmlib.EmitSoundPly(ply)
@@ -610,12 +611,12 @@ function TOOL:RightClick( Trace )
     local trEnt = Trace.Entity
     if(Trace.HitWorld) then
       local svEnt = self:GetEnt(1)
-      if(svEnt) then
+      if(svEnt and svEnt:IsValid()) then
         svEnt:SetRenderMode(RENDERMODE_TRANSALPHA)
         svEnt:SetColor(Color(255,255,255,255))
       end
       gearasmlib.PrintNotify(ply,"Anchor: CLR !","CLEANUP")
-      sEntAnchor = ""
+      ply:ConCommand("gearassembly_anchor N/A\n")
       self:ClearObjects()
       return true
     elseif(trEnt and trEnt:IsValid()) then
@@ -631,7 +632,7 @@ function TOOL:RightClick( Trace )
       trEnt:SetRenderMode(RENDERMODE_TRANSALPHA)
       trEnt:SetColor(Color(180,255,150,255))
       local trModel = gearasmlib.GetModelFileName(trEnt:GetModel())
-      sEntAnchor = "["..trEnt:EntIndex().."] "..trModel
+      ply:ConCommand("gearassembly_anchor ["..trEnt:EntIndex().."] "..trModel.."\n")
       gearasmlib.PrintNotify(ply,"Anchor: SET "..trModel,"UNDO")
       return true
     end
@@ -751,7 +752,7 @@ function TOOL:DrawHUD()
       local trPos   = trEnt:GetPos()
       local trAng   = trEnt:GetAngles()
       local trModel = trEnt:GetModel()
-      local stSpawn = gearasmlib.GetENTSpawn(trEnt,trAng,trModel,rotpiv,model,igntyp,
+      local stSpawn = gearasmlib.GetENTSpawn(trPos,trAng,trModel,rotpiv,model,igntyp,
                                              Vector(nextx,nexty,nextz),
                                              Angle(nextpic,nextyaw,nextrol))
       if(not stSpawn) then return end
@@ -870,11 +871,9 @@ function TOOL:DrawToolScreen(w, h)
   DrawTextRowColor(txPos,"HM: "..(gearasmlib.GetModelFileName(model) or NoAV),stDrawDyes.Magen)
   DrawTextRowColor(txPos,"HS: "..(hdOrig or NoAV) .. ">" .. tostring(gearasmlib.RoundValue(hdRec.Mesh,0.01) or NoAV))
   DrawTextRowColor(txPos,"Ratio: "..gearasmlib.RoundValue(Ratio,0.01).." > "..(trRad or NoAV).."/"..hdRad,stDrawDyes.Yello)
-  DrawTextRowColor(txPos,"Anchor: "..sEntAnchor,stDrawDyes.Cyan)
+  DrawTextRowColor(txPos,"Anc: "..self:GetClientInfo("anchor"),stDrawDyes.Cyan)
   DrawTextRowColor(txPos,"StackMod: "..stSMode[stmode],stDrawDyes.Red)
-  local sTime = tostring(os.date())
-  DrawTextRowColor(txPos,string.sub(sTime,1,8),stDrawDyes.White)
-  DrawTextRowColor(txPos,string.sub(sTime,10,17))
+  DrawTextRowColor(txPos,tostring(os.date()),stDrawDyes.White)
 end
 
 function TOOL.BuildCPanel( CPanel )
@@ -963,6 +962,7 @@ function TOOL.BuildCPanel( CPanel )
   print("GEARASSEMBLY: Found #"..tostring(Cnt-1).." piece items.")
 
   -- http://wiki.garrysmod.com/page/Category:DComboBox
+  local ConID = gearasmlib.GetCorrectID(GetConVarString("gearassembly_contyp"),stCType)
   local pConsType = vgui.Create("DComboBox")
         pConsType:SetPos(2, CurY)
         pConsType:SetTall(18)
@@ -977,6 +977,7 @@ function TOOL.BuildCPanel( CPanel )
     end
     Cnt = Cnt + 1
   end
+  pConsType:ChooseOptionID(ConID)
   CPanel:AddItem(pConsType)
   
   -- http://wiki.garrysmod.com/page/Category:DTextEntry
@@ -1172,7 +1173,7 @@ function TOOL:UpdateGhost(oEnt, oPly)
       local trPos   = trEnt:GetPos()
       local trAng   = trEnt:GetAngles()
       local trModel = trEnt:GetModel()
-      local stSpawn = gearasmlib.GetENTSpawn(trEnt,trAng,trModel,rotpiv,model,igntyp,
+      local stSpawn = gearasmlib.GetENTSpawn(trPos,trAng,trModel,rotpiv,model,igntyp,
                                              Vector(nextx,nexty,nextz),
                                              Angle(nextpic,nextyaw,nextrol))
       if(not stSpawn) then return end
