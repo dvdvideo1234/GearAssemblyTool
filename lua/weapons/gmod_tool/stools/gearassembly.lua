@@ -751,7 +751,7 @@ function TOOL:DrawHUD()
       local trPos   = trEnt:GetPos()
       local trAng   = trEnt:GetAngles()
       local trModel = trEnt:GetModel()
-      local stSpawn = gearasmlib.GetENTSpawn(trEnt,Ang,trModel,rotpiv,model,igntyp,
+      local stSpawn = gearasmlib.GetENTSpawn(trEnt,trAng,trModel,rotpiv,model,igntyp,
                                              Vector(nextx,nexty,nextz),
                                              Angle(nextpic,nextyaw,nextrol))
       if(not stSpawn) then return end
@@ -871,7 +871,7 @@ function TOOL:DrawToolScreen(w, h)
   DrawTextRowColor(txPos,"HS: "..(hdOrig or NoAV) .. ">" .. tostring(gearasmlib.RoundValue(hdRec.Mesh,0.01) or NoAV))
   DrawTextRowColor(txPos,"Ratio: "..gearasmlib.RoundValue(Ratio,0.01).." > "..(trRad or NoAV).."/"..hdRad,stDrawDyes.Yello)
   DrawTextRowColor(txPos,"Anchor: "..sEntAnchor,stDrawDyes.Cyan)
-  DrawTextRowColor(txPos,"Stack mode: "..stSMode[stmode],stDrawDyes.Red)
+  DrawTextRowColor(txPos,"StackMod: "..stSMode[stmode],stDrawDyes.Red)
   local sTime = tostring(os.date())
   DrawTextRowColor(txPos,string.sub(sTime,1,8),stDrawDyes.White)
   DrawTextRowColor(txPos,string.sub(sTime,10,17))
@@ -1172,7 +1172,7 @@ function TOOL:UpdateGhost(oEnt, oPly)
       local trPos   = trEnt:GetPos()
       local trAng   = trEnt:GetAngles()
       local trModel = trEnt:GetModel()
-      local stSpawn = gearasmlib.GetENTSpawn(trEnt,Ang,trModel,rotpiv,model,igntyp,
+      local stSpawn = gearasmlib.GetENTSpawn(trEnt,trAng,trModel,rotpiv,model,igntyp,
                                              Vector(nextx,nexty,nextz),
                                              Angle(nextpic,nextyaw,nextrol))
       if(not stSpawn) then return end
