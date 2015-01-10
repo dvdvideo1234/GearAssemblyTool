@@ -1616,7 +1616,7 @@ end
  * ucsAng        = Offset angle
 ]]--
 
-function GetNORSpawn(stTrace, sModel, ucsPos, aOAng)
+function GetNORSpawn(stTrace, sModel, ucsPos, ucsAng)
   if(not stTrace) then return nil end
   local hdRec  = CacheQueryPiece(sModel)
   if(not hdRec) then return nil end
@@ -1626,9 +1626,9 @@ function GetNORSpawn(stTrace, sModel, ucsPos, aOAng)
   stSpawn.DAng[caP] = stSpawn.DAng[caP] + 90
   stSpawn.F:Set(stSpawn.DAng:Forward())
   stSpawn.R:Set(stSpawn.DAng:Right())
-  stSpawn.DAng:RotateAroundAxis(stSpawn.R,aOAng[caP])
-  stSpawn.DAng:RotateAroundAxis(stSpawn.F,aOAng[caR])
-  stSpawn.DAng:RotateAroundAxis(stSpawn.DAng:Up(),aOAng[caY])
+  stSpawn.DAng:RotateAroundAxis(stSpawn.R,ucsAng[caP])
+  stSpawn.DAng:RotateAroundAxis(stSpawn.F,ucsAng[caR])
+  stSpawn.DAng:RotateAroundAxis(stSpawn.DAng:Up(),ucsAng[caY])
   stSpawn.F:Set(stSpawn.DAng:Forward())
   stSpawn.R:Set(stSpawn.DAng:Right())
   stSpawn.U:Set(stSpawn.DAng:Up())
