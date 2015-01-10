@@ -1612,11 +1612,11 @@ end
  * Calculates SPos, SAng based on the DB inserts and input parameters
  * stTrace       = Trace result
  * sModel        = Piece model
- * vOPos         = Offset position
- * aOAng         = Offset angle
+ * ucsPos        = Offset position
+ * ucsAng        = Offset angle
 ]]--
 
-function GetNORSpawn(stTrace, sModel, vOPos, aOAng)
+function GetNORSpawn(stTrace, sModel, ucsPos, aOAng)
   if(not stTrace) then return nil end
   local hdRec  = CacheQueryPiece(sModel)
   if(not hdRec) then return nil end
@@ -1632,13 +1632,12 @@ function GetNORSpawn(stTrace, sModel, vOPos, aOAng)
   stSpawn.F:Set(stSpawn.DAng:Forward())
   stSpawn.R:Set(stSpawn.DAng:Right())
   stSpawn.U:Set(stSpawn.DAng:Up())
-  stSpawn.SAng[caP] = stSpawn.DAng[caP] + hdRec.A.U[caP]
-  stSpawn.SAng[caY] = stSpawn.DAng[caY] + hdRec.A.U[caY]
-  stSpawn.SAng[caR] = stSpawn.DAng[caR] + hdRec.A.U[caR]
+  stSpawn.SAng:Set(stSpawn.DAng)
+  AddAngle(stSpawn.SAng,hdRec.A.U)
   stSpawn.SPos:Set(stTrace.HitPos)
-  stSpawn.SPos:Add(vOPos[cvX] * stSpawn.F)
-  stSpawn.SPos:Add(vOPos[cvY] * stSpawn.R)
-  stSpawn.SPos:Add(vOPos[cvZ] * stSpawn.U)
+  stSpawn.SPos:Add(ucsPos[cvX] * stSpawn.F)
+  stSpawn.SPos:Add(ucsPos[cvY] * stSpawn.R)
+  stSpawn.SPos:Add(ucsPos[cvZ] * stSpawn.U)
   return stSpawn
 end
 
