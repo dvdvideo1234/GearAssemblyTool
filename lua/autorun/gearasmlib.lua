@@ -1701,6 +1701,7 @@ function GetENTSpawn(trPos,trAng,trModel,nRotAng,hdModel,enIgnTyp,ucsPos,ucsAng)
   ----- Everything is OK !!!!
   stSpawn.DAng:Set(stSpawn.OAng)
   stSpawn.DAng:RotateAroundAxis(stSpawn.DAng:Right(),hdRec.Mesh)
+  stSpawn.DAng:RotateAroundAxis(stSpawn.DAng:Up(),ucsAng[caY] + 180)
 	--Get Hold model stuff
   stSpawn.MAng:Set(-hdRec.A.U)
 	stSpawn.MAng:RotateAroundAxis(stSpawn.MAng:Up(),180)
