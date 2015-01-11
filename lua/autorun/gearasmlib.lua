@@ -1674,14 +1674,12 @@ function GetENTSpawn(trPos,trAng,trModel,nRotAng,hdModel,enIgnTyp,ucsPos,ucsAng)
 
   stSpawn.TPos:Set(vGetMCWorldPosAng(trPos,trAng,trRec.M.U))
   stSpawn.TAng:Set(trAng)
-  -- Start
   -- Make stSpawn.TAng:Set(trEnt:LocalToWorldAngles(-trRec.A.U))
   SubAngle(stSpawn.TAng,trRec.A.U)
-  -- End
   stSpawn.TAng:RotateAroundAxis(stSpawn.TAng:Up(),-nRotAng)
-  	--- Do Origin UCS World angle
+  -- Do Origin UCS World angle
 	stSpawn.OAng:Set(stSpawn.TAng)
-	--Do origin !
+	-- Do origin !
 	stSpawn.OPos:Set(trRec.O.U)
 	stSpawn.OPos:Rotate(stSpawn.OAng)
 	stSpawn.OPos:Add(stSpawn.TPos)
