@@ -1779,6 +1779,25 @@ function GetModelFileName(sModel)
   return string.sub(sModel,Cnt+1,Len)
 end
 
+local function HookOnRemove(oBas,oEnt,arCTable,nMax)
+  if(not (oBas and oBas:IsValid())) then return end
+  if(not (oEnt and oEnt:IsValid())) then return end
+  if(not (arCTable and nMax)) then return end
+  if(nMax < 1) then return end
+  local Ind = 1
+  while(Ind <= nMax) do
+    if(not arCTable[Ind]) then
+      print("GEARASSEMBLY: HookOnRemove > Nil value on index "..Ind..", ignored !")
+      return
+    end
+    oEnt:DeleteOnRemove(arCTable[Ind])
+    oBas:DeleteOnRemove(arCTable[Ind])
+    Ind = Ind + 1
+  end
+  gearasmlib.Log("GEARASSEMBLY: HookOnRemove > Done "..(Ind-1).." of "..nMax..".")
+  return
+end
+
 function RequireOnceDB(sTable,sDelim)
   if(not sTable or type(sTable) ~= "string") then return false end
   if(not sDelim or type(sDelim) ~= "string") then return false end
