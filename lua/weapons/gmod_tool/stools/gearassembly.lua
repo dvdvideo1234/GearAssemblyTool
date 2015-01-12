@@ -387,7 +387,7 @@ local function ConstraintMaster(eBase,ePiece,vPos,vNorm,nID,nNoCollid,nForceLim,
   -- http://wiki.garrysmod.com/page/constraint/AdvBallsocket
   local pyBase = eBase:GetPhysicsObject()
   if(not (pyBase and pyBase:IsValid())) then return true end
-  local Min,Mid,Max = 0.01,50,180
+  local Min,Max = 0.01,180
   local LPos1 = pyBase:GetMassCenter()
   local LPos2 = pyPiece:GetMassCenter()
   if(not IsIn and ConID == 8) then -- Lock X
