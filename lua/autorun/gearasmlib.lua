@@ -1698,7 +1698,7 @@ function GetENTSpawn(trPos,trAng,trModel,nRotAng,hdModel,enIgnTyp,ucsPos,ucsAng)
   ----- Everything is OK !!!!
   stSpawn.DAng:Set(stSpawn.OAng)
   stSpawn.DAng:RotateAroundAxis(stSpawn.DAng:Right(),hdRec.Mesh)
-  stSpawn.DAng:RotateAroundAxis(stSpawn.DAng:Up(),ucsAng[caY] + 180)
+  stSpawn.DAng:RotateAroundAxis(stSpawn.DAng:Up(),ucsAng[caY])
 	--Get Hold model stuff
   stSpawn.MAng:Set(-hdRec.A.U)
 	stSpawn.MAng:RotateAroundAxis(stSpawn.MAng:Up(),180)
@@ -1779,7 +1779,7 @@ function GetModelFileName(sModel)
   return string.sub(sModel,Cnt+1,Len)
 end
 
-local function HookOnRemove(oBas,oEnt,arCTable,nMax)
+function HookOnRemove(oBas,oEnt,arCTable,nMax)
   if(not (oBas and oBas:IsValid())) then return end
   if(not (oEnt and oEnt:IsValid())) then return end
   if(not (arCTable and nMax)) then return end
@@ -1794,7 +1794,7 @@ local function HookOnRemove(oBas,oEnt,arCTable,nMax)
     oBas:DeleteOnRemove(arCTable[Ind])
     Ind = Ind + 1
   end
-  gearasmlib.Log("GEARASSEMBLY: HookOnRemove > Done "..(Ind-1).." of "..nMax..".")
+  Log("GEARASSEMBLY: HookOnRemove > Done "..(Ind-1).." of "..nMax..".")
   return
 end
 

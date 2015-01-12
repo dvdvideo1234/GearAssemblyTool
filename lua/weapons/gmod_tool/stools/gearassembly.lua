@@ -2,7 +2,7 @@
 gearasmlib.SQLCreateTable("GEARASSEMBLY_PIECES",{{1},{2},{3},{1,4},{1,2},{2,4},{1,2,3}},true)
 
 ------- DEV -------
--- gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/props_wasteland/wheel02b.mdl",   "Development", "#", 45, "65, 0, 0", "0, 0, -90", "0.29567885398865,0.3865530192852,-0.36239844560623"})
+--gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/props_wasteland/wheel02b.mdl",   "Development", "#", 45, "65, 0, 0", "0, 0, -90", "0.29567885398865,0.3865530192852,-0.36239844560623"})
 
 ------ PIECES ------
 --- PHX Regular Small
@@ -407,13 +407,19 @@ local function ConstraintMaster(eBase,ePiece,vPos,vNorm,nID,nNoCollid,nForceLim,
 end
 
 ---- For the Lib !
-function GetCustomAngOBB(oEnt,aLAng)
-  local vOBB = оЕnt:OBBMins()
-        vOBB:Rotate(aLAng)
-        vOBB:Set(gearasmlib.DecomposeByAngle(vOBB,Angle(0,0,0)))
-  return vOBB
+function GetCustomAngBBZ(oEnt,aLAng,sMode)
+  if(not (oEnt and oEnt:IsValid())) then return 0 end
+  sMode = "MIN"
+  if(sMode == "RAD") then
+    return (oEnt:OBBMaxs() - oEnt:OBBMins()):Length() / 2.828 -- 2 * sqrt(2)
+  elseif(sMode == "MIN") then
+    vOBB = oEnt:OBBMins()
+    vOBB:Rotate(aLAng)
+    vOBB:Set(gearasmlib.DecomposeByAngle(vOBB,Angle(0,0,0)))
+    return math.abs(vOBB[cvZ])
+  end
+  return 0
 end
-
 
 function TOOL:LeftClick( Trace )
   if(CLIENT) then self:ClearObjects() return true end
@@ -453,8 +459,8 @@ function TOOL:LeftClick( Trace )
     local stSpawn = gearasmlib.GetNORSpawn(Trace,model,Vector(nextx,nexty,nextz),
                                            Angle(nextpic,nextyaw,nextrol))
     if(not stSpawn) then return false end
-    local vCOBB = GetCustomAngOBB(ePiece,stSpawn.HRec.A.U)
-    stSpawn.SPos:Add(-vCOBB[cvZ] * stSpawn.DAng:Up())
+    local OffZ = GetCustomAngBBZ(ePiece,stSpawn.HRec.A.U,"")
+    stSpawn.SPos:Add(OffZ * stSpawn.DAng:Up())
     ePiece:SetAngles(stSpawn.SAng)
     if(util.IsInWorld(stSpawn.SPos)) then
       gearasmlib.SetMCWorld(ePiece,stSpawn.HRec.M.U,stSpawn.SPos)
@@ -813,6 +819,7 @@ function TOOL:DrawHUD()
       local Op = stSpawn.OPos:ToScreen()
       local Sp = stSpawn.SPos:ToScreen()
       local Du = (stSpawn.SPos + 15 * stSpawn.DAng:Up()):ToScreen()
+      local Df = (stSpawn.SPos + 15 * stSpawn.DAng:Forward()):ToScreen()
       local Tp = stSpawn.TPos:ToScreen()
       local Tu = (stSpawn.TPos + 15 * stSpawn.TAng:Up()):ToScreen()
       local Xs = stSpawn.F:ToScreen()
@@ -829,6 +836,7 @@ function TOOL:DrawHUD()
       -- Draw Spawn
       DrawLineColor(Op,Sp,scrW,scrH,stDrawDyes.Magen)
       DrawLineColor(Sp,Du,scrW,scrH,stDrawDyes.Cyan)
+      DrawLineColor(Sp,Df,scrW,scrH,stDrawDyes.Red)
       surface.DrawCircle( Sp.x, Sp.y, RadScal, stDrawDyes.Magen)
       if(addinfo ~= 0) then
         DrawAdditionalInfo(stSpawn)
@@ -1246,8 +1254,8 @@ function TOOL:UpdateGhost(oEnt, oPly)
     oEnt:SetRenderMode(RENDERMODE_TRANSALPHA)
     oEnt:SetColor(Color(255, 255, 255, 150 ))
     oEnt:SetAngles(stSpawn.SAng)
-    local vCOBB = GetCustomAngOBB(oEnt,stSpawn.HRec.A.U)
-    stSpawn.SPos:Add(-vCOBB[cvZ] * stSpawn.DAng:Up())
+    local OffZ = GetCustomAngBBZ(oEnt,stSpawn.HRec.A.U)
+    stSpawn.SPos:Add(OffZ * Trace.HitNormal)
     gearasmlib.SetMCWorld(oEnt,stSpawn.HRec.M.U,stSpawn.SPos)
     return
   end
