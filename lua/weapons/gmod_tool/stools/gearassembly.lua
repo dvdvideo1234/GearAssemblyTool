@@ -324,8 +324,8 @@ local function ConstraintMaster(eBase,ePiece,vPos,vNorm,nID,nNoCollid,nForceLim,
   local NoCollid = nNoCollid     or 0
   local ForceLim = nForceLim     or 0
   local IsIn     = false
-  print("ConstraintMaster: Creating "..stCType[ConID].Name..".")
   if(not stCType[ConID]) then return true end
+  print("ConstraintMaster: Creating "..stCType[ConID].Name..".")
   local ConstrInfo = stCType[ConID]
   -- Check for "Free Spawn" ( No constraints ) , coz nothing to be done after it.
   if(not IsIn and ConID == 1) then IsIn = true end
