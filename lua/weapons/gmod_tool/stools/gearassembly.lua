@@ -245,6 +245,7 @@ TOOL.ClientConVar = {
   [ "maxlogs"   ] = "10000",
   [ "logfile"   ] = "gearasmlib_log",
   [ "bgrpids"   ] = "",
+  [ "spwnflat"  ] = "0",
   [ "exportdb"  ] = "0",
   [ "forcelim"  ] = "0",
   [ "deltarot"  ] = "360",
@@ -409,7 +410,6 @@ end
 ---- For the Lib !
 function GetCustomAngBBZ(oEnt,aLAng,sMode)
   if(not (oEnt and oEnt:IsValid())) then return 0 end
-  sMode = "MIN"
   if(sMode == "RAD") then
     return (oEnt:OBBMaxs() - oEnt:OBBMins()):Length() / 2.828 -- 2 * sqrt(2)
   elseif(sMode == "MIN") then
@@ -437,6 +437,7 @@ function TOOL:LeftClick( Trace )
   local bgrpids   = self:GetClientInfo("bgrpids") or ""
   local engravity = self:GetClientNumber("engravity") or 0
   local nocollide = self:GetClientNumber("nocollide") or 0
+  local spwnflat  = self:GetClientNumber("spwnflat") or 0
   local count     = math.Clamp(self:GetClientNumber("count"),1,200)
   local mass      = math.Clamp(self:GetClientNumber("mass"),1,50000)
   local staatts   = math.Clamp(self:GetClientNumber("maxstaatts"),1,5)
@@ -449,7 +450,6 @@ function TOOL:LeftClick( Trace )
   local stmode    = gearasmlib.GetCorrectID(self:GetClientInfo("stmode"),stSMode)
   local contyp    = gearasmlib.GetCorrectID(self:GetClientInfo("contyp"),stCType)
   gearasmlib.PlyLoadKey(ply)
-  gearasmlib.Print(gearasmlib.PlyLoadKey(ply,"DEBUG"),"Keys")
   if(not gearasmlib.PlyLoadKey(ply,"SPEED") and
      not gearasmlib.PlyLoadKey(ply,"DUCK")) then
     -- Direct Snapping
@@ -459,8 +459,11 @@ function TOOL:LeftClick( Trace )
     local stSpawn = gearasmlib.GetNORSpawn(Trace,model,Vector(nextx,nexty,nextz),
                                            Angle(nextpic,nextyaw,nextrol))
     if(not stSpawn) then return false end
-    local OffZ = GetCustomAngBBZ(ePiece,stSpawn.HRec.A.U,"")
-    stSpawn.SPos:Add(OffZ * stSpawn.DAng:Up())
+    if(spwnflat ~= 0) then
+      stSpawn.SPos:Add(GetCustomAngBBZ(ePiece,stSpawn.HRec.A.U,"MIN") * Trace.HitNormal)
+    else
+      stSpawn.SPos:Add(GetCustomAngBBZ(ePiece,stSpawn.HRec.A.U,"RAD") * Trace.HitNormal)
+    end
     ePiece:SetAngles(stSpawn.SAng)
     if(util.IsInWorld(stSpawn.SPos)) then
       gearasmlib.SetMCWorld(ePiece,stSpawn.HRec.M.U,stSpawn.SPos)
@@ -1158,6 +1161,10 @@ function TOOL.BuildCPanel( CPanel )
             Command = "gearassembly_freeze"})
 
   CPanel:AddControl("Checkbox", {
+            Label   = "Enable flat gear spawn",
+            Command = "gearassembly_spwnflat"})
+
+  CPanel:AddControl("Checkbox", {
             Label   = "Ignore gear type",
             Command = "gearassembly_igntyp"})
 
@@ -1250,12 +1257,16 @@ function TOOL:UpdateGhost(oEnt, oPly)
     local stSpawn = gearasmlib.GetNORSpawn(Trace,model,Vector(nextx,nexty,nextz),
                                            Angle(nextpic,nextyaw,nextrol))
     if(not stSpawn) then return end
+    local spwnflat  = self:GetClientNumber("spwnflat") or 0
     oEnt:SetNoDraw(false)
     oEnt:SetRenderMode(RENDERMODE_TRANSALPHA)
     oEnt:SetColor(Color(255, 255, 255, 150 ))
     oEnt:SetAngles(stSpawn.SAng)
-    local OffZ = GetCustomAngBBZ(oEnt,stSpawn.HRec.A.U)
-    stSpawn.SPos:Add(OffZ * Trace.HitNormal)
+    if(spwnflat ~= 0) then
+      stSpawn.SPos:Add(GetCustomAngBBZ(oEnt,stSpawn.HRec.A.U,"MIN") * Trace.HitNormal)
+    else
+      stSpawn.SPos:Add(GetCustomAngBBZ(oEnt,stSpawn.HRec.A.U,"RAD") * Trace.HitNormal)
+    end
     gearasmlib.SetMCWorld(oEnt,stSpawn.HRec.M.U,stSpawn.SPos)
     return
   end
