@@ -1605,6 +1605,20 @@ function SubAngle(aBase, aSub)
   aBase[caR] = aBase[caR] - aSub[caR]
 end
 
+function GetCustomAngBBZ(oEnt,aLAng,nMode)
+  if(not (oEnt and oEnt:IsValid())) then return 0 end
+  local Mode = nMode or 0
+  if(Mode ~= 0 and aLAng) then
+    vOBB = oEnt:OBBMins()
+    vOBB:Rotate(aLAng)
+    vOBB:Set(gearasmlib.DecomposeByAngle(vOBB,Angle(0,0,0)))
+    return math.abs(vOBB[cvZ])
+  else
+    return (oEnt:OBBMaxs() - oEnt:OBBMins()):Length() / 2.828 -- 2 * sqrt(2)
+  end
+  return 0
+end
+
 ----------------------------- AssemblyLib SNAPPING ------------------------------
 
 --[[

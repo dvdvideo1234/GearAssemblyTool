@@ -407,20 +407,6 @@ local function ConstraintMaster(eBase,ePiece,vPos,vNorm,nID,nNoCollid,nForceLim,
   return (not IsIn)
 end
 
----- For the Lib !
-function GetCustomAngBBZ(oEnt,aLAng,sMode)
-  if(not (oEnt and oEnt:IsValid())) then return 0 end
-  if(sMode == "RAD") then
-    return (oEnt:OBBMaxs() - oEnt:OBBMins()):Length() / 2.828 -- 2 * sqrt(2)
-  elseif(sMode == "MIN") then
-    vOBB = oEnt:OBBMins()
-    vOBB:Rotate(aLAng)
-    vOBB:Set(gearasmlib.DecomposeByAngle(vOBB,Angle(0,0,0)))
-    return math.abs(vOBB[cvZ])
-  end
-  return 0
-end
-
 function TOOL:LeftClick( Trace )
   if(CLIENT) then self:ClearObjects() return true end
   if(not Trace) then return false end
@@ -459,11 +445,7 @@ function TOOL:LeftClick( Trace )
     local stSpawn = gearasmlib.GetNORSpawn(Trace,model,Vector(nextx,nexty,nextz),
                                            Angle(nextpic,nextyaw,nextrol))
     if(not stSpawn) then return false end
-    if(spwnflat ~= 0) then
-      stSpawn.SPos:Add(GetCustomAngBBZ(ePiece,stSpawn.HRec.A.U,"MIN") * Trace.HitNormal)
-    else
-      stSpawn.SPos:Add(GetCustomAngBBZ(ePiece,stSpawn.HRec.A.U,"RAD") * Trace.HitNormal)
-    end
+    stSpawn.SPos:Add(gearasmlib.GetCustomAngBBZ(ePiece,stSpawn.HRec.A.U,spwnflat) * Trace.HitNormal)
     ePiece:SetAngles(stSpawn.SAng)
     if(util.IsInWorld(stSpawn.SPos)) then
       gearasmlib.SetMCWorld(ePiece,stSpawn.HRec.M.U,stSpawn.SPos)
@@ -1262,11 +1244,7 @@ function TOOL:UpdateGhost(oEnt, oPly)
     oEnt:SetRenderMode(RENDERMODE_TRANSALPHA)
     oEnt:SetColor(Color(255, 255, 255, 150 ))
     oEnt:SetAngles(stSpawn.SAng)
-    if(spwnflat ~= 0) then
-      stSpawn.SPos:Add(GetCustomAngBBZ(oEnt,stSpawn.HRec.A.U,"MIN") * Trace.HitNormal)
-    else
-      stSpawn.SPos:Add(GetCustomAngBBZ(oEnt,stSpawn.HRec.A.U,"RAD") * Trace.HitNormal)
-    end
+    stSpawn.SPos:Add(gearasmlib.GetCustomAngBBZ(oEnt,stSpawn.HRec.A.U,spwnflat) * Trace.HitNormal)
     gearasmlib.SetMCWorld(oEnt,stSpawn.HRec.M.U,stSpawn.SPos)
     return
   end
