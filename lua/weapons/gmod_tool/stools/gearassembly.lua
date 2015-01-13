@@ -104,31 +104,31 @@ gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/gears/gear1_s3_36.mdl"
 
 ---------------- Localizing Libraries ----------------
 
+local type              = type
+local pairs             = pairs
+local Angle             = Angle
+local print             = print
+local Color             = Color
+local ipairs            = ipairs
+local Vector            = Vector
+local IsValid           = IsValid
+local tonumber          = tonumber
+local tostring          = tostring
+local LocalPlayer       = LocalPlayer
+local GetConVarString   = GetConVarString
+local RunConsoleCommand = RunConsoleCommand
 local os                = os
 local sql               = sql
-local type              = type
 local math              = math
 local ents              = ents
 local util              = util
 local undo              = undo
 local file              = file
-local Angle             = Angle
-local Color             = Color
-local pairs             = pairs
-local print             = print
-local Vector            = Vector
-local ipairs            = ipairs
 local string            = string
-local IsValid           = IsValid
 local cleanup           = cleanup
-local tostring          = tostring
-local tonumber          = tonumber
 local concommand        = concommand
 local duplicator        = duplicator
 local constraint        = constraint
-local LocalPlayer       = LocalPlayer
-local GetConVarString   = GetConVarString
-local RunConsoleCommand = RunConsoleCommand
 
 ----------------- TOOL Global Parameters ----------------
 
@@ -229,7 +229,7 @@ TOOL.ConfigName = nil                       -- Config file name (nil for default
 TOOL.AddToMenu  = true
 
 TOOL.ClientConVar = {
-  [ "mass"      ] = "25000",
+  [ "mass"      ] = "250",
   [ "model"     ] = "models/props_phx/trains/tracks/track_1x.mdl",
   [ "nextx"     ] = "0",
   [ "nexty"     ] = "0",
@@ -261,156 +261,158 @@ TOOL.ClientConVar = {
 }
 
 if(SERVER)then
+
   cleanup.Register("GEARASSEMBLYs")
-end
-
-local function LoadDupePieceNoPhysgun(Ply,oEnt,tData)
-  if tData.NoPhysgun then
-    oEnt:SetMoveType(MOVETYPE_NONE)
-    oEnt:SetUnFreezable(true)
-    oEnt.PhysgunDisabled = true
-    duplicator.StoreEntityModifier(oEnt,"gearassembly_nophysgun",{NoPhysgun = true })
-  end
-end
-
-duplicator.RegisterEntityModifier( "gearassembly_nophysgun", LoadDupePieceNoPhysgun )
-
-local function eMakePiece(sModel,vPos,aAng,nMass,sBgrpIDs)
-  -- You never know .. ^_^
-  if(not util.IsValidModel(sModel)) then return nil end
-  local stPiece = gearasmlib.CacheQueryPiece(sModel)
-  if(not stPiece) then return nil end -- Not present in the DB
-  local ePiece = ents.Create("prop_physics")
-  if(ePiece and ePiece:IsValid()) then
-    ePiece:SetCollisionGroup(COLLISION_GROUP_NONE );
-    ePiece:SetSolid( SOLID_VPHYSICS );
-    ePiece:SetMoveType( MOVETYPE_VPHYSICS )
-    ePiece:SetNotSolid( false );
-    ePiece:SetModel( sModel )
-    ePiece:SetPos( vPos )
-    ePiece:SetAngles( aAng )
-    ePiece:Spawn()
-    ePiece:Activate()
-    ePiece:SetColor(stDrawDyes.White)
-    ePiece:SetRenderMode( RENDERMODE_TRANSALPHA )
-    ePiece:DrawShadow( true )
-    ePiece:PhysWake()
-    local phPiece = ePiece:GetPhysicsObject()
-    if(phPiece and phPiece:IsValid()) then
-      phPiece:SetMass(nMass)
-      phPiece:EnableMotion(false)
-      gearasmlib.AttachBodyGroups(ePiece,sBgrpIDs)
-      return ePiece
+  
+  function LoadDupePieceNoPhysgun(Ply,oEnt,tData)
+    if tData.NoPhysgun then
+      oEnt:SetMoveType(MOVETYPE_NONE)
+      oEnt:SetUnFreezable(true)
+      oEnt.PhysgunDisabled = true
+      duplicator.StoreEntityModifier(oEnt,"gearassembly_nophysgun",{NoPhysgun = true })
     end
-    ePiece:Remove()
+  end
+
+  function eMakePiece(sModel,vPos,aAng,nMass,sBgrpIDs)
+    -- You never know .. ^_^
+    if(not util.IsValidModel(sModel)) then return nil end
+    local stPiece = gearasmlib.CacheQueryPiece(sModel)
+    if(not stPiece) then return nil end -- Not present in the DB
+    local ePiece = ents.Create("prop_physics")
+    if(ePiece and ePiece:IsValid()) then
+      ePiece:SetCollisionGroup(COLLISION_GROUP_NONE );
+      ePiece:SetSolid( SOLID_VPHYSICS );
+      ePiece:SetMoveType( MOVETYPE_VPHYSICS )
+      ePiece:SetNotSolid( false );
+      ePiece:SetModel( sModel )
+      ePiece:SetPos( vPos )
+      ePiece:SetAngles( aAng )
+      ePiece:Spawn()
+      ePiece:Activate()
+      ePiece:SetColor(stDrawDyes.White)
+      ePiece:SetRenderMode( RENDERMODE_TRANSALPHA )
+      ePiece:DrawShadow( true )
+      ePiece:PhysWake()
+      local phPiece = ePiece:GetPhysicsObject()
+      if(phPiece and phPiece:IsValid()) then
+        phPiece:SetMass(nMass)
+        phPiece:EnableMotion(false)
+        gearasmlib.AttachBodyGroups(ePiece,sBgrpIDs)
+        return ePiece
+      end
+      ePiece:Remove()
+      return nil
+    end
     return nil
   end
-  return nil
-end
 
--- Returns Error Trigger ( False = No Error)
-local function ConstraintMaster(eBase,ePiece,vPos,vNorm,nID,nNoCollid,nForceLim,nFreeze,nGrav)
-  local ConID    = tonumber(nID) or 1
-  local Freeze   = nFreeze       or 0
-  local Grav     = nGrav         or 0
-  local NoCollid = nNoCollid     or 0
-  local ForceLim = nForceLim     or 0
-  local IsIn     = false
-  if(not stCType[ConID]) then return true end
-  print("ConstraintMaster: Creating "..stCType[ConID].Name..".")
-  local ConstrInfo = stCType[ConID]
-  -- Check for "Free Spawn" ( No constraints ) , coz nothing to be done after it.
-  if(not IsIn and ConID == 1) then IsIn = true end
-  if(not (ePiece and ePiece:IsValid())) then return true end
-  if(not constraint.CanConstrain(ePiece,0)) then return true end
-  if(gearasmlib.IsOther(ePiece)) then return true end
-  if(not IsIn and ConID == 2) then
-    -- Weld Ground is my custom child ...
-    ePiece:SetUnFreezable(true)
-    ePiece.PhysgunDisabled = true
-    duplicator.StoreEntityModifier(ePiece,"gearassembly_nophysgun",{NoPhysgun = true})
-    IsIn = true
+  -- Returns Error Trigger ( False = No Error)
+  function ConstraintMaster(eBase,ePiece,vPos,vNorm,nID,nNoCollid,nForceLim,nFreeze,nGrav)
+    local ConID    = tonumber(nID) or 1
+    local Freeze   = nFreeze       or 0
+    local Grav     = nGrav         or 0
+    local NoCollid = nNoCollid     or 0
+    local ForceLim = nForceLim     or 0
+    local IsIn     = false
+    if(not stCType[ConID]) then return true end
+    print("ConstraintMaster: Creating "..stCType[ConID].Name..".")
+    local ConstrInfo = stCType[ConID]
+    -- Check for "Free Spawn" ( No constraints ) , coz nothing to be done after it.
+    if(not IsIn and ConID == 1) then IsIn = true end
+    if(not (ePiece and ePiece:IsValid())) then return true end
+    if(not constraint.CanConstrain(ePiece,0)) then return true end
+    if(gearasmlib.IsOther(ePiece)) then return true end
+    if(not IsIn and ConID == 2) then
+      -- Weld Ground is my custom child ...
+      ePiece:SetUnFreezable(true)
+      ePiece.PhysgunDisabled = true
+      duplicator.StoreEntityModifier(ePiece,"gearassembly_nophysgun",{NoPhysgun = true})
+      IsIn = true
+    end
+    local pyPiece = ePiece:GetPhysicsObject()
+    if(not (pyPiece and pyPiece:IsValid())) then return true end
+    construct.SetPhysProp(nil,ePiece,0,pyPiece,{Material = "gmod_ice"})
+    if(nFreeze and Freeze == 0) then
+      pyPiece:EnableMotion(true)
+    end
+    if(not (Grav and nG ~= 0)) then
+      construct.SetPhysProp(nil,ePiece,0,pyPiece,{GravityToggle = false})
+    end
+    if(not (eBase and eBase:IsValid())) then return true end
+    if(not constraint.CanConstrain(eBase,0)) then return true end
+    if(gearasmlib.IsOther(eBase)) then return true end
+    if(not IsIn and ConID == 3) then
+      -- http://wiki.garrysmod.com/page/Entity/SetParent
+      ePiece:SetParent(eBase)
+      IsIn = true
+    elseif(not IsIn and ConID == 4) then
+      -- http://wiki.garrysmod.com/page/constraint/Weld
+      local C = ConstrInfo.Make(ePiece,eBase,0,0,ForceLim,(NoCollid ~= 0),false)
+      gearasmlib.HookOnRemove(eBase,ePiece,{C},1)
+      IsIn = true
+    end
+    if(not IsIn and ConID == 5 and vNorm) then
+      -- http://wiki.garrysmod.com/page/constraint/Axis
+      local LPos1 = pyPiece:GetMassCenter()
+      local LPos2 = ePiece:LocalToWorld(LPos1)
+            LPos2:Add(vNorm)
+            LPos2:Set(eBase:WorldToLocal(LPos2))
+      local C = ConstrInfo.Make(ePiece,eBase,0,0,
+                                LPos1,LPos2,
+                                ForceLim,0,0,NoCollid)
+       gearasmlib.HookOnRemove(eBase,ePiece,{C},1)
+       IsIn = true
+    elseif(not IsIn and ConID == 6) then
+      -- http://wiki.garrysmod.com/page/constraint/Ballsocket ( HD )
+      local C = ConstrInfo.Make(eBase,ePiece,0,0,pyPiece:GetMassCenter(),ForceLim,0,NoCollid)
+      gearasmlib.HookOnRemove(eBase,ePiece,{C},1)
+      IsIn = true
+    elseif(not IsIn and ConID == 7 and vPos) then
+      -- http://wiki.garrysmod.com/page/constraint/Ballsocket ( TR )
+      local vLPos2 = eBase:WorldToLocal(vPos)
+      local C = ConstrInfo.Make(ePiece,eBase,0,0,vLPos2,ForceLim,0,NoCollid)
+      gearasmlib.HookOnRemove(eBase,ePiece,{C},1)
+      IsIn = true
+    end
+    -- http://wiki.garrysmod.com/page/constraint/AdvBallsocket
+    local pyBase = eBase:GetPhysicsObject()
+    if(not (pyBase and pyBase:IsValid())) then return true end
+    local Min,Max = 0.01,180
+    local LPos1 = pyBase:GetMassCenter()
+    local LPos2 = pyPiece:GetMassCenter()
+    if(not IsIn and ConID == 8) then -- Lock X
+      local C = ConstrInfo.Make(ePiece,eBase,0,0,LPos1,LPos2,ForceLim,0,-Min,-Max,-Max,Min,Max,Max,0,0,0,1,NoCollid)
+      gearasmlib.HookOnRemove(eBase,ePiece,{C},1)
+      IsIn = true
+    elseif(not IsIn and ConID == 9) then -- Lock Y
+      local C = ConstrInfo.Make(ePiece,eBase,0,0,LPos1,LPos2,ForceLim,0,-Max,-Min,-Max,Max,Min,Max,0,0,0,1,NoCollid)
+      gearasmlib.HookOnRemove(eBase,ePiece,{C},1)
+      IsIn = true
+    elseif(not IsIn and ConID == 10) then -- Lock Z
+      local C = ConstrInfo.Make(ePiece,eBase,0,0,LPos1,LPos2,ForceLim,0,-Max,-Max,-Min,Max,Max,Min,0,0,0,1,NoCollid)
+      gearasmlib.HookOnRemove(eBase,ePiece,{C},1)
+      IsIn = true
+    elseif(not IsIn and ConID == 11) then -- Spin X
+      local C1 = ConstrInfo.Make(ePiece,eBase,0,0,LPos1,LPos2,ForceLim,0,-Max,-Min,-Min,Max, Min, Min,0,0,0,1,NoCollid)
+      local C2 = ConstrInfo.Make(ePiece,eBase,0,0,LPos1,LPos2,ForceLim,0,-Max, Min, Min,Max,-Min,-Min,0,0,0,1,NoCollid)
+      gearasmlib.HookOnRemove(eBase,ePiece,{C1,C2},2)
+      IsIn = true
+    elseif(not IsIn and ConID == 12) then -- Spin Y
+      local C1 = ConstrInfo.Make(ePiece,eBase,0,0,LPos1,LPos2,ForceLim,0,-Min,-Max,-Min, Min,Max, Min,0,0,0,1,NoCollid)
+      local C2 = ConstrInfo.Make(ePiece,eBase,0,0,LPos1,LPos2,ForceLim,0, Min,-Max, Min,-Min,Max,-Min,0,0,0,1,NoCollid)
+      gearasmlib.HookOnRemove(eBase,ePiece,{C1,C2},2)
+      IsIn = true
+    elseif(not IsIn and ConID == 13) then -- Spin Z
+      local C1 = ConstrInfo.Make(ePiece,eBase,0,0,LPos1,LPos2,ForceLim,0,-Min,-Min,-Max, Min, Min,Max,0,0,0,1,NoCollid)
+      local C2 = ConstrInfo.Make(ePiece,eBase,0,0,LPos1,LPos2,ForceLim,0, Min, Min,-Max,-Min,-Min,Max,0,0,0,1,NoCollid)
+      gearasmlib.HookOnRemove(eBase,ePiece,{C1,C2},2)
+      IsIn = true
+    end
+    return (not IsIn)
   end
-  local pyPiece = ePiece:GetPhysicsObject()
-  if(not (pyPiece and pyPiece:IsValid())) then return true end
-  construct.SetPhysProp(nil,ePiece,0,pyPiece,{Material = "gmod_ice"})
-  if(nFreeze and Freeze == 0) then
-    pyPiece:EnableMotion(true)
-  end
-  if(not (Grav and nG ~= 0)) then
-    construct.SetPhysProp(nil,ePiece,0,pyPiece,{GravityToggle = false})
-  end
-  if(not (eBase and eBase:IsValid())) then return true end
-  if(not constraint.CanConstrain(eBase,0)) then return true end
-  if(gearasmlib.IsOther(eBase)) then return true end
-  if(not IsIn and ConID == 3) then
-    -- http://wiki.garrysmod.com/page/Entity/SetParent
-    ePiece:SetParent(eBase)
-    IsIn = true
-  elseif(not IsIn and ConID == 4) then
-    -- http://wiki.garrysmod.com/page/constraint/Weld
-    local C = ConstrInfo.Make(ePiece,eBase,0,0,ForceLim,(NoCollid ~= 0),false)
-    gearasmlib.HookOnRemove(eBase,ePiece,{C},1)
-    IsIn = true
-  end
-  if(not IsIn and ConID == 5 and vNorm) then
-    -- http://wiki.garrysmod.com/page/constraint/Axis
-    local LPos1 = pyPiece:GetMassCenter()
-    local LPos2 = ePiece:LocalToWorld(LPos1)
-          LPos2:Add(vNorm)
-          LPos2:Set(eBase:WorldToLocal(LPos2))
-    local C = ConstrInfo.Make(ePiece,eBase,0,0,
-                              LPos1,LPos2,
-                              ForceLim,0,0,NoCollid)
-     gearasmlib.HookOnRemove(eBase,ePiece,{C},1)
-     IsIn = true
-  elseif(not IsIn and ConID == 6) then
-    -- http://wiki.garrysmod.com/page/constraint/Ballsocket ( HD )
-    local C = ConstrInfo.Make(eBase,ePiece,0,0,pyPiece:GetMassCenter(),ForceLim,0,NoCollid)
-    gearasmlib.HookOnRemove(eBase,ePiece,{C},1)
-    IsIn = true
-  elseif(not IsIn and ConID == 7 and vPos) then
-    -- http://wiki.garrysmod.com/page/constraint/Ballsocket ( TR )
-    local vLPos2 = eBase:WorldToLocal(vPos)
-    local C = ConstrInfo.Make(ePiece,eBase,0,0,vLPos2,ForceLim,0,NoCollid)
-    gearasmlib.HookOnRemove(eBase,ePiece,{C},1)
-    IsIn = true
-  end
-  -- http://wiki.garrysmod.com/page/constraint/AdvBallsocket
-  local pyBase = eBase:GetPhysicsObject()
-  if(not (pyBase and pyBase:IsValid())) then return true end
-  local Min,Max = 0.01,180
-  local LPos1 = pyBase:GetMassCenter()
-  local LPos2 = pyPiece:GetMassCenter()
-  if(not IsIn and ConID == 8) then -- Lock X
-    local C = ConstrInfo.Make(ePiece,eBase,0,0,LPos1,LPos2,ForceLim,0,-Min,-Max,-Max,Min,Max,Max,0,0,0,1,NoCollid)
-    gearasmlib.HookOnRemove(eBase,ePiece,{C},1)
-    IsIn = true
-  elseif(not IsIn and ConID == 9) then -- Lock Y
-    local C = ConstrInfo.Make(ePiece,eBase,0,0,LPos1,LPos2,ForceLim,0,-Max,-Min,-Max,Max,Min,Max,0,0,0,1,NoCollid)
-    gearasmlib.HookOnRemove(eBase,ePiece,{C},1)
-    IsIn = true
-  elseif(not IsIn and ConID == 10) then -- Lock Z
-    local C = ConstrInfo.Make(ePiece,eBase,0,0,LPos1,LPos2,ForceLim,0,-Max,-Max,-Min,Max,Max,Min,0,0,0,1,NoCollid)
-    gearasmlib.HookOnRemove(eBase,ePiece,{C},1)
-    IsIn = true
-  elseif(not IsIn and ConID == 11) then -- Spin X
-    local C1 = ConstrInfo.Make(ePiece,eBase,0,0,LPos1,LPos2,ForceLim,0,-Max,-Min,-Min,Max, Min, Min,0,0,0,1,NoCollid)
-    local C2 = ConstrInfo.Make(ePiece,eBase,0,0,LPos1,LPos2,ForceLim,0,-Max, Min, Min,Max,-Min,-Min,0,0,0,1,NoCollid)
-    gearasmlib.HookOnRemove(eBase,ePiece,{C1,C2},2)
-    IsIn = true
-  elseif(not IsIn and ConID == 12) then -- Spin Y
-    local C1 = ConstrInfo.Make(ePiece,eBase,0,0,LPos1,LPos2,ForceLim,0,-Min,-Max,-Min, Min,Max, Min,0,0,0,1,NoCollid)
-    local C2 = ConstrInfo.Make(ePiece,eBase,0,0,LPos1,LPos2,ForceLim,0, Min,-Max, Min,-Min,Max,-Min,0,0,0,1,NoCollid)
-    gearasmlib.HookOnRemove(eBase,ePiece,{C1,C2},2)
-    IsIn = true
-  elseif(not IsIn and ConID == 13) then -- Spin Z
-    local C1 = ConstrInfo.Make(ePiece,eBase,0,0,LPos1,LPos2,ForceLim,0,-Min,-Min,-Max, Min, Min,Max,0,0,0,1,NoCollid)
-    local C2 = ConstrInfo.Make(ePiece,eBase,0,0,LPos1,LPos2,ForceLim,0, Min, Min,-Max,-Min,-Min,Max,0,0,0,1,NoCollid)
-    gearasmlib.HookOnRemove(eBase,ePiece,{C1,C2},2)
-    IsIn = true
-  end
-  return (not IsIn)
+  
+  duplicator.RegisterEntityModifier( "gearassembly_nophysgun", LoadDupePieceNoPhysgun )
+  
 end
 
 function TOOL:LeftClick( Trace )
