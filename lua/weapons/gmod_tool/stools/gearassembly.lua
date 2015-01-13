@@ -696,21 +696,25 @@ function TOOL:Reload(Trace)
   if(CLIENT) then return true end
   if(not Trace) then return false end
   local ply       = self:GetOwner()
-  local debugen   = self:GetClientNumber("debugen") or 0
-  local exportdb  = self:GetClientNumber("exportdb") or 0
-  if(debugen ~= 0 and Trace.HitWorld) then
-    local maxlogs = self:GetClientNumber("maxlogs") or 0
-    local logfile = self:GetClientInfo  ("logfile") or ""
-    if(maxlogs > 0) then
-      gearasmlib.SetLogControl(debugen,maxlogs,logfile)
-    end
-  end
   gearasmlib.PlyLoadKey(ply)
-  if(Trace.HitWorld and gearasmlib.PlyLoadKey(ply,"SPEED") and exportdb ~= 0) then
-    gearasmlib.Log("function TOOL:Reload(Trace) --> Exporting DB ...")
-    gearasmlib.ExportSQL2Lua("GEARASSEMBLY_PIECES")
-    gearasmlib.ExportSQL2Inserts("GEARASSEMBLY_PIECES")
-    gearasmlib.SQLExportIntoDSV("db_","GEARASSEMBLY_PIECES","\t")
+  if(Trace.HitWorld and gearasmlib.PlyLoadKey(ply,"SPEED")) then
+    local debugen   = self:GetClientNumber("debugen") or 0
+    local exportdb  = self:GetClientNumber("exportdb") or 0
+    if(debugen ~= 0) then
+      local maxlogs = self:GetClientNumber("maxlogs") or 0
+      local logfile = self:GetClientInfo  ("logfile") or ""
+      if(maxlogs > 0) then
+        gearasmlib.SetLogControl(debugen,maxlogs,logfile)
+      end
+    end
+    if(exportdb ~= 0) then
+      gearasmlib.Log("function TOOL:Reload(Trace) --> Exporting DB ...")
+      gearasmlib.ExportSQL2Lua("GEARASSEMBLY_PIECES")
+      gearasmlib.ExportSQL2Inserts("GEARASSEMBLY_PIECES")
+      gearasmlib.SQLExportIntoDSV("db_","GEARASSEMBLY_PIECES","\t")
+    end
+  elseif(not gearasmlib.PlyLoadKey(ply,"SPEED"))
+    -- For opening the panel
   end
   if(not gearasmlib.IsPhysTrace(Trace)) then return false end
   local trEnt = Trace.Entity
