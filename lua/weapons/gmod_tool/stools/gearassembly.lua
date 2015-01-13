@@ -920,7 +920,7 @@ function TOOL:DrawToolScreen(w, h)
   DrawTextRowColor(txPos,"HM: "..(gearasmlib.GetModelFileName(model) or NoAV),stDrawDyes.Magen)
   DrawTextRowColor(txPos,"HS: "..(hdOrig or NoAV) .. ">" .. tostring(gearasmlib.RoundValue(hdRec.Mesh,0.01) or NoAV))
   DrawTextRowColor(txPos,"Ratio: "..gearasmlib.RoundValue(Ratio,0.01).." > "..(trRad or NoAV).."/"..hdRad,stDrawDyes.Yello)
-  DrawTextRowColor(txPos,"Anc: "..self:GetClientInfo("anchor"),stDrawDyes.Cyan)
+  DrawTextRowColor(txPos,"Anc: "..self:GetClientInfo("anchor"),stDrawDyes.Anchor)
   DrawTextRowColor(txPos,"StackMod: "..stSMode[stmode],stDrawDyes.Red)
   DrawTextRowColor(txPos,tostring(os.date()),stDrawDyes.White)
 end

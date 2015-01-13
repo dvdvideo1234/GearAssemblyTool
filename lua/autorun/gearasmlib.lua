@@ -265,14 +265,6 @@ function GetCorrectID(sValue,stSettings)
   return Value
 end
 
-function PrintNotify(pPly,sText,sNotifType)
-  if(not pPly) then return end
-  if(SERVER) then
-    pPly:SendLua("GAMEMODE:AddNotify(\""..sText.."\", NOTIFY_"..sNotifType..", 6)")
-    pPly:SendLua("surface.PlaySound(\"ambient/water/drip"..math.random(1, 4)..".wav\")")
-  end
-end
-
 function EmitSoundPly(pPly)
   if(not pPly) then return end
   pPly:EmitSound("physics/metal/metal_canister_impact_hard"..math.floor(math.random(3))..".wav")
@@ -614,6 +606,14 @@ PrintArrLine = function(aTable,sName)
 end
 
 ------------------------- AssemblyLib PLAYER -----------------------------------
+
+function PrintNotify(pPly,sText,sNotifType)
+  if(not pPly) then return end
+  if(SERVER) then
+    pPly:SendLua("GAMEMODE:AddNotify(\""..sText.."\", NOTIFY_"..sNotifType..", 6)")
+    pPly:SendLua("surface.PlaySound(\"ambient/water/drip"..math.random(1, 4)..".wav\")")
+  end
+end
 
 function PlyLoadKey(pPly, sKey)
   if(not LibCache["PLAYERKEYDOWN"]) then
