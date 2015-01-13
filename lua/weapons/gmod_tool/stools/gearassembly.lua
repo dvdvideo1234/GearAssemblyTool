@@ -684,12 +684,17 @@ function TOOL:RightClick( Trace )
       return true
     end
     return false
-  end
-  local stmode
-  stmode = gearasmlib.GetCorrectID(self:GetClientInfo("stmode"),stSMode)
-  stmode = gearasmlib.GetCorrectID(stmode + 1,stSMode)
-  ply:ConCommand( "gearassembly_stmode "..stmode.."\n" )
-  gearasmlib.PrintNotify(ply,"Stack Mode: "..stSMode[stmode].." !","UNDO")
+  elseif(not gearasmlib.PlyLoadKey(ply,"DUCK"))
+    -- For opening the panel
+    return true
+  else
+    local stmode = gearasmlib.GetCorrectID(self:GetClientInfo("stmode"),stSMode)
+          stmode = gearasmlib.GetCorrectID(stmode + 1,stSMode)
+    ply:ConCommand( "gearassembly_stmode "..stmode.."\n" )
+    gearasmlib.PrintNotify(ply,"Stack Mode: "..stSMode[stmode].." !","UNDO")
+    return true
+  end 
+  return false
 end
 
 function TOOL:Reload(Trace)
@@ -713,8 +718,6 @@ function TOOL:Reload(Trace)
       gearasmlib.ExportSQL2Inserts("GEARASSEMBLY_PIECES")
       gearasmlib.SQLExportIntoDSV("db_","GEARASSEMBLY_PIECES","\t")
     end
-  elseif(not gearasmlib.PlyLoadKey(ply,"SPEED"))
-    -- For opening the panel
   end
   if(not gearasmlib.IsPhysTrace(Trace)) then return false end
   local trEnt = Trace.Entity
