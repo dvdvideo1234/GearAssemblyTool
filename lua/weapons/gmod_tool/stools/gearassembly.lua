@@ -680,7 +680,7 @@ function TOOL:RightClick( Trace )
       trEnt:SetColor(stDrawDyes.Anchor)
       local trModel = gearasmlib.GetModelFileName(trEnt:GetModel())
       ply:ConCommand("gearassembly_anchor ["..trEnt:EntIndex().."] "..trModel.."\n")
-      gearasmlib.PrintNotify(ply,"Anchor: Set "..trModel,"UNDO")
+      gearasmlib.PrintNotify(ply,"Anchor: Set "..trModel.." !","UNDO")
       return true
     end
     return false
