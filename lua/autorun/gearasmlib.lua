@@ -257,9 +257,9 @@ function GetViewRadius(plPly,vPos)
   return math.Clamp(500 / (vPos - plPly:GetPos()):Length(),1,100)
 end
 
-function GetCorrectID(sValue,stSettings)
-  if(not tonumber(sValue)) then return 1 end
-  local Value = tonumber(sValue)
+function GetCorrectID(anyValue,stSettings)
+  if(not tonumber(anyValue)) then return 1 end
+  local Value = tonumber(anyValue)
   if(Value > stSettings["MAX"]) then Value = 1 end
   if(Value < 1) then Value = stSettings["MAX"] end
   return Value
@@ -1664,13 +1664,14 @@ end
  * nPitch        = Addition Pitch
  * ucsPos        = Custom Pos offset
 ]]--
-function GetENTSpawn(trPos,trAng,trModel,nRotAng,hdModel,enIgnTyp,ucsPos,ucsAng)
+function GetENTSpawn(trPos,trAng,trModel,nRotAng,hdModel,enIgnTyp,enOrAngTr,ucsPos,ucsAng)
   if(not ( trPos      and
            trAng      and
            trModel    and
            nRotAng    and
            hdModel    and
            enIgnTyp   and
+           enOrAngTr  and
            ucsAng     and
            ucsPos )
   ) then return nil end
@@ -1728,9 +1729,21 @@ function GetENTSpawn(trPos,trAng,trModel,nRotAng,hdModel,enIgnTyp,ucsPos,ucsAng)
   stSpawn.SAng:RotateAroundAxis(stSpawn.DAng:Up(),ucsAng[caY] + 180)
 	--Do Spawn Pos
   stSpawn.SPos:Set(stSpawn.OPos)
-	stSpawn.SPos:Add((hdRec.O.S[csX] * stSpawn.MPos[cvX] + ucsPos[cvX]) * stSpawn.F)
-	stSpawn.SPos:Add((hdRec.O.S[csY] * stSpawn.MPos[cvY] + ucsPos[cvY]) * stSpawn.R)
-	stSpawn.SPos:Add((hdRec.O.S[csZ] * stSpawn.MPos[cvZ] + ucsPos[cvZ]) * stSpawn.U)
+  stSpawn.SPos:Add((hdRec.O.S[csX] * stSpawn.MPos[cvX]) * stSpawn.F)
+  stSpawn.SPos:Add((hdRec.O.S[csY] * stSpawn.MPos[cvY]) * stSpawn.R)
+  stSpawn.SPos:Add((hdRec.O.S[csZ] * stSpawn.MPos[cvZ]) * stSpawn.U)
+  if(enOrAngTr ~= 0) then
+    stSpawn.OAng:Set(stSpawn.TAng)
+    stSpawn.R:Set(stSpawn.OAng:Right())
+    stSpawn.OAng:RotateAroundAxis(stSpawn.R,ucsAng[caP])
+    stSpawn.F:Set(stSpawn.OAng:Forward())
+    stSpawn.OAng:RotateAroundAxis(stSpawn.F,ucsAng[caR])
+    stSpawn.R:Set(stSpawn.OAng:Right())
+    stSpawn.U:Set(stSpawn.OAng:Up())
+  end
+  stSpawn.SPos:Add(ucsPos[cvX] * stSpawn.F)
+  stSpawn.SPos:Add(ucsPos[cvY] * stSpawn.R)
+  stSpawn.SPos:Add(ucsPos[cvZ] * stSpawn.U)
 	return stSpawn
 end
 

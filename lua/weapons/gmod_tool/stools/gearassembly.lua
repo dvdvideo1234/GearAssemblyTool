@@ -5,6 +5,14 @@ gearasmlib.SQLCreateTable("GEARASSEMBLY_PIECES",{{1},{2},{3},{1,4},{1,2},{2,4},{
 --gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/props_wasteland/wheel02b.mdl",   "Development", "#", 45, "65, 0, 0", "0, 0, -90", "0.29567885398865,0.3865530192852,-0.36239844560623"})
 
 ------ PIECES ------
+--- Gmod 10
+gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/props_phx/mechanics/medgear.mdl", "Gmod 10", "#", 0, "24.173, 0, 0", "", "-0.015172731131315, 0.0090782083570957, 3.5684652328491"})
+gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/props_phx/mechanics/biggear.mdl", "Gmod 10", "#", 0, "33.811, 0, 0", "", "-0.00017268359079026, -0.0035230871289968, 3.5217847824097"})
+--- PHX Spur
+gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/props_phx/gears/spur9.mdl" , "PHX Spur Flat", "#", 0, " 7.467, 0, 0", "", "-0.0015837327810004, 0.00016171450261027, 2.8354094028473"})
+gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/props_phx/gears/spur12.mdl", "PHX Spur Flat", "#", 0, " 9.703, 0, 0", "", "-0.0015269597060978, 0.00021413757349364, 2.8405227661133"})
+gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/props_phx/gears/spur24.mdl", "PHX Spur Flat", "#", 0, "18.381, 0, 0", "", "-0.0011573693482205, 0.00018228564294986, 2.8103637695313"})
+gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/props_phx/gears/spur36.mdl", "PHX Spur Flat", "#", 0, "27.119, 0, 0", "", "-0.0012206265237182, -8.6402214947157e-005, 2.7949125766754"})
 --- PHX Regular Small
 gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/mechanics/gears/gear12x6_small.mdl" , "PHX Regular Small", "#", 0, "6.708, 0, 0", "", "2.5334677047795e-005, 0.007706293836236, 1.5820281505585"})
 gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/mechanics/gears/gear16x6_small.mdl" , "PHX Regular Small", "#", 0, "9.600, 0, 0", "", "5.0195762923977e-007, -3.5567546774473e-007, 1.5833348035812"})
@@ -248,6 +256,7 @@ TOOL.ClientConVar = {
   [ "enghost"   ] = "0",
   [ "addinfo"   ] = "0",
   [ "debugen"   ] = "0",
+  [ "orangtr"   ] = "0",
   [ "maxlogs"   ] = "10000",
   [ "logfile"   ] = "gearasmlib_log",
   [ "bgrpids"   ] = "",
@@ -432,6 +441,7 @@ function TOOL:LeftClick( Trace )
   local engravity = self:GetClientNumber("engravity") or 0
   local nocollide = self:GetClientNumber("nocollide") or 0
   local spwnflat  = self:GetClientNumber("spwnflat") or 0
+  local orangtr   = self:GetClientNumber("orangtr")  or 0
   local count     = math.Clamp(self:GetClientNumber("count"),1,200)
   local mass      = math.Clamp(self:GetClientNumber("mass"),1,50000)
   local staatts   = math.Clamp(self:GetClientNumber("maxstaatts"),1,5)
@@ -512,7 +522,7 @@ function TOOL:LeftClick( Trace )
      stmode <= stSMode["MAX"]
   ) then
     local stSpawn = gearasmlib.GetENTSpawn(trPos,trAng,trModel,
-                                           rotpiv,model,igntyp,
+                                           rotpiv,model,igntyp,orangtr,
                                            Vector(nextx,nexty,nextz),
                                            Angle(nextpic,nextyaw,nextrol))
     if(not stSpawn) then return false end
@@ -552,13 +562,13 @@ function TOOL:LeftClick( Trace )
         if(stmode == 1) then
           stSpawn = gearasmlib.GetENTSpawn(ePieceN:GetPos(),ePieceN:GetAngles(),
                                            trModel,rotpiv,model,igntyp,
-                                           Vector(nextx,nexty,nextz),
+                                           orangtr,Vector(nextx,nexty,nextz),
                                            Angle(nextpic,nextyaw,nextrol))
           ePieceO = ePieceN
         elseif(stmode == 2) then
           trAng:RotateAroundAxis(stSpawn.TAng:Up(),-dRot)
           stSpawn = gearasmlib.GetENTSpawn(trPos,trAng,trModel,rotpiv,model,igntyp,
-                                           Vector(nextx,nexty,nextz),
+                                           orangtr,Vector(nextx,nexty,nextz),
                                            Angle(nextpic,nextyaw,nextrol))
         end
         if(not stSpawn) then
@@ -613,7 +623,7 @@ function TOOL:LeftClick( Trace )
   end
 
   local stSpawn = gearasmlib.GetENTSpawn(trPos,trAng,trModel,rotpiv,model,igntyp,
-                                         Vector(nextx,nexty,nextz),
+                                         orangtr,Vector(nextx,nexty,nextz),
                                          Angle(nextpic,nextyaw,nextrol))
   if(stSpawn) then
     local ePiece = eMakePiece(model,Trace.HitPos,ANG_ZERO,mass,bgrpids)
@@ -677,16 +687,13 @@ function TOOL:RightClick( Trace )
       if(not (pyEnt and pyEnt:IsValid())) then return false end
       self:SetObject(1,trEnt,Trace.HitPos,pyEnt,Trace.PhysicsBone,Trace.HitNormal)
       trEnt:SetRenderMode(RENDERMODE_TRANSALPHA)
-      trEnt:SetColor(stDrawDyes.Anchor)
+      trEnt:SetColor(stDrawDyes.Anchr)
       local trModel = gearasmlib.GetModelFileName(trEnt:GetModel())
       ply:ConCommand("gearassembly_anchor ["..trEnt:EntIndex().."] "..trModel.."\n")
       gearasmlib.PrintNotify(ply,"Anchor: Set "..trModel.." !","UNDO")
       return true
     end
     return false
-  elseif(not gearasmlib.PlyLoadKey(ply,"DUCK"))
-    -- For opening the panel
-    return true
   else
     local stmode = gearasmlib.GetCorrectID(self:GetClientInfo("stmode"),stSMode)
           stmode = gearasmlib.GetCorrectID(stmode + 1,stSMode)
@@ -794,6 +801,7 @@ function TOOL:DrawHUD()
     local nexty   = self:GetClientNumber("nexty") or 0
     local nextz   = self:GetClientNumber("nextz") or 0
     local addinfo = self:GetClientNumber("addinfo") or 0
+    local orangtr = self:GetClientNumber("orangtr") or 0
     local rotpiv  = math.Clamp(self:GetClientNumber("rotpiv") or 0,-360,360)
     local nextpic = math.Clamp(self:GetClientNumber("nextpic") or 0,-360,360)
     local nextyaw = math.Clamp(self:GetClientNumber("nextyaw") or 0,-360,360)
@@ -807,7 +815,7 @@ function TOOL:DrawHUD()
       local trAng   = trEnt:GetAngles()
       local trModel = trEnt:GetModel()
       local stSpawn = gearasmlib.GetENTSpawn(trPos,trAng,trModel,rotpiv,model,igntyp,
-                                             Vector(nextx,nexty,nextz),
+                                             orangtr,Vector(nextx,nexty,nextz),
                                              Angle(nextpic,nextyaw,nextrol))
       if(not stSpawn) then return end
       stSpawn.F:Mul(15)
@@ -927,7 +935,7 @@ function TOOL:DrawToolScreen(w, h)
   DrawTextRowColor(txPos,"HM: "..(gearasmlib.GetModelFileName(model) or NoAV),stDrawDyes.Magen)
   DrawTextRowColor(txPos,"HS: "..(hdOrig or NoAV) .. ">" .. tostring(gearasmlib.RoundValue(hdRec.Mesh,0.01) or NoAV))
   DrawTextRowColor(txPos,"Ratio: "..gearasmlib.RoundValue(Ratio,0.01).." > "..(trRad or NoAV).."/"..hdRad,stDrawDyes.Yello)
-  DrawTextRowColor(txPos,"Anc: "..self:GetClientInfo("anchor"),stDrawDyes.Anchor)
+  DrawTextRowColor(txPos,"Anc: "..self:GetClientInfo("anchor"),stDrawDyes.Anchr)
   DrawTextRowColor(txPos,"StackMod: "..stSMode[stmode],stDrawDyes.Red)
   DrawTextRowColor(txPos,tostring(os.date()),stDrawDyes.White)
 end
@@ -1150,6 +1158,10 @@ function TOOL.BuildCPanel( CPanel )
             Command = "gearassembly_engravity"})
 
   CPanel:AddControl("Checkbox", {
+            Label   = "Position offset from base angle",
+            Command = "gearassembly_orangtr"})
+
+  CPanel:AddControl("Checkbox", {
             Label   = "NoCollide new pieces to the anchor",
             Command = "gearassembly_nocollide"})
 
@@ -1225,6 +1237,7 @@ function TOOL:UpdateGhost(oEnt, oPly)
       local nexty   = self:GetClientNumber("nexty") or 0
       local nextz   = self:GetClientNumber("nextz") or 0
       local model   = self:GetClientInfo("model") or ""
+      local orangtr = self:GetClientNumber("orangtr") or 0
       local rotpiv  = math.Clamp(self:GetClientNumber("rotpiv") or 0,-360,360)
       local igntyp  = self:GetClientNumber("igntyp") or 0
       local nextpic = math.Clamp(self:GetClientNumber("nextpic") or 0,-360,360)
@@ -1234,7 +1247,7 @@ function TOOL:UpdateGhost(oEnt, oPly)
       local trAng   = trEnt:GetAngles()
       local trModel = trEnt:GetModel()
       local stSpawn = gearasmlib.GetENTSpawn(trPos,trAng,trModel,rotpiv,model,igntyp,
-                                             Vector(nextx,nexty,nextz),
+                                             orangtr,Vector(nextx,nexty,nextz),
                                              Angle(nextpic,nextyaw,nextrol))
       if(not stSpawn) then return end
       oEnt:SetNoDraw(false)
