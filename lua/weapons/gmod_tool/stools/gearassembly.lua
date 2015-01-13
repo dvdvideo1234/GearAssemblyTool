@@ -210,13 +210,13 @@ if(CLIENT)then
 
   local function ResetOffsets( oPly, oCom, oArgs )
     -- Reset all of the offset options to zero
+    oPly:ConCommand( "gearassembly_nextx 0\n" )
+    oPly:ConCommand( "gearassembly_nexty 0\n" )
+    oPly:ConCommand( "gearassembly_nextz 0\n" )
     oPly:ConCommand( "gearassembly_rotpiv 0\n" )
     oPly:ConCommand( "gearassembly_nextpic 0\n" )
     oPly:ConCommand( "gearassembly_nextyaw 0\n" )
     oPly:ConCommand( "gearassembly_nextrol 0\n" )
-    oPly:ConCommand( "gearassembly_nextx 0\n" )
-    oPly:ConCommand( "gearassembly_nexty 0\n" )
-    oPly:ConCommand( "gearassembly_nextz 0\n" )
   end
   concommand.Add( "gearassembly_resetoffs", ResetOffsets )
   txToolgunBackground = surface.GetTextureID( "vgui/white" )
@@ -662,7 +662,7 @@ function TOOL:RightClick( Trace )
         svEnt:SetRenderMode(RENDERMODE_TRANSALPHA)
         svEnt:SetColor(stDrawDyes.White)
       end
-      gearasmlib.PrintNotify(ply,"Anchor: CLR !","CLEANUP")
+      gearasmlib.PrintNotify(ply,"Anchor: Cleaned !","CLEANUP")
       ply:ConCommand("gearassembly_anchor N/A\n")
       self:ClearObjects()
       return true
@@ -680,7 +680,7 @@ function TOOL:RightClick( Trace )
       trEnt:SetColor(stDrawDyes.Anchor)
       local trModel = gearasmlib.GetModelFileName(trEnt:GetModel())
       ply:ConCommand("gearassembly_anchor ["..trEnt:EntIndex().."] "..trModel.."\n")
-      gearasmlib.PrintNotify(ply,"Anchor: SET "..trModel,"UNDO")
+      gearasmlib.PrintNotify(ply,"Anchor: Set "..trModel,"UNDO")
       return true
     end
     return false
@@ -1231,8 +1231,6 @@ function TOOL:UpdateGhost(oEnt, oPly)
                                              Angle(nextpic,nextyaw,nextrol))
       if(not stSpawn) then return end
       oEnt:SetNoDraw(false)
-      oEnt:SetRenderMode(RENDERMODE_TRANSALPHA)
-      oEnt:SetColor(stDrawDyes.Ghost)
       oEnt:SetAngles(stSpawn.SAng)
       gearasmlib.SetMCWorld(oEnt,stSpawn.HRec.M.U,stSpawn.SPos)
     end
@@ -1249,8 +1247,6 @@ function TOOL:UpdateGhost(oEnt, oPly)
     if(not stSpawn) then return end
     local spwnflat  = self:GetClientNumber("spwnflat") or 0
     oEnt:SetNoDraw(false)
-    oEnt:SetRenderMode(RENDERMODE_TRANSALPHA)
-    oEnt:SetColor(stDrawDyes.Ghost)
     oEnt:SetAngles(stSpawn.SAng)
     stSpawn.SPos:Add(gearasmlib.GetCustomAngBBZ(oEnt,stSpawn.HRec.A.U,spwnflat) * Trace.HitNormal)
     gearasmlib.SetMCWorld(oEnt,stSpawn.HRec.M.U,stSpawn.SPos)
