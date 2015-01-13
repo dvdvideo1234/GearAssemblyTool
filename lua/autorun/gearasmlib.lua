@@ -27,48 +27,48 @@ local CLIENT = CLIENT
 
 ---------------- Localizing Player keys ----------------
 
-local IN_ALT1      = IN_ALT1
-local IN_ALT2      = IN_ALT2
-local IN_ATTACK    = IN_ATTACK
-local IN_ATTACK2   = IN_ATTACK2
-local IN_FORWARD   = IN_FORWARD
-local IN_BACK      = IN_BACK
-local IN_MOVELEFT  = IN_MOVELEFT
-local IN_MOVERIGHT = IN_MOVERIGHT
-local IN_RELOAD    = IN_RELOAD
 local IN_USE       = IN_USE
-local IN_DUCK      = IN_DUCK
+local IN_ALT1      = IN_ALT1
+local IN_LEFT      = IN_LEFT
+local IN_ZOOM      = IN_ZOOM
 local IN_JUMP      = IN_JUMP
+local IN_BACK      = IN_BACK
+local IN_DUCK      = IN_DUCK
+local IN_ALT2      = IN_ALT2
+local IN_WALK      = IN_WALK
 local IN_SPEED     = IN_SPEED
 local IN_SCORE     = IN_SCORE
-local IN_ZOOM      = IN_ZOOM
-local IN_LEFT      = IN_LEFT
 local IN_RIGHT     = IN_RIGHT
-local IN_WALK      = IN_WALK
+local IN_RELOAD    = IN_RELOAD
+local IN_ATTACK    = IN_ATTACK
+local IN_FORWARD   = IN_FORWARD
+local IN_ATTACK2   = IN_ATTACK2
+local IN_MOVELEFT  = IN_MOVELEFT
+local IN_MOVERIGHT = IN_MOVERIGHT
 
 ---------------- Localizing Libraries ----------------
 
-local collectgarbage = collectgarbage
-local Vector         = Vector
+local type           = type
 local Angle          = Angle
 local pairs          = pairs
 local print          = print
-local include        = include
+local Vector         = Vector
 local require        = require
-local tostring       = tostring
-local tonumber       = tonumber
-local type           = type
-local LocalPlayer    = LocalPlayer
 local IsValid        = IsValid
+local include        = include
+local tonumber       = tonumber
+local tostring       = tostring
+local LocalPlayer    = LocalPlayer
+local collectgarbage = collectgarbage
+local os             = os
+local sql            = sql
 local math           = math
-local string         = string
 local ents           = ents
 local util           = util
 local undo           = undo
-local sql            = sql
-local os             = os
 local file           = file
 local timer          = timer
+local string         = string
 
 -- Library Debug Settings
 -- The file is created in the DATA folder :3 *.txt is appended
@@ -1015,7 +1015,7 @@ function SQLInsertRecord(sTable,tData)
       local toNB = tonumber(tData[Ind])
       if(toNB) then
         if(FieldDef[2] == "INTEGER") then
-          tData[Ind] = math.floor(tData[Ind])
+          tData[Ind] = math.floor(toNB)
         end
       else
         Log("SQLInsertRecord: Cannot convert string to an INTEGER for "
@@ -1050,7 +1050,7 @@ function SQLInsertRecord(sTable,tData)
     end
     return true
   end
-  Log("SQLInsertRecord: "..LibSQLBuildError)
+  Log("SQLInsertRecord: "..GetSQLBuildError())
   return false
 end
 
@@ -1081,7 +1081,7 @@ function SQLCreateTable(sTable,tIndex,bReload)
           qRez = sql.Query(v)
           if(not qRez and type(qRez) == "boolean") then
             Log("SQLCreateTable: Table "..sTable
-                .." failed to create index ["..k.."] > " .. v .." > because >".. tostring(sql.LastError()))
+                .." failed to create index ["..k.."] > " .. v .." > because of ".. tostring(sql.LastError()))
             return false
           end
         end
@@ -1095,7 +1095,7 @@ function SQLCreateTable(sTable,tIndex,bReload)
       end
     end
   else
-    Log("SQLCreateTable: "..LibSQLBuildError)
+    Log("SQLCreateTable: "..GetSQLBuildError())
     return false
   end
 end
@@ -1235,7 +1235,7 @@ function CacheQueryPiece(sModel)
       stPiece.Here = false
     end
   else
-    Log("CacheQueryPiece: "..LibSQLBuildError)
+    Log("CacheQueryPiece: "..GetSQLBuildError())
     return nil
   end
   return nil
@@ -1254,7 +1254,7 @@ function PanelQueryPieces()
     Log("PanelQueryPieces: No data found >"..Q.."<")
     return nil
   end
-  Log("PanelQueryPieces: "..LibSQLBuildError)
+  Log("PanelQueryPieces: "..GetSQLBuildError())
   return nil
 end
 
@@ -1322,7 +1322,7 @@ function ExportSQL2Lua(sTable)
       Log("ExportSQL2Lua: No data found >"..Q.."<")
     end
   else
-    Log("ExportSQL2Lua: "..LibSQLBuildError)
+    Log("ExportSQL2Lua: "..GetSQLBuildError())
   end
   F:Flush()
   F:Close()
@@ -1380,7 +1380,7 @@ function ExportSQL2Inserts(sTable)
       end
     end
   else
-    Log("ExportSQL2Inserts: "..LibSQLBuildError .. "\n")
+    Log("ExportSQL2Inserts: "..GetSQLBuildError() .. "\n")
   end
   F:Flush()
   F:Close()
@@ -1555,7 +1555,7 @@ function SQLExportIntoDSV(sSuffix,sTable,sDelim)
     end
   else
     Log("SQLExportIntoDSV: Failed to assemble query >> "
-                  ..LibSQLBuildError)
+                  ..GetSQLBuildError())
     return
   end
   F:Flush()

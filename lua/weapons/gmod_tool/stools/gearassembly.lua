@@ -132,6 +132,10 @@ local RunConsoleCommand = RunConsoleCommand
 
 ----------------- TOOL Global Parameters ----------------
 
+--- ZERO Objects
+local VEC_ZERO = Vector(0,0,0)
+local ANG_ZERO = Angle (0,0,0)
+
 --- Toolgun Background texture ID reference
 local txToolgunBackground
 
@@ -144,7 +148,9 @@ local stDrawDyes = {
   Magen = Color(255, 0 ,255,255),
   Yello = Color(255,255, 0 ,255),
   White = Color(255,255,255,255),
-  Black = Color( 0 , 0 , 0 ,255)
+  Black = Color( 0 , 0 , 0 ,255),
+  Ghost = Color(255,255,255,150),
+  Anchr = Color(180,255,150,255)
 }
 
 local stSMode = {
@@ -285,7 +291,7 @@ local function eMakePiece(sModel,vPos,aAng,nMass,sBgrpIDs)
     ePiece:SetAngles( aAng )
     ePiece:Spawn()
     ePiece:Activate()
-    ePiece:SetColor( Color( 255, 255, 255, 255 ) )
+    ePiece:SetColor(stDrawDyes.White)
     ePiece:SetRenderMode( RENDERMODE_TRANSALPHA )
     ePiece:DrawShadow( true )
     ePiece:PhysWake()
@@ -440,7 +446,7 @@ function TOOL:LeftClick( Trace )
      not gearasmlib.PlyLoadKey(ply,"DUCK")) then
     -- Direct Snapping
     if(not (eBase and eBase:IsValid()) and (trEnt and trEnt:IsValid())) then eBase = trEnt end
-    local ePiece = eMakePiece(model,Trace.HitPos,Angle(),mass,bgrpids)
+    local ePiece = eMakePiece(model,Trace.HitPos,ANG_ZERO,mass,bgrpids)
     if(not ePiece) then return false end
     local stSpawn = gearasmlib.GetNORSpawn(Trace,model,Vector(nextx,nexty,nextz),
                                            Angle(nextpic,nextyaw,nextrol))
@@ -514,7 +520,7 @@ function TOOL:LeftClick( Trace )
     local nTrys = staatts
     local dRot  = deltarot / count
     while(i > 0) do
-      ePieceN = eMakePiece(model,ePieceO:GetPos(),Angle(),mass,bgrpids)
+      ePieceN = eMakePiece(model,ePieceO:GetPos(),ANG_ZERO,mass,bgrpids)
       if(ePieceN) then
         ePieceN:SetAngles(stSpawn.SAng)
         if(util.IsInWorld(stSpawn.SPos)) then
@@ -608,7 +614,7 @@ function TOOL:LeftClick( Trace )
                                          Vector(nextx,nexty,nextz),
                                          Angle(nextpic,nextyaw,nextrol))
   if(stSpawn) then
-    local ePiece = eMakePiece(model,Trace.HitPos,Angle(),mass,bgrpids)
+    local ePiece = eMakePiece(model,Trace.HitPos,ANG_ZERO,mass,bgrpids)
     if(ePiece) then
       ePiece:SetAngles(stSpawn.SAng)
       if(util.IsInWorld(stSpawn.SPos)) then
@@ -652,7 +658,7 @@ function TOOL:RightClick( Trace )
       local svEnt = self:GetEnt(1)
       if(svEnt and svEnt:IsValid()) then
         svEnt:SetRenderMode(RENDERMODE_TRANSALPHA)
-        svEnt:SetColor(Color(255,255,255,255))
+        svEnt:SetColor(stDrawDyes.White)
       end
       gearasmlib.PrintNotify(ply,"Anchor: CLR !","CLEANUP")
       ply:ConCommand("gearassembly_anchor N/A\n")
@@ -662,14 +668,14 @@ function TOOL:RightClick( Trace )
       local svEnt = self:GetEnt(1)
       if(svEnt and svEnt:IsValid()) then
         svEnt:SetRenderMode(RENDERMODE_TRANSALPHA)
-        svEnt:SetColor(Color(255,255,255,255))
+        svEnt:SetColor(stDrawDyes.White)
       end
       self:ClearObjects()
       pyEnt = trEnt:GetPhysicsObject()
       if(not (pyEnt and pyEnt:IsValid())) then return false end
       self:SetObject(1,trEnt,Trace.HitPos,pyEnt,Trace.PhysicsBone,Trace.HitNormal)
       trEnt:SetRenderMode(RENDERMODE_TRANSALPHA)
-      trEnt:SetColor(Color(180,255,150,255))
+      trEnt:SetColor(stDrawDyes.Anchor)
       local trModel = gearasmlib.GetModelFileName(trEnt:GetModel())
       ply:ConCommand("gearassembly_anchor ["..trEnt:EntIndex().."] "..trModel.."\n")
       gearasmlib.PrintNotify(ply,"Anchor: SET "..trModel,"UNDO")
@@ -1191,7 +1197,7 @@ function TOOL:MakeGhostEntity( sModel, vPos, aAngle )
   self.GhostEntity:SetMoveType( MOVETYPE_NONE )
   self.GhostEntity:SetNotSolid( true );
   self.GhostEntity:SetRenderMode( RENDERMODE_TRANSALPHA )
-  self.GhostEntity:SetColor( Color( 255, 255, 255, 150 ) )
+  self.GhostEntity:SetColor(stDrawDyes.Ghost)
 end
 
 function TOOL:UpdateGhost(oEnt, oPly)
@@ -1224,7 +1230,7 @@ function TOOL:UpdateGhost(oEnt, oPly)
       if(not stSpawn) then return end
       oEnt:SetNoDraw(false)
       oEnt:SetRenderMode(RENDERMODE_TRANSALPHA)
-      oEnt:SetColor(Color(255, 255, 255, 150 ))
+      oEnt:SetColor(stDrawDyes.Ghost)
       oEnt:SetAngles(stSpawn.SAng)
       gearasmlib.SetMCWorld(oEnt,stSpawn.HRec.M.U,stSpawn.SPos)
     end
@@ -1242,7 +1248,7 @@ function TOOL:UpdateGhost(oEnt, oPly)
     local spwnflat  = self:GetClientNumber("spwnflat") or 0
     oEnt:SetNoDraw(false)
     oEnt:SetRenderMode(RENDERMODE_TRANSALPHA)
-    oEnt:SetColor(Color(255, 255, 255, 150 ))
+    oEnt:SetColor(stDrawDyes.Ghost)
     oEnt:SetAngles(stSpawn.SAng)
     stSpawn.SPos:Add(gearasmlib.GetCustomAngBBZ(oEnt,stSpawn.HRec.A.U,spwnflat) * Trace.HitNormal)
     gearasmlib.SetMCWorld(oEnt,stSpawn.HRec.M.U,stSpawn.SPos)
@@ -1260,7 +1266,7 @@ function TOOL:Think()
             self.GhostEntity:GetModel() ~= model
     ) then
       -- If none ...
-      self:MakeGhostEntity(model, Vector(), Angle())
+      self:MakeGhostEntity(model, VEC_ZERO, ANG_ZERO)
     end
     self:UpdateGhost(self.GhostEntity, self:GetOwner())
   else
