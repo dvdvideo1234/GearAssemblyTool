@@ -1728,9 +1728,9 @@ function GetENTSpawn(trPos,trAng,trModel,nRotAng,hdModel,enIgnTyp,enOrAngTr,ucsP
   stSpawn.SAng:RotateAroundAxis(stSpawn.DAng:Up(),ucsAng[caY] + 180)
 	--Do Spawn Pos
   if(enOrAngTr ~= 0) then
-    stSpawn.F:Set(stSpawn.TPos:Forward())
-    stSpawn.R:Set(stSpawn.TPos:Right())
-    stSpawn.U:Set(stSpawn.TPos:Up())
+    stSpawn.F:Set(stSpawn.TAng:Forward())
+    stSpawn.R:Set(stSpawn.TAng:Right())
+    stSpawn.U:Set(stSpawn.TAng:Up())
   end
   stSpawn.SPos:Set(stSpawn.OPos)
   stSpawn.SPos:Add((hdRec.O.S[csX] * stSpawn.MPos[cvX] + ucsPos[cvX]) * stSpawn.F)
