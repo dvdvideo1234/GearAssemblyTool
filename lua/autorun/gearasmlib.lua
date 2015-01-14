@@ -111,6 +111,7 @@ local LibSpawn = {
     U    = Vector(),
     SPos = Vector(),
     SAng = Angle (),
+    TAng = Angle (),
     DAng = Angle (),
     HRec = 0
   }
@@ -1632,16 +1633,16 @@ end
 
 function GetNORSpawn(stTrace, sModel, ucsPos, ucsAng)
   if(not stTrace) then return nil end
-  local hdRec  = CacheQueryPiece(sModel)
+  if(not stTrace.Hit) then return nil end
+  local hdRec = CacheQueryPiece(sModel)
   if(not hdRec) then return nil end
   local stSpawn = LibSpawn["NOR"]
   stSpawn.HRec = hdRec
-  stSpawn.DAng:Set(stTrace.HitNormal:Angle())
-  stSpawn.DAng[caP] = stSpawn.DAng[caP] + 90
-  stSpawn.F:Set(stSpawn.DAng:Forward())
-  stSpawn.R:Set(stSpawn.DAng:Right())
-  stSpawn.DAng:RotateAroundAxis(stSpawn.R,ucsAng[caP])
-  stSpawn.DAng:RotateAroundAxis(stSpawn.F,ucsAng[caR])
+  stSpawn.TAng:Set(stTrace.HitNormal:Angle())
+  stSpawn.TAng[caP] = stSpawn.TAng[caP] + 90
+  stSpawn.DAng:Set(stSpawn.TAng)
+  stSpawn.DAng:RotateAroundAxis(stSpawn.TAng:Right(),ucsAng[caP])
+  stSpawn.DAng:RotateAroundAxis(stSpawn.TAng:Forward(),ucsAng[caR])
   stSpawn.DAng:RotateAroundAxis(stSpawn.DAng:Up(),ucsAng[caY])
   stSpawn.F:Set(stSpawn.DAng:Forward())
   stSpawn.R:Set(stSpawn.DAng:Right())
@@ -1672,8 +1673,8 @@ function GetENTSpawn(trPos,trAng,trModel,nRotAng,hdModel,enIgnTyp,enOrAngTr,ucsP
            hdModel    and
            enIgnTyp   and
            enOrAngTr  and
-           ucsAng     and
-           ucsPos )
+           ucsPos     and
+           ucsAng     )
   ) then return nil end
 
   local trRec = CacheQueryPiece(trModel)
@@ -1689,20 +1690,18 @@ function GetENTSpawn(trPos,trAng,trModel,nRotAng,hdModel,enIgnTyp,enOrAngTr,ucsP
 
   stSpawn.TPos:Set(vGetMCWorldPosAng(trPos,trAng,trRec.M.U))
   stSpawn.TAng:Set(trAng)
-  -- Make stSpawn.TAng:Set(trEnt:LocalToWorldAngles(-trRec.A.U))
   SubAngle(stSpawn.TAng,trRec.A.U)
   stSpawn.TAng:RotateAroundAxis(stSpawn.TAng:Up(),-nRotAng)
-  -- Do Origin UCS World angle
-	stSpawn.OAng:Set(stSpawn.TAng)
 	-- Do origin !
 	stSpawn.OPos:Set(trRec.O.U)
-	stSpawn.OPos:Rotate(stSpawn.OAng)
+	stSpawn.OPos:Rotate(stSpawn.TAng)
 	stSpawn.OPos:Add(stSpawn.TPos)
+  -- Do Origin UCS World angle
+	stSpawn.OAng:Set(stSpawn.TAng)
 	--- Do F,R,U
-	stSpawn.R:Set(stSpawn.OAng:Right())
-  stSpawn.OAng:RotateAroundAxis(stSpawn.R,trRec.Mesh + ucsAng[caP])
+  stSpawn.OAng:RotateAroundAxis(stSpawn.TAng:Right(),trRec.Mesh + ucsAng[caP])
+	stSpawn.OAng:RotateAroundAxis(stSpawn.OAng:Forward(),ucsAng[caR])
 	stSpawn.F:Set(stSpawn.OAng:Forward())
-	stSpawn.OAng:RotateAroundAxis(stSpawn.F,ucsAng[caR])
 	stSpawn.R:Set(stSpawn.OAng:Right())
 	stSpawn.U:Set(stSpawn.OAng:Up())
 	--- F R U Ready
@@ -1728,22 +1727,15 @@ function GetENTSpawn(trPos,trAng,trModel,nRotAng,hdModel,enIgnTyp,enOrAngTr,ucsP
 	stSpawn.SAng:RotateAroundAxis(stSpawn.F,-stSpawn.MAng[caR] * hdRec.A.S[csZ])
   stSpawn.SAng:RotateAroundAxis(stSpawn.DAng:Up(),ucsAng[caY] + 180)
 	--Do Spawn Pos
-  stSpawn.SPos:Set(stSpawn.OPos)
-  stSpawn.SPos:Add((hdRec.O.S[csX] * stSpawn.MPos[cvX]) * stSpawn.F)
-  stSpawn.SPos:Add((hdRec.O.S[csY] * stSpawn.MPos[cvY]) * stSpawn.R)
-  stSpawn.SPos:Add((hdRec.O.S[csZ] * stSpawn.MPos[cvZ]) * stSpawn.U)
   if(enOrAngTr ~= 0) then
-    stSpawn.OAng:Set(stSpawn.TAng)
-    stSpawn.R:Set(stSpawn.OAng:Right())
-    stSpawn.OAng:RotateAroundAxis(stSpawn.R,ucsAng[caP])
-    stSpawn.F:Set(stSpawn.OAng:Forward())
-    stSpawn.OAng:RotateAroundAxis(stSpawn.F,ucsAng[caR])
-    stSpawn.R:Set(stSpawn.OAng:Right())
-    stSpawn.U:Set(stSpawn.OAng:Up())
+    stSpawn.F:Set(stSpawn.TPos:Forward())
+    stSpawn.R:Set(stSpawn.TPos:Right())
+    stSpawn.U:Set(stSpawn.TPos:Up())
   end
-  stSpawn.SPos:Add(ucsPos[cvX] * stSpawn.F)
-  stSpawn.SPos:Add(ucsPos[cvY] * stSpawn.R)
-  stSpawn.SPos:Add(ucsPos[cvZ] * stSpawn.U)
+  stSpawn.SPos:Set(stSpawn.OPos)
+  stSpawn.SPos:Add((hdRec.O.S[csX] * stSpawn.MPos[cvX] + ucsPos[cvX]) * stSpawn.F)
+  stSpawn.SPos:Add((hdRec.O.S[csY] * stSpawn.MPos[cvY] + ucsPos[cvY]) * stSpawn.R)
+  stSpawn.SPos:Add((hdRec.O.S[csZ] * stSpawn.MPos[cvZ] + ucsPos[cvZ]) * stSpawn.U)
 	return stSpawn
 end
 

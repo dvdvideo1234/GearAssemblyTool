@@ -210,24 +210,24 @@ local csD = 4
 ------------- LOCAL FUNCTIONS AND STUFF ----------------
 
 if(CLIENT)then
-  language.Add( "Tool.gearassembly.name", "Gear Assembly" )
-  language.Add( "Tool.gearassembly.desc", "Assembles gears to mesh together" )
-  language.Add( "Tool.gearassembly.0", "Left click to spawn/stack, Right to change mode, Reload to remove a piece" )
-  language.Add( "Cleanup.gearassembly", "Gear Assembly" )
-  language.Add( "Cleaned.gearassemblys", "Cleaned up all Pieces" )
+  language.Add("Tool.gearassembly.name", "Gear Assembly" )
+  language.Add("Tool.gearassembly.desc", "Assembles gears to mesh together" )
+  language.Add("Tool.gearassembly.0", "Left click to spawn/stack, Right to change mode, Reload to remove a piece" )
+  language.Add("Cleanup.gearassembly", "Gear Assembly" )
+  language.Add("Cleaned.gearassemblys", "Cleaned up all Pieces" )
 
-  local function ResetOffsets( oPly, oCom, oArgs )
+  local function ResetOffsets(oPly,oCom,oArgs)
     -- Reset all of the offset options to zero
-    oPly:ConCommand( "gearassembly_nextx 0\n" )
-    oPly:ConCommand( "gearassembly_nexty 0\n" )
-    oPly:ConCommand( "gearassembly_nextz 0\n" )
-    oPly:ConCommand( "gearassembly_rotpiv 0\n" )
-    oPly:ConCommand( "gearassembly_nextpic 0\n" )
-    oPly:ConCommand( "gearassembly_nextyaw 0\n" )
-    oPly:ConCommand( "gearassembly_nextrol 0\n" )
+    oPly:ConCommand("gearassembly_nextx 0\n")
+    oPly:ConCommand("gearassembly_nexty 0\n")
+    oPly:ConCommand("gearassembly_nextz 0\n")
+    oPly:ConCommand("gearassembly_rotpiv 0\n")
+    oPly:ConCommand("gearassembly_nextpic 0\n")
+    oPly:ConCommand("gearassembly_nextyaw 0\n")
+    oPly:ConCommand("gearassembly_nextrol 0\n")
   end
-  concommand.Add( "gearassembly_resetoffs", ResetOffsets )
-  txToolgunBackground = surface.GetTextureID( "vgui/white" )
+  concommand.Add("gearassembly_resetoffs",ResetOffsets)
+  txToolgunBackground = surface.GetTextureID("vgui/white")
 end
 
 TOOL.Category   = "Construction"            -- Name of the category
@@ -290,17 +290,17 @@ if(SERVER)then
     local ePiece = ents.Create("prop_physics")
     if(ePiece and ePiece:IsValid()) then
       ePiece:SetCollisionGroup(COLLISION_GROUP_NONE );
-      ePiece:SetSolid( SOLID_VPHYSICS );
-      ePiece:SetMoveType( MOVETYPE_VPHYSICS )
-      ePiece:SetNotSolid( false );
-      ePiece:SetModel( sModel )
-      ePiece:SetPos( vPos )
-      ePiece:SetAngles( aAng )
+      ePiece:SetSolid(SOLID_VPHYSICS);
+      ePiece:SetMoveType(MOVETYPE_VPHYSICS)
+      ePiece:SetNotSolid(false);
+      ePiece:SetModel(sModel)
+      ePiece:SetPos(vPos)
+      ePiece:SetAngles(aAng)
       ePiece:Spawn()
       ePiece:Activate()
       ePiece:SetColor(stDrawDyes.White)
-      ePiece:SetRenderMode( RENDERMODE_TRANSALPHA )
-      ePiece:DrawShadow( true )
+      ePiece:SetRenderMode(RENDERMODE_TRANSALPHA)
+      ePiece:DrawShadow(true)
       ePiece:PhysWake()
       local phPiece = ePiece:GetPhysicsObject()
       if(phPiece and phPiece:IsValid()) then
@@ -420,11 +420,11 @@ if(SERVER)then
     return (not IsIn)
   end
   
-  duplicator.RegisterEntityModifier( "gearassembly_nophysgun", LoadDupePieceNoPhysgun )
+  duplicator.RegisterEntityModifier("gearassembly_nophysgun",LoadDupePieceNoPhysgun)
   
 end
 
-function TOOL:LeftClick( Trace )
+function TOOL:LeftClick(Trace)
   if(CLIENT) then self:ClearObjects() return true end
   if(not Trace) then return false end
   if(not Trace.Hit) then return false end
@@ -484,7 +484,7 @@ function TOOL:LeftClick( Trace )
     gearasmlib.EmitSoundPly(ply)
     undo.AddEntity(ePiece)
     undo.SetPlayer(ply)
-    undo.SetCustomUndoText( "Undone Assembly ( Normal Spawn )" )
+    undo.SetCustomUndoText("Undone Assembly ( Normal Spawn )")
     undo.Finish()
     return true
   end
@@ -544,7 +544,7 @@ function TOOL:LeftClick( Trace )
           .."\n   Event  : Stacking > Position out of map bounds"
           .."\n   StMode : "..stSMode[stmode]
           .."\n   Iterats: "..tostring(count-i)
-          .."\n   StackTr: "..tostring( nTrys ).." ?= "..tostring(staatts)
+          .."\n   StackTr: "..tostring(nTrys).." ?= "..tostring(staatts)
           .."\n   Player : "..ply:Nick()
           .."\n   DeltaRt: "..dRot
           .."\n   Anchor : "..gearasmlib.GetModelFileName(bsModel)
@@ -553,7 +553,7 @@ function TOOL:LeftClick( Trace )
           .."\n")
           gearasmlib.EmitSoundPly(ply)
           undo.SetPlayer(ply)
-          undo.SetCustomUndoText( "Undone Assembly ( Stack #"..tostring(count-i).." )" )
+          undo.SetCustomUndoText("Undone Assembly ( Stack #"..tostring(count-i).." )")
           undo.Finish()
           return true
         end
@@ -577,7 +577,7 @@ function TOOL:LeftClick( Trace )
           .."\n   Event  : Stacking > Failed to obtain spawn data"
           .."\n   StMode : "..stSMode[stmode]
           .."\n   Iterats: "..tostring(count-i)
-          .."\n   StackTr: "..tostring( nTrys ).." ?= "..tostring(staatts)
+          .."\n   StackTr: "..tostring(nTrys).." ?= "..tostring(staatts)
           .."\n   Player : "..ply:Nick()
           .."\n   DeltaRt: "..dRot
           .."\n   Anchor : "..gearasmlib.GetModelFileName(bsModel)
@@ -586,7 +586,7 @@ function TOOL:LeftClick( Trace )
           .."\n")
           gearasmlib.EmitSoundPly(ply)
           undo.SetPlayer(ply)
-          undo.SetCustomUndoText( "Undone Assembly ( Stack #"..tostring(count-i).." )" )
+          undo.SetCustomUndoText("Undone Assembly ( Stack #"..tostring(count-i).." )")
           undo.Finish()
           return true
         end
@@ -601,7 +601,7 @@ function TOOL:LeftClick( Trace )
         .."\n   Event  : Stacking > Failed to allocate memory for a piece"
         .."\n   StMode : "..stSMode[stmode]
         .."\n   Iterats: "..tostring(count-i)
-        .."\n   StackTr: "..tostring( nTrys ).." ?= "..tostring(staatts)
+        .."\n   StackTr: "..tostring(nTrys).." ?= "..tostring(staatts)
         .."\n   Player : "..ply:Nick()
         .."\n   DeltaRt: "..dRot
         .."\n   Anchor : "..gearasmlib.GetModelFileName(bsModel)
@@ -610,14 +610,14 @@ function TOOL:LeftClick( Trace )
         .."\n")
         gearasmlib.EmitSoundPly(ply)
         undo.SetPlayer(ply)
-        undo.SetCustomUndoText( "Undone Assembly ( Stack #"..tostring(count-i).." )" )
+        undo.SetCustomUndoText("Undone Assembly ( Stack #"..tostring(count-i).." )")
         undo.Finish()
         return true
       end
     end
     gearasmlib.EmitSoundPly(ply)
     undo.SetPlayer(ply)
-    undo.SetCustomUndoText( "Undone Assembly ( Stack #"..tostring(count-i).." )" )
+    undo.SetCustomUndoText("Undone Assembly ( Stack #"..tostring(count-i).." )")
     undo.Finish()
     return true
   end
@@ -650,7 +650,7 @@ function TOOL:LeftClick( Trace )
       gearasmlib.EmitSoundPly(ply)
       undo.AddEntity(ePiece)
       undo.SetPlayer(ply)
-      undo.SetCustomUndoText( "Undone Assembly ( Prop Relative )" )
+      undo.SetCustomUndoText("Undone Assembly ( Prop Relative )")
       undo.Finish()
       return true
     end
@@ -658,7 +658,7 @@ function TOOL:LeftClick( Trace )
   return false
 end
 
-function TOOL:RightClick( Trace )
+function TOOL:RightClick(Trace)
   -- Change the tool mode
   if(CLIENT) then return true end
   if(not Trace) then return nil end
@@ -697,7 +697,7 @@ function TOOL:RightClick( Trace )
   else
     local stmode = gearasmlib.GetCorrectID(self:GetClientInfo("stmode"),stSMode)
           stmode = gearasmlib.GetCorrectID(stmode + 1,stSMode)
-    ply:ConCommand( "gearassembly_stmode "..stmode.."\n" )
+    ply:ConCommand("gearassembly_stmode "..stmode.."\n")
     gearasmlib.PrintNotify(ply,"Stack Mode: "..stSMode[stmode].." !","UNDO")
     return true
   end 
@@ -801,8 +801,6 @@ function TOOL:DrawHUD()
     local nexty   = self:GetClientNumber("nexty") or 0
     local nextz   = self:GetClientNumber("nextz") or 0
     local addinfo = self:GetClientNumber("addinfo") or 0
-    local orangtr = self:GetClientNumber("orangtr") or 0
-    local rotpiv  = math.Clamp(self:GetClientNumber("rotpiv") or 0,-360,360)
     local nextpic = math.Clamp(self:GetClientNumber("nextpic") or 0,-360,360)
     local nextyaw = math.Clamp(self:GetClientNumber("nextyaw") or 0,-360,360)
     local nextrol = math.Clamp(self:GetClientNumber("nextrol") or 0,-360,360)
@@ -811,6 +809,8 @@ function TOOL:DrawHUD()
     if(trEnt and trEnt:IsValid() and gearasmlib.PlyLoadKey(ply,"SPEED")) then
       if(gearasmlib.IsOther(trEnt)) then return end
       local igntyp  = self:GetClientNumber("igntyp") or 0
+      local orangtr = self:GetClientNumber("orangtr") or 0
+      local rotpiv  = math.Clamp(self:GetClientNumber("rotpiv") or 0,-360,360)
       local trPos   = trEnt:GetPos()
       local trAng   = trEnt:GetAngles()
       local trModel = trEnt:GetModel()
@@ -818,34 +818,28 @@ function TOOL:DrawHUD()
                                              orangtr,Vector(nextx,nexty,nextz),
                                              Angle(nextpic,nextyaw,nextrol))
       if(not stSpawn) then return end
-      stSpawn.F:Mul(15)
-      stSpawn.F:Add(stSpawn.OPos)
-      stSpawn.R:Mul(15)
-      stSpawn.R:Add(stSpawn.OPos)
-      stSpawn.U:Mul(15)
-      stSpawn.U:Add(stSpawn.OPos)
-      local Op = stSpawn.OPos:ToScreen()
-      local Sp = stSpawn.SPos:ToScreen()
-      local Du = (stSpawn.SPos + 15 * stSpawn.DAng:Up()):ToScreen()
+      local Op =  stSpawn.OPos:ToScreen()
+      local Xs = (stSpawn.OPos + 15 * stSpawn.F):ToScreen()
+      local Ys = (stSpawn.OPos + 15 * stSpawn.R):ToScreen()
+      local Zs = (stSpawn.OPos + 15 * stSpawn.U):ToScreen()
+      local Sp =  stSpawn.SPos:ToScreen()
       local Df = (stSpawn.SPos + 15 * stSpawn.DAng:Forward()):ToScreen()
-      local Tp = stSpawn.TPos:ToScreen()
+      local Du = (stSpawn.SPos + 15 * stSpawn.DAng:Up()):ToScreen()
+      local Tp =  stSpawn.TPos:ToScreen()
       local Tu = (stSpawn.TPos + 15 * stSpawn.TAng:Up()):ToScreen()
-      local Xs = stSpawn.F:ToScreen()
-      local Ys = stSpawn.R:ToScreen()
-      local Zs = stSpawn.U:ToScreen()
       -- Draw UCS
       DrawLineColor(Op,Xs,scrW,scrH,stDrawDyes.Red)
       DrawLineColor(Op,Ys,scrW,scrH,stDrawDyes.Green)
       DrawLineColor(Op,Zs,scrW,scrH,stDrawDyes.Blue)
       DrawLineColor(Tp,Tu,scrW,scrH,stDrawDyes.Yello)
       DrawLineColor(Tp,Op,scrW,scrH,stDrawDyes.Green)
-      surface.DrawCircle( Op.x, Op.y, RadScal, stDrawDyes.Yello)
-      surface.DrawCircle( Tp.x, Tp.y, RadScal, stDrawDyes.Green)
+      surface.DrawCircle(Op.x,Op.y,RadScal,stDrawDyes.Yello)
+      surface.DrawCircle(Tp.x,Tp.y,RadScal,stDrawDyes.Green)
       -- Draw Spawn
       DrawLineColor(Op,Sp,scrW,scrH,stDrawDyes.Magen)
       DrawLineColor(Sp,Du,scrW,scrH,stDrawDyes.Cyan)
       DrawLineColor(Sp,Df,scrW,scrH,stDrawDyes.Red)
-      surface.DrawCircle( Sp.x, Sp.y, RadScal, stDrawDyes.Magen)
+      surface.DrawCircle(Sp.x,Sp.y,RadScal,stDrawDyes.Magen)
       if(addinfo ~= 0) then
         DrawAdditionalInfo(stSpawn)
       end
@@ -861,7 +855,7 @@ function TOOL:DrawHUD()
       DrawLineColor(Os,Xs,scrW,scrH,stDrawDyes.Red)
       DrawLineColor(Os,Ys,scrW,scrH,stDrawDyes.Green)
       DrawLineColor(Os,Zs,scrW,scrH,stDrawDyes.Blue)
-      surface.DrawCircle( Os.x, Os.y, RadScal, stDrawDyes.Yello)
+      surface.DrawCircle(Os.x,Os.y,RadScal,stDrawDyes.Yello)
       if(addinfo ~= 0) then
         DrawAdditionalInfo(stSpawn)
       end
@@ -871,9 +865,9 @@ end
 
 function TOOL:DrawToolScreen(w, h)
   if(SERVER) then return end
-  surface.SetTexture( txToolgunBackground )
-  surface.SetDrawColor( stDrawDyes.Black )
-  surface.DrawTexturedRect( 0, 0, w, h )
+  surface.SetTexture(txToolgunBackground)
+  surface.SetDrawColor(stDrawDyes.Black)
+  surface.DrawTexturedRect(0,0,w,h)
   surface.SetFont("Trebuchet24")
   local Trace = LocalPlayer():GetEyeTrace()
   local txPos = {x = 0, y = 0, w = 0, h = 0}
@@ -940,9 +934,9 @@ function TOOL:DrawToolScreen(w, h)
   DrawTextRowColor(txPos,tostring(os.date()),stDrawDyes.White)
 end
 
-function TOOL.BuildCPanel( CPanel )
-  Header = CPanel:AddControl( "Header", { Text        = "#Tool.gearassembly.Name",
-                                          Description = "#Tool.gearassembly.desc" }  )
+function TOOL.BuildCPanel(CPanel)
+  Header = CPanel:AddControl("Header", { Text        = "#Tool.gearassembly.Name",
+                                         Description = "#Tool.gearassembly.desc" })
   local CurY = Header:GetTall() + 2
 
   local Combo         = {}
@@ -1036,7 +1030,7 @@ function TOOL.BuildCPanel( CPanel )
   while(stCType[Cnt]) do
     local Val = stCType[Cnt]
     pConsType:AddChoice(Val.Name)
-    pConsType.OnSelect = function( panel, index, value )
+    pConsType.OnSelect = function(panel,index,value)
       RunConsoleCommand("gearassembly_contyp",index)
     end
     Cnt = Cnt + 1
@@ -1046,11 +1040,11 @@ function TOOL.BuildCPanel( CPanel )
 
   -- http://wiki.garrysmod.com/page/Category:DTextEntry
   local pText = vgui.Create("DTextEntry")
-        pText:SetPos( 2, 300 )
+        pText:SetPos(2,300)
         pText:SetTall(18)
         pText:SetText(GetConVarString("gearassembly_bgrpids") or
                       "Bodygroup IDs separated with commas > ENTER")
-        pText.OnEnter = function( self )
+        pText.OnEnter = function(self)
           local sTX = self:GetValue() or ""
           RunConsoleCommand("gearassembly_bgrpids",sTX)
         end
@@ -1085,10 +1079,10 @@ function TOOL.BuildCPanel( CPanel )
             Max     = 200,
             Command = "gearassembly_count"})
 
-  CPanel:AddControl( "Button", {
+  CPanel:AddControl("Button", {
             Label   = "V Reset Offset Values V",
             Command = "gearassembly_resetoffs",
-            Text    = "Reset All Offsets" } )
+            Text    = "Reset All Offsets" })
 
   CPanel:AddControl("Slider", {
             Label   = "Pivot rotation: ",
@@ -1158,7 +1152,7 @@ function TOOL.BuildCPanel( CPanel )
             Command = "gearassembly_engravity"})
 
   CPanel:AddControl("Checkbox", {
-            Label   = "Position offset from base angle",
+            Label   = "Origin is trace angle",
             Command = "gearassembly_orangtr"})
 
   CPanel:AddControl("Checkbox", {
@@ -1186,10 +1180,10 @@ function TOOL.BuildCPanel( CPanel )
             Command = "gearassembly_enghost"})
 end
 
-function TOOL:MakeGhostEntity( sModel, vPos, aAngle )
+function TOOL:MakeGhostEntity(sModel,vPos,aAngle)
   -- Check for invalid model
-  if(not util.IsValidModel( sModel )) then return end
-  util.PrecacheModel( sModel )
+  if(not util.IsValidModel(sModel)) then return end
+  util.PrecacheModel(sModel)
   -- We do ghosting serverside in single player
   -- It's done clientside in multiplayer
   if(SERVER and not game.SinglePlayer()) then return end
@@ -1199,7 +1193,7 @@ function TOOL:MakeGhostEntity( sModel, vPos, aAngle )
   if(CLIENT) then
     self.GhostEntity = ents.CreateClientProp(sModel)
   else
-    if (util.IsValidRagdoll(sModel)) then
+    if(util.IsValidRagdoll(sModel)) then
       self.GhostEntity = ents.Create("prop_dynamic")
     else
       self.GhostEntity = ents.Create("prop_physics")
@@ -1210,14 +1204,14 @@ function TOOL:MakeGhostEntity( sModel, vPos, aAngle )
     self.GhostEntity = nil
     return
   end
-  self.GhostEntity:SetModel( sModel )
-  self.GhostEntity:SetPos( vPos )
-  self.GhostEntity:SetAngles( aAngle )
+  self.GhostEntity:SetModel(sModel)
+  self.GhostEntity:SetPos(vPos)
+  self.GhostEntity:SetAngles(aAngle)
   self.GhostEntity:Spawn()
-  self.GhostEntity:SetSolid( SOLID_VPHYSICS );
-  self.GhostEntity:SetMoveType( MOVETYPE_NONE )
-  self.GhostEntity:SetNotSolid( true );
-  self.GhostEntity:SetRenderMode( RENDERMODE_TRANSALPHA )
+  self.GhostEntity:SetSolid(SOLID_VPHYSICS);
+  self.GhostEntity:SetMoveType(MOVETYPE_NONE)
+  self.GhostEntity:SetNotSolid(true);
+  self.GhostEntity:SetRenderMode(RENDERMODE_TRANSALPHA)
   self.GhostEntity:SetColor(stDrawDyes.Ghost)
 end
 
