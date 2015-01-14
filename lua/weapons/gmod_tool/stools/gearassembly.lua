@@ -272,7 +272,7 @@ TOOL.ClientConVar = {
 if(SERVER)then
 
   cleanup.Register("GEARASSEMBLYs")
-  
+
   function LoadDupePieceNoPhysgun(Ply,oEnt,tData)
     if tData.NoPhysgun then
       oEnt:SetMoveType(MOVETYPE_NONE)
@@ -419,9 +419,9 @@ if(SERVER)then
     end
     return (not IsIn)
   end
-  
+
   duplicator.RegisterEntityModifier("gearassembly_nophysgun",LoadDupePieceNoPhysgun)
-  
+
 end
 
 function TOOL:LeftClick(Trace)
@@ -700,7 +700,7 @@ function TOOL:RightClick(Trace)
     ply:ConCommand("gearassembly_stmode "..stmode.."\n")
     gearasmlib.PrintNotify(ply,"Stack Mode: "..stSMode[stmode].." !","UNDO")
     return true
-  end 
+  end
   return false
 end
 
@@ -1148,29 +1148,29 @@ function TOOL.BuildCPanel(CPanel)
             Command = "gearassembly_forcelim"})
 
   CPanel:AddControl("Checkbox", {
-            Label   = "Enable pieces gravity",
-            Command = "gearassembly_engravity"})
-
-  CPanel:AddControl("Checkbox", {
-            Label   = "Origin is trace angle",
-            Command = "gearassembly_orangtr"})
-
-  CPanel:AddControl("Checkbox", {
             Label   = "NoCollide new pieces to the anchor",
             Command = "gearassembly_nocollide"})
 
   CPanel:AddControl("Checkbox", {
             Label   = "Freeze pieces",
             Command = "gearassembly_freeze"})
-
+            
   CPanel:AddControl("Checkbox", {
-            Label   = "Enable flat gear spawn",
-            Command = "gearassembly_spwnflat"})
-
+            Label   = "Enable pieces gravity",
+            Command = "gearassembly_engravity"})
+            
+  CPanel:AddControl("Checkbox", {
+            Label   = "Use origin angle from trace",
+            Command = "gearassembly_orangtr"})
+            
   CPanel:AddControl("Checkbox", {
             Label   = "Ignore gear type",
             Command = "gearassembly_igntyp"})
 
+  CPanel:AddControl("Checkbox", {
+            Label   = "Enable flat gear spawn",
+            Command = "gearassembly_spwnflat"})
+            
   CPanel:AddControl("Checkbox", {
             Label   = "Enable advisor",
             Command = "gearassembly_advise"})
