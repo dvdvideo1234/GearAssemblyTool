@@ -106,9 +106,44 @@ gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/gears/gear1_s3_18.mdl"
 gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/gears/gear1_s3_24.mdl", "Black Reglar S", "#", 0, " 7.917, 0, 0", "", "0.007310485932976, -0.004775257781148, 0.0017300172476098"})
 gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/gears/gear1_s3_30.mdl", "Black Reglar S", "#", 0, " 9.849, 0, 0", "", "0.0016155475750566, -0.010166599415243, -0.00065914361039177"})
 gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/gears/gear1_s3_36.mdl", "Black Reglar S", "#", 0, "11.848, 0, 0", "", "0.014523273333907, 0.012045037001371, 0.00054475461365655"})
-
-
-
+--- Sprops Flat S
+gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/sprops/mechanics/sgears/spur_10t_s.mdl", "SProps Flat S", "#", 0, " 2.820, 0, 0", "", "0.0049172430299222, -0.0049177999608219, -1.5156917498871e-008"})
+gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/sprops/mechanics/sgears/spur_12t_s.mdl", "SProps Flat S", "#", 0, " 3.100, 0, 0", "", "-0.001883051590994, 0.00050171936163679, -0.0005939711118117"})
+gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/sprops/mechanics/sgears/spur_14t_s.mdl", "SProps Flat S", "#", 0, " 3.784, 0, 0", "", "0.002141302684322, -0.002729385625571, 0.013979037292302"})
+gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/sprops/mechanics/sgears/spur_16t_s.mdl", "SProps Flat S", "#", 0, " 4.271, 0, 0", "", "0.0015306419227272, -0.00057447905419394, -0.00052806112216786"})
+gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/sprops/mechanics/sgears/spur_18t_s.mdl", "SProps Flat S", "#", 0, " 4.761, 0, 0", "", "-0.0017241191817448, -0.0063244164921343, -0.00037708022864535"})
+gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/sprops/mechanics/sgears/spur_24t_s.mdl", "SProps Flat S", "#", 0, " 6.237, 0, 0", "", "-2.9937275485281e-006, -1.4846134490654e-006, -1.7167849364341e-008"})
+gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/sprops/mechanics/sgears/spur_30t_s.mdl", "SProps Flat S", "#", 0, " 7.722, 0, 0", "", "0.001925386604853, 0.00010160527017433, 0.00021312535682227"})
+gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/sprops/mechanics/sgears/spur_36t_s.mdl", "SProps Flat S", "#", 0, " 9.211, 0, 0", "", "-0.00056221708655357, -7.6126736530568e-005, -1.2265476634354e-008"})
+gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/sprops/mechanics/sgears/spur_42t_s.mdl", "SProps Flat S", "#", 0, "10.703, 0, 0", "", "-2.1004445898143e-006, -1.0246620831822e-006, 8.0583710371229e-008"})
+gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/sprops/mechanics/sgears/spur_48t_s.mdl", "SProps Flat S", "#", 0, "12.197, 0, 0", "", "-0.0046847369521856, -0.0031020345631987, -0.00029869191348553"})
+gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/sprops/mechanics/sgears/spur_54t_s.mdl", "SProps Flat S", "#", 0, "13.692, 0, 0", "", "0.001435556798242, -0.020333550870419, -0.0020731033291668"})
+gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/sprops/mechanics/sgears/spur_60t_s.mdl", "SProps Flat S", "#", 0, "15.188, 0, 0", "", "0.020014140754938, 0.018639868125319, -0.00044363949564286"})
+gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/sprops/mechanics/sgears/spur_66t_s.mdl", "SProps Flat S", "#", 0, "16.685, 0, 0", "", "-0.010388540104032, 0.016772596165538, -0.00034016091376543"})
+gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/sprops/mechanics/sgears/spur_72t_s.mdl", "SProps Flat S", "#", 0, "18.182, 0, 0", "", "0.03625612705946, -0.0024083079770207, 9.4895163783804e-005"})
+gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/sprops/mechanics/sgears/spur_78t_s.mdl", "SProps Flat S", "#", 0, "19.680, 0, 0", "", "0.0019805070478469, -0.0081495717167854, 0.0006504594348371"})
+gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/sprops/mechanics/sgears/spur_84t_s.mdl", "SProps Flat S", "#", 0, "21.178, 0, 0", "", "0.030328331515193, -0.021101905032992, -0.00029180099954829"})
+gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/sprops/mechanics/sgears/spur_90t_s.mdl", "SProps Flat S", "#", 0, "22.676, 0, 0", "", "-0.029588585719466, -0.014376631937921, -0.00069682777393609"})
+gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/sprops/mechanics/sgears/spur_96t_s.mdl", "SProps Flat S", "#", 0, "24.174, 0, 0", "", "0.005857755895704, -0.01476801559329, -0.00028429020312615"})
+--- SProps Flat L
+gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/sprops/mechanics/sgears/spur_10t_l.mdl", "SProps Flat L", "#", 0, " 5.394, 0, 0", "", "-0.0041495636105537, -0.0030151198152453, -0.0059148990549147"})
+gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/sprops/mechanics/sgears/spur_12t_l.mdl", "SProps Flat L", "#", 0, " 6.358, 0, 0", "", "-0.0037653909530491, -0.006521004717797, -0.0023776774760336"})
+gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/sprops/mechanics/sgears/spur_14t_l.mdl", "SProps Flat L", "#", 0, " 7.330, 0, 0", "", "4.0495933717466e-007, 3.3086558914874e-007, -3.283965099854e-008"})
+gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/sprops/mechanics/sgears/spur_16t_l.mdl", "SProps Flat L", "#", 0, " 8.307, 0, 0", "", "-0.0028722907882184, 0.00086623401148245, -3.2330953469994e-009"})
+gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/sprops/mechanics/sgears/spur_18t_l.mdl", "SProps Flat L", "#", 0, " 9.288, 0, 0", "", "0.0068863672204316, -0.0019885420333594, 0.00037651605089195"})
+gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/sprops/mechanics/sgears/spur_24t_l.mdl", "SProps Flat L", "#", 0, "12.247, 0, 0", "", "-2.9040645586065e-006, -3.0396604415728e-006, -3.5156244582168e-009"})
+gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/sprops/mechanics/sgears/spur_30t_l.mdl", "SProps Flat L", "#", 0, "15.221, 0, 0", "", "-0.0038472001906484, -0.005274873226881, 0.0015362998237833"})
+gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/sprops/mechanics/sgears/spur_36t_l.mdl", "SProps Flat L", "#", 0, "18.203, 0, 0", "", "0.0037662063259631, 0.0026958135422319, -0.00089779059635475"})
+gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/sprops/mechanics/sgears/spur_42t_l.mdl", "SProps Flat L", "#", 0, "21.189, 0, 0", "", "-2.4632468011987e-006, -2.1759717583336e-006, 1.3644348939579e-007"})
+gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/sprops/mechanics/sgears/spur_48t_l.mdl", "SProps Flat L", "#", 0, "24.179, 0, 0", "", "-9.0362368609931e-007, -2.2698932298226e-006, 2.9944263957304e-008"})
+gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/sprops/mechanics/sgears/spur_54t_l.mdl", "SProps Flat L", "#", 0, "27.171, 0, 0", "", "-0.00012703427637462, 0.0087271770462394, 0.00064932194072753"})
+gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/sprops/mechanics/sgears/spur_60t_l.mdl", "SProps Flat L", "#", 0, "30.164, 0, 0", "", "0.0056863417848945, -0.0054859640076756, 0.00057526386808604"})
+gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/sprops/mechanics/sgears/spur_66t_l.mdl", "SProps Flat L", "#", 0, "33.158, 0, 0", "", "0.00034787258482538, 0.01172979734838, 0.00039185225614347"})
+gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/sprops/mechanics/sgears/spur_72t_l.mdl", "SProps Flat L", "#", 0, "36.154, 0, 0", "", "0.0059279436245561, -0.00014554298832081, 0.00043231318704784"})
+gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/sprops/mechanics/sgears/spur_78t_l.mdl", "SProps Flat L", "#", 0, "39.150, 0, 0", "", "0.035279795527458, 0.0002772074949462, -0.0002848417207133"})
+gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/sprops/mechanics/sgears/spur_84t_l.mdl", "SProps Flat L", "#", 0, "42.146, 0, 0", "", "-0.0063623366877437, -0.0040172939188778, 0.00028934032889083"})
+gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/sprops/mechanics/sgears/spur_90t_l.mdl", "SProps Flat L", "#", 0, "45.143, 0, 0", "", "-3.0313363822643e-005, 0.0025897726882249, -8.3106489910278e-005"})
+gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/sprops/mechanics/sgears/spur_96t_l.mdl", "SProps Flat L", "#", 0, "48.141, 0, 0", "", "-0.020891901105642, -0.0010100682266057, 0.00014523084973916"})
 
 ---------------- Localizing Libraries ----------------
 

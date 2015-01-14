@@ -1612,7 +1612,7 @@ function GetCustomAngBBZ(oEnt,aLAng,nMode)
   if(Mode ~= 0 and aLAng) then
     vOBB = oEnt:OBBMins()
     vOBB:Rotate(aLAng)
-    vOBB:Set(gearasmlib.DecomposeByAngle(vOBB,Angle(0,0,0)))
+    vOBB:Set(DecomposeByAngle(vOBB,Angle(0,0,0)))
     return math.abs(vOBB[cvZ])
   else
     return (oEnt:OBBMaxs() - oEnt:OBBMins()):Length() / 2.828 -- 2 * sqrt(2)
@@ -1725,15 +1725,18 @@ function GetENTSpawn(trPos,trAng,trModel,nRotAng,hdModel,enIgnTyp,enOrAngTr,ucsP
 	stSpawn.SAng:RotateAroundAxis(stSpawn.F,-stSpawn.MAng[caR] * hdRec.A.S[csZ])
   stSpawn.SAng:RotateAroundAxis(stSpawn.DAng:Up(),ucsAng[caY] + 180)
 	-- Do Spawn Position
+  stSpawn.SPos:Set(stSpawn.OPos)
+  stSpawn.SPos:Add((hdRec.O.S[csX] * stSpawn.MPos[cvX]) * stSpawn.F)
+  stSpawn.SPos:Add((hdRec.O.S[csY] * stSpawn.MPos[cvY]) * stSpawn.R)
+  stSpawn.SPos:Add((hdRec.O.S[csZ] * stSpawn.MPos[cvZ]) * stSpawn.U)
   if(enOrAngTr ~= 0) then
     stSpawn.F:Set(stSpawn.TAng:Forward())
     stSpawn.R:Set(stSpawn.TAng:Right())
     stSpawn.U:Set(stSpawn.TAng:Up())
   end
-  stSpawn.SPos:Set(stSpawn.OPos)
-  stSpawn.SPos:Add((hdRec.O.S[csX] * stSpawn.MPos[cvX] + ucsPos[cvX]) * stSpawn.F)
-  stSpawn.SPos:Add((hdRec.O.S[csY] * stSpawn.MPos[cvY] + ucsPos[cvY]) * stSpawn.R)
-  stSpawn.SPos:Add((hdRec.O.S[csZ] * stSpawn.MPos[cvZ] + ucsPos[cvZ]) * stSpawn.U)
+  stSpawn.SPos:Add(ucsPos[cvX] * stSpawn.F)
+  stSpawn.SPos:Add(ucsPos[cvY] * stSpawn.R)
+  stSpawn.SPos:Add(ucsPos[cvZ] * stSpawn.U)
 	return stSpawn
 end
 
