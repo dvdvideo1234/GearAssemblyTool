@@ -1698,35 +1698,33 @@ function GetENTSpawn(trPos,trAng,trModel,nRotAng,hdModel,enIgnTyp,enOrAngTr,ucsP
 	stSpawn.OPos:Add(stSpawn.TPos)
   -- Do Origin UCS World angle
 	stSpawn.OAng:Set(stSpawn.TAng)
-	--- Do F,R,U
+	-- Do Origin F,R,U
   stSpawn.OAng:RotateAroundAxis(stSpawn.TAng:Right(),trRec.Mesh + ucsAng[caP])
 	stSpawn.OAng:RotateAroundAxis(stSpawn.OAng:Forward(),ucsAng[caR])
 	stSpawn.F:Set(stSpawn.OAng:Forward())
 	stSpawn.R:Set(stSpawn.OAng:Right())
 	stSpawn.U:Set(stSpawn.OAng:Up())
-	--- F R U Ready
-	--- Do Offset for the next Piece
-	--Save our records
+	-- Save our records
 	stSpawn.HRec = hdRec
 	stSpawn.TRec = trRec
-  ----- Everything is OK !!!!
+  -- Get the new Domain
   stSpawn.DAng:Set(stSpawn.OAng)
   stSpawn.DAng:RotateAroundAxis(stSpawn.DAng:Right(),hdRec.Mesh)
   stSpawn.DAng:RotateAroundAxis(stSpawn.DAng:Up(),ucsAng[caY])
-	--Get Hold model stuff
+	-- Get Hold model stuff
   stSpawn.MAng:Set(-hdRec.A.U)
 	stSpawn.MAng:RotateAroundAxis(stSpawn.MAng:Up(),180)
   stSpawn.MAng:RotateAroundAxis(stSpawn.MAng:Right(),-hdRec.Mesh)
   stSpawn.MPos:Set(hdRec.O.U)
 	stSpawn.MPos:Mul(-1)
   stSpawn.MPos:Set(DecomposeByAngle(stSpawn.MPos,stSpawn.MAng))
-	--Do Spawn Angle
+	-- Do Spawn Angle
   stSpawn.SAng:Set(stSpawn.OAng)
 	stSpawn.SAng:RotateAroundAxis(stSpawn.R,-stSpawn.MAng[caP] * hdRec.A.S[csX])
 	stSpawn.SAng:RotateAroundAxis(stSpawn.U,-stSpawn.MAng[caY] * hdRec.A.S[csY])
 	stSpawn.SAng:RotateAroundAxis(stSpawn.F,-stSpawn.MAng[caR] * hdRec.A.S[csZ])
   stSpawn.SAng:RotateAroundAxis(stSpawn.DAng:Up(),ucsAng[caY] + 180)
-	--Do Spawn Pos
+	-- Do Spawn Position
   if(enOrAngTr ~= 0) then
     stSpawn.F:Set(stSpawn.TAng:Forward())
     stSpawn.R:Set(stSpawn.TAng:Right())
