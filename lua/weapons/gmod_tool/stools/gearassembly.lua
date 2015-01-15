@@ -277,9 +277,9 @@ end
 
 TOOL.Category   = "Construction"            -- Name of the category
 TOOL.Name       = "#Tool.gearassembly.name" -- Name to display
-TOOL.Command    = nil                       -- Command on click (nil for default)
-TOOL.ConfigName = nil                       -- Config file name (nil for default)
-TOOL.AddToMenu  = true
+TOOL.Command    = nil                       -- Command on click ( nil )
+TOOL.ConfigName = nil                       -- Config file name ( nil )
+TOOL.AddToMenu  = true                      -- Yo add it to the Q menu or not ( true )
 
 TOOL.ClientConVar = {
   [ "mass"      ] = "250",
@@ -329,7 +329,6 @@ if(SERVER)then
 
   function eMakePiece(sModel,vPos,aAng,nMass,sBgrpIDs)
     -- You never know .. ^_^
-    if(not util.IsValidModel(sModel)) then return nil end
     local stPiece = gearasmlib.CacheQueryPiece(sModel)
     if(not stPiece) then return nil end -- Not present in the DB
     local ePiece = ents.Create("prop_physics")
@@ -533,8 +532,7 @@ function TOOL:LeftClick(Trace)
     undo.Finish()
     return true
   end
-  -- Hit Prop
-  if(not util.IsValidModel(model)) then return false end
+  -- Hit Prop 
   if(not trEnt) then return false end
   if(not trEnt:IsValid()) then return false end
   if(not gearasmlib.IsPhysTrace(Trace)) then return false end
@@ -547,8 +545,8 @@ function TOOL:LeftClick(Trace)
   if(eBase and eBase:IsValid()) then bsModel = eBase:GetModel() end
 
   --No need stacking relative to non-persistent props or using them...
-  local trRec   = gearasmlib.CacheQueryPiece(trModel)
   local hdRec   = gearasmlib.CacheQueryPiece(model)
+  local trRec   = gearasmlib.CacheQueryPiece(trModel)
 
   if(not trRec) then return false end
 
@@ -921,12 +919,8 @@ function TOOL:DrawToolScreen(w, h)
     return
   end
   DrawTextRowColor(txPos,"Trace status: Valid",stDrawDyes.White)
-  local model = self:GetClientInfo("model")
-  if(not util.IsValidModel(model)) then
-    DrawTextRowColor(txPos,"Holds Model: Invalid")
-    return
-  end
-  local hdRec = gearasmlib.CacheQueryPiece(model)
+  local model = self:GetClientInfo("model") or ""
+  local hdRec = gearasmlib.CacheQueryPiece(model)  
   if(not hdRec) then
     DrawTextRowColor(txPos,"Holds Model: Invalid")
     return
