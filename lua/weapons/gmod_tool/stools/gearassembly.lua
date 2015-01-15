@@ -1,12 +1,13 @@
 -- INITIALIZE DB
 gearasmlib.SQLCreateTable("GEARASSEMBLY_PIECES",{{1},{2},{3},{1,4},{1,2},{2,4},{1,2,3}},true,true)
 
-if(file.Exists(BASPath()..DSVPath().."db_GEARASSEMBLY_PIECES.txt", "DATA")
+if(file.Exists(gearasmlib.BASPath()..gearasmlib.DSVPath().."db_GEARASSEMBLY_PIECES.txt", "DATA")
 ) then
   gearasmlib.PrintInstance("GEARASSEMBLY: Populate DB from DSV.")
   gearasmlib.SQLImportFromDSV("db_","GEARASSEMBLY_PIECES","\t",true)
 else
   gearasmlib.PrintInstance("GEARASSEMBLY: Populate DB from TOOL.")
+  
   ------- DEV -------
   --gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/props_wasteland/wheel02b.mdl",   "Development", "#", 45, "65, 0, 0", "0, 0, -90", "0.29567885398865,0.3865530192852,-0.36239844560623"})
 
@@ -150,8 +151,19 @@ else
   gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/sprops/mechanics/sgears/spur_84t_l.mdl", "SProps Flat L", "#", 0, "42.146, 0, 0", "", "-0.0063623366877437, -0.0040172939188778, 0.00028934032889083"})
   gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/sprops/mechanics/sgears/spur_90t_l.mdl", "SProps Flat L", "#", 0, "45.143, 0, 0", "", "-3.0313363822643e-005, 0.0025897726882249, -8.3106489910278e-005"})
   gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/sprops/mechanics/sgears/spur_96t_l.mdl", "SProps Flat L", "#", 0, "48.141, 0, 0", "", "-0.020891901105642, -0.0010100682266057, 0.00014523084973916"})
-
-
+  --- SProps Bevel
+  gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/sprops/mechanics/bgears/bevel_10t_l.mdl", "SProps Bevel L", "#", 45, " 5.520, 0, 1.350", "", "-2.1634095901391e-005, 0.00061463302699849, -1.0174524784088"})
+  gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/sprops/mechanics/bgears/bevel_12t_l.mdl", "SProps Bevel L", "#", 45, " 6.244, 0, 1.350", "", "-0.03066711127758, 0.013303384184837, -0.9567843079567"})
+  gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/sprops/mechanics/bgears/bevel_14t_l.mdl", "SProps Bevel L", "#", 45, " 7.237, 0, 1.350", "", "0.0046781497076154, 0.0045431824401021, -0.91953921318054"})
+  gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/sprops/mechanics/bgears/bevel_16t_l.mdl", "SProps Bevel L", "#", 45, " 8.230, 0, 1.350", "", "-0.0024151098914444, -0.0035203483421355, -0.88513052463531"})
+  gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/sprops/mechanics/bgears/bevel_18t_l.mdl", "SProps Bevel L", "#", 45, " 9.280, 0, 1.350", "", "-3.7560730561381e-006, -3.2225407267106e-006, -0.85729819536209"})
+  gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/sprops/mechanics/bgears/bevel_24t_l.mdl", "SProps Bevel L", "#", 45, "12.252, 0, 1.350", "", "-2.7985045107926e-006, -3.253147497162e-006, -0.80283242464066"})
+  gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/sprops/mechanics/bgears/bevel_30t_l.mdl", "SProps Bevel L", "#", 45, "15.275, 0, 1.350", "", "0.0065972418524325, 0.012552709318697, -0.76705181598663"})
+  gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/sprops/mechanics/bgears/bevel_36t_l.mdl", "SProps Bevel L", "#", 45, "18.257, 0, 1.350", "", "0.0032132093328983, 0.0069867530837655, -0.74561846256256"})
+  gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/sprops/mechanics/bgears/bevel_42t_l.mdl", "SProps Bevel L", "#", 45, "21.244, 0, 1.350", "", "-2.1220994312898e-006, -1.2074082178515e-006, -0.72734010219574"})
+  gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/sprops/mechanics/bgears/bevel_48t_l.mdl", "SProps Bevel L", "#", 45, "24.233, 0, 1.350", "", "0.0043564774096012, 0.0072778444737196, -0.7125990986824"})
+  gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/sprops/mechanics/bgears/bevel_54t_l.mdl", "SProps Bevel L", "#", 45, "27.193, 0, 1.350", "", "-0.0012360077816993, -0.015729079023004, -0.70351052284241"})
+  gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/sprops/mechanics/bgears/bevel_60t_l.mdl", "SProps Bevel L", "#", 45, "30.188, 0, 1.350", "", "0.0024155958089978, -0.0004843553469982, -0.69532954692841"})
 
 end
 
@@ -368,7 +380,7 @@ if(SERVER)then
     local ForceLim = nForceLim     or 0
     local IsIn     = false
     if(not stCType[ConID]) then return true end
-    gearasmlib.PrintInstance("ConstraintMaster: Creating "..stCType[ConID].Name..".")
+    gearasmlib.LogInstance("ConstraintMaster: Creating "..stCType[ConID].Name..".")
     local ConstrInfo = stCType[ConID]
     -- Check for "Free Spawn" ( No constraints ) , coz nothing to be done after it.
     if(not IsIn and ConID == 1) then IsIn = true end
@@ -514,7 +526,7 @@ function TOOL:LeftClick(Trace)
     else
       ePiece:Remove()
       gearasmlib.PrintNotify(ply,"Position out of map bounds!","ERROR")
-      gearasmlib.PrintInstance("GEARASSEMBLY: Additional Error INFO"
+      gearasmlib.LogInstance("GEARASSEMBLY: Additional Error INFO"
       .."\n   Event  : Spawning when HitNormal"
       .."\n   Player : "..ply:Nick()
       .."\n   hdModel: "..gearasmlib.GetModelFileName(model)
@@ -583,7 +595,7 @@ function TOOL:LeftClick(Trace)
         else
           ePieceN:Remove()
           gearasmlib.PrintNotify(ply,"Position out of map bounds!","ERROR")
-          gearasmlib.PrintInstance("GEARASSEMBLY: Additional Error INFO"
+          gearasmlib.LogInstance("GEARASSEMBLY: Additional Error INFO"
           .."\n   Event  : Stacking > Position out of map bounds"
           .."\n   StMode : "..stSMode[stmode]
           .."\n   Iterats: "..tostring(count-i)
@@ -616,7 +628,7 @@ function TOOL:LeftClick(Trace)
         end
         if(not stSpawn) then
           gearasmlib.PrintNotify(ply,"Failed to obtain spawn data!","ERROR")
-          gearasmlib.PrintInstance("GEARASSEMBLY: Additional Error INFO"
+          gearasmlib.LogInstance("GEARASSEMBLY: Additional Error INFO"
           .."\n   Event  : Stacking > Failed to obtain spawn data"
           .."\n   StMode : "..stSMode[stmode]
           .."\n   Iterats: "..tostring(count-i)
@@ -640,7 +652,7 @@ function TOOL:LeftClick(Trace)
       end
       if(nTrys <= 0) then
         gearasmlib.PrintNotify(ply,"Make attempts ran off!","ERROR")
-        gearasmlib.PrintInstance("GEARASSEMBLY: Additional Error INFO"
+        gearasmlib.LogInstance("GEARASSEMBLY: Additional Error INFO"
         .."\n   Event  : Stacking > Failed to allocate memory for a piece"
         .."\n   StMode : "..stSMode[stmode]
         .."\n   Iterats: "..tostring(count-i)
@@ -677,7 +689,7 @@ function TOOL:LeftClick(Trace)
       else
         ePiece:Remove()
         gearasmlib.PrintNotify(ply,"Position out of map bounds !","ERROR")
-        gearasmlib.PrintInstance("GEARASSEMBLY: Additional Error INFO"
+        gearasmlib.LogInstance("GEARASSEMBLY: Additional Error INFO"
         .."\n   Event  : Spawn one piece relative to another"
         .."\n   Player : "..ply:Nick()
         .."\n   Anchor : "..gearasmlib.GetModelFileName(bsModel)
@@ -763,7 +775,7 @@ function TOOL:Reload(Trace)
       end
     end
     if(exportdb ~= 0) then
-      gearasmlib.PrintInstance("function TOOL:Reload(Trace) --> Exporting DB ...")
+      gearasmlib.PrintInstance("Reload + SPEED --> Exporting DB ...")
       gearasmlib.ExportSQL2Lua("GEARASSEMBLY_PIECES")
       gearasmlib.ExportSQL2Inserts("GEARASSEMBLY_PIECES")
       gearasmlib.SQLExportIntoDSV("db_","GEARASSEMBLY_PIECES","\t")

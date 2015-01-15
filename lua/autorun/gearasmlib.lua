@@ -147,6 +147,16 @@ module( "gearasmlib" )
 
 ------------------ AssemblyLib LOGS ------------------------
 
+function PrintInstance(anyStuff)
+  if(SERVER) then
+    print("SERVER > "..tostring(anyStuff))
+  elseif(CLIENT) then
+    print("CLIENT > "..tostring(anyStuff))
+  else
+    print("NOINST > "..tostring(anyStuff))
+  end
+end
+
 function SetLogControl(nEn,nLines,sFile)
   LibDebugEn = nEn
   LibLogFile = sFile
@@ -156,19 +166,19 @@ function SetLogControl(nEn,nLines,sFile)
   end
 end
 
-function Log(sStuff)
+function Log(anyStuff)
   if(LibDebugEn ~= 0) then
     if(LibLogFile ~= "") then
       local fName = LibBASPath .. LibLOGPath .. LibLogFile..".txt"
       file.Append(fName,NumFormatLen(LibCurLogs,{string.len(tostring(LibMaxLogs))},{" "})
-               .." >> "..tostring(sStuff).."\n")
+               .." >> "..tostring(anyStuff).."\n")
       LibCurLogs = LibCurLogs + 1
       if(LibCurLogs > LibMaxLogs) then
         file.Delete(fName)
         LibCurLogs = 0
       end
     else
-      print("GEARASSEMBLY LOG: "..tostring(sStuff))
+      PrintInstance("GEARASSEMBLY LOG: "..tostring(anyStuff))
     end
   end
 end
@@ -180,16 +190,6 @@ function LogInstance(anyStuff)
     Log("CLIENT > "..tostring(anyStuff))
   else
     Log("NOINST > "..tostring(anyStuff))
-  end
-end
-
-function PrintInstance(anyStuff)
-  if(SERVER) then
-    print("SERVER > "..tostring(anyStuff))
-  elseif(CLIENT) then
-    print("CLIENT > "..tostring(anyStuff))
-  else
-    print("NOINST > "..tostring(anyStuff))
   end
 end
 
@@ -1071,20 +1071,13 @@ end
 function SQLCreateTable(sTable,tIndex,bDelete,bReload)
   local tQ = SQLBuildCreate(sTable,tIndex)
   if(tQ) then
-    if(bDelete) then
+    if(bDelete and sql.TableExists(sTable)) then
       local qRez = sql.Query(tQ.Delete)
       if(not qRez and type(qRez) == "boolean") then
         LogInstance("SQLCreateTable: Table "..sTable
           .." is not present. Skipping delete !")
       else
         LogInstance("SQLCreateTable: Table "..sTable.." deleted !")
-      end
-      local qRez = sql.Query("VACUUM;")
-      if(not qRez and type(qRez) == "boolean") then
-        LogInstance("SQLCreateTable: Table "..sTable
-          .." is not optimal. Vacuum failed !")
-      else
-        LogInstance("SQLCreateTable: Table "..sTable.." vacuumed !")
       end
     end
     if(bReload) then
@@ -1096,7 +1089,7 @@ function SQLCreateTable(sTable,tIndex,bDelete,bReload)
         LogInstance("SQLCreateTable: Table "..sTable.." dropped !")
       end
     end
-    if (sql.TableExists(sTable)) then
+    if(sql.TableExists(sTable)) then
       LogInstance("SQLCreateTable: Table "..sTable.." exists!")
       return true
     else
@@ -1136,7 +1129,7 @@ function AttachKillTimer(oLocation,sKey,sTable,anyDuration,anyMessage)
   local Key = sTable.."_"..sKey
   if(anyDuration and
      tonumber(anyDuration) and
-     not timer.Exists(Key) and
+     not timer.Exists(Key)
   ) then
     local Duration = tonumber(anyDuration)
     if(Duration > 0) then
@@ -1839,4 +1832,4 @@ function HookOnRemove(oBas,oEnt,arCTable,nMax)
   return
 end
 
-LogInstance("GEARASSEMBLY: Library loaded successfully !")
+PrintInstance("GEARASSEMBLY: Library loaded successfully !")
