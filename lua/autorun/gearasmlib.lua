@@ -716,8 +716,8 @@ function SQLBuildCreate(sTable,tIndex)
   end
   local Ind = 1
   local Command  = {}
-  Command.Clear  = "DELETE FROM "..sTable..";" 
   Command.Drop   = "DROP TABLE "..sTable..";"
+  Command.Delete = "DELETE FROM "..sTable..";" 
   Command.Create = "CREATE TABLE "..sTable.." ( "
   while(Table[Ind]) do
     local v = Table[Ind]
@@ -1068,16 +1068,16 @@ function SQLInsertRecord(sTable,tData)
   return false
 end
 
-function SQLCreateTable(sTable,tIndex,bClear,bReload)
+function SQLCreateTable(sTable,tIndex,bDelete,bReload)
   local tQ = SQLBuildCreate(sTable,tIndex)
   if(tQ) then
-    if(Clear) then
-      local qRez = sql.Query(tQ.Clear)
+    if(bDelete) then
+      local qRez = sql.Query(tQ.Delete)
       if(not qRez and type(qRez) == "boolean") then
         LogInstance("SQLCreateTable: Table "..sTable
-          .." is not present. Skipping clear !")
+          .." is not present. Skipping delete !")
       else
-        LogInstance("SQLCreateTable: Table "..sTable.." Cleared !")
+        LogInstance("SQLCreateTable: Table "..sTable.." deleted !")
       end
       local qRez = sql.Query("VACUUM;")
       if(not qRez and type(qRez) == "boolean") then
@@ -1093,11 +1093,11 @@ function SQLCreateTable(sTable,tIndex,bClear,bReload)
         LogInstance("SQLCreateTable: Table "..sTable
           .." is not present. Skipping drop !")
       else
-        LogInstance("SQLCreateTable: Table "..sTable.." Dropped !")
+        LogInstance("SQLCreateTable: Table "..sTable.." dropped !")
       end
     end
     if (sql.TableExists(sTable)) then
-      LogInstance("SQLCreateTable: Table "..sTable.." Exists!")
+      LogInstance("SQLCreateTable: Table "..sTable.." exists!")
       return true
     else
       local qRez = sql.Query(tQ.Create)
@@ -1115,7 +1115,7 @@ function SQLCreateTable(sTable,tIndex,bClear,bReload)
             return false
           end
         end
-        LogInstance("SQLCreateTable: Indexed Table "..sTable.." Created !")
+        LogInstance("SQLCreateTable: Indexed Table "..sTable.." created !")
         return true
       else
         LogInstance("SQLCreateTable: Table "..sTable
