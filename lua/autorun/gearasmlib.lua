@@ -502,7 +502,7 @@ function Sort(tTable,tIndexes)
     while(tIndexes[Cnt]) do
       i = tIndexes[Cnt]
       if(not v[i]) then
-        Log("Sort: Failed to process Table["..Cct.."]["..i.."]")
+        PrintInstance("Sort: Failed to process Table["..Cct.."]["..i.."]")
         return nil
       end
       CopyTable[Cct].Val = CopyTable[Cct].Val .. tostring(v[i])
@@ -526,7 +526,7 @@ function SetLogControl(nEn,nLines,sFile)
   end
 end
 
-function Log(sStuff)
+function PrintInstance(sStuff)
   if(LibDebugEn ~= 0) then
     if(LibLogFile ~= "") then
       local fName = LibBASPath .. LibLOGPath .. LibLogFile..".txt"
@@ -543,19 +543,19 @@ function Log(sStuff)
   end
 end
 
-function PrintInstance(sStuff)
+function PrintInstance(anyStuff)
   if(SERVER) then
-    Log("SERVER > "..tostring(sStuff))
+    Log("SERVER > "..tostring(anyStuff))
   elseif(CLIENT) then
-    Log("CLIENT > "..tostring(sStuff))
+    Log("CLIENT > "..tostring(anyStuff))
   else
-    Log("NOINST > "..tostring(sStuff))
+    Log("NOINST > "..tostring(anyStuff))
   end
 end
 
 function Print(tT,sS)
   if(not tT)then
-    Log("Print: No Data: Print( table, string = \"Data\" )!")
+    PrintInstance("Print: No Data: Print( table, string = \"Data\" )!")
     return
   end
   local S = type(sS)
@@ -570,11 +570,11 @@ function Print(tT,sS)
     S = "Data"
   end
   if(T ~= "table") then
-    Log("{"..T.."}["..S.."] => "..tostring(tT))
+    PrintInstance("{"..T.."}["..S.."] => "..tostring(tT))
     return
   end
   T = tT
-  Log(S)
+  PrintInstance(S)
   for k,v in pairs(T) do
     if(type(k) == "string") then
       Key = S.."[\""..k.."\"]"
@@ -583,9 +583,9 @@ function Print(tT,sS)
     end
     if(type(v) ~= "table") then
       if(type(v) == "string") then
-        Log(Key.." = \""..v.."\"")
+        PrintInstance(Key.." = \""..v.."\"")
       else
-        Log(Key.." = "..tostring(v))
+        PrintInstance(Key.." = "..tostring(v))
       end
     else
       Print(v,Key)
@@ -603,7 +603,7 @@ PrintArrLine = function(aTable,sName)
     end
     Cnt = Cnt + 1
   end
-  Log(Line.."}")
+  PrintInstance(Line.."}")
 end
 
 ------------------------- AssemblyLib PLAYER -----------------------------------
@@ -703,8 +703,9 @@ function SQLBuildCreate(sTable,tIndex)
     return false
   end
   local Ind = 1
-  local Command = {}
-  Command.Drop = "DROP TABLE "..sTable..";"
+  local Command  = {}
+  Command.Clear  = "DELETE FROM "..sTable..";" 
+  Command.Drop   = "DROP TABLE "..sTable..";"
   Command.Create = "CREATE TABLE "..sTable.." ( "
   while(Table[Ind]) do
     local v = Table[Ind]
@@ -956,24 +957,24 @@ end
 
 function SQLInsertRecord(sTable,tData)
   if(not LibTables[sTable])     then
-    Log("SQLInsertRecord: Missing: Table definition for "..sTable)
+    PrintInstance("SQLInsertRecord: Missing: Table definition for "..sTable)
     return false
   end
   local Table = LibTables[sTable]
   if(not Table.Size) then
-    Log("SQLInsertRecord: Missing: Table definition SIZE for "..sTable)
+    PrintInstance("SQLInsertRecord: Missing: Table definition SIZE for "..sTable)
     return false
   end
   if(not Table[1])  then
-    Log("SQLInsertRecord: Missing: Table definition is empty for "..sTable)
+    PrintInstance("SQLInsertRecord: Missing: Table definition is empty for "..sTable)
     return false
   end
   if(not tData)      then
-    Log("SQLInsertRecord: Missing: Data table for "..sTable)
+    PrintInstance("SQLInsertRecord: Missing: Data table for "..sTable)
     return false
   end
   if(not tData[1])   then
-    Log("SQLInsertRecord: Missing: Data table is empty for "..sTable)
+    PrintInstance("SQLInsertRecord: Missing: Data table is empty for "..sTable)
     return false
   end
   if(sTable == "GEARASSEMBLY_PIECES") then
@@ -1019,14 +1020,14 @@ function SQLInsertRecord(sTable,tData)
           tData[Ind] = math.floor(toNB)
         end
       else
-        Log("SQLInsertRecord: Cannot convert string to an INTEGER for "
+        PrintInstance("SQLInsertRecord: Cannot convert string to an INTEGER for "
                                    ..tData[Ind].." at field "..FieldDef[1].." ("..Ind..")")
         return false
       end
     elseif(FieldTyp == "number" and FieldDef[2] == "TEXT") then
       tData[Ind] = tostring(tData[Ind])
     else
-      Log("SQLInsertRecord: Data type mismatch: "
+      PrintInstance("SQLInsertRecord: Data type mismatch: "
               ..FieldTyp.." <> "..FieldDef[2]
               .." at field "..FieldDef[1].." ("..Ind..") on table "..sTable)
       return false
@@ -1045,66 +1046,82 @@ function SQLInsertRecord(sTable,tData)
   if(Q) then
     local qRez = sql.Query(Q)
     if(not qRez and type(qRez) == "boolean") then
-        Log("SQLInsertRecord: Failed to insert a record because of "..tostring(sql.LastError()))
-        Log("SQLInsertRecord: Query ran > "..Q)
+        PrintInstance("SQLInsertRecord: Failed to insert a record because of "..tostring(sql.LastError()))
+        PrintInstance("SQLInsertRecord: Query ran > "..Q)
       return false
     end
     return true
   end
-  Log("SQLInsertRecord: "..GetSQLBuildError())
+  PrintInstance("SQLInsertRecord: "..GetSQLBuildError())
   return false
 end
 
-function SQLCreateTable(sTable,tIndex,bReload)
+function SQLCreateTable(sTable,tIndex,bClear,bReload)
   local tQ = SQLBuildCreate(sTable,tIndex)
   if(tQ) then
+    if(Clear) then
+      local qRez = sql.Query(tQ.Clear)
+      if(not qRez and type(qRez) == "boolean") then
+        PrintInstance("SQLCreateTable: Table "..sTable
+          .." is not present. Skipping clear !")
+      else
+        PrintInstance("SQLCreateTable: Table "..sTable.." Cleared !")
+      end
+      local qRez = sql.Query("VACUUM;")
+      if(not qRez and type(qRez) == "boolean") then
+        PrintInstance("SQLCreateTable: Table "..sTable
+          .." is not optimal. Vacuum failed !")
+      else
+        PrintInstance("SQLCreateTable: Table "..sTable.." vacuumed !")
+      end
+    end
     if(bReload) then
       local qRez = sql.Query(tQ.Drop)
       if(not qRez and type(qRez) == "boolean") then
-        Log("SQLCreateTable: Table "..sTable
-            .." is not present. Skipping drop !")
+        PrintInstance("SQLCreateTable: Table "..sTable
+          .." is not present. Skipping drop !")
       else
-        Log("SQLCreateTable: Table "..sTable.." Dropped !")
+        PrintInstance("SQLCreateTable: Table "..sTable.." Dropped !")
       end
     end
     if (sql.TableExists(sTable)) then
-      Log("SQLCreateTable: Table "..sTable.." Exists!")
+      PrintInstance("SQLCreateTable: Table "..sTable.." Exists!")
       return true
     else
       local qRez = sql.Query(tQ.Create)
       if(not qRez and type(qRez) == "boolean") then
-        Log("SQLCreateTable: Table "..sTable
-            .." failed to create because of ".. tostring(sql.LastError()))
+        PrintInstance("SQLCreateTable: Table "..sTable
+          .." failed to create because of ".. tostring(sql.LastError()))
         return false
       end
       if(sql.TableExists(sTable)) then
         for k, v in pairs(tQ.Index) do
           qRez = sql.Query(v)
           if(not qRez and type(qRez) == "boolean") then
-            Log("SQLCreateTable: Table "..sTable
-                .." failed to create index ["..k.."] > " .. v .." > because of ".. tostring(sql.LastError()))
+            PrintInstance("SQLCreateTable: Table "..sTable
+              .." failed to create index ["..k.."] > " .. v .." > because of ".. tostring(sql.LastError()))
             return false
           end
         end
-        Log("SQLCreateTable: Indexed Table "..sTable.." Created !")
+        PrintInstance("SQLCreateTable: Indexed Table "..sTable.." Created !")
         return true
       else
-        Log("SQLCreateTable: Table "..sTable
-            .." failed to create because of "..tostring(sql.LastError()))
-        Log("SQLCreateTable: Query ran > "..tQ.Create)
+        PrintInstance("SQLCreateTable: Table "..sTable
+          .." failed to create because of "..tostring(sql.LastError()))
+        PrintInstance("SQLCreateTable: Query ran > "..tQ.Create)
         return false
       end
     end
   else
-    Log("SQLCreateTable: "..GetSQLBuildError())
+    PrintInstance("SQLCreateTable: "..GetSQLBuildError())
     return false
   end
 end
 
 --------------------------- AssemblyLib PIECE QUERY -----------------------------
 
-function AttachKillTimer(oTable,sKey,sTabName,nDuration,sMessage)
-  local Key = sTabName.."_"..sKey
+function AttachKillTimer(oLocation,sKey,sTable,nDuration,sMessage)
+  local Key = sTable.."_"..sKey
   if((not timer.Exists(Key)) and
      nDuration                and
      tonumber(nDuration)
@@ -1112,10 +1129,10 @@ function AttachKillTimer(oTable,sKey,sTabName,nDuration,sMessage)
     local Duration = tonumber(nDuration)
     if(Duration > 0) then
       timer.Create(Key, Duration, 1, function()
-                                       Log("AttachKillTimer["..Key.."]("..Duration.."): "..tostring(sMessage))
+                                       PrintInstance("AttachKillTimer["..Key.."]("..Duration.."): "..tostring(sMessage))
                                        timer.Stop(Key)
                                        timer.Destroy(Key)
-                                       oTable[Key] = nil
+                                       oLocation[Key] = nil
                                        collectgarbage()
                                      end)
       timer.Start(Key)
@@ -1151,7 +1168,7 @@ function CacheQueryPiece(sModel)
     end
     return nil
   end
-  Log("CacheQueryPiece: Model >> Pool: "..GetModelFileName(sModel))
+  PrintInstance("CacheQueryPiece: Model >> Pool: "..GetModelFileName(sModel))
   LibCache[sTable][sModel] = {}
   stPiece = LibCache[sTable][sModel]
   AttachKillTimer(LibCache[sTable],sModel,sTable,stTable.KeepInCache,"CacheQueryPiece")
@@ -1236,7 +1253,7 @@ function CacheQueryPiece(sModel)
       stPiece.Here = false
     end
   else
-    Log("CacheQueryPiece: "..GetSQLBuildError())
+    PrintInstance("CacheQueryPiece: "..GetSQLBuildError())
     return nil
   end
   return nil
@@ -1252,10 +1269,10 @@ function PanelQueryPieces()
     if(qData and qData[1]) then
       return qData
     end
-    Log("PanelQueryPieces: No data found >"..Q.."<")
+    PrintInstance("PanelQueryPieces: No data found >"..Q.."<")
     return nil
   end
-  Log("PanelQueryPieces: "..GetSQLBuildError())
+  PrintInstance("PanelQueryPieces: "..GetSQLBuildError())
   return nil
 end
 
@@ -1276,7 +1293,7 @@ function ExportSQL2Lua(sTable)
                       LibEXPPath..
                       "sql2lua_"..sTable..".txt", "w", "DATA" )
   if(not F) then
-    Log("ExportSQL2Lua: file.Open("..
+    PrintInstance("ExportSQL2Lua: file.Open("..
         LibBASPath..
         LibEXPPath..
         "sql2lua_"..sTable..".txt) Failed")
@@ -1320,10 +1337,10 @@ function ExportSQL2Lua(sTable)
       end
       F:Write("}")
     else
-      Log("ExportSQL2Lua: No data found >"..Q.."<")
+      PrintInstance("ExportSQL2Lua: No data found >"..Q.."<")
     end
   else
-    Log("ExportSQL2Lua: "..GetSQLBuildError())
+    PrintInstance("ExportSQL2Lua: "..GetSQLBuildError())
   end
   F:Flush()
   F:Close()
@@ -1343,7 +1360,7 @@ function ExportSQL2Inserts(sTable)
                       LibEXPPath..
                       "sql2inserts_"..sTable..".txt", "w", "DATA" )
   if(not F) then
-    Log("ExportSQL2Inserts: file.Open("..LibBASPath..LibEXPPath.."sql2inserts_"..sTable..".txt) Failed")
+    PrintInstance("ExportSQL2Inserts: file.Open("..LibBASPath..LibEXPPath.."sql2inserts_"..sTable..".txt) Failed")
     return
   end
   local Q
@@ -1381,7 +1398,7 @@ function ExportSQL2Inserts(sTable)
       end
     end
   else
-    Log("ExportSQL2Inserts: "..GetSQLBuildError() .. "\n")
+    PrintInstance("ExportSQL2Inserts: "..GetSQLBuildError() .. "\n")
   end
   F:Flush()
   F:Close()
@@ -1398,7 +1415,7 @@ function ExportLua2Inserts(tTable,sName)
                       LibEXPPath..
                       "lua2inserts_"..(sName or "Data")..".txt", "w", "DATA" )
   if(not F) then
-    Log("ExportSQL2Lua: file.Open("..
+    PrintInstance("ExportSQL2Lua: file.Open("..
         LibBASPath..
         LibEXPPath..
         "lua2inserts_"..(sName or "Data")..".txt) Failed")
@@ -1439,14 +1456,14 @@ end
 ]]
 function SQLImportFromDSV(sSuffix,sTable,sDelim,bCommit)
   if(not LibTables[sTable] or type(sTable) ~= "string") then
-    Log("SQLImportFromDSV: Missing: Table definition for "..tostring(sTable))
+    PrintInstance("SQLImportFromDSV: Missing: Table definition for "..tostring(sTable))
     return
   end
   local F = file.Open(LibBASPath..
                       LibDSVPath..
                       (sSuffix or "")..sTable..".txt", "r", "DATA" )
   if(not F) then
-    Log("SQLImportFromDSV: file.Open("..
+    PrintInstance("SQLImportFromDSV: file.Open("..
         LibBASPath..
         LibDSVPath..
         (sSuffix or "")..sTable..".txt) Failed")
@@ -1490,7 +1507,7 @@ end
 
 function SQLExportIntoDSV(sSuffix,sTable,sDelim)
   if(not LibTables[sTable] or type(sTable) ~= "string") then
-    Log("SQLExportIntoDSV: Missing: Table definition for "..tostring(sTable))
+    PrintInstance("SQLExportIntoDSV: Missing: Table definition for "..tostring(sTable))
     return
   end
   local stTable = LibTables[sTable]
@@ -1504,7 +1521,7 @@ function SQLExportIntoDSV(sSuffix,sTable,sDelim)
                       LibDSVPath..
                       (sSuffix or "")..sTable..".txt", "w", "DATA" )
   if(not F) then
-    Log("SQLExportIntoDSV: file.Open("..
+    PrintInstance("SQLExportIntoDSV: file.Open("..
         LibBASPath..
         LibDSVPath..
         (sSuffix or "")..sTable..".txt) Failed")
@@ -1516,7 +1533,7 @@ function SQLExportIntoDSV(sSuffix,sTable,sDelim)
   else
     Q = SQLBuildSelect(sTable,nil,nil,nil)
   end
-  Log("SQLExportIntoDSV: "..Q)
+  PrintInstance("SQLExportIntoDSV: "..Q)
   if(Q) then
     local qData = sql.Query(Q)
     if(qData) then
@@ -1539,7 +1556,7 @@ function SQLExportIntoDSV(sSuffix,sTable,sDelim)
         while(stTable[Ind]) do
           local f = stTable[Ind][1]
           if(not f) then
-            Log("SQLExportIntoDSV: Missing field name in table "..sTable.." index #"..Ind)
+            PrintInstance("SQLExportIntoDSV: Missing field name in table "..sTable.." index #"..Ind)
             return
           end
           local v = tostring(qRec[f]) or ""
@@ -1555,7 +1572,7 @@ function SQLExportIntoDSV(sSuffix,sTable,sDelim)
       end
     end
   else
-    Log("SQLExportIntoDSV: Failed to assemble query >> "
+    PrintInstance("SQLExportIntoDSV: Failed to assemble query >> "
                   ..GetSQLBuildError())
     return
   end
@@ -1748,7 +1765,7 @@ function GetBodygroupString()
   if(tr.HitWorld) then return "" end
   local trEnt = tr.Entity
   if(trEnt and trEnt:IsValid()) then
-    Log("GetBodygroupString: ")
+    PrintInstance("GetBodygroupString: ")
     if(IsOther(trEnt)) then return "" end
     local BG = trEnt:GetBodyGroups()
     if(not (BG and BG[1])) then return "" end
@@ -1765,10 +1782,10 @@ function GetBodygroupString()
 end
 
 function AttachBodyGroups(ePiece,sBgrpIDs)
-  Log("AttachBodyGroups: ")
+  PrintInstance("AttachBodyGroups: ")
   local NumBG     = ePiece:GetNumBodyGroups()
-  Log("BG: "..sBgrpIDs)
-  Log("NU: "..NumBG)
+  PrintInstance("BG: "..sBgrpIDs)
+  PrintInstance("NU: "..NumBG)
   local IDs = Str2BGID(sBgrpIDs,NumBG)
   if(not IDs) then return end
   local BG = ePiece:GetBodyGroups()
@@ -1780,7 +1797,7 @@ function AttachBodyGroups(ePiece,sBgrpIDs)
     local BGCnt = ePiece:GetBodygroupCount(CurBG.id)
     if(IDs[Cnt] > BGCnt or
        IDs[Cnt] < 0) then IDs[Cnt] = 0 end
-    Log("ePiece:SetBodygroup("..CurBG.id..","..(IDs[Cnt] or 0)..")")
+    PrintInstance("ePiece:SetBodygroup("..CurBG.id..","..(IDs[Cnt] or 0)..")")
     ePiece:SetBodygroup(CurBG.id,IDs[Cnt] or 0)
     Cnt = Cnt + 1
   end
@@ -1807,32 +1824,15 @@ function HookOnRemove(oBas,oEnt,arCTable,nMax)
   local Ind = 1
   while(Ind <= nMax) do
     if(not arCTable[Ind]) then
-      print("GEARASSEMBLY: HookOnRemove > Nil value on index "..Ind..", ignored !")
+      PrintInstance("GEARASSEMBLY: HookOnRemove > Nil value on index "..Ind..", ignored !")
       return
     end
     oEnt:DeleteOnRemove(arCTable[Ind])
     oBas:DeleteOnRemove(arCTable[Ind])
     Ind = Ind + 1
   end
-  Log("GEARASSEMBLY: HookOnRemove > Done "..(Ind-1).." of "..nMax..".")
+  PrintInstance("GEARASSEMBLY: HookOnRemove > Done "..(Ind-1).." of "..nMax..".")
   return
 end
 
-function RequireOnceDB(sTable,sDelim)
-  if(not sTable or type(sTable) ~= "string") then return false end
-  if(not sDelim or type(sDelim) ~= "string") then return false end
-  if(not LibTables[sTable]) then return false end
-  if(file.Exists(LibBASPath..
-                 LibDSVPath..
-                 "db_"..string.lower(sTable)..".txt", "DATA")
-  ) then
-    PrintInstance("Read from DSV DB.")
-    SQLImportFromDSV("db_",sTable,sDelim,true)
-  else
-    PrintInstance("Read from Lua DB.")
-    include( "trackassemblydb/db_"..string.lower(sTable)..".lua" )
-  end
-  return true
-end
-
-print("GEARASSEMBLY: Library loaded successfully !")
+PrintInstance("GEARASSEMBLY: Library loaded successfully !")
