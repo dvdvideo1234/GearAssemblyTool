@@ -15,10 +15,10 @@ else
   gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/props_phx/mechanics/medgear.mdl", "Gmod 10", "#", 0, "24.173, 0, 0", "", "-0.015172731131315, 0.0090782083570957, 3.5684652328491"})
   gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/props_phx/mechanics/biggear.mdl", "Gmod 10", "#", 0, "33.811, 0, 0", "", "-0.00017268359079026, -0.0035230871289968, 3.5217847824097"})
   --- PHX Spur
-  gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/props_phx/gears/spur9.mdl" , "PHX Spur Flat", "#", 0, " 7.467, 0, 0", "", "-0.0015837327810004, 0.00016171450261027, 2.8354094028473"})
-  gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/props_phx/gears/spur12.mdl", "PHX Spur Flat", "#", 0, " 9.703, 0, 0", "", "-0.0015269597060978, 0.00021413757349364, 2.8405227661133"})
-  gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/props_phx/gears/spur24.mdl", "PHX Spur Flat", "#", 0, "18.381, 0, 0", "", "-0.0011573693482205, 0.00018228564294986, 2.8103637695313"})
-  gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/props_phx/gears/spur36.mdl", "PHX Spur Flat", "#", 0, "27.119, 0, 0", "", "-0.0012206265237182, -8.6402214947157e-005, 2.7949125766754"})
+  gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/props_phx/gears/spur9.mdl" , "PHX Spotted Flat", "#", 0, " 7.467, 0, 0", "", "-0.0015837327810004, 0.00016171450261027, 2.8354094028473"})
+  gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/props_phx/gears/spur12.mdl", "PHX Spotted Flat", "#", 0, " 9.703, 0, 0", "", "-0.0015269597060978, 0.00021413757349364, 2.8405227661133"})
+  gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/props_phx/gears/spur24.mdl", "PHX Spotted Flat", "#", 0, "18.381, 0, 0", "", "-0.0011573693482205, 0.00018228564294986, 2.8103637695313"})
+  gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/props_phx/gears/spur36.mdl", "PHX Spotted Flat", "#", 0, "27.119, 0, 0", "", "-0.0012206265237182, -8.6402214947157e-005, 2.7949125766754"})
   --- PHX Regular Small
   gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/mechanics/gears/gear12x6_small.mdl" , "PHX Regular Small", "#", 0, " 6.708, 0, 0", "", "2.5334677047795e-005, 0.007706293836236, 1.5820281505585"})
   gearasmlib.SQLInsertRecord("GEARASSEMBLY_PIECES",{"models/mechanics/gears/gear16x6_small.mdl" , "PHX Regular Small", "#", 0, " 9.600, 0, 0", "", "5.0195762923977e-007, -3.5567546774473e-007, 1.5833348035812"})
