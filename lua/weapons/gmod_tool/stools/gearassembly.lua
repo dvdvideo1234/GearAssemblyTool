@@ -1199,15 +1199,15 @@ function TOOL.BuildCPanel(CPanel)
   CPanel:AddControl("Checkbox", {
             Label   = "Freeze pieces",
             Command = "gearassembly_freeze"})
-            
+
   CPanel:AddControl("Checkbox", {
             Label   = "Enable pieces gravity",
             Command = "gearassembly_engravity"})
-            
+
   CPanel:AddControl("Checkbox", {
             Label   = "Use origin angle from trace",
             Command = "gearassembly_orangtr"})
-            
+
   CPanel:AddControl("Checkbox", {
             Label   = "Ignore gear type",
             Command = "gearassembly_igntyp"})
@@ -1215,7 +1215,7 @@ function TOOL.BuildCPanel(CPanel)
   CPanel:AddControl("Checkbox", {
             Label   = "Enable flat gear spawn",
             Command = "gearassembly_spwnflat"})
-            
+
   CPanel:AddControl("Checkbox", {
             Label   = "Enable advisor",
             Command = "gearassembly_advise"})

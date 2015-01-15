@@ -107,7 +107,7 @@ local LibSpawn = {
   },
   ["NOR"] = {
     F    = Vector(),
-    R    = Vector(), 
+    R    = Vector(),
     U    = Vector(),
     SPos = Vector(),
     SAng = Angle (),
@@ -717,7 +717,7 @@ function SQLBuildCreate(sTable,tIndex)
   local Ind = 1
   local Command  = {}
   Command.Drop   = "DROP TABLE "..sTable..";"
-  Command.Delete = "DELETE FROM "..sTable..";" 
+  Command.Delete = "DELETE FROM "..sTable..";"
   Command.Create = "CREATE TABLE "..sTable.." ( "
   while(Table[Ind]) do
     local v = Table[Ind]
