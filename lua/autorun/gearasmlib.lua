@@ -1032,7 +1032,7 @@ function SQLInsertRecord(sTable,tData)
           tData[Ind] = math.floor(toNB)
         end
       else
-        LogInstance("SQLInsertRecord: Cannot convert string to an INTEGER for "
+        LogInstance("SQLInsertRecord: Cannot convert string to a number for "
                                    ..tData[Ind].." at field "..FieldDef[1].." ("..Ind..")")
         return false
       end
@@ -1132,16 +1132,16 @@ end
 
 --------------------------- AssemblyLib PIECE QUERY -----------------------------
 
-function AttachKillTimer(oLocation,sKey,sTable,nDuration,sMessage)
+function AttachKillTimer(oLocation,sKey,sTable,anyDuration,anyMessage)
   local Key = sTable.."_"..sKey
-  if((not timer.Exists(Key)) and
-     nDuration                and
-     tonumber(nDuration)
+  if(anyDuration and
+     tonumber(anyDuration) and
+     not timer.Exists(Key) and
   ) then
-    local Duration = tonumber(nDuration)
+    local Duration = tonumber(anyDuration)
     if(Duration > 0) then
       timer.Create(Key, Duration, 1, function()
-                                       LogInstance("AttachKillTimer["..Key.."]("..Duration.."): "..tostring(sMessage))
+                                       LogInstance("AttachKillTimer["..Key.."]("..Duration.."): "..tostring(anyMessage))
                                        timer.Stop(Key)
                                        timer.Destroy(Key)
                                        oLocation[Key] = nil
@@ -1294,21 +1294,17 @@ end
 function ExportSQL2Lua(sTable)
   if(not LibTables[sTable] or type(sTable) ~= "string") then return end
   local stTable = LibTables[sTable]
-  local sFname  = "trackassembly/sql2lua_"
   if(not file.Exists(LibBASPath,"DATA")) then
     file.CreateDir(LibBASPath)
   end
   if(not file.Exists(LibBASPath..LibEXPPath,"DATA")) then
     file.CreateDir(LibBASPath..LibEXPPath)
   end
-  local F = file.Open(LibBASPath..
-                      LibEXPPath..
+  local F = file.Open(LibBASPath..LibEXPPath..
                       "sql2lua_"..sTable..".txt", "w", "DATA" )
   if(not F) then
-    LogInstance("ExportSQL2Lua: file.Open("..
-        LibBASPath..
-        LibEXPPath..
-        "sql2lua_"..sTable..".txt) Failed")
+    LogInstance("ExportSQL2Lua: file.Open("..LibBASPath..LibEXPPath
+                                           .."sql2lua_"..sTable..".txt) Failed")
     return
   end
   local Q
@@ -1368,11 +1364,11 @@ function ExportSQL2Inserts(sTable)
   if(not file.Exists(LibBASPath..LibEXPPath,"DATA")) then
     file.CreateDir(LibBASPath..LibEXPPath)
   end
-  local F = file.Open(LibBASPath..
-                      LibEXPPath..
+  local F = file.Open(LibBASPath..LibEXPPath..
                       "sql2inserts_"..sTable..".txt", "w", "DATA" )
   if(not F) then
-    LogInstance("ExportSQL2Inserts: file.Open("..LibBASPath..LibEXPPath.."sql2inserts_"..sTable..".txt) Failed")
+    LogInstance("ExportSQL2Inserts: file.Open("..LibBASPath..LibEXPPath
+                                               .."sql2inserts_"..sTable..".txt) Failed")
     return
   end
   local Q
@@ -1427,10 +1423,8 @@ function ExportLua2Inserts(tTable,sName)
                       LibEXPPath..
                       "lua2inserts_"..(sName or "Data")..".txt", "w", "DATA" )
   if(not F) then
-    LogInstance("ExportSQL2Lua: file.Open("..
-        LibBASPath..
-        LibEXPPath..
-        "lua2inserts_"..(sName or "Data")..".txt) Failed")
+    LogInstance("ExportSQL2Lua: file.Open("..LibBASPath..LibEXPPath
+              .."lua2inserts_"..(sName or "Data")..".txt) Failed")
     return
   end
   if(tTable) then
@@ -1463,22 +1457,20 @@ end
  * Save/Load the DB Using Excel or
  * anything that supports delimiter
  * separated digital tables
- * sTable = Definition KEY
- * sDelim = Delimiter CHAR data separator
+ * sSuffix = Something that separates exported table from the rest ( e.g. db_)
+ * sTable  = Definition KEY to export to
+ * sDelim  = Delimiter CHAR data separator
+ * bCommit = true to insert the read values
 ]]
 function SQLImportFromDSV(sSuffix,sTable,sDelim,bCommit)
   if(not LibTables[sTable] or type(sTable) ~= "string") then
     LogInstance("SQLImportFromDSV: Missing: Table definition for "..tostring(sTable))
     return
   end
-  local F = file.Open(LibBASPath..
-                      LibDSVPath..
-                      (sSuffix or "")..sTable..".txt", "r", "DATA" )
+  local F = file.Open(LibBASPath..LibDSVPath..(sSuffix or "")..sTable..".txt", "r", "DATA" )
   if(not F) then
-    LogInstance("SQLImportFromDSV: file.Open("..
-        LibBASPath..
-        LibDSVPath..
-        (sSuffix or "")..sTable..".txt) Failed")
+    LogInstance("SQLImportFromDSV: file.Open("..LibBASPath..LibDSVPath..
+               (sSuffix or "")..sTable..".txt) Failed")
     return
   end
   local Line = ""
@@ -1529,14 +1521,10 @@ function SQLExportIntoDSV(sSuffix,sTable,sDelim)
   if(not file.Exists(LibBASPath..LibDSVPath,"DATA")) then
     file.CreateDir(LibBASPath..LibDSVPath)
   end
-  local F = file.Open(LibBASPath..
-                      LibDSVPath..
-                      (sSuffix or "")..sTable..".txt", "w", "DATA" )
+  local F = file.Open(LibBASPath..LibDSVPath..(sSuffix or "")..sTable..".txt", "w", "DATA" )
   if(not F) then
-    LogInstance("SQLExportIntoDSV: file.Open("..
-        LibBASPath..
-        LibDSVPath..
-        (sSuffix or "")..sTable..".txt) Failed")
+    LogInstance("SQLExportIntoDSV: file.Open("..LibBASPath..LibDSVPath..
+               (sSuffix or "")..sTable..".txt) Failed")
     return
   end
   local Q
@@ -1688,11 +1676,15 @@ end
 --[[
  * This function is the backbone of the tool for Trace.Entity
  * Calculates SPos, SAng based on the DB inserts and input parameters
- * trEnt         = Trace.Entity
+ * trPos         = Trace.Entity:GetPos()
+ * trAng         = Trace.Entity:GetAngles()
+ * trModel       = Trace.Entity:GetModel()
+ * nRotAng       = Start pifor angle to rotate trAng to
  * hdModel       = Node:Model()
  * enIgnTyp      = Ignore Gear Type
- * nPitch        = Addition Pitch
- * ucsPos        = Custom Pos offset
+ * enOrAngTr     = F,R,U Come from trace's angles
+ * ucsPos        = Custom Position offset
+ * ucsAng        = Custom Angle    offset
 ]]--
 function GetENTSpawn(trPos,trAng,trModel,nRotAng,hdModel,enIgnTyp,enOrAngTr,ucsPos,ucsAng)
   if(not ( trPos      and
