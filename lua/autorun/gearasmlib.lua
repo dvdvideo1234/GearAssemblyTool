@@ -12,13 +12,13 @@ local caR = 3
 
 --- Component Status indexes ---
 -- Sign of the first component
-local csX = 1
+local csX = 4
 -- Sign of the second component
-local csY = 2
+local csY = 5
 -- Sign of the third component
-local csZ = 3
+local csZ = 6
 -- Flag for disabling the point
-local csD = 4
+local csD = 7
 
 ---------------- Localizing instances ------------------
 
@@ -1182,76 +1182,30 @@ function CacheQueryPiece(sModel)
     local qData = sql.Query(Q)
     if(qData and qData[1]) then
       local qRec   = qData[1]
-      local arData = {0,0,0,1,1,1,false}
       stPiece.Type = qRec[stTable[2][1]]
       stPiece.Name = qRec[stTable[3][1]]
       stPiece.Mesh = qRec[stTable[4][1]]
-      stPiece.Here = true
-      stPiece.A = {U = Angle (), S = {[csX] = 1,[csY] = 1,[csZ] = 1,[csD] = true}}
-      stPiece.O = {U = Vector(), S = {[csX] = 1,[csY] = 1,[csZ] = 1,[csD] = true}}
-      stPiece.M = {U = Vector(), S = {[csX] = 1,[csY] = 1,[csZ] = 1,[csD] = true}}
+      stPiece.Here = true 
+      stPiece.A = {[caP] = 0, [caY] = 0,[caR] = 0, [csX] = 1, [csY] = 1, [csZ] = 1, [csD] = true}
+      stPiece.O = {[csX] = 0, [csY] = 0,[csZ] = 0, [csX] = 1, [csY] = 1, [csZ] = 1, [csD] = true}
+      stPiece.M = {[csX] = 0, [csY] = 0,[csZ] = 0, [csX] = 1, [csY] = 1, [csZ] = 1, [csD] = true}
       -- Origin
       if((qRec[stTable[5][1]] ~= "") and
          (qRec[stTable[5][1]] ~= "NULL")
       ) then
-        DecodeOffset(arData,qRec[stTable[5][1]])
-        stPiece.O.U[cvX] = arData[1]
-        stPiece.O.U[cvY] = arData[2]
-        stPiece.O.U[cvZ] = arData[3]
-        stPiece.O.S[csX] = arData[4]
-        stPiece.O.S[csY] = arData[5]
-        stPiece.O.S[csZ] = arData[6]
-        stPiece.O.S[csD] = arData[7]
-      else
-        stPiece.O.U[cvX] = 0
-        stPiece.O.U[cvY] = 0
-        stPiece.O.U[cvZ] = 0
-        stPiece.O.S[csX] = 1
-        stPiece.O.S[csY] = 1
-        stPiece.O.S[csZ] = 1
-        stPiece.O.S[csD] = false
+        DecodeOffset(stPiece.O,qRec[stTable[5][1]])
       end
       -- Angle
       if((qRec[stTable[6][1]] ~= "") and
          (qRec[stTable[6][1]] ~= "NULL")
       ) then
         -- "@1,2,1" = {1,2,1,-1,1,1,true}
-        DecodeOffset(arData,qRec[stTable[6][1]])
-        stPiece.A.U[cvX] = arData[1]
-        stPiece.A.U[cvY] = arData[2]
-        stPiece.A.U[cvZ] = arData[3]
-        stPiece.A.S[csX] = arData[4]
-        stPiece.A.S[csY] = arData[5]
-        stPiece.A.S[csZ] = arData[6]
-        stPiece.A.S[csD] = arData[7]
-      else
-        stPiece.A.U[cvX] = 0
-        stPiece.A.U[cvY] = 0
-        stPiece.A.U[cvZ] = 0
-        stPiece.A.S[csX] = 1
-        stPiece.A.S[csY] = 1
-        stPiece.A.S[csZ] = 1
-        stPiece.A.S[csD] = false
+        DecodeOffset(stPiece.A,qRec[stTable[6][1]])
       end
       if((qRec[stTable[7][1]] ~= "") and
          (qRec[stTable[7][1]] ~= "NULL")
       ) then
-        DecodeOffset(arData,qRec[stTable[7][1]])
-        stPiece.M.U[cvX] = arData[1]
-        stPiece.M.U[cvY] = arData[2]
-        stPiece.M.U[cvZ] = arData[3]
-        stPiece.M.S[csX] = arData[4]
-        stPiece.M.S[csY] = arData[5]
-        stPiece.M.S[csZ] = arData[6]
-        stPiece.M.S[csD] = arData[7]
-      else
-        stPiece.M.U[cvX] = 0
-        stPiece.M.U[cvY] = 0
-        stPiece.M.U[cvZ] = 0
-        stPiece.M.S[csX] = 1
-        stPiece.M.S[csY] = 1
-        stPiece.M.S[csZ] = 1
-        stPiece.M.S[csD] = false
+        DecodeOffset(stPiece.M,qRec[stTable[7][1]])
       end
       return stPiece
     else
@@ -1610,11 +1564,36 @@ function AddAngle(aBase, aAdd)
   aBase[caR] = aBase[caR] + aAdd[caR]
 end
 
+function AddAnglePYR(aBase, nP, nY, nR)
+  aBase[caP] = aBase[caP] + (nP or 0)
+  aBase[caY] = aBase[caY] + (nY or 0)
+  aBase[caR] = aBase[caR] + (nR or 0)
+end
+
 function SubAngle(aBase, aSub)
   aBase[caP] = aBase[caP] - aSub[caP]
   aBase[caY] = aBase[caY] - aSub[caY]
   aBase[caR] = aBase[caR] - aSub[caR]
 end
+
+function SubAnglePYR(aBase, nP, nY, nR)
+  aBase[caP] = aBase[caP] - (nP or 0)
+  aBase[caY] = aBase[caY] - (nY or 0)
+  aBase[caR] = aBase[caR] - (nR or 0)
+end
+
+function SetAngle(aAng, nP, nY, nR)
+  aAng[caP] = (nP or 0)
+  aAng[caY] = (nY or 0)
+  aAng[caR] = (nR or 0)
+end
+
+function SetVector(vVec, nX, nY, nZ)
+  vVec[caX] = (nX or 0)
+  vVec[caY] = (nY or 0)
+  vVec[caZ] = (nZ or 0)
+end
+
 
 function GetCustomAngBBZ(oEnt,aLAng,nMode)
   if(not (oEnt and oEnt:IsValid())) then return 0 end
@@ -1658,7 +1637,7 @@ function GetNORSpawn(stTrace, sModel, ucsPos, ucsAng)
   stSpawn.R:Set(stSpawn.DAng:Right())
   stSpawn.U:Set(stSpawn.DAng:Up())
   stSpawn.SAng:Set(stSpawn.DAng)
-  AddAngle(stSpawn.SAng,hdRec.A.U)
+  AddAngle(stSpawn.SAng,hdRec.A)
   stSpawn.SPos:Set(stTrace.HitPos)
   stSpawn.SPos:Add(ucsPos[cvX] * stSpawn.F)
   stSpawn.SPos:Add(ucsPos[cvY] * stSpawn.R)
@@ -1704,10 +1683,10 @@ function GetENTSpawn(trPos,trAng,trModel,nRotAng,hdModel,enIgnTyp,enOrAngTr,ucsP
 
   stSpawn.TPos:Set(vGetMCWorldPosAng(trPos,trAng,trRec.M.U))
   stSpawn.TAng:Set(trAng)
-  SubAngle(stSpawn.TAng,trRec.A.U)
+  SubAngle(stSpawn.TAng,trRec.A[caP], trRec.A[caY], trRec.A[caR])
   stSpawn.TAng:RotateAroundAxis(stSpawn.TAng:Up(),-nRotAng)
 	-- Do origin !
-	stSpawn.OPos:Set(trRec.O.U)
+	SetVector(stSpawn.OPos,trRec.O[cvX], trRec.O[cvY], trRec.O[cvZ])
 	stSpawn.OPos:Rotate(stSpawn.TAng)
 	stSpawn.OPos:Add(stSpawn.TPos)
   -- Do Origin UCS World angle
@@ -1726,23 +1705,23 @@ function GetENTSpawn(trPos,trAng,trModel,nRotAng,hdModel,enIgnTyp,enOrAngTr,ucsP
   stSpawn.DAng:RotateAroundAxis(stSpawn.DAng:Right(),hdRec.Mesh)
   stSpawn.DAng:RotateAroundAxis(stSpawn.DAng:Up(),ucsAng[caY])
 	-- Get Hold model stuff
-  stSpawn.MAng:Set(-hdRec.A.U)
+  SetAngle(stSpawn.MAng,-hdRec.A[caP], -hdRec.A[caY], -hdRec.A[caR])
 	stSpawn.MAng:RotateAroundAxis(stSpawn.MAng:Up(),180)
   stSpawn.MAng:RotateAroundAxis(stSpawn.MAng:Right(),-hdRec.Mesh)
-  stSpawn.MPos:Set(hdRec.O.U)
+  SetVector(stSpawn.MPos, hdRec.O[cvX], hdRec.O[cvY], hdRec.O[cvZ])
 	stSpawn.MPos:Mul(-1)
   stSpawn.MPos:Set(DecomposeByAngle(stSpawn.MPos,stSpawn.MAng))
 	-- Do Spawn Angle
   stSpawn.SAng:Set(stSpawn.OAng)
-	stSpawn.SAng:RotateAroundAxis(stSpawn.R,-stSpawn.MAng[caP] * hdRec.A.S[csX])
-	stSpawn.SAng:RotateAroundAxis(stSpawn.U,-stSpawn.MAng[caY] * hdRec.A.S[csY])
-	stSpawn.SAng:RotateAroundAxis(stSpawn.F,-stSpawn.MAng[caR] * hdRec.A.S[csZ])
+	stSpawn.SAng:RotateAroundAxis(stSpawn.R,-stSpawn.MAng[caP] * hdRec.A[csX])
+	stSpawn.SAng:RotateAroundAxis(stSpawn.U,-stSpawn.MAng[caY] * hdRec.A[csY])
+	stSpawn.SAng:RotateAroundAxis(stSpawn.F,-stSpawn.MAng[caR] * hdRec.A[csZ])
   stSpawn.SAng:RotateAroundAxis(stSpawn.DAng:Up(),ucsAng[caY] + 180)
 	-- Do Spawn Position
   stSpawn.SPos:Set(stSpawn.OPos)
-  stSpawn.SPos:Add((hdRec.O.S[csX] * stSpawn.MPos[cvX]) * stSpawn.F)
-  stSpawn.SPos:Add((hdRec.O.S[csY] * stSpawn.MPos[cvY]) * stSpawn.R)
-  stSpawn.SPos:Add((hdRec.O.S[csZ] * stSpawn.MPos[cvZ]) * stSpawn.U)
+  stSpawn.SPos:Add((hdRec.O[csX] * stSpawn.MPos[cvX]) * stSpawn.F)
+  stSpawn.SPos:Add((hdRec.O[csY] * stSpawn.MPos[cvY]) * stSpawn.R)
+  stSpawn.SPos:Add((hdRec.O[csZ] * stSpawn.MPos[cvZ]) * stSpawn.U)
   if(enOrAngTr ~= 0) then
     stSpawn.F:Set(stSpawn.TAng:Forward())
     stSpawn.R:Set(stSpawn.TAng:Right())
