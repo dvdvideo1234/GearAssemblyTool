@@ -1754,7 +1754,7 @@ function GetENTSpawn(trPos,trAng,trModel,nRotAng,hdModel,enIgnTyp,enOrAngTr,ucsP
 	return stSpawn
 end
 
-function GetBodygroupString()
+function GetBodygroupTrace()
   local Ply = LocalPlayer()
   if(not Ply) then return "" end
   local tr  = Ply:GetEyeTrace()
@@ -1762,11 +1762,11 @@ function GetBodygroupString()
   if(tr.HitWorld) then return "" end
   local trEnt = tr.Entity
   if(trEnt and trEnt:IsValid()) then
-    LogInstance("GetBodygroupString: ")
+    LogInstance("GetBodygroupTrace: ")
     if(IsOther(trEnt)) then return "" end
     local BG = trEnt:GetBodyGroups()
     if(not (BG and BG[1])) then return "" end
-    Print(BG,"GetBodygroupString: BG")
+    Print(BG,"GetBodygroupTrace: BG")
     local Result = ""
     local Cnt = 1
     while(BG[Cnt]) do
@@ -1774,6 +1774,24 @@ function GetBodygroupString()
       Cnt = Cnt + 1
     end
     return string.sub(Result,2,string.len(Result))
+  end
+  return ""
+end
+
+function GetSkinTrace()
+  local Ply = LocalPlayer()
+  if(not Ply) then return "" end
+  local tr  = Ply:GetEyeTrace()
+  if(not tr) then return "" end
+  if(tr.HitWorld) then return "" end
+  local trEnt = tr.Entity
+  if(trEnt and trEnt:IsValid()) then
+    LogInstance("GetSkinTrace: ")
+    if(IsOther(trEnt)) then return "" end
+    local Skin = trEnt:GetSkin()
+    if(not Skin) then return "" end
+    Print(BG,"GetSkinTrace: Skin")
+    return tostring(Skin)
   end
   return ""
 end
