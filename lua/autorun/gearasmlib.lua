@@ -73,19 +73,23 @@ local string         = string
 -- Library Debug Settings
 -- The file is created in the DATA folder :3 *.txt is appended
 local LibDebugEn = 1
-local LibLogFile = "assemblylib_log"
+local LibLogFile = "gearasmlib_log"
 local LibMaxLogs = 10000
 local LibCurLogs = 0
 
 -- Library Syms
-local LibSymDisable  = "#"
-local LibSymRevSign  = "@"
+local LibSymDisable = "#"
+local LibSymRevSign = "@"
+local LibSymDevider = "_"
 
 -- Operating paths
 local LibBASPath = "gearassembly/"
 local LibEXPPath = "export/"
 local LibDSVPath = "dsvbase/"
 local LibLOGPath = ""
+
+-- Table prefix to avoid overlapping and conflicts
+local LibTablePrefix = "GEARASSEMBLY"
 
 -- Spawn Struct table Space
 local LibSpawn = {
@@ -127,7 +131,7 @@ local LibSQLBuildError = ""
 ---------------- TABLE DEFINITIONS SPACE----------------
 
 local LibTables = {
-  ["GEARASSEMBLY_PIECES"] = {
+  [LibTablePrefix.."PIECES"] = {
     Size = 7,
     KeepInCache = 3600,
     [1] = {"MODEL" , "TEXT", "L"},
@@ -144,110 +148,83 @@ module( "gearasmlib" )
 
 -------------- BEGIN SQL AssemblyLib -------------
 
-
------------------- AssemblyLib LOGS ------------------------
-
-function PrintInstance(anyStuff)
-  if(SERVER) then
-    print("SERVER > "..tostring(anyStuff))
-  elseif(CLIENT) then
-    print("CLIENT > "..tostring(anyStuff))
-  else
-    print("NOINST > "..tostring(anyStuff))
-  end
-end
-
-function SetLogControl(nEn,nLines,sFile)
-  LibDebugEn = nEn
-  LibLogFile = sFile
-  LibMaxLogs = nLines
-  if(not file.Exists(LibBASPath,"DATA") and (string.len(LibLogFile) > 0)) then
-    file.CreateDir(LibBASPath)
-  end
-end
-
-function Log(anyStuff)
-  if(LibDebugEn ~= 0) then
-    if(LibLogFile ~= "") then
-      local fName = LibBASPath .. LibLOGPath .. LibLogFile..".txt"
-      file.Append(fName,NumFormatLen(LibCurLogs,{string.len(tostring(LibMaxLogs))},{" "})
-               .." >> "..tostring(anyStuff).."\n")
-      LibCurLogs = LibCurLogs + 1
-      if(LibCurLogs > LibMaxLogs) then
-        file.Delete(fName)
-        LibCurLogs = 0
-      end
-    else
-      PrintInstance("GEARASSEMBLY LOG: "..tostring(anyStuff))
-    end
-  end
-end
-
-function LogInstance(anyStuff)
-  if(SERVER) then
-    Log("SERVER > "..tostring(anyStuff))
-  elseif(CLIENT) then
-    Log("CLIENT > "..tostring(anyStuff))
-  else
-    Log("NOINST > "..tostring(anyStuff))
-  end
-end
-
-function Print(tT,sS)
-  if(not tT)then
-    LogInstance("Print: No Data: Print( table, string = \"Data\" )!")
-    return
-  end
-  local S = type(sS)
-  local T = type(tT)
-  local Key  = ""
-  if(S and (S == "string" or
-            S == "number" )
-       and S ~= ""
-  ) then
-    S = tostring(sS)
-  else
-    S = "Data"
-  end
-  if(T ~= "table") then
-    LogInstance("{"..T.."}["..S.."] => "..tostring(tT))
-    return
-  end
-  T = tT
-  LogInstance(S)
-  for k,v in pairs(T) do
-    if(type(k) == "string") then
-      Key = S.."[\""..k.."\"]"
-    else
-      Key = S.."["..k.."]"
-    end
-    if(type(v) ~= "table") then
-      if(type(v) == "string") then
-        LogInstance(Key.." = \""..v.."\"")
-      else
-        LogInstance(Key.." = "..tostring(v))
-      end
-    else
-      Print(v,Key)
-    end
-  end
-end
-
-PrintArrLine = function(aTable,sName)
-  local Line = (sName or "Data").."{"
-  local Cnt  = 1
-  while(aTable[Cnt]) do
-    Line = Line .. tostring(aTable[Cnt])
-    if(aTable[Cnt + 1]) then
-      Line = Line .. ", "
-    end
-    Cnt = Cnt + 1
-  end
-  LogInstance(Line.."}")
-end
-
-
 ---------------------------- AssemblyLib COMMON ----------------------------
+
+--- Angle
+
+function AddAngle(aBase, adbAdd)
+  aBase[caP] = aBase[caP] + adbAdd[caP]
+  aBase[caY] = aBase[caY] + adbAdd[caY]
+  aBase[caR] = aBase[caR] + adbAdd[caR]
+end
+
+function AddAnglePYR(aBase, nP, nY, nR)
+  aBase[caP] = aBase[caP] + (nP or 0)
+  aBase[caY] = aBase[caY] + (nY or 0)
+  aBase[caR] = aBase[caR] + (nR or 0)
+end
+
+function SubAngle(aBase, adbSub)
+  aBase[caP] = aBase[caP] - adbSub[caP]
+  aBase[caY] = aBase[caY] - adbSub[caY]
+  aBase[caR] = aBase[caR] - adbSub[caR]
+end
+
+function SubAnglePYR(aBase, nP, nY, nR)
+  aBase[caP] = aBase[caP] - (nP or 0)
+  aBase[caY] = aBase[caY] - (nY or 0)
+  aBase[caR] = aBase[caR] - (nR or 0)
+end
+
+function SetAngle(aBase, adbSet)
+  aBase[caP] = adbSet[caP]
+  aBase[caY] = adbSet[caY]
+  aBase[caR] = adbSet[caR]
+end
+
+function SetAnglePYR(aBase, nP, nY, nR)
+  aBase[caP] = (nP or 0)
+  aBase[caY] = (nY or 0)
+  aBase[caR] = (nR or 0)
+end
+
+--- Vector
+
+function AddVector(vBase, vdbAdd)
+  vBase[cvX] = vBase[cvX] + vdbAdd[cvX]
+  vBase[cvY] = vBase[cvY] + vdbAdd[cvY]
+  vBase[cvZ] = vBase[cvZ] + vdbAdd[cvZ]
+end
+
+function AddVectorXYZ(vBase, nX, nY, nZ)
+  vBase[cvX] = vBase[cvX] + (nX or 0)
+  vBase[cvY] = vBase[cvY] + (nY or 0)
+  vBase[cvZ] = vBase[cvZ] + (nZ or 0)
+end
+
+function SubVector(vBase, vdbSub)
+  vBase[cvX] = vBase[cvX] - vdbSub[cvX]
+  vBase[cvY] = vBase[cvY] - vdbSub[cvY]
+  vBase[cvZ] = vBase[cvZ] - vdbSub[cvZ]
+end
+
+function SubVectorXYZ(vBase, nX, nY, nZ)
+  vBase[cvX] = vBase[cvX] - (nX or 0)
+  vBase[cvY] = vBase[cvY] - (nY or 0)
+  vBase[cvZ] = vBase[cvZ] - (nZ or 0)
+end
+
+function SetVector(vVec, vdbSet)
+  vVec[cvX] = vdbSet[cvX]
+  vVec[cvY] = vdbSet[cvY]
+  vVec[cvZ] = vdbSet[cvZ]
+end
+
+function SetVectorXYZ(vVec, nX, nY, nZ)
+  vVec[cvX] = (nX or 0)
+  vVec[cvY] = (nY or 0)
+  vVec[cvZ] = (nZ or 0)
+end
 
 function SetTableDefinition(sTable, tDefinition)
   if(not sTable or sTable ~= "string") then return false end
@@ -262,7 +239,10 @@ function SetTableDefinition(sTable, tDefinition)
 end
 
 function GetTableDefinition(sTable)
-  return LibTables[sTable]
+  if(sTable and type(sTable) == "string") then
+    return LibTables[LibTablePrefix..sTable]
+  end
+  return nil
 end
 
 function GetSQLBuildError()
@@ -295,6 +275,10 @@ function LOGPath(sPath)
     LibLOGPath = sPath .. "/"
   end
   return LibLOGPath
+end
+
+function GetTablePrefix()
+  return LibTablePrefix
 end
 
 function IsOther(oEnt)
@@ -393,19 +377,6 @@ function SnapValue(nVal, nSnap)
   return Rez;
 end
 
-function vGetMCWorldOffset(oEnt)
--- Set the ENT's Angles first!
-  local vOff = Vector()
-  if(not oEnt) then return vOff end
-  Phys = oEnt:GetPhysicsObject()
-  if(Phys:IsValid()) then
-    vOff:Set(Phys:GetMassCenter())
-    vOff:Rotate(oEnt:GetAngles())
-    vOff:Mul(-1)
-  end
-  return vOff
-end
-
 function IsPhysTrace(Trace)
   if(not Trace) then return false end
   local eEnt = Trace.Entity
@@ -418,15 +389,6 @@ function IsPhysTrace(Trace)
   return false
 end
 
-function DecomposeByAngle(V,A)
-  if(not ( V and A ) ) then
-    return Vector()
-  end
-  return Vector(V:DotProduct(A:Forward()),
-                V:DotProduct(A:Right()),
-                V:DotProduct(A:Up()))
-end
-
 function Model2Name(sModel)
   local Len = string.len(sModel)-4
   local Cnt = Len
@@ -437,7 +399,7 @@ function Model2Name(sModel)
     end
     Cnt = Cnt - 1
   end
-  local Sub = "_"..string.sub(sModel,Cnt+1,Len)
+  local Sub = LibSymDevider..string.sub(sModel,Cnt+1,Len)
   local Rez = ""
   Len = string.len(Sub)
   Cnt = 1
@@ -445,7 +407,7 @@ function Model2Name(sModel)
   while(Cnt <= Len) do
     Us = string.sub(Sub,Cnt,Cnt)
     Ch = string.sub(Sub,Cnt+1,Cnt+1)
-    if(Us == "_") then
+    if(Us == LibSymDevider) then
        Us = " "
        Ch = string.upper(Ch)
        Rez = Rez .. Us .. Ch
@@ -618,6 +580,116 @@ function Sort(tTable,tIndexes)
   return CopyTable
 end
 
+function DecomposeByAngle(V,A)
+  if(not ( V and A ) ) then
+    return Vector()
+  end
+  return Vector(V:DotProduct(A:Forward()),
+                V:DotProduct(A:Right()),
+                V:DotProduct(A:Up()))
+end
+
+------------------ AssemblyLib LOGS ------------------------
+
+function PrintInstance(anyStuff)
+  if(SERVER) then
+    print("SERVER > "..tostring(anyStuff))
+  elseif(CLIENT) then
+    print("CLIENT > "..tostring(anyStuff))
+  else
+    print("NOINST > "..tostring(anyStuff))
+  end
+end
+
+function SetLogControl(nEn,nLines,sFile)
+  LibDebugEn = nEn
+  LibLogFile = sFile
+  LibMaxLogs = nLines
+  if(not file.Exists(LibBASPath,"DATA") and (string.len(LibLogFile) > 0)) then
+    file.CreateDir(LibBASPath)
+  end
+end
+
+function Log(anyStuff)
+  if(LibDebugEn ~= 0) then
+    if(LibLogFile ~= "") then
+      local fName = LibBASPath .. LibLOGPath .. LibLogFile..".txt"
+      file.Append(fName,NumFormatLen(LibCurLogs,{string.len(tostring(LibMaxLogs))},{" "})
+               .." >> "..tostring(anyStuff).."\n")
+      LibCurLogs = LibCurLogs + 1
+      if(LibCurLogs > LibMaxLogs) then
+        file.Delete(fName)
+        LibCurLogs = 0
+      end
+    else
+      PrintInstance("GEARASSEMBLY LOG: "..tostring(anyStuff))
+    end
+  end
+end
+
+function LogInstance(anyStuff)
+  if(SERVER) then
+    Log("SERVER > "..tostring(anyStuff))
+  elseif(CLIENT) then
+    Log("CLIENT > "..tostring(anyStuff))
+  else
+    Log("NOINST > "..tostring(anyStuff))
+  end
+end
+
+function Print(tT,sS)
+  if(not tT)then
+    LogInstance("Print: No Data: Print( table, string = \"Data\" )!")
+    return
+  end
+  local S = type(sS)
+  local T = type(tT)
+  local Key  = ""
+  if(S and (S == "string" or
+            S == "number" )
+       and S ~= ""
+  ) then
+    S = tostring(sS)
+  else
+    S = "Data"
+  end
+  if(T ~= "table") then
+    LogInstance("{"..T.."}["..S.."] => "..tostring(tT))
+    return
+  end
+  T = tT
+  LogInstance(S)
+  for k,v in pairs(T) do
+    if(type(k) == "string") then
+      Key = S.."[\""..k.."\"]"
+    else
+      Key = S.."["..k.."]"
+    end
+    if(type(v) ~= "table") then
+      if(type(v) == "string") then
+        LogInstance(Key.." = \""..v.."\"")
+      else
+        LogInstance(Key.." = "..tostring(v))
+      end
+    else
+      Print(v,Key)
+    end
+  end
+end
+
+PrintArrLine = function(aTable,sName)
+  local Line = (sName or "Data").."{"
+  local Cnt  = 1
+  while(aTable[Cnt]) do
+    Line = Line .. tostring(aTable[Cnt])
+    if(aTable[Cnt + 1]) then
+      Line = Line .. ", "
+    end
+    Cnt = Cnt + 1
+  end
+  LogInstance(Line.."}")
+end
+
 ------------------------- AssemblyLib PLAYER -----------------------------------
 
 function PrintNotify(pPly,sText,sNotifType)
@@ -695,21 +767,22 @@ end
 -------------------------- AssemblyLib BUILDSQL ------------------------------
 
 function SQLBuildCreate(sTable,tIndex)
+  if(not type(sTable) == "string") then return false end
   if(not LibTables[sTable]) then
     LibSQLBuildError = "SQLBuildCreate: Missing Table definition for "..sTable
     return false
   end
-  local Table = LibTables[sTable]
-  if(not Table.Size) then
+  local defTable = LibTables[sTable]
+  if(not defTable.Size) then
     LibSQLBuildError = "SQLBuildCreate: Missing Table definition SIZE for "..sTable
     return false
   end
-  if(not Table[1]) then
+  if(not defTable[1]) then
     LibSQLBuildError = "SQLBuildCreate: Missing Table definition is empty for "..sTable
     return false
   end
-  if(not (Table[1][1] and
-          Table[1][2])
+  if(not (defTable[1][1] and
+          defTable[1][2])
   ) then
     LibSQLBuildError = "SQLBuildCreate: Missing: Table "..sTable.." field definitions"
     return false
@@ -719,8 +792,8 @@ function SQLBuildCreate(sTable,tIndex)
   Command.Drop   = "DROP TABLE "..sTable..";"
   Command.Delete = "DELETE FROM "..sTable..";"
   Command.Create = "CREATE TABLE "..sTable.." ( "
-  while(Table[Ind]) do
-    local v = Table[Ind]
+  while(defTable[Ind]) do
+    local v = defTable[Ind]
     if(not v[1]) then
       return "SQLBuildCreate: Missing Table "..sTable
              .."'s field #"..tostring(Ind)
@@ -731,7 +804,7 @@ function SQLBuildCreate(sTable,tIndex)
       return false
     end
     Command.Create = Command.Create .. string.upper(v[1]).." ".. string.upper(v[2])
-    if(Table[Ind+1]) then
+    if(defTable[Ind+1]) then
       Command.Create = Command.Create ..", "
     end
     Ind = Ind + 1
@@ -765,14 +838,14 @@ function SQLBuildCreate(sTable,tIndex)
                  ..tostring(Ind).."]["..tostring(Cnt).."]"
           return false
         end
-        if(not Table[vF]) then
+        if(not defTable[vF]) then
           LibSQLBuildError = "SQLBuildCreate: Index creator mismatch on "..sTable
                  ..". The table does ot have field index #"
                  ..vF..", max is #"..Table.Size
           return false
         end
-        FieldsU = FieldsU .. "_" ..string.upper(Table[vF][1])
-        FieldsC = FieldsC .. string.upper(Table[vF][1])
+        FieldsU = FieldsU .. "_" ..string.upper(defTable[vF][1])
+        FieldsC = FieldsC .. string.upper(defTable[vF][1])
         if(vI[Cnt+1]) then
           FieldsC = FieldsC ..", "
         end
@@ -786,17 +859,18 @@ function SQLBuildCreate(sTable,tIndex)
 end
 
 function SQLBuildSelect(sTable,tFields,tWhere,tOrderBy)
+  if(not type(sTable) == "string") then return false end
   if(not LibTables[sTable]) then
     LibSQLBuildError = "SQLBuildSelect: Missing: Table definition "..sTable
     return false
   end
-  local Table = LibTables[sTable]
-  if(not Table.Size) then
+  local defTable = LibTables[sTable]
+  if(not defTable.Size) then
     LibSQLBuildError = "SQLBuildSelect: Missing: Table definition SIZE in "..sTable
     return false
   end
-  if(not (Table[1][1] and
-          Table[1][2])
+  if(not (defTable[1][1] and
+          defTable[1][2])
   ) then
     LibSQLBuildError = "SQLBuildSelect: Missing: Table "..sTable.." field definitions"
     return false
@@ -811,9 +885,9 @@ function SQLBuildSelect(sTable,tFields,tWhere,tOrderBy)
              .." type mismatch in "..sTable
         return false
       end
-      if(Table[v]) then
-        if(Table[v][1]) then
-          Command = Command .. Table[v][1]
+      if(defTable[v]) then
+        if(defTable[v][1]) then
+          Command = Command .. defTable[v][1]
         else
           LibSQLBuildError = "SQLBuildSelect: No such field name by index #"..v.." in the table "..sTable
           return false
@@ -825,10 +899,11 @@ function SQLBuildSelect(sTable,tFields,tWhere,tOrderBy)
       Cnt = Cnt + 1
     end
   else
-    Command = Command .. "* "
+    Command = Command .. "*"
   end
   Command = Command .." FROM "..sTable
   if(tWhere and
+     type(tWhere == "table") and
      type(tWhere[1]) == "table" and
      tWhere[1][1] and
      tWhere[1][2] and
@@ -838,7 +913,7 @@ function SQLBuildSelect(sTable,tFields,tWhere,tOrderBy)
     Cnt = 1
     local k = tonumber(tWhere[Cnt][1])
     local v = tWhere[Cnt][2]
-    local t = Table[k][2]
+    local t = defTable[k][2]
     if(k and v and t) then
       if(t == "TEXT" and type(v) == "number") then
         v = tostring(v)
@@ -855,12 +930,12 @@ function SQLBuildSelect(sTable,tFields,tWhere,tOrderBy)
       if(t == "TEXT") then
         v = "'"..v.."'"
       end
-      Command = Command .. " WHERE "..Table[k][1].." = "..v
+      Command = Command .. " WHERE "..defTable[k][1].." = "..v
       Cnt = Cnt + 1
       while(tWhere[Cnt]) do
         local k = tonumber(tWhere[Cnt][1])
         local v = tWhere[Cnt][2]
-        local t = Table[k][2]
+        local t = defTable[k][2]
         if(not (k and v and t) ) then
           LibSQLBuildError = "SQLBuildSelect: Missing eather "..sTable.." field index, "
                  .."value or type in the table definition"
@@ -881,14 +956,14 @@ function SQLBuildSelect(sTable,tFields,tWhere,tOrderBy)
         if(t == "TEXT") then
           v = "'"..v.."'"
         end
-        Command = Command .." AND "..Table[k][1].." = "..v
+        Command = Command .." AND "..defTable[k][1].." = "..v
         Cnt = Cnt + 1
       end
     else
       return Command .. ";"
     end
   end
-  if(tOrderBy) then
+  if(tOrderBy and (type(tOrderBy) == "table")) then
     local Dire = ""
     Command = Command .. " ORDER BY "
     Cnt = 1
@@ -905,7 +980,7 @@ function SQLBuildSelect(sTable,tFields,tWhere,tOrderBy)
         LibSQLBuildError = "Wrong Table "..sTable.." field index #"..Cnt
         return false
       end
-        Command = Command .. Table[v][1] .. Dire
+        Command = Command .. defTable[v][1] .. Dire
         if(tOrderBy[Cnt+1]) then
           Command = Command..", "
         end
@@ -916,17 +991,18 @@ function SQLBuildSelect(sTable,tFields,tWhere,tOrderBy)
 end
 
 function SQLBuildInsert(sTable,tInsert,tValues)
+  if(not type(sTable) == "string") then return false end
   if(not (LibTables[sTable] and tInsert and tValues)) then
     LibSQLBuildError = "SQLBuildInsert: Missing Table definition and Chosen fields"
     return false
   end
-  local Table = LibTables[sTable]
-  if(not (Table[1] and tInsert[1])) then
+  local defTable = LibTables[sTable]
+  if(not (defTable[1] and tInsert[1])) then
     LibSQLBuildError = "SQLBuildInsert: The table and the chosen fields must not be empty"
     return false
   end
-  if(not (Table[1][1] and
-          Table[1][2])
+  if(not (defTable[1][1] and
+          defTable[1][2])
   ) then
     LibSQLBuildError = "SQLBuildInsert: Missing: Table "..sTable.." field definition"
     return false
@@ -937,7 +1013,7 @@ function SQLBuildInsert(sTable,tInsert,tValues)
   local Val = ""
   while(tInsert[Cnt]) do
     local k = tInsert[Cnt]
-    local v = Table[k]
+    local v = defTable[k]
           Val = tValues[Cnt]
     local tyVal = type(Val)
     if(Val and
@@ -953,7 +1029,7 @@ function SQLBuildInsert(sTable,tInsert,tValues)
       LibSQLBuildError = "SQLBuildInsert: Cannot insert tables into the DB for index #"..Cnt
       return false
     end
-    qIns = qIns .. Table[k][1]
+    qIns = qIns .. defTable[k][1]
     qVal = qVal .. Val
     if(tInsert[Cnt+1]) then
       qIns = qIns ..", "
@@ -967,17 +1043,21 @@ function SQLBuildInsert(sTable,tInsert,tValues)
   return qIns .. qVal
 end
 
+------------- SQL Handling --------------
+
 function SQLInsertRecord(sTable,tData)
-  if(not LibTables[sTable])     then
+  if(not type(sTable) == "string") then return false end
+  local TableKey = LibTablePrefix..sTable
+  if(not LibTables[TableKey]) then
     LogInstance("SQLInsertRecord: Missing: Table definition for "..sTable)
     return false
   end
-  local Table = LibTables[sTable]
-  if(not Table.Size) then
+  local defTable = LibTables[TableKey]
+  if(not defTable.Size) then
     LogInstance("SQLInsertRecord: Missing: Table definition SIZE for "..sTable)
     return false
   end
-  if(not Table[1])  then
+  if(not defTable[1])  then
     LogInstance("SQLInsertRecord: Missing: Table definition is empty for "..sTable)
     return false
   end
@@ -989,7 +1069,7 @@ function SQLInsertRecord(sTable,tData)
     LogInstance("SQLInsertRecord: Missing: Data table is empty for "..sTable)
     return false
   end
-  if(sTable == "GEARASSEMBLY_PIECES") then
+  if(sTable == "PIECES") then
     --Used only in PecesDB !!!
     if(tData[3]) then
       if(type(tData[3]) == "string") then
@@ -1005,10 +1085,10 @@ function SQLInsertRecord(sTable,tData)
   end
 
   -- Malloc Some Index Arrays
-  local aFields = {}
+  local Fields = {}
   local Ind = 1
-  while(Table[Ind]) do
-    local FieldDef = Table[Ind]
+  while(defTable[Ind]) do
+    local FieldDef = defTable[Ind]
     local FieldTyp = type(tData[Ind])
 
     -- Different Type handling
@@ -1051,10 +1131,10 @@ function SQLInsertRecord(sTable,tData)
     elseif(FieldDef[3] == "U" and FieldDef[2] == "TEXT") then
       tData[Ind] = string.upper(tData[Ind])
     end
-    aFields[Ind] = Ind
+    Fields[Ind] = Ind
     Ind = Ind + 1
   end
-  local Q = SQLBuildInsert(sTable,aFields,tData)
+  local Q = SQLBuildInsert(TableKey,Fields,tData)
   if(Q) then
     local qRez = sql.Query(Q)
     if(not qRez and type(qRez) == "boolean") then
@@ -1069,9 +1149,11 @@ function SQLInsertRecord(sTable,tData)
 end
 
 function SQLCreateTable(sTable,tIndex,bDelete,bReload)
-  local tQ = SQLBuildCreate(sTable,tIndex)
+  if(not type(sTable) == "string") then return false end
+  local TableKey = LibTablePrefix..sTable
+  local tQ = SQLBuildCreate(TableKey,tIndex)
   if(tQ) then
-    if(bDelete and sql.TableExists(sTable)) then
+    if(bDelete and sql.TableExists(TableKey)) then
       local qRez = sql.Query(tQ.Delete)
       if(not qRez and type(qRez) == "boolean") then
         LogInstance("SQLCreateTable: Table "..sTable
@@ -1089,7 +1171,7 @@ function SQLCreateTable(sTable,tIndex,bDelete,bReload)
         LogInstance("SQLCreateTable: Table "..sTable.." dropped !")
       end
     end
-    if(sql.TableExists(sTable)) then
+    if(sql.TableExists(TableKey)) then
       LogInstance("SQLCreateTable: Table "..sTable.." exists!")
       return true
     else
@@ -1099,7 +1181,7 @@ function SQLCreateTable(sTable,tIndex,bDelete,bReload)
           .." failed to create because of ".. tostring(sql.LastError()))
         return false
       end
-      if(sql.TableExists(sTable)) then
+      if(sql.TableExists(TableKey)) then
         for k, v in pairs(tQ.Index) do
           qRez = sql.Query(v)
           if(not qRez and type(qRez) == "boolean") then
@@ -1125,32 +1207,27 @@ end
 
 --------------------------- AssemblyLib PIECE QUERY -----------------------------
 
-function AttachKillTimer(oLocation,sKey,sTable,anyDuration,anyMessage)
-  local Key = sTable.."_"..sKey
-  if(anyDuration and
-     tonumber(anyDuration) and
-     not timer.Exists(Key)
-  ) then
-    local Duration = tonumber(anyDuration)
-    if(Duration > 0) then
-      timer.Create(Key, Duration, 1, function()
-                                       LogInstance("AttachKillTimer["..Key.."]("..Duration.."): "..tostring(anyMessage))
-                                       timer.Stop(Key)
-                                       timer.Destroy(Key)
-                                       oLocation[Key] = nil
-                                       collectgarbage()
-                                     end)
-      timer.Start(Key)
-    end
+function AttachKillTimer(oLocation,sKey,sTableKey,anyDuration,anyMessage)
+  local Key = sTableKey.."_"..sKey
+  local Duration = tonumber(anyDuration) or 0
+  if(not timer.Exists(Key) and Duration > 0) then
+    timer.Create(Key, Duration, 1, function()
+                                     LogInstance("AttachKillTimer["..Key.."]("..Duration.."): "..tostring(anyMessage))
+                                     timer.Stop(Key)
+                                     timer.Destroy(Key)
+                                     oLocation[Key] = nil
+                                     collectgarbage()
+                                   end)
+    timer.Start(Key)
   end
 end
 
-function RestartTimer(sTable,sKey)
-  if(not (sTable and sKey)) then return false end
-  if(not (type(sTable) == "string" and
-          type(sKey)   == "string")
+function RestartTimer(sTableKey,sKey)
+  if(not (sTableKey and sKey)) then return false end
+  if(not (type(sTableKey) == "string" and
+          type(sKey)      == "string")
   ) then return false end
-  local Key = sTable.."_"..sKey
+  local Key = sTableKey.."_"..sKey
   if(not timer.Exists(Key)) then return false end
   return timer.Start(Key)
 end
@@ -1158,54 +1235,55 @@ end
 -- Cashing the selected Piece Result
 function CacheQueryPiece(sModel)
   if(not sModel) then return nil end
+  if(type(sModel) ~= "string") then return nil end
   if(sModel == "") then return nil end
   if(not util.IsValidModel(sModel)) then return nil end
-  local sTable = "GEARASSEMBLY_PIECES"
-  if(not LibCache[sTable]) then
-    LibCache[sTable] = {}
+  local TableKey = LibTablePrefix.."PIECES"
+  if(not LibCache[TableKey]) then
+    LibCache[TableKey] = {}
   end
-  local stTable = LibTables[sTable]
-  local stPiece = LibCache[sTable][sModel]
+  local defTable = LibTables[TableKey]
+  local stPiece  = LibCache[TableKey][sModel]
   if(stPiece) then
     if(stPiece.Here) then
-      RestartTimer(sTable,sModel)
-      return LibCache[sTable][sModel]
+      RestartTimer(TableKey,sModel)
+      return LibCache[TableKey][sModel]
     end
     return nil
   end
   LogInstance("CacheQueryPiece: Model >> Pool: "..GetModelFileName(sModel))
-  LibCache[sTable][sModel] = {}
-  stPiece = LibCache[sTable][sModel]
-  AttachKillTimer(LibCache[sTable],sModel,sTable,stTable.KeepInCache,"CacheQueryPiece")
-  local Q = SQLBuildSelect(sTable,nil,{{1,sModel}})
+  LibCache[TableKey][sModel] = {}
+  stPiece = LibCache[TableKey][sModel]
+  AttachKillTimer(LibCache[TableKey],sModel,TableKey,defTable.KeepInCache,"CacheQueryPiece")
+  local Q = SQLBuildSelect(TableKey,nil,{{1,sModel}})
   if(Q) then
     local qData = sql.Query(Q)
     if(qData and qData[1]) then
       local qRec   = qData[1]
-      stPiece.Type = qRec[stTable[2][1]]
-      stPiece.Name = qRec[stTable[3][1]]
-      stPiece.Mesh = qRec[stTable[4][1]]
+      stPiece.Type = qRec[defTable[2][1]]
+      stPiece.Name = qRec[defTable[3][1]]
+      stPiece.Mesh = qRec[defTable[4][1]]
       stPiece.Here = true 
       stPiece.A = {[caP] = 0, [caY] = 0,[caR] = 0, [csX] = 1, [csY] = 1, [csZ] = 1, [csD] = true}
       stPiece.O = {[csX] = 0, [csY] = 0,[csZ] = 0, [csX] = 1, [csY] = 1, [csZ] = 1, [csD] = true}
       stPiece.M = {[csX] = 0, [csY] = 0,[csZ] = 0, [csX] = 1, [csY] = 1, [csZ] = 1, [csD] = true}
       -- Origin
-      if((qRec[stTable[5][1]] ~= "") and
-         (qRec[stTable[5][1]] ~= "NULL")
+      if((qRec[defTable[5][1]] ~= "") and
+         (qRec[defTable[5][1]] ~= "NULL")
       ) then
-        DecodeOffset(stPiece.O,qRec[stTable[5][1]])
+        DecodeOffset(stPiece.O,qRec[defTable[5][1]])
       end
       -- Angle
-      if((qRec[stTable[6][1]] ~= "") and
-         (qRec[stTable[6][1]] ~= "NULL")
+      if((qRec[defTable[6][1]] ~= "") and
+         (qRec[defTable[6][1]] ~= "NULL")
       ) then
         -- "@1,2,1" = {1,2,1,-1,1,1,true}
-        DecodeOffset(stPiece.A,qRec[stTable[6][1]])
+        DecodeOffset(stPiece.A,qRec[defTable[6][1]])
       end
-      if((qRec[stTable[7][1]] ~= "") and
-         (qRec[stTable[7][1]] ~= "NULL")
+      if((qRec[defTable[7][1]] ~= "") and
+         (qRec[defTable[7][1]] ~= "NULL")
       ) then
-        DecodeOffset(stPiece.M,qRec[stTable[7][1]])
+        DecodeOffset(stPiece.M,qRec[defTable[7][1]])
       end
       return stPiece
     else
@@ -1222,7 +1300,7 @@ end
 
 --- Used to Populate the CPanel Tree
 function PanelQueryPieces()
-  local Q = SQLBuildSelect("GEARASSEMBLY_PIECES",{1,2,3},nil,{2,3})
+  local Q = SQLBuildSelect(LibTablePrefix.."PIECES",{1,2,3},nil,{2,3})
   if(Q) then
     local qData = sql.Query(Q)
     if(qData and qData[1]) then
@@ -1239,8 +1317,10 @@ end
 
 -- Used to define DB as a Lua table
 function ExportSQL2Lua(sTable)
-  if(not LibTables[sTable] or type(sTable) ~= "string") then return end
-  local stTable = LibTables[sTable]
+  if(type(sTable) ~= "string") then return end
+  local TableKey = LibTablePrefix..sTable
+  if(not LibTables[TableKey]) then return end
+  local defTable = LibTables[TableKey]
   if(not file.Exists(LibBASPath,"DATA")) then
     file.CreateDir(LibBASPath)
   end
@@ -1248,54 +1328,54 @@ function ExportSQL2Lua(sTable)
     file.CreateDir(LibBASPath..LibEXPPath)
   end
   local F = file.Open(LibBASPath..LibEXPPath..
-                      "sql2lua_"..sTable..".txt", "w", "DATA" )
+                      "sql2lua_"..TableKey..".txt", "w", "DATA" )
   if(not F) then
     LogInstance("ExportSQL2Lua: file.Open("..LibBASPath..LibEXPPath
-                                           .."sql2lua_"..sTable..".txt) Failed")
+                                           .."sql2lua_"..TableKey..".txt) Failed")
     return
   end
   local Q
-  if(sTable == "GEARASSEMBLY_PIECES") then
-    Q = SQLBuildSelect(sTable,nil,nil,{2,3,1,4})
+  if(sTable == "PIECES") then
+    Q = SQLBuildSelect(TableKey,nil,nil,{2,3,1,4})
   else
-    Q = SQLBuildSelect(sTable,nil,nil,nil)
+    Q = SQLBuildSelect(TableKey,nil,nil,nil)
   end
   if(Q) then
     local qData = sql.Query(Q)
     if(qData and qData[1]) then
-      local Cnt = 1
       local Ind = 1
-      local qRec
+      local Line = ""
       F:Write("Exported on: "..os.date().."\n")
       F:Write("DB Query Ran: "..Q.."\n")
       F:Write("Return "..#qData.." results !\n")
       F:Write("Function ExportSQL2Lua: \n\n")
-      F:Write("local "..sTable.." = {\n")
+      F:Write("local "..TableKey.." = {\n")
       while(qData[Ind]) do
-        F:Write("  { ")
-        Cnt = 1
-        qRec = qData[Ind]
-        while(Cnt <= stTable.Size) do
-          local f = stTable[Cnt][1]
+        local Cnt  = 2
+        local qRec = qData[Ind]
+        local fMod = defTable[1][1]
+        Line = "  [\""..qRec[fMod].."\"] = {"
+        while(Cnt <= defTable.Size) do
+          local f = defTable[Cnt][1]
           local v = qRec[f]
-          if(stTable[Cnt][2] == "TEXT") then
+          if(defTable[Cnt][2] == "TEXT") then
             v = "\""..v.."\""
           end
-          F:Write(tostring(v))
-          if(Cnt < stTable.Size) then F:Write(", ") end
+          Line = Line .. tostring(v)
+          if(Cnt < defTable.Size) then Line = Line .. ", " end
           Cnt = Cnt + 1
         end
-        F:Write(" }")
-        if(qData[Ind+1]) then F:Write(",") end
-        F:Write("\n")
+        Line = Line .. "}"
+        if(qData[Ind+1]) then Line = Line .. "," end
+        F:Write(Line.."\n")
         Ind = Ind + 1
       end
       F:Write("}")
     else
-      LogInstance("ExportSQL2Lua: No data found >"..Q.."<")
+       F:Write("ExportSQL2Lua: No data found >"..Q.."<")
     end
   else
-    LogInstance("ExportSQL2Lua: "..GetSQLBuildError())
+     F:Write("ExportSQL2Lua: "..GetSQLBuildError())
   end
   F:Flush()
   F:Close()
@@ -1303,8 +1383,10 @@ end
 
 -- Used to generate inserts based on the DB itself
 function ExportSQL2Inserts(sTable)
-  if(not LibTables[sTable] or type(sTable) ~= "string") then return end
-  local stTable = LibTables[sTable]
+  if(type(sTable) ~= "string") then return end
+  local TableKey = LibTablePrefix..sTable
+  if(not LibTables[TableKey]) then return end
+  local defTable = LibTables[TableKey]
   if(not file.Exists(LibBASPath,"DATA")) then
     file.CreateDir(LibBASPath)
   end
@@ -1312,17 +1394,17 @@ function ExportSQL2Inserts(sTable)
     file.CreateDir(LibBASPath..LibEXPPath)
   end
   local F = file.Open(LibBASPath..LibEXPPath..
-                      "sql2inserts_"..sTable..".txt", "w", "DATA" )
+                      "sql2inserts_"..TableKey..".txt", "w", "DATA" )
   if(not F) then
     LogInstance("ExportSQL2Inserts: file.Open("..LibBASPath..LibEXPPath
-                                               .."sql2inserts_"..sTable..".txt) Failed")
+                                               .."sql2inserts_"..TableKey..".txt) Failed")
     return
   end
   local Q
-  if(sTable == "GEARASSEMBLY_PIECES") then
-    Q = SQLBuildSelect(sTable,nil,nil,{2,3,1,4})
+  if(sTable == "PIECES") then
+    Q = SQLBuildSelect(TableKey,nil,nil,{2,3,1,4})
   else
-    Q = SQLBuildSelect(sTable,nil,nil,nil)
+    Q = SQLBuildSelect(TableKey,nil,nil,nil)
   end
   if(Q) then
   local qData = sql.Query(Q)
@@ -1338,14 +1420,14 @@ function ExportSQL2Inserts(sTable)
         F:Write("SQLInsertRecord(\""..sTable.."\", {")
         Cnt  = 1
         qRec = qData[Ind]
-        while(Cnt <= stTable.Size) do
-          local f = stTable[Cnt][1]
+        while(Cnt <= defTable.Size) do
+          local f = defTable[Cnt][1]
           local v = qRec[f]
-          if(stTable[Cnt][2] == "TEXT") then
+          if(defTable[Cnt][2] == "TEXT") then
             v = "\""..v.."\""
           end
           F:Write(tostring(v))
-          if(Cnt < stTable.Size) then F:Write(", ") end
+          if(Cnt < defTable.Size) then F:Write(", ") end
           Cnt = Cnt + 1
         end
         F:Write(" }\n")
@@ -1353,13 +1435,14 @@ function ExportSQL2Inserts(sTable)
       end
     end
   else
-    LogInstance("ExportSQL2Inserts: "..GetSQLBuildError() .. "\n")
+     F:Write("ExportSQL2Inserts: "..GetSQLBuildError() .. "\n")
   end
   F:Flush()
   F:Close()
 end
 
 function ExportLua2Inserts(tTable,sName)
+  if(not tTable) then return end
   if(not file.Exists(LibBASPath,"DATA")) then
     file.CreateDir(LibBASPath)
   end
@@ -1370,7 +1453,7 @@ function ExportLua2Inserts(tTable,sName)
                       LibEXPPath..
                       "lua2inserts_"..(sName or "Data")..".txt", "w", "DATA" )
   if(not F) then
-    LogInstance("ExportSQL2Lua: file.Open("..LibBASPath..LibEXPPath
+    LogInstance("ExportLua2Inserts: file.Open("..LibBASPath..LibEXPPath
               .."lua2inserts_"..(sName or "Data")..".txt) Failed")
     return
   end
@@ -1410,18 +1493,20 @@ end
  * bCommit = true to insert the read values
 ]]
 function SQLImportFromDSV(sSuffix,sTable,sDelim,bCommit)
-  if(not LibTables[sTable] or type(sTable) ~= "string") then
-    LogInstance("SQLImportFromDSV: Missing: Table definition for "..tostring(sTable))
+  if(type(sTable) ~= "string") then return end
+  local TableKey = LibTablePrefix..sTable
+  if(not LibTables[TableKey]) then
+    LogInstance("SQLImportFromDSV: Missing: Table definition for "..sTable)
     return
   end
-  local F = file.Open(LibBASPath..LibDSVPath..(sSuffix or "")..sTable..".txt", "r", "DATA" )
+  local F = file.Open(LibBASPath..LibDSVPath..(sSuffix or "")..TableKey..".txt", "r", "DATA" )
   if(not F) then
     LogInstance("SQLImportFromDSV: file.Open("..LibBASPath..LibDSVPath..
-               (sSuffix or "")..sTable..".txt) Failed")
+               (sSuffix or "")..TableKey..".txt) Failed")
     return
   end
   local Line = ""
-  local TabLen = string.len(sTable)
+  local TabLen = string.len(TableKey)
   local LinLen = 0
   local ComCnt = 0
   local Ch = LibSymDisable
@@ -1435,7 +1520,7 @@ function SQLImportFromDSV(sSuffix,sTable,sDelim,bCommit)
         LinLen = LinLen - 1
       end
       if(not (string.sub(Line,1,1) == LibSymDisable)) then
-        if(string.sub(Line,1,TabLen) == sTable) then
+        if(string.sub(Line,1,TabLen) == TableKey) then
           local Data = StringExplode(string.sub(Line,TabLen+2,LinLen),sDelim)
           for k,v in pairs(Data) do
             local DataLen = string.len(v)
@@ -1457,39 +1542,41 @@ function SQLImportFromDSV(sSuffix,sTable,sDelim,bCommit)
 end
 
 function SQLExportIntoDSV(sSuffix,sTable,sDelim)
-  if(not LibTables[sTable] or type(sTable) ~= "string") then
+  if(type(sTable) ~= "string") then return end
+  local TableKey = LibTablePrefix..sTable
+  if(not LibTables[TableKey]) then
     LogInstance("SQLExportIntoDSV: Missing: Table definition for "..tostring(sTable))
     return
   end
-  local stTable = LibTables[sTable]
+  local defTable = LibTables[TableKey]
   if(not file.Exists(LibBASPath,"DATA")) then
     file.CreateDir(LibBASPath)
   end
   if(not file.Exists(LibBASPath..LibDSVPath,"DATA")) then
     file.CreateDir(LibBASPath..LibDSVPath)
   end
-  local F = file.Open(LibBASPath..LibDSVPath..(sSuffix or "")..sTable..".txt", "w", "DATA" )
+  local F = file.Open(LibBASPath..LibDSVPath..(sSuffix or "")..TableKey..".txt", "w", "DATA" )
   if(not F) then
     LogInstance("SQLExportIntoDSV: file.Open("..LibBASPath..LibDSVPath..
-               (sSuffix or "")..sTable..".txt) Failed")
+               (sSuffix or "")..TableKey..".txt) Failed")
     return
   end
   local Q
-  if(sTable == "GEARASSEMBLY_PIECES") then
-    Q = SQLBuildSelect(sTable,nil,nil,{2,3,1,4})
+  if(sTable == "PIECES") then
+    Q = SQLBuildSelect(TableKey,nil,nil,{2,3,1,4})
   else
-    Q = SQLBuildSelect(sTable,nil,nil,nil)
+    Q = SQLBuildSelect(TableKey,nil,nil,nil)
   end
   LogInstance("SQLExportIntoDSV: "..Q)
   if(Q) then
     local qData = sql.Query(Q)
     if(qData) then
       F:Write("# Exported on: "..os.date().."\n")
-      local Line = "# Table: "..sTable..sDelim
+      local Line = "# Table: "..TableKey..sDelim
       local Cnt = 1
-      while(stTable[Cnt]) do
-        Line = Line ..stTable[Cnt][1]
-        if(stTable[Cnt+1]) then
+      while(defTable[Cnt]) do
+        Line = Line ..defTable[Cnt][1]
+        if(defTable[Cnt+1]) then
           Line = Line .. sDelim
         end
         Cnt = Cnt + 1
@@ -1497,22 +1584,22 @@ function SQLExportIntoDSV(sSuffix,sTable,sDelim)
       F:Write(Line .. "\n")
       Cnt = 1
       while(qData[Cnt]) do
-        Line = sTable .. sDelim
+        Line = TableKey .. sDelim
         local qRec = qData[Cnt]
         local Ind  = 1
-        while(stTable[Ind]) do
-          local f = stTable[Ind][1]
+        while(defTable[Ind]) do
+          local f = defTable[Ind][1]
           if(not f) then
             LogInstance("SQLExportIntoDSV: Missing field name in table "..sTable.." index #"..Ind)
             return
           end
           local v = tostring(qRec[f]) or ""
           Line = Line .. v
-          if(stTable[Ind+1]) then
+          if(defTable[Ind+1]) then
             Line = Line .. sDelim
           end
           Ind = Ind + 1
-          v = qRec[LibTables[sTable][Ind]]
+          v = qRec[defTable[Ind]]
         end
         F:Write(Line .. "\n")
         Cnt = Cnt + 1
@@ -1527,80 +1614,41 @@ function SQLExportIntoDSV(sSuffix,sTable,sDelim)
   F:Close()
 end
 
-function SetMCWorld(oEnt,vMCL,vMCW)
+function SetMCWorld(oEnt,vdbMCL,vMCW)
   if(not vMCW) then return end
-  if(not vMCL) then return end
+  if(not vdbMCL) then return end
   if(not (oEnt and oEnt:IsValid())) then return end
-  local vPos = Vector()
-        vPos:Set(vMCL)
+  local vPos = Vector(vdbMCL[cvX],vdbMCL[cvY],vdbMCL[cvZ])
         vPos:Mul(-1)
         vPos:Rotate(oEnt:GetAngles())
         vPos:Add(vMCW)
         oEnt:SetPos(vPos)
 end
 
-function vGetMCWorld(oEnt,vMCL)
-  if(not vMCL) then return end
+function vGetMCWorld(oEnt,vdbMCL)
+  if(not vdbMCL) then return end
   if(not (oEnt and oEnt:IsValid())) then return end
-  local vMCW = Vector()
-        vMCW:Set(vMCL)
+  local vMCW = Vector(vdbMCL[cvX],vdbMCL[cvY],vdbMCL[cvZ])
         vMCW:Rotate(oEnt:GetAngles())
         vMCW:Add(oEnt:GetPos())
   return vMCW
 end
 
-function vGetMCWorldPosAng(vPos,vAng,vMCL)
-  if(not (vMCL and vPos and vAng)) then return end
-  local vMCW = Vector()
-        vMCW:Set(vMCL)
+function vGetMCWorldPosAng(vPos,vAng,vdbMCL)
+  if(not (vdbMCL and vPos and vAng)) then return end
+  local vMCW = Vector(vdbMCL[cvX],vdbMCL[cvY],vdbMCL[cvZ])
         vMCW:Rotate(vAng)
         vMCW:Add(vPos)
   return vMCW
 end
 
-function AddAngle(aBase, aAdd)
-  aBase[caP] = aBase[caP] + aAdd[caP]
-  aBase[caY] = aBase[caY] + aAdd[caY]
-  aBase[caR] = aBase[caR] + aAdd[caR]
-end
-
-function AddAnglePYR(aBase, nP, nY, nR)
-  aBase[caP] = aBase[caP] + (nP or 0)
-  aBase[caY] = aBase[caY] + (nY or 0)
-  aBase[caR] = aBase[caR] + (nR or 0)
-end
-
-function SubAngle(aBase, aSub)
-  aBase[caP] = aBase[caP] - aSub[caP]
-  aBase[caY] = aBase[caY] - aSub[caY]
-  aBase[caR] = aBase[caR] - aSub[caR]
-end
-
-function SubAnglePYR(aBase, nP, nY, nR)
-  aBase[caP] = aBase[caP] - (nP or 0)
-  aBase[caY] = aBase[caY] - (nY or 0)
-  aBase[caR] = aBase[caR] - (nR or 0)
-end
-
-function SetAngle(aAng, nP, nY, nR)
-  aAng[caP] = (nP or 0)
-  aAng[caY] = (nY or 0)
-  aAng[caR] = (nR or 0)
-end
-
-function SetVector(vVec, nX, nY, nZ)
-  vVec[caX] = (nX or 0)
-  vVec[caY] = (nY or 0)
-  vVec[caZ] = (nZ or 0)
-end
-
-
-function GetCustomAngBBZ(oEnt,aLAng,nMode)
+function GetCustomAngBBZ(oEnt,adbAng,nMode)
   if(not (oEnt and oEnt:IsValid())) then return 0 end
   local Mode = nMode or 0
-  if(Mode ~= 0 and aLAng) then
+  if(Mode ~= 0 and adbAng) then
+    local aAngDB = Angle(adbAng[caP],adbAng[caY],adbAng[caR])
     vOBB = oEnt:OBBMins()
-    vOBB:Rotate(aLAng)
+    vOBB:Rotate(aAngDB)
     vOBB:Set(DecomposeByAngle(vOBB,Angle(0,0,0)))
     return math.abs(vOBB[cvZ])
   else
@@ -1681,12 +1729,12 @@ function GetENTSpawn(trPos,trAng,trModel,nRotAng,hdModel,enIgnTyp,enOrAngTr,ucsP
   -- We have the next Piece Offset
   local stSpawn = LibSpawn["ENT"]
 
-  stSpawn.TPos:Set(vGetMCWorldPosAng(trPos,trAng,trRec.M.U))
+  stSpawn.TPos:Set(vGetMCWorldPosAng(trPos,trAng,trRec.M))
   stSpawn.TAng:Set(trAng)
-  SubAngle(stSpawn.TAng,trRec.A[caP], trRec.A[caY], trRec.A[caR])
+  SubAngle(stSpawn.TAng,trRec.A)
   stSpawn.TAng:RotateAroundAxis(stSpawn.TAng:Up(),-nRotAng)
 	-- Do origin !
-	SetVector(stSpawn.OPos,trRec.O[cvX], trRec.O[cvY], trRec.O[cvZ])
+	SetVector(stSpawn.OPos,trRec.O)
 	stSpawn.OPos:Rotate(stSpawn.TAng)
 	stSpawn.OPos:Add(stSpawn.TPos)
   -- Do Origin UCS World angle
@@ -1705,10 +1753,11 @@ function GetENTSpawn(trPos,trAng,trModel,nRotAng,hdModel,enIgnTyp,enOrAngTr,ucsP
   stSpawn.DAng:RotateAroundAxis(stSpawn.DAng:Right(),hdRec.Mesh)
   stSpawn.DAng:RotateAroundAxis(stSpawn.DAng:Up(),ucsAng[caY])
 	-- Get Hold model stuff
-  SetAngle(stSpawn.MAng,-hdRec.A[caP], -hdRec.A[caY], -hdRec.A[caR])
+  SetVector(stSpawn.MPos, hdRec.O)
+  SetAnglePYR(stSpawn.MAng,-hdRec.A[caP],-hdRec.A[caY],-hdRec.A[caR])
+  stSpawn.MPos:Rotate(stSpawn.MAng)
 	stSpawn.MAng:RotateAroundAxis(stSpawn.MAng:Up(),180)
   stSpawn.MAng:RotateAroundAxis(stSpawn.MAng:Right(),-hdRec.Mesh)
-  SetVector(stSpawn.MPos, hdRec.O[cvX], hdRec.O[cvY], hdRec.O[cvZ])
 	stSpawn.MPos:Mul(-1)
   stSpawn.MPos:Set(DecomposeByAngle(stSpawn.MPos,stSpawn.MAng))
 	-- Do Spawn Angle
