@@ -3,7 +3,7 @@ gearasmlib.SQLCreateTable("PIECES",{{1},{2},{3},{1,4},{1,2},{2,4},{1,2,3}},true,
 
 if(file.Exists(gearasmlib.BASPath()..gearasmlib.DSVPath().."db_"..gearasmlib.GetTablePrefix().."PIECES.txt", "DATA")) then
   gearasmlib.PrintInstance("GEARASSEMBLY: DB PIECES exported, populating from DSV.")
-  gearasmlib.SQLImportFromDSV("db_",gearasmlib.GetTablePrefix().."PIECES","\t",true)
+  gearasmlib.SQLImportFromDSV("db_","PIECES","\t",true)
 else
   gearasmlib.PrintInstance("GEARASSEMBLY: DB PIECES not exported, populating from TOOL.")
   
