@@ -293,22 +293,23 @@ function IsOther(oEnt)
 end
 
 function StringExplode(sStr,sDelim)
-  local StrLen = string.len(sStr)
+  local Len = string.len(sStr)
   local S = 1
   local E = 1
   local V = ""
-  local Data = { Len = 0 }
-  if(string.sub(sStr,StrLen,StrLen) ~= sDelim) then
+  local Ind = 1
+  local Data = {}
+  if(string.sub(sStr,Len,Len) ~= sDelim) then
     sStr = sStr .. sDelim
-    StrLen = StrLen + 1
+    Len = Len + 1
   end
-  while(E <= StrLen) do
+  while(E <= Len) do
     Ch = string.sub(sStr,E,E)
     if(Ch == sDelim) then
-      Data.Len = Data.Len + 1
+      Ind = Ind + 1
       V = string.sub(sStr,S,E-1)
       S = E + 1
-      Data[Data.Len] = V or ""
+      Data[Ind] = V or ""
     end
     E = E + 1
   end
@@ -1523,9 +1524,9 @@ function SQLImportFromDSV(sSuffix,sTable,sDelim,bCommit)
         if(string.sub(Line,1,TabLen) == TableKey) then
           local Data = StringExplode(string.sub(Line,TabLen+2,LinLen),sDelim)
           for k,v in pairs(Data) do
-            local DataLen = string.len(v)
-            if(string.sub(v,1,1) == "\"" and string.sub(v,DataLen,DataLen) == "\"") then
-              Data[k] = string.sub(v,2,DataLen-1)
+            local VLen = string.len(v)
+            if(string.sub(v,1,1) == "\"" and string.sub(v,VLen,VLen) == "\"") then
+              Data[k] = string.sub(v,2,VLen-1)
             end
           end
           if(bCommit) then
