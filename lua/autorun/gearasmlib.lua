@@ -1264,7 +1264,7 @@ function CacheQueryPiece(sModel)
       stPiece.Type = qRec[defTable[2][1]]
       stPiece.Name = qRec[defTable[3][1]]
       stPiece.Mesh = qRec[defTable[4][1]]
-      stPiece.Here = true 
+      stPiece.Here = true
       stPiece.A = {[caP] = 0, [caY] = 0,[caR] = 0, [csX] = 1, [csY] = 1, [csZ] = 1, [csD] = true}
       stPiece.O = {[csX] = 0, [csY] = 0,[csZ] = 0, [csX] = 1, [csY] = 1, [csZ] = 1, [csD] = true}
       stPiece.M = {[csX] = 0, [csY] = 0,[csZ] = 0, [csX] = 1, [csY] = 1, [csZ] = 1, [csD] = true}
@@ -1734,40 +1734,40 @@ function GetENTSpawn(trPos,trAng,trModel,nRotAng,hdModel,enIgnTyp,enOrAngTr,ucsP
   stSpawn.TAng:Set(trAng)
   SubAngle(stSpawn.TAng,trRec.A)
   stSpawn.TAng:RotateAroundAxis(stSpawn.TAng:Up(),-nRotAng)
-	-- Do origin !
-	SetVector(stSpawn.OPos,trRec.O)
-	stSpawn.OPos:Rotate(stSpawn.TAng)
-	stSpawn.OPos:Add(stSpawn.TPos)
+  -- Do origin !
+  SetVector(stSpawn.OPos,trRec.O)
+  stSpawn.OPos:Rotate(stSpawn.TAng)
+  stSpawn.OPos:Add(stSpawn.TPos)
   -- Do Origin UCS World angle
-	stSpawn.OAng:Set(stSpawn.TAng)
-	-- Do Origin F,R,U
+  stSpawn.OAng:Set(stSpawn.TAng)
+  -- Do Origin F,R,U
   stSpawn.OAng:RotateAroundAxis(stSpawn.TAng:Right(),trRec.Mesh + ucsAng[caP])
-	stSpawn.OAng:RotateAroundAxis(stSpawn.OAng:Forward(),ucsAng[caR])
-	stSpawn.F:Set(stSpawn.OAng:Forward())
-	stSpawn.R:Set(stSpawn.OAng:Right())
-	stSpawn.U:Set(stSpawn.OAng:Up())
-	-- Save our records
-	stSpawn.HRec = hdRec
-	stSpawn.TRec = trRec
+  stSpawn.OAng:RotateAroundAxis(stSpawn.OAng:Forward(),ucsAng[caR])
+  stSpawn.F:Set(stSpawn.OAng:Forward())
+  stSpawn.R:Set(stSpawn.OAng:Right())
+  stSpawn.U:Set(stSpawn.OAng:Up())
+  -- Save our records
+  stSpawn.HRec = hdRec
+  stSpawn.TRec = trRec
   -- Get the new Domain
   stSpawn.DAng:Set(stSpawn.OAng)
   stSpawn.DAng:RotateAroundAxis(stSpawn.DAng:Right(),hdRec.Mesh)
   stSpawn.DAng:RotateAroundAxis(stSpawn.DAng:Up(),ucsAng[caY])
-	-- Get Hold model stuff
+  -- Get Hold model stuff
   SetVector(stSpawn.MPos, hdRec.O)
   SetAnglePYR(stSpawn.MAng,-hdRec.A[caP],-hdRec.A[caY],-hdRec.A[caR])
   stSpawn.MPos:Rotate(stSpawn.MAng)
-	stSpawn.MAng:RotateAroundAxis(stSpawn.MAng:Up(),180)
+  stSpawn.MAng:RotateAroundAxis(stSpawn.MAng:Up(),180)
   stSpawn.MAng:RotateAroundAxis(stSpawn.MAng:Right(),-hdRec.Mesh)
-	stSpawn.MPos:Mul(-1)
+  stSpawn.MPos:Mul(-1)
   stSpawn.MPos:Set(DecomposeByAngle(stSpawn.MPos,stSpawn.MAng))
-	-- Do Spawn Angle
+  -- Do Spawn Angle
   stSpawn.SAng:Set(stSpawn.OAng)
-	stSpawn.SAng:RotateAroundAxis(stSpawn.R,-stSpawn.MAng[caP] * hdRec.A[csX])
-	stSpawn.SAng:RotateAroundAxis(stSpawn.U,-stSpawn.MAng[caY] * hdRec.A[csY])
-	stSpawn.SAng:RotateAroundAxis(stSpawn.F,-stSpawn.MAng[caR] * hdRec.A[csZ])
+  stSpawn.SAng:RotateAroundAxis(stSpawn.R,-stSpawn.MAng[caP] * hdRec.A[csX])
+  stSpawn.SAng:RotateAroundAxis(stSpawn.U,-stSpawn.MAng[caY] * hdRec.A[csY])
+  stSpawn.SAng:RotateAroundAxis(stSpawn.F,-stSpawn.MAng[caR] * hdRec.A[csZ])
   stSpawn.SAng:RotateAroundAxis(stSpawn.DAng:Up(),ucsAng[caY] + 180)
-	-- Do Spawn Position
+  -- Do Spawn Position
   stSpawn.SPos:Set(stSpawn.OPos)
   stSpawn.SPos:Add((hdRec.O[csX] * stSpawn.MPos[cvX]) * stSpawn.F)
   stSpawn.SPos:Add((hdRec.O[csY] * stSpawn.MPos[cvY]) * stSpawn.R)
@@ -1780,7 +1780,7 @@ function GetENTSpawn(trPos,trAng,trModel,nRotAng,hdModel,enIgnTyp,enOrAngTr,ucsP
   stSpawn.SPos:Add(ucsPos[cvX] * stSpawn.F)
   stSpawn.SPos:Add(ucsPos[cvY] * stSpawn.R)
   stSpawn.SPos:Add(ucsPos[cvZ] * stSpawn.U)
-	return stSpawn
+  return stSpawn
 end
 
 function GetBodygroupTrace()

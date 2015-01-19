@@ -559,7 +559,7 @@ function TOOL:LeftClick(Trace)
     undo.Finish()
     return true
   end
-  -- Hit Prop 
+  -- Hit Prop
   if(not trEnt) then return false end
   if(not trEnt:IsValid()) then return false end
   if(not gearasmlib.IsPhysTrace(Trace)) then return false end
