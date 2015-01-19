@@ -98,13 +98,12 @@ local LibSpawn = {
     R    = Vector(),
     U    = Vector(),
     OPos = Vector(),
-    OAng = Angle (),
     SPos = Vector(),
     SAng = Angle (),
     MPos = Vector(),
     MAng = Angle (),
-    TPos = Vector(),
-    TAng = Angle (),
+    CPos = Vector(),
+    CAng = Angle (),
     DAng = Angle (),
     HRec = 0,
     TRec = 0,
@@ -115,7 +114,7 @@ local LibSpawn = {
     U    = Vector(),
     SPos = Vector(),
     SAng = Angle (),
-    TAng = Angle (),
+    CAng = Angle (),
     DAng = Angle (),
     HRec = 0
   }
@@ -1676,11 +1675,11 @@ function GetNORSpawn(stTrace, sModel, ucsPos, ucsAng)
   if(not hdRec) then return nil end
   local stSpawn = LibSpawn["NOR"]
   stSpawn.HRec = hdRec
-  stSpawn.TAng:Set(stTrace.HitNormal:Angle())
-  stSpawn.TAng[caP] = stSpawn.TAng[caP] + 90
-  stSpawn.DAng:Set(stSpawn.TAng)
-  stSpawn.DAng:RotateAroundAxis(stSpawn.TAng:Right(),ucsAng[caP])
-  stSpawn.DAng:RotateAroundAxis(stSpawn.TAng:Forward(),ucsAng[caR])
+  stSpawn.CAng:Set(stTrace.HitNormal:Angle())
+  stSpawn.CAng[caP] = stSpawn.CAng[caP] + 90
+  stSpawn.DAng:Set(stSpawn.CAng)
+  stSpawn.DAng:RotateAroundAxis(stSpawn.CAng:Right(),ucsAng[caP])
+  stSpawn.DAng:RotateAroundAxis(stSpawn.CAng:Forward(),ucsAng[caR])
   stSpawn.DAng:RotateAroundAxis(stSpawn.DAng:Up(),ucsAng[caY])
   stSpawn.F:Set(stSpawn.DAng:Forward())
   stSpawn.R:Set(stSpawn.DAng:Right())
@@ -1730,27 +1729,27 @@ function GetENTSpawn(trPos,trAng,trModel,nRotAng,hdModel,enIgnTyp,enOrAngTr,ucsP
   -- We have the next Piece Offset
   local stSpawn = LibSpawn["ENT"]
 
-  stSpawn.TPos:Set(vGetMCWorldPosAng(trPos,trAng,trRec.M))
-  stSpawn.TAng:Set(trAng)
-  SubAngle(stSpawn.TAng,trRec.A)
-  stSpawn.TAng:RotateAroundAxis(stSpawn.TAng:Up(),-nRotAng)
+  stSpawn.CPos:Set(vGetMCWorldPosAng(trPos,trAng,trRec.M))
+  stSpawn.CAng:Set(trAng)
+  SubAngle(stSpawn.CAng,trRec.A)
+  stSpawn.CAng:RotateAroundAxis(stSpawn.CAng:Up(),-nRotAng)
   -- Do origin !
   SetVector(stSpawn.OPos,trRec.O)
-  stSpawn.OPos:Rotate(stSpawn.TAng)
-  stSpawn.OPos:Add(stSpawn.TPos)
+  stSpawn.OPos:Rotate(stSpawn.CAng)
+  stSpawn.OPos:Add(stSpawn.CPos)
   -- Do Origin UCS World angle
-  stSpawn.OAng:Set(stSpawn.TAng)
+  stSpawn.SAng:Set(stSpawn.CAng)
   -- Do Origin F,R,U
-  stSpawn.OAng:RotateAroundAxis(stSpawn.TAng:Right(),trRec.Mesh + ucsAng[caP])
-  stSpawn.OAng:RotateAroundAxis(stSpawn.OAng:Forward(),ucsAng[caR])
-  stSpawn.F:Set(stSpawn.OAng:Forward())
-  stSpawn.R:Set(stSpawn.OAng:Right())
-  stSpawn.U:Set(stSpawn.OAng:Up())
+  stSpawn.SAng:RotateAroundAxis(stSpawn.CAng:Right(),trRec.Mesh + ucsAng[caP])
+  stSpawn.SAng:RotateAroundAxis(stSpawn.SAng:Forward(),ucsAng[caR])
+  stSpawn.F:Set(stSpawn.SAng:Forward())
+  stSpawn.R:Set(stSpawn.SAng:Right())
+  stSpawn.U:Set(stSpawn.SAng:Up())
   -- Save our records
   stSpawn.HRec = hdRec
   stSpawn.TRec = trRec
   -- Get the new Domain
-  stSpawn.DAng:Set(stSpawn.OAng)
+  stSpawn.DAng:Set(stSpawn.SAng)
   stSpawn.DAng:RotateAroundAxis(stSpawn.DAng:Right(),hdRec.Mesh)
   stSpawn.DAng:RotateAroundAxis(stSpawn.DAng:Up(),ucsAng[caY])
   -- Get Hold model stuff
@@ -1762,7 +1761,6 @@ function GetENTSpawn(trPos,trAng,trModel,nRotAng,hdModel,enIgnTyp,enOrAngTr,ucsP
   stSpawn.MPos:Mul(-1)
   stSpawn.MPos:Set(DecomposeByAngle(stSpawn.MPos,stSpawn.MAng))
   -- Do Spawn Angle
-  stSpawn.SAng:Set(stSpawn.OAng)
   stSpawn.SAng:RotateAroundAxis(stSpawn.R,-stSpawn.MAng[caP] * hdRec.A[csX])
   stSpawn.SAng:RotateAroundAxis(stSpawn.U,-stSpawn.MAng[caY] * hdRec.A[csY])
   stSpawn.SAng:RotateAroundAxis(stSpawn.F,-stSpawn.MAng[caR] * hdRec.A[csZ])
@@ -1773,9 +1771,9 @@ function GetENTSpawn(trPos,trAng,trModel,nRotAng,hdModel,enIgnTyp,enOrAngTr,ucsP
   stSpawn.SPos:Add((hdRec.O[csY] * stSpawn.MPos[cvY]) * stSpawn.R)
   stSpawn.SPos:Add((hdRec.O[csZ] * stSpawn.MPos[cvZ]) * stSpawn.U)
   if(enOrAngTr ~= 0) then
-    stSpawn.F:Set(stSpawn.TAng:Forward())
-    stSpawn.R:Set(stSpawn.TAng:Right())
-    stSpawn.U:Set(stSpawn.TAng:Up())
+    stSpawn.F:Set(stSpawn.CAng:Forward())
+    stSpawn.R:Set(stSpawn.CAng:Right())
+    stSpawn.U:Set(stSpawn.CAng:Up())
   end
   stSpawn.SPos:Add(ucsPos[cvX] * stSpawn.F)
   stSpawn.SPos:Add(ucsPos[cvY] * stSpawn.R)

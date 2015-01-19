@@ -848,7 +848,6 @@ local function DrawAdditionalInfo(stSpawn)
   txPos.y = surface.ScreenHeight()/ 2 + 10
   surface.SetFont("Trebuchet18")
   DrawTextRowColor(txPos,"Org POS: "..tostring(stSpawn.OPos),stDrawDyes.Black)
-  DrawTextRowColor(txPos,"Org ANG: "..tostring(stSpawn.OAng))
   DrawTextRowColor(txPos,"Dom ANG: "..tostring(stSpawn.DAng))
   DrawTextRowColor(txPos,"Mod POS: "..tostring(stSpawn.MPos))
   DrawTextRowColor(txPos,"Mod ANG: "..tostring(stSpawn.MAng))
