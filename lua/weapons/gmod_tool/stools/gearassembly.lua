@@ -828,7 +828,7 @@ local function DrawTextRowColor(xyPos,sTxT,stColor)
   xyPos.y = xyPos.y + xyPos.h
 end
 
-local function DrawLineColor(xyPosS,xyPosE,stColor,nW,nH)
+local function DrawLineColor(xyPosS,xyPosE,nW,nH,stColor)
   if(not (xyPosS and xyPosE)) then return end
   if(not (xyPosS.x and xyPosS.y and xyPosE.x and xyPosE.y)) then return end
   if(stColor) then
@@ -894,8 +894,8 @@ function TOOL:DrawHUD()
       local Sp =  stSpawn.SPos:ToScreen()
       local Df = (stSpawn.SPos + 15 * stSpawn.DAng:Forward()):ToScreen()
       local Du = (stSpawn.SPos + 15 * stSpawn.DAng:Up()):ToScreen()
-      local Tp =  stSpawn.TPos:ToScreen()
-      local Tu = (stSpawn.TPos + 15 * stSpawn.TAng:Up()):ToScreen()
+      local Tp =  stSpawn.CPos:ToScreen()
+      local Tu = (stSpawn.CPos + 15 * stSpawn.CAng:Up()):ToScreen()
       -- Draw UCS
       DrawLineColor(Op,Xs,scrW,scrH,stDrawDyes.Red)
       DrawLineColor(Op,Ys,scrW,scrH,stDrawDyes.Green)

@@ -89,7 +89,7 @@ local LibDSVPath = "dsvbase/"
 local LibLOGPath = ""
 
 -- Table prefix to avoid overlapping and conflicts
-local LibTablePrefix = "GEARASSEMBLY"
+local LibTablePrefix = "GEARASSEMBLY_"
 
 -- Spawn Struct table Space
 local LibSpawn = {
@@ -292,6 +292,12 @@ function IsOther(oEnt)
 end
 
 function StringExplode(sStr,sDelim)
+  if(type(sStr) ~= "string" and type(sDelim) ~= "string") then
+    LogInstance("StringExplode: All parameters should be strings")
+  end
+  if(string.len(sDelim) <= 0) then
+    LogInstance("StringExplode: Delimiter has to be a symbol")
+  end
   local Len = string.len(sStr)
   local S = 1
   local E = 1
@@ -305,10 +311,10 @@ function StringExplode(sStr,sDelim)
   while(E <= Len) do
     Ch = string.sub(sStr,E,E)
     if(Ch == sDelim) then
-      Ind = Ind + 1
       V = string.sub(sStr,S,E-1)
       S = E + 1
       Data[Ind] = V or ""
+      Ind = Ind + 1
     end
     E = E + 1
   end
@@ -351,11 +357,6 @@ function GetCorrectID(anyValue,stSettings)
   if(Value > stSettings["MAX"]) then Value = 1 end
   if(Value < 1) then Value = stSettings["MAX"] end
   return Value
-end
-
-function EmitSoundPly(pPly)
-  if(not pPly) then return end
-  pPly:EmitSound("physics/metal/metal_canister_impact_hard"..math.floor(math.random(3))..".wav")
 end
 
 function SnapValue(nVal, nSnap)
@@ -698,6 +699,11 @@ function PrintNotify(pPly,sText,sNotifType)
     pPly:SendLua("GAMEMODE:AddNotify(\""..sText.."\", NOTIFY_"..sNotifType..", 6)")
     pPly:SendLua("surface.PlaySound(\"ambient/water/drip"..math.random(1, 4)..".wav\")")
   end
+end
+
+function EmitSoundPly(pPly)
+  if(not pPly) then return end
+  pPly:EmitSound("physics/metal/metal_canister_impact_hard"..math.floor(math.random(3))..".wav")
 end
 
 function PlyLoadKey(pPly, sKey)
