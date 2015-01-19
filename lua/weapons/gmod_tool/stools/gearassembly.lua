@@ -814,31 +814,31 @@ function TOOL:Holster()
   end
 end
 
-local function DrawTextRowColor(PosXY,TxT,stColor)
+local function DrawTextRowColor(xyPos,sTxT,stColor)
   -- Always Set the font before usage:
   -- e.g. surface.SetFont("Trebuchet18")
-  if(not PosXY) then return end
-  if(not (PosXY.x and PosXY.y)) then return end
-  surface.SetTextPos(PosXY.x,PosXY.y)
+  if(not xyPos) then return end
+  if(not (xyPos.x and xyPos.y)) then return end
+  surface.SetTextPos(xyPos.x,xyPos.y)
   if(stColor) then
     surface.SetTextColor(stColor.r, stColor.g, stColor.b, stColor.a)
   end
-  surface.DrawText(TxT)
-  PosXY.w, PosXY.h = surface.GetTextSize(TxT)
-  PosXY.y = PosXY.y + PosXY.h
+  surface.DrawText(sTxT)
+  xyPos.w, xyPos.h = surface.GetTextSize(sTxT)
+  xyPos.y = xyPos.y + xyPos.h
 end
 
-local function DrawLineColor(PosS,PosE,w,h,stColor)
-  if(not (PosS and PosE)) then return end
-  if(not (PosS.x and PosS.y and PosE.x and PosE.y)) then return end
+local function DrawLineColor(xyPosS,xyPosE,stColor,nW,nH)
+  if(not (xyPosS and xyPosE)) then return end
+  if(not (xyPosS.x and xyPosS.y and xyPosE.x and xyPosE.y)) then return end
   if(stColor) then
     surface.SetDrawColor(stColor.r, stColor.g, stColor.b, stColor.a)
   end
-  if(PosS.x < 0 or PosS.x > w) then return end
-  if(PosS.y < 0 or PosS.y > h) then return end
-  if(PosE.x < 0 or PosE.x > w) then return end
-  if(PosE.y < 0 or PosE.y > h) then return end
-  surface.DrawLine(PosS.x,PosS.y,PosE.x,PosE.y)
+  if(xyPosS.x < 0 or xyPosS.x > nW) then return end
+  if(xyPosS.y < 0 or xyPosS.y > nH) then return end
+  if(xyPosE.x < 0 or xyPosE.x > nW) then return end
+  if(xyPosE.y < 0 or xyPosE.y > nH) then return end
+  surface.DrawLine(xyPosS.x,xyPosS.y,xyPosE.x,xyPosE.y)
 end
 
 local function DrawAdditionalInfo(stSpawn)
