@@ -1806,24 +1806,6 @@ function GetBodygroupTrace()
   return ""
 end
 
-function GetSkinTrace()
-  local Ply = LocalPlayer()
-  if(not Ply) then return "" end
-  local tr  = Ply:GetEyeTrace()
-  if(not tr) then return "" end
-  if(tr.HitWorld) then return "" end
-  local trEnt = tr.Entity
-  if(trEnt and trEnt:IsValid()) then
-    LogInstance("GetSkinTrace: ")
-    if(IsOther(trEnt)) then return "" end
-    local Skin = trEnt:GetSkin()
-    if(not Skin) then return "" end
-    Print(BG,"GetSkinTrace: Skin")
-    return tostring(Skin)
-  end
-  return ""
-end
-
 function AttachBodyGroups(ePiece,sBgrpIDs)
   LogInstance("AttachBodyGroups: ")
   local NumBG     = ePiece:GetNumBodyGroups()
@@ -1844,6 +1826,24 @@ function AttachBodyGroups(ePiece,sBgrpIDs)
     ePiece:SetBodygroup(CurBG.id,IDs[Cnt] or 0)
     Cnt = Cnt + 1
   end
+end
+
+function GetSkinTrace()
+  local Ply = LocalPlayer()
+  if(not Ply) then return "" end
+  local tr  = Ply:GetEyeTrace()
+  if(not tr) then return "" end
+  if(tr.HitWorld) then return "" end
+  local trEnt = tr.Entity
+  if(trEnt and trEnt:IsValid()) then
+    LogInstance("GetSkinTrace: ")
+    if(IsOther(trEnt)) then return "" end
+    local Skin = trEnt:GetSkin()
+    if(not Skin) then return "" end
+    Print(BG,"GetSkinTrace: Skin")
+    return tostring(Skin)
+  end
+  return ""
 end
 
 function GetModelFileName(sModel)

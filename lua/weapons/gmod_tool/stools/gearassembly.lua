@@ -227,7 +227,8 @@ local stDrawDyes = {
   White = Color(255,255,255,255),
   Black = Color( 0 , 0 , 0 ,255),
   Ghost = Color(255,255,255,150),
-  Anchr = Color(180,255,150,255)
+  Anchr = Color(180,255,150,255),
+  Txtsk = Color(161,161,161,255)
 }
 
 local stSMode = {
@@ -1057,7 +1058,7 @@ function TOOL.BuildCPanel(CPanel)
         end
         local FolderLabel = pItem.Label
         function FolderLabel:UpdateColours(skin)
-          return self:SetTextStyleColor(Color(161, 161, 161))
+          return self:SetTextStyleColor(stDrawDyes.Txtsk)
         end
         pFolders[Type] = pItem
       end
