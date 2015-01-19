@@ -279,7 +279,7 @@ local csD = 4
 
 ------------- LOCAL FUNCTIONS AND STUFF ----------------
 
-if(CLIENT)then
+if(CLIENT) then
   language.Add("Tool.gearassembly.name", "Gear Assembly")
   language.Add("Tool.gearassembly.desc", "Assembles gears to mesh together")
   language.Add("Tool.gearassembly.0"   , "Left click to spawn/stack, Right to change mode, Reload to remove a piece")
@@ -339,11 +339,11 @@ TOOL.ClientConVar = {
   [ "nocollide" ] = "0",
 }
 
-if(SERVER)then
+if(SERVER) then
 
-  cleanup.Register("GEARASSEMBLYs")
+  cleanup.Register("GearAssemblys")
 
-  function LoadDupePieceNoPhysgun(Ply,oEnt,tData)
+  function LoadDupeGearPieceNoPhysgun(Ply,oEnt,tData)
     if tData.NoPhysgun then
       oEnt:SetMoveType(MOVETYPE_NONE)
       oEnt:SetUnFreezable(true)
@@ -352,7 +352,9 @@ if(SERVER)then
     end
   end
 
-  function eMakePiece(sModel,vPos,aAng,nMass,sBgSkISs)
+  duplicator.RegisterEntityModifier("gearassembly_nophysgun",LoadDupeGearPieceNoPhysgun)
+  
+  function eMakeGearPiece(sModel,vPos,aAng,nMass,sBgSkIDs)
     -- You never know .. ^_^
     local stPiece = gearasmlib.CacheQueryPiece(sModel)
     if(not stPiece) then return nil end -- Not present in the DB
@@ -373,7 +375,7 @@ if(SERVER)then
       ePiece:PhysWake()
       local phPiece = ePiece:GetPhysicsObject()
       if(phPiece and phPiece:IsValid()) then
-        local IDs = gearasmlib.StringExplode(sBgSkISs,"/")
+        local IDs = gearasmlib.StringExplode(sBgSkIDs,"/")
         phPiece:SetMass(nMass)
         phPiece:EnableMotion(false)
         gearasmlib.AttachBodyGroups(ePiece,IDs[1] or "")
@@ -387,7 +389,7 @@ if(SERVER)then
   end
 
   -- Returns Error Trigger ( False = No Error)
-  function ConstraintMaster(eBase,ePiece,vPos,vNorm,nID,nNoCollid,nForceLim,nFreeze,nGrav)
+  function ConstraintMasterGearPiece(eBase,ePiece,vPos,vNorm,nID,nNoCollid,nForceLim,nFreeze,nGrav)
     local ConID    = tonumber(nID) or 1
     local Freeze   = nFreeze       or 0
     local Grav     = nGrav         or 0
@@ -395,7 +397,7 @@ if(SERVER)then
     local ForceLim = nForceLim     or 0
     local IsIn     = false
     if(not stCType[ConID]) then return true end
-    gearasmlib.LogInstance("ConstraintMaster: Creating "..stCType[ConID].Name..".")
+    gearasmlib.LogInstance("ConstraintMasterGearPiece: Creating "..stCType[ConID].Name..".")
     local ConstrInfo = stCType[ConID]
     -- Check for "Free Spawn" ( No constraints ) , coz nothing to be done after it.
     if(not IsIn and ConID == 1) then IsIn = true end
@@ -491,8 +493,6 @@ if(SERVER)then
     return (not IsIn)
   end
 
-  duplicator.RegisterEntityModifier("gearassembly_nophysgun",LoadDupePieceNoPhysgun)
-
 end
 
 function TOOL:LeftClick(Trace)
@@ -529,12 +529,12 @@ function TOOL:LeftClick(Trace)
      not gearasmlib.PlyLoadKey(ply,"DUCK")) then
     -- Direct Snapping
     if(not (eBase and eBase:IsValid()) and (trEnt and trEnt:IsValid())) then eBase = trEnt end
-    local ePiece = eMakePiece(model,Trace.HitPos,ANG_ZERO,mass,bgskids)
+    local ePiece = eMakeGearPiece(model,Trace.HitPos,ANG_ZERO,mass,bgskids)
     if(not ePiece) then return false end
     local stSpawn = gearasmlib.GetNORSpawn(Trace,model,Vector(nextx,nexty,nextz),
                                            Angle(nextpic,nextyaw,nextrol))
     if(not stSpawn) then return false end
-    stSpawn.SPos:Add(gearasmlib.GetCustomAngBBZ(ePiece,stSpawn.HRec.A,spwnflat) * Trace.HitNormal)
+    stSpawn.SPos:Add(gearasmlib.GetCustomAngBBZ(ePiece,stSpawn.HRec,spwnflat) * Trace.HitNormal)
     ePiece:SetAngles(stSpawn.SAng)
     if(util.IsInWorld(stSpawn.SPos)) then
       gearasmlib.SetMCWorld(ePiece,stSpawn.HRec.M,stSpawn.SPos)
@@ -549,7 +549,7 @@ function TOOL:LeftClick(Trace)
       return false
     end
     undo.Create("Last Gear Assembly")
-    if(ConstraintMaster(eBase,ePiece,Trace.HitPos,Trace.HitNormal,contyp,nocollide,forcelim,freeze,engravity)) then
+    if(ConstraintMasterGearPiece(eBase,ePiece,Trace.HitPos,Trace.HitNormal,contyp,nocollide,forcelim,freeze,engravity)) then
       gearasmlib.PrintNotify(ply,"Ignore constraint "..stCType[contyp].Name..".","UNDO")
     end
     gearasmlib.EmitSoundPly(ply)
@@ -602,7 +602,7 @@ function TOOL:LeftClick(Trace)
     local nTrys = staatts
     local dRot  = deltarot / count
     while(i > 0) do
-      ePieceN = eMakePiece(model,ePieceO:GetPos(),ANG_ZERO,mass,bgskids)
+      ePieceN = eMakeGearPiece(model,ePieceO:GetPos(),ANG_ZERO,mass,bgskids)
       if(ePieceN) then
         ePieceN:SetAngles(stSpawn.SAng)
         if(util.IsInWorld(stSpawn.SPos)) then
@@ -627,7 +627,7 @@ function TOOL:LeftClick(Trace)
           undo.Finish()
           return true
         end
-        ConstraintMaster(eBase,ePieceN,stSpawn.SPos,stSpawn.DAng:Up(),contyp,nocollide,forcelim,freeze,engravity)
+        ConstraintMasterGearPiece(eBase,ePieceN,stSpawn.SPos,stSpawn.DAng:Up(),contyp,nocollide,forcelim,freeze,engravity)
         undo.AddEntity(ePieceN)
         if(stmode == 1) then
           stSpawn = gearasmlib.GetENTSpawn(ePieceN:GetPos(),ePieceN:GetAngles(),
@@ -696,7 +696,7 @@ function TOOL:LeftClick(Trace)
                                          orangtr,Vector(nextx,nexty,nextz),
                                          Angle(nextpic,nextyaw,nextrol))
   if(stSpawn) then
-    local ePiece = eMakePiece(model,Trace.HitPos,ANG_ZERO,mass,bgskids)
+    local ePiece = eMakeGearPiece(model,Trace.HitPos,ANG_ZERO,mass,bgskids)
     if(ePiece) then
       ePiece:SetAngles(stSpawn.SAng)
       if(util.IsInWorld(stSpawn.SPos)) then
@@ -714,7 +714,7 @@ function TOOL:LeftClick(Trace)
         return true
       end
       undo.Create("Last Gear Assembly")
-      if(ConstraintMaster(eBase,ePiece,stSpawn.SPos,stSpawn.DAng:Up(),contyp,nocollide,forcelim,freeze,engravity)) then
+      if(ConstraintMasterGearPiece(eBase,ePiece,stSpawn.SPos,stSpawn.DAng:Up(),contyp,nocollide,forcelim,freeze,engravity)) then
         gearasmlib.PrintNotify(ply,"Ignore constraint "..stCType[contyp].Name..".","UNDO")
       end
       gearasmlib.EmitSoundPly(ply)
@@ -1327,7 +1327,7 @@ function TOOL:UpdateGhost(oEnt, oPly)
     local spwnflat  = self:GetClientNumber("spwnflat") or 0
     oEnt:SetNoDraw(false)
     oEnt:SetAngles(stSpawn.SAng)
-    stSpawn.SPos:Add(gearasmlib.GetCustomAngBBZ(oEnt,stSpawn.HRec.A,spwnflat) * Trace.HitNormal)
+    stSpawn.SPos:Add(gearasmlib.GetCustomAngBBZ(oEnt,stSpawn.HRec,spwnflat) * Trace.HitNormal)
     gearasmlib.SetMCWorld(oEnt,stSpawn.HRec.M,stSpawn.SPos)
     return
   end

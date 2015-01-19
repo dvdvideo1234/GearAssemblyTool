@@ -1270,9 +1270,9 @@ function CacheQueryPiece(sModel)
       stPiece.Name = qRec[defTable[3][1]]
       stPiece.Mesh = qRec[defTable[4][1]]
       stPiece.Here = true
-      stPiece.A = {[caP] = 0, [caY] = 0,[caR] = 0, [csX] = 1, [csY] = 1, [csZ] = 1, [csD] = true}
-      stPiece.O = {[csX] = 0, [csY] = 0,[csZ] = 0, [csX] = 1, [csY] = 1, [csZ] = 1, [csD] = true}
-      stPiece.M = {[csX] = 0, [csY] = 0,[csZ] = 0, [csX] = 1, [csY] = 1, [csZ] = 1, [csD] = true}
+      stPiece.O = {[cvX] = 0, [cvY] = 0,[cvZ] = 0, [csX] = 1, [csY] = 1, [csZ] = 1, [csD] = false}
+      stPiece.M = {[cvX] = 0, [cvY] = 0,[cvZ] = 0, [csX] = 1, [csY] = 1, [csZ] = 1, [csD] = false}
+      stPiece.A = {[caP] = 0, [caY] = 0,[caR] = 0, [csX] = 1, [csY] = 1, [csZ] = 1, [csD] = false}
       -- Origin
       if((qRec[defTable[5][1]] ~= "") and
          (qRec[defTable[5][1]] ~= "NULL")
@@ -1648,14 +1648,15 @@ function vGetMCWorldPosAng(vPos,vAng,vdbMCL)
   return vMCW
 end
 
-function GetCustomAngBBZ(oEnt,adbAng,nMode)
+function GetCustomAngBBZ(oEnt,oRec,nMode)
   if(not (oEnt and oEnt:IsValid())) then return 0 end
   local Mode = nMode or 0
-  if(Mode ~= 0 and adbAng) then
-    local aAngDB = Angle(adbAng[caP],adbAng[caY],adbAng[caR])
-    vOBB = oEnt:OBBMins()
-    vOBB:Rotate(aAngDB)
-    vOBB:Set(DecomposeByAngle(vOBB,Angle(0,0,0)))
+  if(Mode ~= 0 and oRec) then
+    local aAngDB = Angle(oRec.A[caP],oRec.A[caY],oRec.A[caR])
+    local vOBB = oEnt:OBBMins()
+          SubVector(vOBB,oRec.M)
+          vOBB:Rotate(aAngDB)
+          vOBB:Set(DecomposeByAngle(vOBB,Angle(0,0,0)))
     return math.abs(vOBB[cvZ])
   else
     return (oEnt:OBBMaxs() - oEnt:OBBMins()):Length() / 2.828 -- 2 * sqrt(2)
