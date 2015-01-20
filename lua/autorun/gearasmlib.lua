@@ -70,8 +70,11 @@ local file           = file
 local timer          = timer
 local string         = string
 
--- Library Debug Settings
--- The file is created in the DATA folder :3 *.txt is appended
+-- How is the tool called
+local LibToolName = "gearassembly"
+
+-- Library Debug Settings. The file is created in
+-- the DATA folder :3 *.txt is appended
 local LibDebugEn = 1
 local LibLogFile = "gearasmlib_log"
 local LibMaxLogs = 10000
@@ -83,13 +86,13 @@ local LibSymRevSign = "@"
 local LibSymDevider = "_"
 
 -- Operating paths
-local LibBASPath = "gearassembly/"
+local LibBASPath = LibToolName .. "/"
 local LibEXPPath = "export/"
 local LibDSVPath = "dsvbase/"
 local LibLOGPath = ""
 
 -- Table prefix to avoid overlapping and conflicts
-local LibTablePrefix = "GEARASSEMBLY_"
+local LibTablePrefix = string.upper(LibToolName) .. "_"
 
 -- Spawn Struct table Space
 local LibSpawn = {
