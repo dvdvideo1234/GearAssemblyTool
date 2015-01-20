@@ -76,7 +76,7 @@ local LibToolName = "gearassembly"
 -- Library Debug Settings. The file is created in
 -- the DATA folder :3 *.txt is appended
 local LibDebugEn = 1
-local LibLogFile = "gearasmlib_log"
+local LibLogFile = LibToolName .. "_log"
 local LibMaxLogs = 10000
 local LibCurLogs = 0
 
