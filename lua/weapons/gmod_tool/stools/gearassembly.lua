@@ -313,7 +313,7 @@ TOOL.ClientConVar = {
   [ "nexty"     ] = "0",
   [ "nextz"     ] = "0",
   [ "count"     ] = "1",
-  [ "anchor"    ] = "",
+  [ "anchor"    ] = "N/A",
   [ "contyp"    ] = "1",
   [ "stmode"    ] = "1",
   [ "freeze"    ] = "0",
@@ -360,7 +360,7 @@ if(SERVER) then
     if(not stPiece) then return nil end -- Not present in the DB
     local ePiece = ents.Create("prop_physics")
     if(ePiece and ePiece:IsValid()) then
-      ePiece:SetCollisionGroup(COLLISION_GROUP_NONE );
+      ePiece:SetCollisionGroup(COLLISION_GROUP_NONE);
       ePiece:SetSolid(SOLID_VPHYSICS);
       ePiece:SetMoveType(MOVETYPE_VPHYSICS)
       ePiece:SetNotSolid(false);
