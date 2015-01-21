@@ -1764,7 +1764,7 @@ function GetENTSpawn(trPos,trAng,trModel,nRotAng,hdModel,enIgnTyp,enOrAngTr,ucsP
   stSpawn.DAng:RotateAroundAxis(stSpawn.DAng:Up(),ucsAng[caY])
   -- Get Hold model stuff
   SetVector(stSpawn.MPos, hdRec.O)
-  SetAnglePYR(stSpawn.MAng,-hdRec.A[caP],-hdRec.A[caY],-hdRec.A[caR])
+  SetAngle (stSpawn.MAng, hdRec.A)
   stSpawn.MPos:Rotate(stSpawn.MAng)
   stSpawn.MAng:RotateAroundAxis(stSpawn.MAng:Up(),180)
   stSpawn.MAng:RotateAroundAxis(stSpawn.MAng:Right(),-hdRec.Mesh)
