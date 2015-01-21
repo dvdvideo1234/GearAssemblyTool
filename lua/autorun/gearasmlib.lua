@@ -1763,18 +1763,20 @@ function GetENTSpawn(trPos,trAng,trModel,nRotAng,hdModel,enIgnTyp,enOrAngTr,ucsP
   stSpawn.DAng:RotateAroundAxis(stSpawn.DAng:Right(),hdRec.Mesh)
   stSpawn.DAng:RotateAroundAxis(stSpawn.DAng:Up(),ucsAng[caY])
   -- Get Hold model stuff
+  
   SetVector(stSpawn.MPos, hdRec.O)
-  SetAngle (stSpawn.MAng, hdRec.A)
-  stSpawn.MPos:Rotate(stSpawn.MAng)
-  stSpawn.MAng:RotateAroundAxis(stSpawn.MAng:Up(),180)
-  stSpawn.MAng:RotateAroundAxis(stSpawn.MAng:Right(),-hdRec.Mesh)
-  stSpawn.MPos:Mul(-1)
-  stSpawn.MPos:Set(DecomposeByAngle(stSpawn.MPos,stSpawn.MAng))
+  SetAnglePYR(stSpawn.MAng,0,0,0)
+  SubAngle(stSpawn.MAng, hdRec.A)
+  -- stSpawn.MPos:Rotate(stSpawn.MAng)
+  -- stSpawn.MAng:RotateAroundAxis(stSpawn.MAng:Up(),180)
+  -- stSpawn.MAng:RotateAroundAxis(stSpawn.MAng:Right(),hdRec.Mesh)
   -- Do Spawn Angle
+  stSpawn.SAng:Set(stSpawn.DAng)
   stSpawn.SAng:RotateAroundAxis(stSpawn.R,stSpawn.MAng[caP] * hdRec.A[csX])
   stSpawn.SAng:RotateAroundAxis(stSpawn.U,stSpawn.MAng[caY] * hdRec.A[csY])
   stSpawn.SAng:RotateAroundAxis(stSpawn.F,stSpawn.MAng[caR] * hdRec.A[csZ])
-  stSpawn.SAng:RotateAroundAxis(stSpawn.DAng:Up(),ucsAng[caY] + 180)
+  --stSpawn.SAng:RotateAroundAxis(stSpawn.DAng:Up(),180)
+  
   -- Do Spawn Position
   stSpawn.SPos:Set(stSpawn.OPos)
   stSpawn.SPos:Add((hdRec.O[csX] * stSpawn.MPos[cvX]) * stSpawn.F)
