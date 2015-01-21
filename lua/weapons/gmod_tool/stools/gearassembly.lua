@@ -894,16 +894,16 @@ function TOOL:DrawHUD()
       local Sp =  stSpawn.SPos:ToScreen()
       local Df = (stSpawn.SPos + 15 * stSpawn.DAng:Forward()):ToScreen()
       local Du = (stSpawn.SPos + 15 * stSpawn.DAng:Up()):ToScreen()
-      local Tp =  stSpawn.CPos:ToScreen()
-      local Tu = (stSpawn.CPos + 15 * stSpawn.CAng:Up()):ToScreen()
+      local Cp =  stSpawn.CPos:ToScreen()
+      local Cu = (stSpawn.CPos + 15 * stSpawn.CAng:Up()):ToScreen()
       -- Draw UCS
       DrawLineColor(Op,Xs,scrW,scrH,stDrawDyes.Red)
       DrawLineColor(Op,Ys,scrW,scrH,stDrawDyes.Green)
       DrawLineColor(Op,Zs,scrW,scrH,stDrawDyes.Blue)
-      DrawLineColor(Tp,Tu,scrW,scrH,stDrawDyes.Yello)
-      DrawLineColor(Tp,Op,scrW,scrH,stDrawDyes.Green)
+      DrawLineColor(Cp,Cu,scrW,scrH,stDrawDyes.Yello)
+      DrawLineColor(Cp,Op,scrW,scrH,stDrawDyes.Green)
       surface.DrawCircle(Op.x,Op.y,RadScal,stDrawDyes.Yello)
-      surface.DrawCircle(Tp.x,Tp.y,RadScal,stDrawDyes.Green)
+      surface.DrawCircle(Cp.x,Cp.y,RadScal,stDrawDyes.Green)
       -- Draw Spawn
       DrawLineColor(Op,Sp,scrW,scrH,stDrawDyes.Magen)
       DrawLineColor(Sp,Du,scrW,scrH,stDrawDyes.Cyan)
@@ -1089,16 +1089,17 @@ function TOOL.BuildCPanel(CPanel)
   local pConsType = vgui.Create("DComboBox")
         pConsType:SetPos(2, CurY)
         pConsType:SetTall(18)
-        pConsType:SetValue("<"..stCType["ACT"]..">")
+        pConsType:SetValue(stCType[ConID].Name or ("<"..stCType["ACT"]..">"))
         CurY = CurY + pConsType:GetTall() + 2
   local Cnt = 1
-  while(stCType[Cnt]) do
-    local Val = stCType[Cnt]
+  local Val = stCType[Cnt]
+  while(Val) do
     pConsType:AddChoice(Val.Name)
     pConsType.OnSelect = function(panel,index,value)
       RunConsoleCommand("gearassembly_contyp",index)
     end
     Cnt = Cnt + 1
+    Val = stCType[Cnt]
   end
   pConsType:ChooseOptionID(ConID)
   CPanel:AddItem(pConsType)

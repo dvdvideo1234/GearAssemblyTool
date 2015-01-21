@@ -355,8 +355,8 @@ function GetViewRadius(plPly,vPos)
 end
 
 function GetCorrectID(anyValue,stSettings)
-  if(not tonumber(anyValue)) then return 1 end
   local Value = tonumber(anyValue)
+  if(not Value) then return 1 end
   if(Value > stSettings["MAX"]) then Value = 1 end
   if(Value < 1) then Value = stSettings["MAX"] end
   return Value
