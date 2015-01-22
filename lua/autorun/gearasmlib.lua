@@ -1790,7 +1790,6 @@ function GetENTSpawn(trPos,trAng,trModel,nRotAng,hdModel,enIgnTyp,enOrAngTr,ucsP
   stSpawn.SAng:RotateAroundAxis(stSpawn.R,stSpawn.MAng[caP] * hdRec.A[csX])
   stSpawn.SAng:RotateAroundAxis(stSpawn.U,stSpawn.MAng[caY] * hdRec.A[csY])
   stSpawn.SAng:RotateAroundAxis(stSpawn.F,stSpawn.MAng[caR] * hdRec.A[csZ])
-  --stSpawn.SAng:RotateAroundAxis(stSpawn.DAng:Up(),180)
   
   -- Do Spawn Position
   stSpawn.SPos:Set(stSpawn.OPos)
