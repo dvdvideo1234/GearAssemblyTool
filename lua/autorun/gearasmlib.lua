@@ -178,6 +178,12 @@ function SubAnglePYR(aBase, nP, nY, nR)
   aBase[caR] = aBase[caR] - (nR or 0)
 end
 
+function NegAngle(aBase)
+  aBase[caP] = -aBase[caP]
+  aBase[caY] = -aBase[caY]
+  aBase[caR] = -aBase[caR]
+end
+
 function SetAngle(aBase, adbSet)
   aBase[caP] = adbSet[caP]
   aBase[caY] = adbSet[caY]
@@ -216,6 +222,12 @@ function SubVectorXYZ(vBase, nX, nY, nZ)
   vBase[cvZ] = vBase[cvZ] - (nZ or 0)
 end
 
+function NegVector(vBase, nX, nY, nZ)
+  vBase[cvX] = -vBase[cvX]
+  vBase[cvY] = -vBase[cvY]
+  vBase[cvZ] = -vBase[cvZ]
+end
+
 function SetVector(vVec, vdbSet)
   vVec[cvX] = vdbSet[cvX]
   vVec[cvY] = vdbSet[cvY]
@@ -227,6 +239,7 @@ function SetVectorXYZ(vVec, nX, nY, nZ)
   vVec[cvY] = (nY or 0)
   vVec[cvZ] = (nZ or 0)
 end
+
 
 function SetTableDefinition(sTable, tDefinition)
   if(not sTable or sTable ~= "string") then return false end
@@ -1764,12 +1777,14 @@ function GetENTSpawn(trPos,trAng,trModel,nRotAng,hdModel,enIgnTyp,enOrAngTr,ucsP
   stSpawn.DAng:RotateAroundAxis(stSpawn.DAng:Up(),ucsAng[caY])
   -- Get Hold model stuff
   
+  SetAngle (stSpawn.MAng, hdRec.A)
   SetVector(stSpawn.MPos, hdRec.O)
-  SetAnglePYR(stSpawn.MAng,0,0,0)
-  SubAngle(stSpawn.MAng, hdRec.A)
-  -- stSpawn.MPos:Rotate(stSpawn.MAng)
-  -- stSpawn.MAng:RotateAroundAxis(stSpawn.MAng:Up(),180)
-  -- stSpawn.MAng:RotateAroundAxis(stSpawn.MAng:Right(),hdRec.Mesh)
+  
+  stSpawn.MAng:RotateAroundAxis(stSpawn.MAng:Up(),180)
+  stSpawn.MPos:Set(DecomposeByAngle(stSpawn.MPos,stSpawn.MAng))
+  
+  NegAngle(stSpawn.MAng)
+  
   -- Do Spawn Angle
   stSpawn.SAng:Set(stSpawn.DAng)
   stSpawn.SAng:RotateAroundAxis(stSpawn.R,stSpawn.MAng[caP] * hdRec.A[csX])
