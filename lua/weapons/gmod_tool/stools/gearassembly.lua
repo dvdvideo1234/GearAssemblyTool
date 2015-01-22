@@ -14,6 +14,9 @@ else
   --- Gmod 10
   gearasmlib.SQLInsertRecord("PIECES",{"models/props_phx/mechanics/medgear.mdl", "Old Gmod 10", "#", 0, "24.173, 0, 0", "", "-0.015172731131315, 0.0090782083570957, 3.5684652328491"})
   gearasmlib.SQLInsertRecord("PIECES",{"models/props_phx/mechanics/biggear.mdl", "Old Gmod 10", "#", 0, "33.811, 0, 0", "", "-0.00017268359079026, -0.0035230871289968, 3.5217847824097"})
+  gearasmlib.SQLInsertRecord("PIECES",{"models/props_phx/mechanics/slider1.mdl", "Old Gmod 10", "#", 0, " 3.000, 0, 0", "-90.000, 90.000, 180.000", "0.17126856744289, -0.10668225586414, 3.5165667533875"})
+
+
   --- PHX Spur
   gearasmlib.SQLInsertRecord("PIECES",{"models/props_phx/gears/spur9.mdl" , "PHX Spotted Flat", "#", 0, " 7.467, 0, 0", "", "-0.0015837327810004, 0.00016171450261027, 2.8354094028473"})
   gearasmlib.SQLInsertRecord("PIECES",{"models/props_phx/gears/spur12.mdl", "PHX Spotted Flat", "#", 0, " 9.703, 0, 0", "", "-0.0015269597060978, 0.00021413757349364, 2.8405227661133"})
@@ -636,7 +639,7 @@ function TOOL:LeftClick(Trace)
                                            Angle(nextpic,nextyaw,nextrol))
           ePieceO = ePieceN
         elseif(stmode == 2) then
-          trAng:RotateAroundAxis(stSpawn.TAng:Up(),-dRot)
+          trAng:RotateAroundAxis(stSpawn.CAng:Up(),-dRot)
           stSpawn = gearasmlib.GetENTSpawn(trPos,trAng,trModel,rotpiv,model,igntyp,
                                            orangtr,Vector(nextx,nexty,nextz),
                                            Angle(nextpic,nextyaw,nextrol))

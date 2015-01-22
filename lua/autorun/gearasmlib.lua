@@ -152,6 +152,7 @@ module( "gearasmlib" )
 
 ---------------------------- AssemblyLib COMMON ----------------------------
 
+
 --- Angle
 
 function AddAngle(aBase, adbAdd)
@@ -1774,23 +1775,24 @@ function GetENTSpawn(trPos,trAng,trModel,nRotAng,hdModel,enIgnTyp,enOrAngTr,ucsP
   -- Get the new Domain
   stSpawn.DAng:Set(stSpawn.SAng)
   stSpawn.DAng:RotateAroundAxis(stSpawn.DAng:Right(),hdRec.Mesh)
-  stSpawn.DAng:RotateAroundAxis(stSpawn.DAng:Up(),ucsAng[caY])
+  stSpawn.DAng:RotateAroundAxis(stSpawn.DAng:Up(),ucsAng[caY] + 180)
   -- Get Hold model stuff
-  
+
   SetAngle (stSpawn.MAng, hdRec.A)
   SetVector(stSpawn.MPos, hdRec.O)
-  
-  stSpawn.MAng:RotateAroundAxis(stSpawn.MAng:Up(),180)
+  stSpawn.MPos:Rotate(stSpawn.MAng)
+
+  stSpawn.MAng:RotateAroundAxis(stSpawn.MAng:Up(),-180)
+  stSpawn.MAng:RotateAroundAxis(stSpawn.MAng:Right(),-hdRec.Mesh) 
+  NegVector(stSpawn.MPos)
   stSpawn.MPos:Set(DecomposeByAngle(stSpawn.MPos,stSpawn.MAng))
   
   NegAngle(stSpawn.MAng)
   
-  -- Do Spawn Angle
-  stSpawn.SAng:Set(stSpawn.DAng)
   stSpawn.SAng:RotateAroundAxis(stSpawn.R,stSpawn.MAng[caP] * hdRec.A[csX])
   stSpawn.SAng:RotateAroundAxis(stSpawn.U,stSpawn.MAng[caY] * hdRec.A[csY])
   stSpawn.SAng:RotateAroundAxis(stSpawn.F,stSpawn.MAng[caR] * hdRec.A[csZ])
-  
+
   -- Do Spawn Position
   stSpawn.SPos:Set(stSpawn.OPos)
   stSpawn.SPos:Add((hdRec.O[csX] * stSpawn.MPos[cvX]) * stSpawn.F)
