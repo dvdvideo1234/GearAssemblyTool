@@ -1782,9 +1782,11 @@ function GetENTSpawn(trPos,trAng,trModel,nRotAng,hdModel,enIgnTyp,enOrAngTr,ucsP
   SetVector(stSpawn.MPos, hdRec.O)
   stSpawn.MPos:Rotate(stSpawn.MAng)
 
-  stSpawn.MAng:RotateAroundAxis(stSpawn.MAng:Up(),-180)
-  stSpawn.MAng:RotateAroundAxis(stSpawn.MAng:Right(),-hdRec.Mesh) 
+  stSpawn.MAng:RotateAroundAxis(stSpawn.MAng:Up(),180)
+  stSpawn.MAng:RotateAroundAxis(stSpawn.MAng:Right(),hdRec.Mesh) 
+  
   NegVector(stSpawn.MPos)
+  
   stSpawn.MPos:Set(DecomposeByAngle(stSpawn.MPos,stSpawn.MAng))
   
   NegAngle(stSpawn.MAng)
