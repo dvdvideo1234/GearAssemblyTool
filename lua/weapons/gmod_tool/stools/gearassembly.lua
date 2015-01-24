@@ -495,7 +495,7 @@ if(SERVER) then
     end
     return (not IsIn)
   end
-
+  
 end
 
 function TOOL:LeftClick(Trace)
@@ -534,8 +534,8 @@ function TOOL:LeftClick(Trace)
     if(not (eBase and eBase:IsValid()) and (trEnt and trEnt:IsValid())) then eBase = trEnt end
     local ePiece = eMakeGearAssemblyPiece(model,Trace.HitPos,ANG_ZERO,mass,bgskids)
     if(not ePiece) then return false end
-    local stSpawn = gearasmlib.GetNORSpawn(Trace,model,Vector(nextx,nexty,nextz),
-                                           Angle(nextpic,nextyaw,nextrol))
+    local stSpawn = gearasmlib.GetNORSpawn(Trace,model,nextx,nexty,nextz,
+                                           nextpic,nextyaw,nextrol)
     if(not stSpawn) then return false end
     stSpawn.SPos:Add(gearasmlib.GetCustomAngBBZ(ePiece,stSpawn.HRec,spwnflat) * Trace.HitNormal)
     ePiece:SetAngles(stSpawn.SAng)
@@ -568,8 +568,6 @@ function TOOL:LeftClick(Trace)
   if(not gearasmlib.IsPhysTrace(Trace)) then return false end
   if(gearasmlib.IsOther(trEnt)) then return false end
 
-  local trPos   = trEnt:GetPos()
-  local trAng   = trEnt:GetAngles()
   local trModel = trEnt:GetModel()
   local bsModel = "N/A"
   if(eBase and eBase:IsValid()) then bsModel = eBase:GetModel() end
@@ -594,16 +592,17 @@ function TOOL:LeftClick(Trace)
      stmode >= 1 and
      stmode <= stSMode["MAX"]
   ) then
-    local stSpawn = gearasmlib.GetENTSpawn(trPos,trAng,trModel,
-                                           rotpiv,model,igntyp,orangtr,
-                                           Vector(nextx,nexty,nextz),
-                                           Angle(nextpic,nextyaw,nextrol))
+    local stSpawn = gearasmlib.GetENTSpawn(trEnt,rotpiv,model,igntyp,orangtr,
+                                           nextx,nexty,nextz,
+                                           nextpic,nextyaw,nextrol)
     if(not stSpawn) then return false end
     undo.Create("Last Gear Assembly")
     local ePieceN, ePieceO = nil, trEnt
-    local i     = count
-    local nTrys = staatts
-    local dRot  = deltarot / count
+    local i      = count
+    local nTrys  = staatts
+    local dRot   = deltarot / count
+    local aIter  = ePieceO:GetAngles()
+    local aStart = ePieceO:GetAngles()
     while(i > 0) do
       ePieceN = eMakeGearAssemblyPiece(model,ePieceO:GetPos(),ANG_ZERO,mass,bgskids)
       if(ePieceN) then
@@ -633,16 +632,16 @@ function TOOL:LeftClick(Trace)
         ConstraintGearAssemblyPiece(eBase,ePieceN,stSpawn.SPos,stSpawn.DAng:Up(),contyp,nocollide,forcelim,freeze,engravity)
         undo.AddEntity(ePieceN)
         if(stmode == 1) then
-          stSpawn = gearasmlib.GetENTSpawn(ePieceN:GetPos(),ePieceN:GetAngles(),
-                                           trModel,rotpiv,model,igntyp,
-                                           orangtr,Vector(nextx,nexty,nextz),
-                                           Angle(nextpic,nextyaw,nextrol))
+          stSpawn = gearasmlib.GetENTSpawn(ePieceN,rotpiv,model,igntyp,
+                                           orangtr,nextx,nexty,nextz,
+                                           nextpic,nextyaw,nextrol)
           ePieceO = ePieceN
         elseif(stmode == 2) then
-          trAng:RotateAroundAxis(stSpawn.CAng:Up(),-dRot)
-          stSpawn = gearasmlib.GetENTSpawn(trPos,trAng,trModel,rotpiv,model,igntyp,
-                                           orangtr,Vector(nextx,nexty,nextz),
-                                           Angle(nextpic,nextyaw,nextrol))
+          aIter:RotateAroundAxis(stSpawn.CAng:Up(),-dRot)
+          trEnt:SetAngles(aIter)
+          stSpawn = gearasmlib.GetENTSpawn(trEnt,rotpiv,model,igntyp,
+                                           orangtr,nextx,nexty,nextz,
+                                           nextpic,nextyaw,nextrol)
         end
         if(not stSpawn) then
           gearasmlib.PrintNotify(ply,"Failed to obtain spawn data!","ERROR")
@@ -688,6 +687,7 @@ function TOOL:LeftClick(Trace)
         return true
       end
     end
+    trEnt:SetAngles(aStart)
     gearasmlib.EmitSoundPly(ply)
     undo.SetPlayer(ply)
     undo.SetCustomUndoText("Undone Assembly ( Stack #"..tostring(count-i).." )")
@@ -695,9 +695,9 @@ function TOOL:LeftClick(Trace)
     return true
   end
 
-  local stSpawn = gearasmlib.GetENTSpawn(trPos,trAng,trModel,rotpiv,model,igntyp,
-                                         orangtr,Vector(nextx,nexty,nextz),
-                                         Angle(nextpic,nextyaw,nextrol))
+  local stSpawn = gearasmlib.GetENTSpawn(trEnt,rotpiv,model,igntyp,
+                                         orangtr,nextx,nexty,nextz,
+                                         nextpic,nextyaw,nextrol)
   if(stSpawn) then
     local ePiece = eMakeGearAssemblyPiece(model,Trace.HitPos,ANG_ZERO,mass,bgskids)
     if(ePiece) then
@@ -883,12 +883,9 @@ function TOOL:DrawHUD()
       local igntyp  = self:GetClientNumber("igntyp") or 0
       local orangtr = self:GetClientNumber("orangtr") or 0
       local rotpiv  = math.Clamp(self:GetClientNumber("rotpiv") or 0,-360,360)
-      local trPos   = trEnt:GetPos()
-      local trAng   = trEnt:GetAngles()
-      local trModel = trEnt:GetModel()
-      local stSpawn = gearasmlib.GetENTSpawn(trPos,trAng,trModel,rotpiv,model,igntyp,
-                                             orangtr,Vector(nextx,nexty,nextz),
-                                             Angle(nextpic,nextyaw,nextrol))
+      local stSpawn = gearasmlib.GetENTSpawn(trEnt,rotpiv,model,igntyp,
+                                             orangtr,nextx,nexty,nextz,
+                                             nextpic,nextyaw,nextrol)
       if(not stSpawn) then return end
       local Op =  stSpawn.OPos:ToScreen()
       local Xs = (stSpawn.OPos + 15 * stSpawn.F):ToScreen()
@@ -916,8 +913,8 @@ function TOOL:DrawHUD()
         DrawAdditionalInfo(stSpawn)
       end
     else
-      local stSpawn  = gearasmlib.GetNORSpawn(Trace,model,Vector(nextx,nexty,nextz),
-                                              Angle(nextpic,nextyaw,nextrol))
+      local stSpawn  = gearasmlib.GetNORSpawn(Trace,model,nextx,nexty,nextz,
+                                              nextpic,nextyaw,nextrol)
       if(not stSpawn) then return false end
       local addinfo = self:GetClientNumber("addinfo") or 0
       local Os = stSpawn.SPos:ToScreen()
@@ -1306,12 +1303,9 @@ function TOOL:UpdateGhost(oEnt, oPly)
       local nextpic = math.Clamp(self:GetClientNumber("nextpic") or 0,-360,360)
       local nextyaw = math.Clamp(self:GetClientNumber("nextyaw") or 0,-360,360)
       local nextrol = math.Clamp(self:GetClientNumber("nextrol") or 0,-360,360)
-      local trPos   = trEnt:GetPos()
-      local trAng   = trEnt:GetAngles()
-      local trModel = trEnt:GetModel()
-      local stSpawn = gearasmlib.GetENTSpawn(trPos,trAng,trModel,rotpiv,model,igntyp,
-                                             orangtr,Vector(nextx,nexty,nextz),
-                                             Angle(nextpic,nextyaw,nextrol))
+      local stSpawn = gearasmlib.GetENTSpawn(trEnt,rotpiv,model,igntyp,
+                                             orangtr,nextx,nexty,nextz,
+                                             nextpic,nextyaw,nextrol)
       if(not stSpawn) then return end
       oEnt:SetNoDraw(false)
       oEnt:SetAngles(stSpawn.SAng)
@@ -1325,8 +1319,8 @@ function TOOL:UpdateGhost(oEnt, oPly)
     local nextpic = math.Clamp(self:GetClientNumber("nextpic") or 0,-360,360)
     local nextyaw = math.Clamp(self:GetClientNumber("nextyaw") or 0,-360,360)
     local nextrol = math.Clamp(self:GetClientNumber("nextrol") or 0,-360,360)
-    local stSpawn = gearasmlib.GetNORSpawn(Trace,model,Vector(nextx,nexty,nextz),
-                                           Angle(nextpic,nextyaw,nextrol))
+    local stSpawn = gearasmlib.GetNORSpawn(Trace,model,nextx,nexty,nextz,
+                                           nextpic,nextyaw,nextrol)
     if(not stSpawn) then return end
     local spwnflat  = self:GetClientNumber("spwnflat") or 0
     oEnt:SetNoDraw(false)
