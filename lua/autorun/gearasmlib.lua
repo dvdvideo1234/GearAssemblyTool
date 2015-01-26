@@ -1743,9 +1743,7 @@ end
 --[[
  * This function is the backbone of the tool for Trace.Entity
  * Calculates SPos, SAng based on the DB inserts and input parameters
- * trPos         = Trace.Entity:GetPos()
- * trAng         = Trace.Entity:GetAngles()
- * trModel       = Trace.Entity:GetModel()
+ * trEnt         = Trace.Entity
  * nRotAng       = Start pifor angle to rotate trAng to
  * hdModel       = Node:Model()
  * enIgnTyp      = Ignore Gear Type
@@ -1776,7 +1774,7 @@ function GetENTSpawn(trEnt,nRotPivot,hdModel,enIgnTyp,enOrAngTr,
 
   stSpawn.CPos:Set(vGetMCWorld(trEnt,trRec.M))
   SetAngle(stSpawn.CAng,trRec.A)
-  stSpawn.CAng:Set(trAng:LocalToWorldAngles(stSpawn.CAng))
+  stSpawn.CAng:Set(trEnt:LocalToWorldAngles(stSpawn.CAng))
   stSpawn.CAng:RotateAroundAxis(stSpawn.CAng:Up(),-nRotPivot)
   -- Do origin !
   SetVector(stSpawn.OPos,trRec.O)

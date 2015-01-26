@@ -938,33 +938,30 @@ local function DrawRatioVisual(nW,nH,nY,nTrR,nHdR,nDeep)
   if(D2 <= 2) then return end
   if(nTrR) then 
     -- Trace Teeth
-    surface.SetDrawColor(stDrawDyes.Red)
+    surface.SetDrawColor(stDrawDyes.Yello)
     surface.DrawTexturedRect(0,nY,nDeep,nH)
     -- Trace Gear
     local Cent = (nTrR / ( nTrR + nHdR )) * nW   
     surface.SetDrawColor(stDrawDyes.Green) 
     surface.DrawTexturedRect(nDeep,nY,Cent-D2,nH)
     -- Meshing
-    surface.SetDrawColor(stDrawDyes.Red)
+    surface.SetDrawColor(stDrawDyes.Yello)
     surface.DrawTexturedRect(Cent-D2,nY,Cent+D2,nH)
     -- Holds Gear
     surface.SetDrawColor(stDrawDyes.Magen)
     surface.DrawTexturedRect(Cent+D2,nY,nW-nDeep,nH)
     -- Holds Teeth
-    surface.SetDrawColor(stDrawDyes.Red)
+    surface.SetDrawColor(stDrawDyes.Yello)
     surface.DrawTexturedRect(nW-nDeep,nY,nW,nH)
   else
     -- Holds Teeth
-    surface.SetDrawColor(stDrawDyes.Red)
+    surface.SetDrawColor(stDrawDyes.Yello)
     surface.DrawTexturedRect(0,nY,nDeep,nH)
-    if(stColorNxt) then
-      surface.SetDrawColor(stColorNxt)
-    else
-      surface.SetDrawColor(stDrawDyes.White)
-    end
+    -- Holds
+    surface.SetDrawColor(stDrawDyes.Green)
     surface.DrawTexturedRect(nDeep,nY,nW-nDeep,nH)
     -- Holds Teeth
-    surface.SetDrawColor(stDrawDyes.Red)
+    surface.SetDrawColor(stDrawDyes.Yello)
     surface.DrawTexturedRect(nW-nDeep,nY,nW,nH)
   end
 end
@@ -1008,8 +1005,8 @@ function TOOL:DrawToolScreen(w, h)
   DrawTextRowColor(txPos,"TM: "..(trModel or NoAV),stDrawDyes.Green)
   DrawTextRowColor(txPos,"HM: "..(gearasmlib.GetModelFileName(model) or NoAV),stDrawDyes.Magen)
   DrawTextRowColor(txPos,"Anc: "..self:GetClientInfo("anchor"),stDrawDyes.Anchr)
-  DrawTextRowColor(txPos,"Mesh: "..tostring(trMesh or NoAV).." > "..tostring(gearasmlib.RoundValue(hdRec.Mesh,0.01) or NoAV))
-  DrawTextRowColor(txPos,"Ratio: "..tostring(Ratio).." > "..tostring(trRad or NoAV).."/"..tostring(hdRad),stDrawDyes.Yello)
+  DrawTextRowColor(txPos,"Mesh: "..tostring(trMesh or NoAV).." > "..tostring(gearasmlib.RoundValue(hdRec.Mesh,0.01) or NoAV),stDrawDyes.Yello)
+  DrawTextRowColor(txPos,"Ratio: "..tostring(Ratio).." > "..tostring(trRad or NoAV).."/"..tostring(hdRad))
   DrawTextRowColor(txPos,"StackMod: "..stSMode[stmode],stDrawDyes.Red)
   DrawTextRowColor(txPos,tostring(os.date()),stDrawDyes.White)
   DrawRatioVisual(w,h,txPos.y+2,trRad,hdRad,15)
