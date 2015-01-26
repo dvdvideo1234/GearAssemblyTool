@@ -932,6 +932,43 @@ function TOOL:DrawHUD()
   end
 end
 
+local function DrawRatioVisual(nW,nH,nY,nTrR,nHdR,nDeep)
+  if(nY >= nH) then return end
+  local D2 = (nDeep or 0) / 2
+  if(D2 <= 2) then return end
+  if(nTrR) then 
+    -- Trace Teeth
+    surface.SetDrawColor(stDrawDyes.Red)
+    surface.DrawTexturedRect(0,nY,nDeep,nH)
+    -- Trace Gear
+    local Cent = (nTrR / ( nTrR + nHdR )) * nW   
+    surface.SetDrawColor(stDrawDyes.Green) 
+    surface.DrawTexturedRect(nDeep,nY,Cent-D2,nH)
+    -- Meshing
+    surface.SetDrawColor(stDrawDyes.Red)
+    surface.DrawTexturedRect(Cent-D2,nY,Cent+D2,nH)
+    -- Holds Gear
+    surface.SetDrawColor(stDrawDyes.Magen)
+    surface.DrawTexturedRect(Cent+D2,nY,nW-nDeep,nH)
+    -- Holds Teeth
+    surface.SetDrawColor(stDrawDyes.Red)
+    surface.DrawTexturedRect(nW-nDeep,nY,nW,nH)
+  else
+    -- Holds Teeth
+    surface.SetDrawColor(stDrawDyes.Red)
+    surface.DrawTexturedRect(0,nY,nDeep,nH)
+    if(stColorNxt) then
+      surface.SetDrawColor(stColorNxt)
+    else
+      surface.SetDrawColor(stDrawDyes.White)
+    end
+    surface.DrawTexturedRect(nDeep,nY,nW-nDeep,nH)
+    -- Holds Teeth
+    surface.SetDrawColor(stDrawDyes.Red)
+    surface.DrawTexturedRect(nW-nDeep,nY,nW,nH)
+  end
+end
+
 function TOOL:DrawToolScreen(w, h)
   if(SERVER) then return end
   surface.SetTexture(txToolgunBackground)
@@ -956,9 +993,6 @@ function TOOL:DrawToolScreen(w, h)
   local stmode  = gearasmlib.GetCorrectID(self:GetClientInfo("stmode"),stSMode)
   local trEnt = Trace.Entity
   local trOrig, trModel, trMesh, trRad
-  local X = 0
-  local Y = 0
-  local Z = 0
   if(trEnt and trEnt:IsValid()) then
     if(gearasmlib.IsOther(trEnt)) then return end
           trModel = trEnt:GetModel()
@@ -966,37 +1000,19 @@ function TOOL:DrawToolScreen(w, h)
           trModel = gearasmlib.GetModelFileName(trModel)
     if(trRec) then
       trMesh = tostring(gearasmlib.RoundValue(trRec.Mesh,0.01)) or NoAV
-      trOrig = Vector()
-      gearasmlib.SetVector(trOrig,trRec.O)
-      trRad = gearasmlib.RoundValue(trOrig:Length(),0.1)
-      X = trOrig[cvX]
-      X = gearasmlib.RoundValue(X,0.1)
-      Y = trOrig[cvY]
-      Y = gearasmlib.RoundValue(Y,0.1)
-      Z = trOrig[cvZ]
-      Z = gearasmlib.RoundValue(Z,0.1)
-      trOrig = "["..tostring(X)..","..tostring(Y)..","..tostring(Z).."]"
+      trRad = gearasmlib.RoundValue(gearasmlib.GetLengthVector(trRec.O),0.01)
     end
   end
-  local hdOrig = Vector()
-        gearasmlib.SetVector(hdOrig,hdRec.O)
-  local hdRad = gearasmlib.RoundValue(hdOrig:Length(),0.1)
-  local Ratio = (trRad or 0) / hdRad
-        X = hdOrig[cvX]
-        X = gearasmlib.RoundValue(X,0.1)
-        Y = hdOrig[cvY]
-        Y = gearasmlib.RoundValue(Y,0.1)
-        Z = hdOrig[cvZ]
-        Z = gearasmlib.RoundValue(Z,0.1)
-        hdOrig = "["..tostring(X) ..",".. tostring(Y)..","..tostring(Z).."]"
+  local hdRad = gearasmlib.RoundValue(gearasmlib.GetLengthVector(hdRec.O),0.01)
+  local Ratio = gearasmlib.RoundValue((trRad or 0) / hdRad,0.01)
   DrawTextRowColor(txPos,"TM: "..(trModel or NoAV),stDrawDyes.Green)
-  DrawTextRowColor(txPos,"TS: "..(trOrig or NoAV) .. ">" .. (trMesh or NoAV))
   DrawTextRowColor(txPos,"HM: "..(gearasmlib.GetModelFileName(model) or NoAV),stDrawDyes.Magen)
-  DrawTextRowColor(txPos,"HS: "..(hdOrig or NoAV) .. ">" .. tostring(gearasmlib.RoundValue(hdRec.Mesh,0.01) or NoAV))
-  DrawTextRowColor(txPos,"Ratio: "..gearasmlib.RoundValue(Ratio,0.01).." > "..(trRad or NoAV).."/"..hdRad,stDrawDyes.Yello)
   DrawTextRowColor(txPos,"Anc: "..self:GetClientInfo("anchor"),stDrawDyes.Anchr)
+  DrawTextRowColor(txPos,"Mesh: "..tostring(trMesh or NoAV).." > "..tostring(gearasmlib.RoundValue(hdRec.Mesh,0.01) or NoAV))
+  DrawTextRowColor(txPos,"Ratio: "..tostring(Ratio).." > "..tostring(trRad or NoAV).."/"..tostring(hdRad),stDrawDyes.Yello)
   DrawTextRowColor(txPos,"StackMod: "..stSMode[stmode],stDrawDyes.Red)
   DrawTextRowColor(txPos,tostring(os.date()),stDrawDyes.White)
+  DrawRatioVisual(w,h,txPos.y+2,trRad,hdRad,15)
 end
 
 function TOOL.BuildCPanel(CPanel)

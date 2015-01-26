@@ -199,6 +199,28 @@ end
 
 --- Vector
 
+function GetLengthVector(vdbBase)
+  local X = (vdbBase[cvX] or 0)
+        X = X * X
+  local Y = (vdbBase[cvY] or 0)
+        Y = Y * Y
+  local Z = (vdbBase[cvZ] or 0)
+        Z = Z * Z
+  return math.sqrt(X+Y+Z)
+end
+
+function RoundVector(vBase,nRound)
+  local X = vBase[cvX] or 0
+        X = RoundValue(X,nRound or 0.1)
+  local Y = vBase[cvY] or 0
+        Y = RoundValue(Y,nRound or 0.1)
+  local Z = vBase[cvZ] or 0
+        Z = RoundValue(Z,nRound or 0.1)
+  vBase[cvX] = X
+  vBase[cvY] = Y
+  vBase[cvZ] = Z
+end
+
 function AddVector(vBase, vdbAdd)
   vBase[cvX] = vBase[cvX] + vdbAdd[cvX]
   vBase[cvY] = vBase[cvY] + vdbAdd[cvY]
@@ -1300,9 +1322,9 @@ function CacheQueryPiece(sModel)
       if((qRec[defTable[6][1]] ~= "") and
          (qRec[defTable[6][1]] ~= "NULL")
       ) then
-        -- "@1,2,1" = {1,2,1,-1,1,1,true}
         DecodeOffset(stPiece.A,qRec[defTable[6][1]])
       end
+      -- MassCentre
       if((qRec[defTable[7][1]] ~= "") and
          (qRec[defTable[7][1]] ~= "NULL")
       ) then
@@ -1703,18 +1725,18 @@ function GetNORSpawn(stTrace, sModel, ucsPosX, ucsPosY, ucsPosZ,
   stSpawn.CAng:Set(stTrace.HitNormal:Angle())
   stSpawn.CAng[caP] = stSpawn.CAng[caP] + 90
   stSpawn.DAng:Set(stSpawn.CAng)
-  stSpawn.DAng:RotateAroundAxis(stSpawn.CAng:Right(),ucsAngP)
-  stSpawn.DAng:RotateAroundAxis(stSpawn.CAng:Forward(),ucsAngR)
-  stSpawn.DAng:RotateAroundAxis(stSpawn.DAng:Up(),ucsAngY)
+  stSpawn.DAng:RotateAroundAxis(stSpawn.CAng:Right()  ,(ucsAngP or 0))
+  stSpawn.DAng:RotateAroundAxis(stSpawn.CAng:Forward(),(ucsAngR or 0))
+  stSpawn.DAng:RotateAroundAxis(stSpawn.DAng:Up()     ,(ucsAngY or 0))
   stSpawn.F:Set(stSpawn.DAng:Forward())
   stSpawn.R:Set(stSpawn.DAng:Right())
   stSpawn.U:Set(stSpawn.DAng:Up())
   stSpawn.SAng:Set(stSpawn.DAng)
   AddAngle(stSpawn.SAng,hdRec.A)
   stSpawn.SPos:Set(stTrace.HitPos)
-  stSpawn.SPos:Add(ucsPosX * stSpawn.F)
-  stSpawn.SPos:Add(ucsPosY * stSpawn.R)
-  stSpawn.SPos:Add(ucsPosZ * stSpawn.U)
+  stSpawn.SPos:Add((ucsPosX or 0) * stSpawn.F)
+  stSpawn.SPos:Add((ucsPosY or 0) * stSpawn.R)
+  stSpawn.SPos:Add((ucsPosZ or 0) * stSpawn.U)
   return stSpawn
 end
 
@@ -1738,9 +1760,7 @@ function GetENTSpawn(trEnt,nRotPivot,hdModel,enIgnTyp,enOrAngTr,
            nRotPivot  and
            hdModel    and
            enIgnTyp   and
-           enOrAngTr  and
-           ucsPos     and
-           ucsAng     )
+           enOrAngTr )
   ) then return nil end
 
   local trRec = CacheQueryPiece(trEnt:GetModel())
