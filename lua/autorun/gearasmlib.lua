@@ -135,7 +135,7 @@ local LibSQLBuildError = ""
 local LibTables = {
   [LibTablePrefix.."PIECES"] = {
     Size = 7,
-    KeepInCache = 3600,
+    Keep = 15,
     [1] = {"MODEL" , "TEXT", "L"},
     [2] = {"TYPE"  , "TEXT"},
     [3] = {"NAME"  , "TEXT"},
@@ -1252,22 +1252,26 @@ end
 
 --------------------------- AssemblyLib PIECE QUERY -----------------------------
 
-function AttachKillTimer(oLocation,sKey,sTableKey,anyDuration,anyMessage)
+function AttachKillTimer(oLocation,sTableKey,sKey,defTable,anyMessage)
   if(not oLocation) then return false end
-  if(not (type(sKey) == "string" and type(sTableKey) == "string")) then return false end
-  local Key = sTableKey.."_"..sKey
-  if(not oLocation[sKey]) then return false end
-  local Duration = tonumber(anyDuration) or 0
-  if(not timer.Exists(Key) and Duration > 0) then
-    timer.Create(Key, Duration, 1, function()
-                                     LogInstance("AttachKillTimer["..Key.."]("..Duration.."): "
+  if(not (type(sTableKey) == "string" and type(sKey) == "string")) then return false end
+  local TimerKey = sTableKey.."_"..sKey
+  if(not oLocation[sTableKey]) then return false end
+  if(not oLocation[sTableKey][sKey]) then return false end
+  local Duration = 0
+  if(defTable)
+    Duration = tonumber(defTable.Keep) or 0
+  end
+  if(not timer.Exists(TimerKey) and Duration > 0) then
+    timer.Create(TimerKey, Duration, 1, function()
+                                     LogInstance("AttachKillTimer["..TimerKey.."]("..Duration.."): "
                                                   ..tostring(anyMessage).." > Dead")
-                                     timer.Stop(Key)
-                                     timer.Destroy(Key)
-                                     oLocation[sKey] = nil
+                                     timer.Stop(TimerKey)
+                                     timer.Destroy(TimerKey)
+                                     oLocation[sTableKey][sKey] = nil
                                      collectgarbage()
                                    end)
-    timer.Start(Key)
+    timer.Start(TimerKey)
   end
 end
 
@@ -1302,7 +1306,7 @@ function CacheQueryPiece(sModel)
   LogInstance("CacheQueryPiece: Model >> Pool: "..GetModelFileName(sModel))
   LibCache[TableKey][sModel] = {}
   stPiece = LibCache[TableKey][sModel]
-  AttachKillTimer(LibCache[TableKey],sModel,TableKey,defTable.KeepInCache,"CacheQueryPiece")
+  AttachKillTimer(LibCache,TableKey,sModel,defTable,"CacheQueryPiece")
   local Q = SQLBuildSelect(TableKey,nil,{{1,sModel}})
   if(Q) then
     local qData = sql.Query(Q)
