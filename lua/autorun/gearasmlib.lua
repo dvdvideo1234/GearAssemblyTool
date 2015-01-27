@@ -1797,7 +1797,9 @@ function GetENTSpawn(trEnt,nRotPivot,hdModel,enIgnTyp,enOrAngTr,
   stSpawn.DAng:RotateAroundAxis(stSpawn.DAng:Up(),ucsAngY + 180)
   -- Get Hold model stuff
 
-  SetAngle (stSpawn.MAng, hdRec.A)
+  SetAngle(stSpawn.MAng, hdRec.A)
+  NegAngle(stSpawn.MAng)
+  
   SetVector(stSpawn.MPos, hdRec.O)
   stSpawn.MPos:Rotate(stSpawn.MAng)
 
@@ -1807,9 +1809,9 @@ function GetENTSpawn(trEnt,nRotPivot,hdModel,enIgnTyp,enOrAngTr,
   stSpawn.MPos:Set(DecomposeByAngle(stSpawn.MPos,stSpawn.MAng))
 
   stSpawn.SAng:Set(stSpawn.DAng)
-  stSpawn.SAng:RotateAroundAxis(stSpawn.R,hdRec.A[caP] * hdRec.A[csX])
-  stSpawn.SAng:RotateAroundAxis(stSpawn.U,hdRec.A[caY] * hdRec.A[csY])
-  stSpawn.SAng:RotateAroundAxis(stSpawn.F,hdRec.A[caR] * hdRec.A[csZ])
+  stSpawn.SAng:RotateAroundAxis(stSpawn.DAng:Right()  ,hdRec.A[caP] * hdRec.A[csX])
+  stSpawn.SAng:RotateAroundAxis(stSpawn.DAng:Forward(),hdRec.A[caY] * hdRec.A[csY])
+  stSpawn.SAng:RotateAroundAxis(stSpawn.DAng:Up()     ,hdRec.A[caR] * hdRec.A[csZ])
 
   -- Do Spawn Position
   stSpawn.SPos:Set(stSpawn.OPos)
