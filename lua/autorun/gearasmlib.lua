@@ -1802,7 +1802,7 @@ function GetENTSpawn(trEnt,nRotPivot,hdModel,enIgnTyp,enOrAngTr,
   stSpawn.MPos:Rotate(stSpawn.MAng)
 
   stSpawn.MAng:RotateAroundAxis(stSpawn.MAng:Up(),180)
-  stSpawn.MAng:RotateAroundAxis(stSpawn.MAng:Right(),hdRec.Mesh) 
+  stSpawn.MAng:RotateAroundAxis(stSpawn.MAng:Right(),hdRec.Mesh)
   NegVector(stSpawn.MPos)
   stSpawn.MPos:Set(DecomposeByAngle(stSpawn.MPos,stSpawn.MAng))
 

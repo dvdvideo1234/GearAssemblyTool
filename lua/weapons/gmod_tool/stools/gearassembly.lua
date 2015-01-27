@@ -6,7 +6,7 @@ if(file.Exists(gearasmlib.BASPath()..gearasmlib.DSVPath().."db_"..gearasmlib.Get
   gearasmlib.SQLImportFromDSV("db_","PIECES","\t",true)
 else
   gearasmlib.PrintInstance("GEARASSEMBLY: DB PIECES not exported, populating from TOOL.")
-  
+
   ------- DEV -------
   gearasmlib.SQLInsertRecord("PIECES",{"models/props_wasteland/wheel02b.mdl",   "Development", "#", 45, "65, 0, 0", "0, 0, -90", "0.29567885398865,0.3865530192852,-0.36239844560623"})
 
@@ -88,7 +88,7 @@ else
   gearasmlib.SQLInsertRecord("PIECES",{"models/mechanics/gears2/pinion_80t2.mdl", "PHX Teeth Flat", "#", 0, "2.55, 0, 0", " 0.000, -90.000,  0.000", "-0.017873015254736, 0.68288779258728, 0.0010742680169642"})
   gearasmlib.SQLInsertRecord("PIECES",{"models/mechanics/gears2/pinion_80t3.mdl", "PHX Teeth Flat", "#", 0, "2.55, 0, 0", " 0.000, -90.000,  0.000", "-0.018022054806352, 0.68289351463318, 0.0021022602450103"})
   --- PHX Spotter Rack
-  
+
   --- PHX Bevel
   gearasmlib.SQLInsertRecord("PIECES",{"models/mechanics/gears2/bevel_12t1.mdl", "PHX Bevel", "#", 45, "12.2, 0, 1.3", "", "-0.0026455507613719,-0.0061479024589062,-0.87438750267029"})
   gearasmlib.SQLInsertRecord("PIECES",{"models/Mechanics/gears2/bevel_18t1.mdl", "PHX Bevel", "#", 45, "17.3, 0, 1.3", "", "-0.033187858760357,0.0065126456320286,-1.0525280237198"})
@@ -356,7 +356,7 @@ if(SERVER) then
   end
 
   duplicator.RegisterEntityModifier("gearassembly_nophysgun",LoadDupeGearAssemblyNoPhysgun)
-  
+
   function eMakeGearAssemblyPiece(sModel,vPos,aAng,nMass,sBgSkIDs)
     -- You never know .. ^_^
     local stPiece = gearasmlib.CacheQueryPiece(sModel)
@@ -495,7 +495,7 @@ if(SERVER) then
     end
     return (not IsIn)
   end
-  
+
 end
 
 function TOOL:LeftClick(Trace)
@@ -939,13 +939,13 @@ local function DrawRatioVisual(nW,nH,nY,nTrR,nHdR,nDeep)
   local MColor = stDrawDyes.Yello
   local TColor = stDrawDyes.Green
   local HColor = stDrawDyes.Magen
-  if(nTrR) then 
+  if(nTrR) then
     -- Trace Teeth
     surface.SetDrawColor(MColor)
     surface.DrawTexturedRect(0,nY,nDeep,nH)
     -- Trace Gear
-    local Cent = (nTrR / ( nTrR + nHdR )) * nW   
-    surface.SetDrawColor(TColor) 
+    local Cent = math.floor((nTrR / ( nTrR + nHdR )) * nW)
+    surface.SetDrawColor(TColor)
     surface.DrawTexturedRect(nDeep,nY,Cent-D2,nH)
     -- Meshing
     surface.SetDrawColor(MColor)
@@ -983,7 +983,7 @@ function TOOL:DrawToolScreen(w, h)
   end
   DrawTextRowColor(txPos,"Trace status: Valid",stDrawDyes.White)
   local model = self:GetClientInfo("model") or ""
-  local hdRec = gearasmlib.CacheQueryPiece(model)  
+  local hdRec = gearasmlib.CacheQueryPiece(model)
   if(not hdRec) then
     DrawTextRowColor(txPos,"Holds Model: Invalid")
     return
