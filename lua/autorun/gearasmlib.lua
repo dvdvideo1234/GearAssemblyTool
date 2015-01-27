@@ -1253,14 +1253,18 @@ end
 --------------------------- AssemblyLib PIECE QUERY -----------------------------
 
 function AttachKillTimer(oLocation,sKey,sTableKey,anyDuration,anyMessage)
+  if(not oLocation) then return false end
+  if(not (type(sKey) == "string" and type(sTableKey) == "string")) then return false end
   local Key = sTableKey.."_"..sKey
+  if(not oLocation[sKey]) then return false end
   local Duration = tonumber(anyDuration) or 0
   if(not timer.Exists(Key) and Duration > 0) then
     timer.Create(Key, Duration, 1, function()
-                                     LogInstance("AttachKillTimer["..Key.."]("..Duration.."): "..tostring(anyMessage))
+                                     LogInstance("AttachKillTimer["..Key.."]("..Duration.."): "
+                                                  ..tostring(anyMessage).." > Dead")
                                      timer.Stop(Key)
                                      timer.Destroy(Key)
-                                     oLocation[Key] = nil
+                                     oLocation[sKey] = nil
                                      collectgarbage()
                                    end)
     timer.Start(Key)
@@ -1294,7 +1298,6 @@ function CacheQueryPiece(sModel)
       RestartTimer(TableKey,sModel)
       return LibCache[TableKey][sModel]
     end
-    return nil
   end
   LogInstance("CacheQueryPiece: Model >> Pool: "..GetModelFileName(sModel))
   LibCache[TableKey][sModel] = {}
