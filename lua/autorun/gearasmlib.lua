@@ -152,7 +152,6 @@ module( "gearasmlib" )
 
 ---------------------------- AssemblyLib COMMON ----------------------------
 
-
 --- Angle
 
 function AddAngle(aBase, adbAdd)
@@ -263,6 +262,12 @@ function SetVectorXYZ(vVec, nX, nY, nZ)
   vVec[cvZ] = (nZ or 0)
 end
 
+function GetDefaultString(sBase, sDefault)
+  if(type(sBase) ~= type(sDefault)) then return "" end
+  if(type(sBase) ~= "string") then return "" end
+  if(string.len(sBase > 0)) then return sBase end
+  return sDefault
+end
 
 function SetTableDefinition(sTable, tDefinition)
   if(not sTable or sTable ~= "string") then return false end

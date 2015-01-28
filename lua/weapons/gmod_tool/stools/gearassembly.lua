@@ -1124,8 +1124,8 @@ function TOOL.BuildCPanel(CPanel)
   local pText = vgui.Create("DTextEntry")
         pText:SetPos(2,300)
         pText:SetTall(18)
-        pText:SetText(GetConVarString("gearassembly_bgskids") or
-                      "Bodygroup IDs separated with commas > ENTER")
+        pText:SetText(gearasmlib.GetDefaultString(GetConVarString("gearassembly_bgskids"),
+                                           "Bodygroup IDs separated with commas > ENTER"))
         pText.OnEnter = function(self)
           local sTX = self:GetValue() or ""
           RunConsoleCommand("gearassembly_bgskids",sTX)
