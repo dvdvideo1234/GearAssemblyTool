@@ -135,7 +135,7 @@ local LibSQLBuildError = ""
 local LibTables = {
   [LibTablePrefix.."PIECES"] = {
     Size = 7,
-    Keep = 15,
+    KeepInCache = 3600,
     [1] = {"MODEL" , "TEXT", "L"},
     [2] = {"TYPE"  , "TEXT"},
     [3] = {"NAME"  , "TEXT"},
@@ -151,6 +151,7 @@ module( "gearasmlib" )
 -------------- BEGIN SQL AssemblyLib -------------
 
 ---------------------------- AssemblyLib COMMON ----------------------------
+
 
 --- Angle
 
@@ -262,12 +263,6 @@ function SetVectorXYZ(vVec, nX, nY, nZ)
   vVec[cvZ] = (nZ or 0)
 end
 
-function GetDefaultString(sBase, sDefault)
-  if(type(sBase) ~= type(sDefault)) then return "" end
-  if(type(sBase) ~= "string") then return "" end
-  if(string.len(sBase > 0)) then return sBase end
-  return sDefault
-end
 
 function SetTableDefinition(sTable, tDefinition)
   if(not sTable or sTable ~= "string") then return false end
@@ -1257,26 +1252,18 @@ end
 
 --------------------------- AssemblyLib PIECE QUERY -----------------------------
 
-function AttachKillTimer(oLocation,sTableKey,sKey,defTable,anyMessage)
-  if(not oLocation) then return false end
-  if(not (type(sTableKey) == "string" and type(sKey) == "string")) then return false end
-  local TimerKey = sTableKey.."_"..sKey
-  if(not oLocation[sTableKey]) then return false end
-  if(not oLocation[sTableKey][sKey]) then return false end
-  local Duration = 0
-  if(defTable)
-    Duration = tonumber(defTable.Keep) or 0
-  end
-  if(not timer.Exists(TimerKey) and Duration > 0) then
-    timer.Create(TimerKey, Duration, 1, function()
-                                     LogInstance("AttachKillTimer["..TimerKey.."]("..Duration.."): "
-                                                  ..tostring(anyMessage).." > Dead")
-                                     timer.Stop(TimerKey)
-                                     timer.Destroy(TimerKey)
-                                     oLocation[sTableKey][sKey] = nil
+function AttachKillTimer(oLocation,sKey,sTableKey,anyDuration,anyMessage)
+  local Key = sTableKey.."_"..sKey
+  local Duration = tonumber(anyDuration) or 0
+  if(not timer.Exists(Key) and Duration > 0) then
+    timer.Create(Key, Duration, 1, function()
+                                     LogInstance("AttachKillTimer["..Key.."]("..Duration.."): "..tostring(anyMessage))
+                                     timer.Stop(Key)
+                                     timer.Destroy(Key)
+                                     oLocation[Key] = nil
                                      collectgarbage()
                                    end)
-    timer.Start(TimerKey)
+    timer.Start(Key)
   end
 end
 
@@ -1307,11 +1294,12 @@ function CacheQueryPiece(sModel)
       RestartTimer(TableKey,sModel)
       return LibCache[TableKey][sModel]
     end
+    return nil
   end
   LogInstance("CacheQueryPiece: Model >> Pool: "..GetModelFileName(sModel))
   LibCache[TableKey][sModel] = {}
   stPiece = LibCache[TableKey][sModel]
-  AttachKillTimer(LibCache,TableKey,sModel,defTable,"CacheQueryPiece")
+  AttachKillTimer(LibCache[TableKey],sModel,TableKey,defTable.KeepInCache,"CacheQueryPiece")
   local Q = SQLBuildSelect(TableKey,nil,{{1,sModel}})
   if(Q) then
     local qData = sql.Query(Q)
@@ -1809,21 +1797,19 @@ function GetENTSpawn(trEnt,nRotPivot,hdModel,enIgnTyp,enOrAngTr,
   stSpawn.DAng:RotateAroundAxis(stSpawn.DAng:Up(),ucsAngY + 180)
   -- Get Hold model stuff
 
-  SetAngle(stSpawn.MAng, hdRec.A)
-  NegAngle(stSpawn.MAng)
-  
+  SetAngle (stSpawn.MAng, hdRec.A)
   SetVector(stSpawn.MPos, hdRec.O)
   stSpawn.MPos:Rotate(stSpawn.MAng)
 
   stSpawn.MAng:RotateAroundAxis(stSpawn.MAng:Up(),180)
-  stSpawn.MAng:RotateAroundAxis(stSpawn.MAng:Right(),hdRec.Mesh)
+  stSpawn.MAng:RotateAroundAxis(stSpawn.MAng:Right(),hdRec.Mesh) 
   NegVector(stSpawn.MPos)
   stSpawn.MPos:Set(DecomposeByAngle(stSpawn.MPos,stSpawn.MAng))
 
   stSpawn.SAng:Set(stSpawn.DAng)
-  stSpawn.SAng:RotateAroundAxis(stSpawn.DAng:Right()  ,hdRec.A[caP] * hdRec.A[csX])
-  stSpawn.SAng:RotateAroundAxis(stSpawn.DAng:Forward(),hdRec.A[caY] * hdRec.A[csY])
-  stSpawn.SAng:RotateAroundAxis(stSpawn.DAng:Up()     ,hdRec.A[caR] * hdRec.A[csZ])
+  stSpawn.SAng:RotateAroundAxis(stSpawn.R,hdRec.A[caP] * hdRec.A[csX])
+  stSpawn.SAng:RotateAroundAxis(stSpawn.U,hdRec.A[caY] * hdRec.A[csY])
+  stSpawn.SAng:RotateAroundAxis(stSpawn.F,hdRec.A[caR] * hdRec.A[csZ])
 
   -- Do Spawn Position
   stSpawn.SPos:Set(stSpawn.OPos)

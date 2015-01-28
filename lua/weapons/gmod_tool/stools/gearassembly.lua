@@ -6,7 +6,7 @@ if(file.Exists(gearasmlib.BASPath()..gearasmlib.DSVPath().."db_"..gearasmlib.Get
   gearasmlib.SQLImportFromDSV("db_","PIECES","\t",true)
 else
   gearasmlib.PrintInstance("GEARASSEMBLY: DB PIECES not exported, populating from TOOL.")
-
+  
   ------- DEV -------
   gearasmlib.SQLInsertRecord("PIECES",{"models/props_wasteland/wheel02b.mdl",   "Development", "#", 45, "65, 0, 0", "0, 0, -90", "0.29567885398865,0.3865530192852,-0.36239844560623"})
 
@@ -88,7 +88,7 @@ else
   gearasmlib.SQLInsertRecord("PIECES",{"models/mechanics/gears2/pinion_80t2.mdl", "PHX Teeth Flat", "#", 0, "2.55, 0, 0", " 0.000, -90.000,  0.000", "-0.017873015254736, 0.68288779258728, 0.0010742680169642"})
   gearasmlib.SQLInsertRecord("PIECES",{"models/mechanics/gears2/pinion_80t3.mdl", "PHX Teeth Flat", "#", 0, "2.55, 0, 0", " 0.000, -90.000,  0.000", "-0.018022054806352, 0.68289351463318, 0.0021022602450103"})
   --- PHX Spotter Rack
-
+  
   --- PHX Bevel
   gearasmlib.SQLInsertRecord("PIECES",{"models/mechanics/gears2/bevel_12t1.mdl", "PHX Bevel", "#", 45, "12.2, 0, 1.3", "", "-0.0026455507613719,-0.0061479024589062,-0.87438750267029"})
   gearasmlib.SQLInsertRecord("PIECES",{"models/Mechanics/gears2/bevel_18t1.mdl", "PHX Bevel", "#", 45, "17.3, 0, 1.3", "", "-0.033187858760357,0.0065126456320286,-1.0525280237198"})
@@ -356,7 +356,7 @@ if(SERVER) then
   end
 
   duplicator.RegisterEntityModifier("gearassembly_nophysgun",LoadDupeGearAssemblyNoPhysgun)
-
+  
   function eMakeGearAssemblyPiece(sModel,vPos,aAng,nMass,sBgSkIDs)
     -- You never know .. ^_^
     local stPiece = gearasmlib.CacheQueryPiece(sModel)
@@ -495,7 +495,7 @@ if(SERVER) then
     end
     return (not IsIn)
   end
-
+  
 end
 
 function TOOL:LeftClick(Trace)
@@ -824,7 +824,7 @@ local function DrawTextRowColor(xyPos,sTxT,stColor)
   if(not (xyPos.x and xyPos.y)) then return end
   surface.SetTextPos(xyPos.x,xyPos.y)
   if(stColor) then
-    surface.SetTextColor(stColor)
+    surface.SetTextColor(stColor.r, stColor.g, stColor.b, stColor.a)
   end
   surface.DrawText(sTxT)
   xyPos.w, xyPos.h = surface.GetTextSize(sTxT)
@@ -835,7 +835,7 @@ local function DrawLineColor(xyPosS,xyPosE,nW,nH,stColor)
   if(not (xyPosS and xyPosE)) then return end
   if(not (xyPosS.x and xyPosS.y and xyPosE.x and xyPosE.y)) then return end
   if(stColor) then
-    surface.SetDrawColor(stColor)
+    surface.SetDrawColor(stColor.r, stColor.g, stColor.b, stColor.a)
   end
   if(xyPosS.x < 0 or xyPosS.x > nW) then return end
   if(xyPosS.y < 0 or xyPosS.y > nH) then return end
@@ -934,37 +934,34 @@ end
 
 local function DrawRatioVisual(nW,nH,nY,nTrR,nHdR,nDeep)
   if(nY >= nH) then return end
-  local D2 = math.floor((nDeep or 0) / 2)
+  local D2 = (nDeep or 0) / 2
   if(D2 <= 2) then return end
-  local MColor = stDrawDyes.Yello
-  local TColor = stDrawDyes.Green
-  local HColor = stDrawDyes.Magen
-  if(nTrR) then
+  if(nTrR) then 
     -- Trace Teeth
-    surface.SetDrawColor(MColor)
+    surface.SetDrawColor(stDrawDyes.Yello)
     surface.DrawTexturedRect(0,nY,nDeep,nH)
     -- Trace Gear
-    local Cent = math.floor((nTrR / ( nTrR + nHdR )) * nW)
-    surface.SetDrawColor(TColor)
+    local Cent = (nTrR / ( nTrR + nHdR )) * nW   
+    surface.SetDrawColor(stDrawDyes.Green) 
     surface.DrawTexturedRect(nDeep,nY,Cent-D2,nH)
     -- Meshing
-    surface.SetDrawColor(MColor)
+    surface.SetDrawColor(stDrawDyes.Yello)
     surface.DrawTexturedRect(Cent-D2,nY,Cent+D2,nH)
     -- Holds Gear
-    surface.SetDrawColor(HColor)
+    surface.SetDrawColor(stDrawDyes.Magen)
     surface.DrawTexturedRect(Cent+D2,nY,nW-nDeep,nH)
     -- Holds Teeth
-    surface.SetDrawColor(MColor)
+    surface.SetDrawColor(stDrawDyes.Yello)
     surface.DrawTexturedRect(nW-nDeep,nY,nW,nH)
   else
     -- Holds Teeth
-    surface.SetDrawColor(MColor)
+    surface.SetDrawColor(stDrawDyes.Yello)
     surface.DrawTexturedRect(0,nY,nDeep,nH)
     -- Holds
-    surface.SetDrawColor(TColor)
+    surface.SetDrawColor(stDrawDyes.Green)
     surface.DrawTexturedRect(nDeep,nY,nW-nDeep,nH)
     -- Holds Teeth
-    surface.SetDrawColor(MColor)
+    surface.SetDrawColor(stDrawDyes.Yello)
     surface.DrawTexturedRect(nW-nDeep,nY,nW,nH)
   end
 end
@@ -983,7 +980,7 @@ function TOOL:DrawToolScreen(w, h)
   end
   DrawTextRowColor(txPos,"Trace status: Valid",stDrawDyes.White)
   local model = self:GetClientInfo("model") or ""
-  local hdRec = gearasmlib.CacheQueryPiece(model)
+  local hdRec = gearasmlib.CacheQueryPiece(model)  
   if(not hdRec) then
     DrawTextRowColor(txPos,"Holds Model: Invalid")
     return
@@ -999,8 +996,8 @@ function TOOL:DrawToolScreen(w, h)
     local trRec   = gearasmlib.CacheQueryPiece(trModel)
           trModel = gearasmlib.GetModelFileName(trModel)
     if(trRec) then
-      trMesh = gearasmlib.RoundValue(trRec.Mesh,0.01)
-      trRad  = gearasmlib.RoundValue(gearasmlib.GetLengthVector(trRec.O),0.01)
+      trMesh = tostring(gearasmlib.RoundValue(trRec.Mesh,0.01)) or NoAV
+      trRad = gearasmlib.RoundValue(gearasmlib.GetLengthVector(trRec.O),0.01)
     end
   end
   local hdRad = gearasmlib.RoundValue(gearasmlib.GetLengthVector(hdRec.O),0.01)
@@ -1012,7 +1009,7 @@ function TOOL:DrawToolScreen(w, h)
   DrawTextRowColor(txPos,"Ratio: "..tostring(Ratio).." > "..tostring(trRad or NoAV).."/"..tostring(hdRad))
   DrawTextRowColor(txPos,"StackMod: "..stSMode[stmode],stDrawDyes.Red)
   DrawTextRowColor(txPos,tostring(os.date()),stDrawDyes.White)
-  DrawRatioVisual(w,h,txPos.y+2,trRad,hdRad,10)
+  DrawRatioVisual(w,h,txPos.y+2,trRad,hdRad,8)
 end
 
 function TOOL.BuildCPanel(CPanel)
@@ -1124,8 +1121,8 @@ function TOOL.BuildCPanel(CPanel)
   local pText = vgui.Create("DTextEntry")
         pText:SetPos(2,300)
         pText:SetTall(18)
-        pText:SetText(gearasmlib.GetDefaultString(GetConVarString("gearassembly_bgskids"),
-                                           "Bodygroup IDs separated with commas > ENTER"))
+        pText:SetText(GetConVarString("gearassembly_bgskids") or
+                      "Bodygroup IDs separated with commas > ENTER")
         pText.OnEnter = function(self)
           local sTX = self:GetValue() or ""
           RunConsoleCommand("gearassembly_bgskids",sTX)
