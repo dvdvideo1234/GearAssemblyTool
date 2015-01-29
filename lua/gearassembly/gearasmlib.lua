@@ -1257,35 +1257,62 @@ end
 
 --------------------------- AssemblyLib PIECE QUERY -----------------------------
 
-function AttachKillTimer(oLocation,sTableKey,sKey,defTable,anyMessage)
-  if(not oLocation) then return false end
-  if(not (type(sTableKey) == "string" and type(sKey) == "string")) then return false end
-  local TimerKey = sTableKey.."_"..sKey
-  if(not oLocation[sTableKey]) then return false end
-  if(not oLocation[sTableKey][sKey]) then return false end
+function AttachKillTimer(oLocation,tKeys,defTable,anyMessage)
+  if(not (oLocation and tKeys)) then return false end
+  if(not tKeys[1]) then return false end
+  local Cnt = 1
+  local Place, Key, Typ
+  local TimerKey = ""
+  while(tKeys[Cnt]) do
+    Key = tKeys[Cnt]
+    Typ = type(Key)
+    if(not (Typ == "string" or Typ == "number")) then return false end
+    TimerKey = TimerKey..tostring(Key)
+    if(tKeys[Cnt+1]) then
+      TimerKey = TimerKey .. "_"
+      if(Place) then
+        Place = Place[Key] 
+        if(not Place) then return false end
+      else
+        Place = oLocation[Key]
+      end
+    end
+    Cnt = Cnt + 1
+  end
   local Duration = 0
-  if(defTable)
+  if(defTable) then
     Duration = tonumber(defTable.Keep) or 0
   end
-  if(not timer.Exists(TimerKey) and Duration > 0) then
+  if(not timer.Exists(TimerKey) and Place and Duration > 0) then
     timer.Create(TimerKey, Duration, 1, function()
                                      LogInstance("AttachKillTimer["..TimerKey.."]("..Duration.."): "
                                                   ..tostring(anyMessage).." > Dead")
                                      timer.Stop(TimerKey)
                                      timer.Destroy(TimerKey)
-                                     oLocation[sTableKey][sKey] = nil
+                                     Place[sKey] = nil
                                      collectgarbage()
                                    end)
-    timer.Start(TimerKey)
+    return timer.Start(TimerKey)
   end
+  return false
 end
 
 function RestartTimer(sTableKey,sKey)
-  if(not (sTableKey and sKey)) then return false end
-  if(not (type(sTableKey) == "string" and
-          type(sKey)      == "string")
-  ) then return false end
-  local Key = sTableKey.."_"..sKey
+  if(not tKeys) then return false end
+  if(not tKeys[1]) then return false end
+  local Cnt = 1
+  local Key, Typ
+  local TimerKey = ""
+  while(tKeys[Cnt]) do
+    Key = tKeys[Cnt]
+    Typ = type(Key)
+    if(not (Typ == "string" or Typ == "number")) then return false end
+    TimerKey = TimerKey..tostring(Key)
+    if(tKeys[Cnt+1]) then
+      TimerKey = TimerKey .. "_"
+    end
+    Cnt = Cnt + 1
+  end
   if(not timer.Exists(Key)) then return false end
   return timer.Start(Key)
 end
@@ -1304,14 +1331,14 @@ function CacheQueryPiece(sModel)
   local stPiece  = LibCache[TableKey][sModel]
   if(stPiece) then
     if(stPiece.Here) then
-      RestartTimer(TableKey,sModel)
+      RestartTimer({TableKey,sModel},"CacheQueryPiece")
       return LibCache[TableKey][sModel]
     end
   end
   LogInstance("CacheQueryPiece: Model >> Pool: "..GetModelFileName(sModel))
   LibCache[TableKey][sModel] = {}
   stPiece = LibCache[TableKey][sModel]
-  AttachKillTimer(LibCache,TableKey,sModel,defTable,"CacheQueryPiece")
+  AttachKillTimer(LibCache,{TableKey,sModel},defTable,"CacheQueryPiece")
   local Q = SQLBuildSelect(TableKey,nil,{{1,sModel}})
   if(Q) then
     local qData = sql.Query(Q)
