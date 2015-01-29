@@ -263,8 +263,8 @@ function SetVectorXYZ(vVec, nX, nY, nZ)
 end
 
 function GetDefaultString(sBase, sDefault)
-  if(type(sBase) ~= type(sDefault)) then return "" end
   if(type(sBase) ~= "string") then return "" end
+  if(type(sBase) ~= type(sDefault)) then return "" end
   if(string.len(sBase > 0)) then return sBase end
   return sDefault
 end
