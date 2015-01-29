@@ -198,7 +198,7 @@ if(SERVER) then
         phPiece:SetMass(nMass)
         phPiece:EnableMotion(false)
         gearasmlib.AttachBodyGroups(ePiece,IDs[1] or "")
-        ePiece:SetSkin(math.Clamp(tonumber(IDs[2]) or 1,1,ePiece:SkinCount()))
+        ePiece:SetSkin(math.Clamp(tonumber(IDs[2]) or 0,0,ePiece:SkinCount()))
         return ePiece
       end
       ePiece:Remove()

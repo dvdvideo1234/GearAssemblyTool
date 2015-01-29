@@ -265,7 +265,7 @@ end
 function GetDefaultString(sBase, sDefault)
   if(type(sBase) ~= "string") then return "" end
   if(type(sBase) ~= type(sDefault)) then return "" end
-  if(string.len(sBase > 0)) then return sBase end
+  if(string.len(sBase) > 0) then return sBase end
   return sDefault
 end
 
@@ -1262,14 +1262,14 @@ function AttachKillTimer(oLocation,tKeys,defTable,anyMessage)
   if(not tKeys[1]) then return false end
   local Cnt = 1
   local Place, Key, Typ
-  local TimerKey = ""
+  local TimerID = ""
   while(tKeys[Cnt]) do
     Key = tKeys[Cnt]
     Typ = type(Key)
     if(not (Typ == "string" or Typ == "number")) then return false end
-    TimerKey = TimerKey..tostring(Key)
+    TimerID = TimerID..tostring(Key)
     if(tKeys[Cnt+1]) then
-      TimerKey = TimerKey .. "_"
+      TimerID = TimerID .. "_"
       if(Place) then
         Place = Place[Key] 
         if(not Place) then return false end
@@ -1283,38 +1283,38 @@ function AttachKillTimer(oLocation,tKeys,defTable,anyMessage)
   if(defTable) then
     Duration = tonumber(defTable.Keep) or 0
   end
-  if(not timer.Exists(TimerKey) and Place and Duration > 0) then
-    timer.Create(TimerKey, Duration, 1, function()
-                                     LogInstance("AttachKillTimer["..TimerKey.."]("..Duration.."): "
+  if(not timer.Exists(TimerID) and Place and Duration > 0) then
+    timer.Create(TimerID, Duration, 1, function()
+                                     LogInstance("AttachKillTimer["..TimerID.."]("..Duration.."): "
                                                   ..tostring(anyMessage).." > Dead")
-                                     timer.Stop(TimerKey)
-                                     timer.Destroy(TimerKey)
-                                     Place[sKey] = nil
+                                     Place[Key] = nil
+                                     timer.Stop(TimerID)
+                                     timer.Destroy(TimerID)
                                      collectgarbage()
                                    end)
-    return timer.Start(TimerKey)
+    return timer.Start(TimerID)
   end
   return false
 end
 
-function RestartTimer(sTableKey,sKey)
+function RestartTimer(tKeys,anyMessage)
   if(not tKeys) then return false end
   if(not tKeys[1]) then return false end
   local Cnt = 1
   local Key, Typ
-  local TimerKey = ""
+  local TimerID = ""
   while(tKeys[Cnt]) do
     Key = tKeys[Cnt]
     Typ = type(Key)
     if(not (Typ == "string" or Typ == "number")) then return false end
-    TimerKey = TimerKey..tostring(Key)
+    TimerID = TimerID..tostring(Key)
     if(tKeys[Cnt+1]) then
-      TimerKey = TimerKey .. "_"
+      TimerID = TimerID .. "_"
     end
     Cnt = Cnt + 1
   end
-  if(not timer.Exists(Key)) then return false end
-  return timer.Start(Key)
+  if(not timer.Exists(TimerID)) then return false end
+  return timer.Start(TimerID)
 end
 
 -- Cashing the selected Piece Result
