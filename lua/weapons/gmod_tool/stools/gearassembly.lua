@@ -828,7 +828,7 @@ function TOOL:DrawToolScreen(w, h)
   DrawTextRowColor(txPos,"Ratio: "..tostring(Ratio).." > "..tostring(trRad or NoAV).."/"..tostring(hdRad))
   DrawTextRowColor(txPos,"StackMod: "..stSMode[stmode],stDrawDyes.Red)
   DrawTextRowColor(txPos,tostring(os.date()),stDrawDyes.White)
-  DrawRatioVisual(w,h,txPos.y+2,trRad,hdRad,10)
+  DrawRatioVisual(w,h,txPos.y+2,trRad,hdRad,7)
 end
 
 function TOOL.BuildCPanel(CPanel)
