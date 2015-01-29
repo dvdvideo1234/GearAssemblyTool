@@ -1841,16 +1841,21 @@ function GetENTSpawn(trEnt,nRotPivot,hdModel,enIgnTyp,enOrAngTr,
   
   SetVector(stSpawn.MPos, hdRec.O)
   stSpawn.MPos:Rotate(stSpawn.MAng)
-
+  
+  NegAngle(stSpawn.MAng)
+  
   stSpawn.MAng:RotateAroundAxis(stSpawn.MAng:Up(),180)
   stSpawn.MAng:RotateAroundAxis(stSpawn.MAng:Right(),hdRec.Mesh)
   NegVector(stSpawn.MPos)
   stSpawn.MPos:Set(DecomposeByAngle(stSpawn.MPos,stSpawn.MAng))
 
+  SetAngle(stSpawn.MAng,hdRec.A)
+  NegAngle(stSpawn.MAng)
+  
   stSpawn.SAng:Set(stSpawn.DAng)
-  stSpawn.SAng:RotateAroundAxis(stSpawn.DAng:Right()  ,hdRec.A[caP] * hdRec.A[csX])
-  stSpawn.SAng:RotateAroundAxis(stSpawn.DAng:Forward(),hdRec.A[caY] * hdRec.A[csY])
-  stSpawn.SAng:RotateAroundAxis(stSpawn.DAng:Up()     ,hdRec.A[caR] * hdRec.A[csZ])
+  stSpawn.SAng:RotateAroundAxis(stSpawn.DAng:Right()  ,stSpawn.MAng[caP] * hdRec.A[csX])
+  stSpawn.SAng:RotateAroundAxis(stSpawn.DAng:Forward(),stSpawn.MAng[caY] * hdRec.A[csY])
+  stSpawn.SAng:RotateAroundAxis(stSpawn.DAng:Up()     ,stSpawn.MAng[caR] * hdRec.A[csZ])
 
   -- Do Spawn Position
   stSpawn.SPos:Set(stSpawn.OPos)
