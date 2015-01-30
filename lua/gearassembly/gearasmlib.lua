@@ -76,7 +76,7 @@ local LibToolName = "gearassembly"
 -- Library Debug Settings. The file is created in
 -- the DATA folder :3 *.txt is appended
 local LibDebugEn = 1
-local LibLogFile = LibToolName .. "_log"
+local LibLogFile = "" -- LibToolName .. "_log"
 local LibMaxLogs = 10000
 local LibCurLogs = 0
 
@@ -135,7 +135,7 @@ local LibSQLBuildError = ""
 local LibTables = {
   [LibTablePrefix.."PIECES"] = {
     Size = 7,
-    Keep = 15,
+    Keep = 5,
     [1] = {"MODEL" , "TEXT", "L"},
     [2] = {"TYPE"  , "TEXT"},
     [3] = {"NAME"  , "TEXT"},
