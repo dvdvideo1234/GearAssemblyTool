@@ -1330,6 +1330,7 @@ function CacheQueryPiece(sModel)
   if(sModel == "") then return nil end
   if(not util.IsValidModel(sModel)) then return nil end
   local TableKey = LibTablePrefix.."PIECES"
+  local CacheInd = {TableKey,sModel}
   if(not LibCache[TableKey]) then
     LibCache[TableKey] = {}
   end
@@ -1337,14 +1338,14 @@ function CacheQueryPiece(sModel)
   local stPiece  = LibCache[TableKey][sModel]
   if(stPiece) then
     if(stPiece.Here) then
-      RestartTimer({TableKey,sModel},"CacheQueryPiece")
+      RestartTimer(CacheInd,"CacheQueryPiece")
       return LibCache[TableKey][sModel]
     end
   end
   LogInstance("CacheQueryPiece: Model >> Pool: "..GetModelFileName(sModel))
   LibCache[TableKey][sModel] = {}
   stPiece = LibCache[TableKey][sModel]
-  AttachKillTimer(LibCache,{TableKey,sModel},defTable,"CacheQueryPiece")
+  AttachKillTimer(LibCache,CacheInd,defTable,"CacheQueryPiece")
   local Q = SQLBuildSelect(TableKey,nil,{{1,sModel}})
   if(Q) then
     local qData = sql.Query(Q)
