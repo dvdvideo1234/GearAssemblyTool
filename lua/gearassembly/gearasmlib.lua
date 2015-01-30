@@ -244,7 +244,7 @@ function SubVectorXYZ(vBase, nX, nY, nZ)
   vBase[cvZ] = vBase[cvZ] - (nZ or 0)
 end
 
-function NegVector(vBase, nX, nY, nZ)
+function NegVector(vBase)
   vBase[cvX] = -vBase[cvX]
   vBase[cvY] = -vBase[cvY]
   vBase[cvZ] = -vBase[cvZ]
