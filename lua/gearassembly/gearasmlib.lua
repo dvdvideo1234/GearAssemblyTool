@@ -263,10 +263,16 @@ function SetVectorXYZ(vVec, nX, nY, nZ)
 end
 
 function GetDefaultString(sBase, sDefault)
-  if(type(sBase) ~= "string") then return "" end
-  if(type(sBase) ~= type(sDefault)) then return "" end
-  if(string.len(sBase) > 0) then return sBase end
-  return sDefault
+  local IsBase = (type(sBase)    == "string")
+  local IsDeft = (type(sDefault) == "string")
+  if(IsBase) then
+    if(string.len(sBase) > 0) then return sBase end
+    if(IsDeft) then return sDefault end
+    return ""
+  else
+    if(IsDeft) then return sDefault end
+    return ""
+  end
 end
 
 function SetTableDefinition(sTable, tDefinition)
