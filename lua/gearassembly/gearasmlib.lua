@@ -1289,15 +1289,19 @@ function AttachKillTimer(oLocation,tKeys,defTable,anyMessage)
   if(defTable) then
     Duration = tonumber(defTable.Keep) or 0
   end
-  if(not timer.Exists(TimerID) and Place and Duration > 0) then
+  if(Place and
+     Place[Key] and
+     Duration > 0 and
+     not timer.Exists(TimerID)
+  ) then
     timer.Create(TimerID, Duration, 1, function()
-                                     LogInstance("AttachKillTimer["..TimerID.."]("..Duration.."): "
-                                                  ..tostring(anyMessage).." > Dead")
-                                     Place[Key] = nil
-                                     timer.Stop(TimerID)
-                                     timer.Destroy(TimerID)
-                                     collectgarbage()
-                                   end)
+      LogInstance("AttachKillTimer["..TimerID.."]("..Duration.."): "
+                   ..tostring(anyMessage).." > Dead")
+      Place[Key] = nil
+      timer.Stop(TimerID)
+      timer.Destroy(TimerID)
+      collectgarbage()
+    end)
     return timer.Start(TimerID)
   end
   return false
