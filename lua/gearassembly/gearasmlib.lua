@@ -283,7 +283,7 @@ function SetTableDefinition(sTable, tDefinition)
   for k,v in pairs(LibTables) do
     if(k == sTable) then return false end
   end
-  LibTables[sTable] = tDefinition
+  LibTables[LibTablePrefix..sTable] = tDefinition
   return true
 end
 
@@ -1345,6 +1345,7 @@ function CacheQueryPiece(sModel)
       RestartTimer(CacheInd,"CacheQueryPiece")
       return LibCache[TableKey][sModel]
     end
+    return nil
   end
   LogInstance("CacheQueryPiece: Model >> Pool: "..GetModelFileName(sModel))
   LibCache[TableKey][sModel] = {}
@@ -1847,16 +1848,13 @@ function GetENTSpawn(trEnt,nRotPivot,hdModel,enIgnTyp,enOrAngTr,
   stSpawn.DAng:RotateAroundAxis(stSpawn.DAng:Up(),ucsAngY + 180)
   -- Get Hold model stuff
 
-  SetAngle(stSpawn.MAng, hdRec.A)
-  NegAngle(stSpawn.MAng)
-  
+  SetAngle(stSpawn.MAng, hdRec.A)   
   SetVector(stSpawn.MPos, hdRec.O)
+  NegAngle(stSpawn.MAng)
   stSpawn.MPos:Rotate(stSpawn.MAng)
   
-  NegAngle(stSpawn.MAng)
-  
   stSpawn.MAng:RotateAroundAxis(stSpawn.MAng:Up(),180)
-  stSpawn.MAng:RotateAroundAxis(stSpawn.MAng:Right(),hdRec.Mesh)
+  stSpawn.MAng:RotateAroundAxis(stSpawn.MAng:Right(),-hdRec.Mesh)
   NegVector(stSpawn.MPos)
   stSpawn.MPos:Set(DecomposeByAngle(stSpawn.MPos,stSpawn.MAng))
 
@@ -1864,9 +1862,9 @@ function GetENTSpawn(trEnt,nRotPivot,hdModel,enIgnTyp,enOrAngTr,
   NegAngle(stSpawn.MAng)
   
   stSpawn.SAng:Set(stSpawn.DAng)
-  stSpawn.SAng:RotateAroundAxis(stSpawn.DAng:Right()  ,stSpawn.MAng[caP] * hdRec.A[csX])
-  stSpawn.SAng:RotateAroundAxis(stSpawn.DAng:Forward(),stSpawn.MAng[caY] * hdRec.A[csY])
-  stSpawn.SAng:RotateAroundAxis(stSpawn.DAng:Up()     ,stSpawn.MAng[caR] * hdRec.A[csZ])
+  stSpawn.SAng:RotateAroundAxis(stSpawn.SAng:Right()  ,stSpawn.MAng[caP] * hdRec.A[csX])
+  stSpawn.SAng:RotateAroundAxis(stSpawn.SAng:Up()     ,stSpawn.MAng[caY] * hdRec.A[csY])
+  stSpawn.SAng:RotateAroundAxis(stSpawn.SAng:Forward(),stSpawn.MAng[caR] * hdRec.A[csZ])
 
   -- Do Spawn Position
   stSpawn.SPos:Set(stSpawn.OPos)

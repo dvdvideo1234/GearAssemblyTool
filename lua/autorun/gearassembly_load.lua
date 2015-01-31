@@ -11,7 +11,8 @@ else
   gearasmlib.PrintInstance("GEARASSEMBLY: DB PIECES not exported, populating from LUA.")
 
   ------- DEV -------
-  gearasmlib.SQLInsertRecord("PIECES",{"models/props_wasteland/wheel02b.mdl",   "Development", "#", 45, "65, 0, 0", "0, 0, -90", "0.29567885398865,0.3865530192852,-0.36239844560623"})
+  --gearasmlib.SQLInsertRecord("PIECES",{"models/props_wasteland/wheel02b.mdl",   "Development", "Dev1", 45, "65, 0, 0", "-90, 90, 180", "0.29567885398865,0.3865530192852,-0.36239844560623"})
+  gearasmlib.SQLInsertRecord("PIECES",{"models/props_wasteland/wheel02b.mdl",   "Development", "Dev2", 45, "65, 0, 0", "45, -180, -90", "0.29567885398865,0.3865530192852,-0.36239844560623"})
 
   ------ PIECES ------
   --- Gmod 10
@@ -80,18 +81,20 @@ else
   gearasmlib.SQLInsertRecord("PIECES",{"models/mechanics/gears2/vert_24t1.mdl", "PHX Vertical", "#", 90, "25.78, 0, 5.6", "", "-0.0046720593236387,-0.0090785603970289,-1.5481045246124"})
   gearasmlib.SQLInsertRecord("PIECES",{"models/mechanics/gears2/vert_36t1.mdl", "PHX Vertical", "#", 90, "37.78, 0, 5.6", "", "0.0043581933714449,-0.00018005351012107,-1.6056708097458"})
   --- PHX Teeth
-  gearasmlib.SQLInsertRecord("PIECES",{"models/mechanics/gears2/pinion_20t1.mdl", "PHX Teeth Flat", "#", 0, "2.55, 0, 0", " 0.000, -90.000,  0.000", "-0.031061116605997, 0.68289417028427, 0.00010814304550877"})
-  gearasmlib.SQLInsertRecord("PIECES",{"models/mechanics/gears2/pinion_20t2.mdl", "PHX Teeth Flat", "#", 0, "2.55, 0, 0", " 0.000, -90.000,  0.000", "-0.0308688133955, 0.68287181854248, 0.00033729249844328"})
-  gearasmlib.SQLInsertRecord("PIECES",{"models/mechanics/gears2/pinion_20t3.mdl", "PHX Teeth Flat", "#", 0, "2.55, 0, 0", "-0.000, -90.000, -0.000", "-0.03086843341589, 0.68287181854248, 0.00067511270754039"})
-  gearasmlib.SQLInsertRecord("PIECES",{"models/mechanics/gears2/pinion_40.mdl  ", "PHX Teeth Flat", "#", 0, "2.55, 0, 0", " 0.000, -90.000,  0.000", "0.51859414577484, 0.68797379732132, -0.00052835274254903"})
-  gearasmlib.SQLInsertRecord("PIECES",{"models/mechanics/gears2/pinion_40t1.mdl", "PHX Teeth Flat", "#", 0, "2.55, 0, 0", " 0.000, -90.000,  0.000", "-0.0045434008352458, 0.68366396427155, 0.0020906918216497"})
-  gearasmlib.SQLInsertRecord("PIECES",{"models/mechanics/gears2/pinion_40t2.mdl", "PHX Teeth Flat", "#", 0, "2.55, 0, 0", " 0.000, -90.000,  0.000", "-0.0043520531617105, 0.68364036083221, 0.004302385263145"})
-  gearasmlib.SQLInsertRecord("PIECES",{"models/mechanics/gears2/pinion_40t3.mdl", "PHX Teeth Flat", "#", 0, "2.55, 0, 0", " 0.000, -90.000,  0.000", "-0.0043467613868415, 0.68364137411118, 0.008606200106442"})
-  gearasmlib.SQLInsertRecord("PIECES",{"models/mechanics/gears2/pinion_80t1.mdl", "PHX Teeth Flat", "#", 0, "2.55, 0, 0", " 0.000, -90.000,  0.000", "-0.018019204959273, 0.68289333581924, 0.00052548095118254"})
-  gearasmlib.SQLInsertRecord("PIECES",{"models/mechanics/gears2/pinion_80t2.mdl", "PHX Teeth Flat", "#", 0, "2.55, 0, 0", " 0.000, -90.000,  0.000", "-0.017873015254736, 0.68288779258728, 0.0010742680169642"})
-  gearasmlib.SQLInsertRecord("PIECES",{"models/mechanics/gears2/pinion_80t3.mdl", "PHX Teeth Flat", "#", 0, "2.55, 0, 0", " 0.000, -90.000,  0.000", "-0.018022054806352, 0.68289351463318, 0.0021022602450103"})
-  --- PHX Spotter Rack
-
+  gearasmlib.SQLInsertRecord("PIECES",{"models/mechanics/gears2/pinion_20t1.mdl", "PHX Teeth Flat", "#", 0, "2.55, 0, 0", "0, -90, 0", "-0.031061116605997, 0.68289417028427, 0.00010814304550877"})
+  gearasmlib.SQLInsertRecord("PIECES",{"models/mechanics/gears2/pinion_20t2.mdl", "PHX Teeth Flat", "#", 0, "2.55, 0, 0", "0, -90, 0", "-0.0308688133955, 0.68287181854248, 0.00033729249844328"})
+  gearasmlib.SQLInsertRecord("PIECES",{"models/mechanics/gears2/pinion_20t3.mdl", "PHX Teeth Flat", "#", 0, "2.55, 0, 0", "0, -90, 0", "-0.03086843341589, 0.68287181854248, 0.00067511270754039"})
+  gearasmlib.SQLInsertRecord("PIECES",{"models/mechanics/gears2/pinion_40t1.mdl", "PHX Teeth Flat", "#", 0, "2.55, 0, 0", "0, -90, 0", "-0.0045434008352458, 0.68366396427155, 0.0020906918216497"})
+  gearasmlib.SQLInsertRecord("PIECES",{"models/mechanics/gears2/pinion_40t2.mdl", "PHX Teeth Flat", "#", 0, "2.55, 0, 0", "0, -90, 0", "-0.0043520531617105, 0.68364036083221, 0.004302385263145"})
+  gearasmlib.SQLInsertRecord("PIECES",{"models/mechanics/gears2/pinion_40t3.mdl", "PHX Teeth Flat", "#", 0, "2.55, 0, 0", "0, -90, 0", "-0.0043467613868415, 0.68364137411118, 0.008606200106442"})
+  gearasmlib.SQLInsertRecord("PIECES",{"models/mechanics/gears2/pinion_80t1.mdl", "PHX Teeth Flat", "#", 0, "2.55, 0, 0", "0, -90, 0", "-0.018019204959273, 0.68289333581924, 0.00052548095118254"})
+  gearasmlib.SQLInsertRecord("PIECES",{"models/mechanics/gears2/pinion_80t2.mdl", "PHX Teeth Flat", "#", 0, "2.55, 0, 0", "0, -90, 0", "-0.017873015254736, 0.68288779258728, 0.0010742680169642"})
+  gearasmlib.SQLInsertRecord("PIECES",{"models/mechanics/gears2/pinion_80t3.mdl", "PHX Teeth Flat", "#", 0, "2.55, 0, 0", "0, -90, 0", "-0.018022054806352, 0.68289351463318, 0.0021022602450103"})
+  --- PHX Spotted Rack
+  gearasmlib.SQLInsertRecord("PIECES",{"models/props_phx/gears/rack9.mdl" , "PHX Spotted Rack", "#", 0, " 2.7, 0, 0", "-90, 0, 180", "-0.00016037904424593, -0.13780690729618, 2.362241268158"})
+  gearasmlib.SQLInsertRecord("PIECES",{"models/props_phx/gears/rack18.mdl", "PHX Spotted Rack", "#", 0, " 2.7, 0, 0", "-90, 0, 180", "0.022915028035641, 2.2609362602234, 2.3429780006409"})
+  gearasmlib.SQLInsertRecord("PIECES",{"models/props_phx/gears/rack36.mdl", "PHX Spotted Rack", "#", 0, " 2.7, 0, 0", "-90, 0, 180", "0.013655911199749, -0.019220048561692, 2.3991346359253"})
+  gearasmlib.SQLInsertRecord("PIECES",{"models/props_phx/gears/rack70.mdl", "PHX Spotted Rack", "#", 0, " 2.7, 0, 0", "-90, 0, 180", "-0.017855016514659, 0.20156383514404, 2.3644349575043"})
   --- PHX Bevel
   gearasmlib.SQLInsertRecord("PIECES",{"models/mechanics/gears2/bevel_12t1.mdl", "PHX Bevel", "#", 45, "12.2, 0, 1.3", "", "-0.0026455507613719,-0.0061479024589062,-0.87438750267029"})
   gearasmlib.SQLInsertRecord("PIECES",{"models/Mechanics/gears2/bevel_18t1.mdl", "PHX Bevel", "#", 45, "17.3, 0, 1.3", "", "-0.033187858760357,0.0065126456320286,-1.0525280237198"})
@@ -169,7 +172,7 @@ else
   gearasmlib.SQLInsertRecord("PIECES",{"models/sprops/mechanics/sgears/spur_84t_l.mdl", "SProps Flat Large", "#", 0, "42.146, 0, 0", "", "-0.0063623366877437, -0.0040172939188778, 0.00028934032889083"})
   gearasmlib.SQLInsertRecord("PIECES",{"models/sprops/mechanics/sgears/spur_90t_l.mdl", "SProps Flat Large", "#", 0, "45.143, 0, 0", "", "-3.0313363822643e-005, 0.0025897726882249, -8.3106489910278e-005"})
   gearasmlib.SQLInsertRecord("PIECES",{"models/sprops/mechanics/sgears/spur_96t_l.mdl", "SProps Flat Large", "#", 0, "48.141, 0, 0", "", "-0.020891901105642, -0.0010100682266057, 0.00014523084973916"})
-  --- SProps Bevel
+  --- SProps Bevel Large
   gearasmlib.SQLInsertRecord("PIECES",{"models/sprops/mechanics/bgears/bevel_10t_l.mdl", "SProps Bevel Large", "#", 45, " 5.520, 0, 1.35", "", "-2.1634095901391e-005, 0.00061463302699849, -1.0174524784088"})
   gearasmlib.SQLInsertRecord("PIECES",{"models/sprops/mechanics/bgears/bevel_12t_l.mdl", "SProps Bevel Large", "#", 45, " 6.244, 0, 1.35", "", "-0.03066711127758, 0.013303384184837, -0.9567843079567"})
   gearasmlib.SQLInsertRecord("PIECES",{"models/sprops/mechanics/bgears/bevel_14t_l.mdl", "SProps Bevel Large", "#", 45, " 7.237, 0, 1.35", "", "0.0046781497076154, 0.0045431824401021, -0.91953921318054"})
@@ -182,5 +185,42 @@ else
   gearasmlib.SQLInsertRecord("PIECES",{"models/sprops/mechanics/bgears/bevel_48t_l.mdl", "SProps Bevel Large", "#", 45, "24.233, 0, 1.35", "", "0.0043564774096012, 0.0072778444737196, -0.7125990986824"})
   gearasmlib.SQLInsertRecord("PIECES",{"models/sprops/mechanics/bgears/bevel_54t_l.mdl", "SProps Bevel Large", "#", 45, "27.193, 0, 1.35", "", "-0.0012360077816993, -0.015729079023004, -0.70351052284241"})
   gearasmlib.SQLInsertRecord("PIECES",{"models/sprops/mechanics/bgears/bevel_60t_l.mdl", "SProps Bevel Large", "#", 45, "30.188, 0, 1.35", "", "0.0024155958089978, -0.0004843553469982, -0.69532954692841"})
+  --- SProps Bevel Small
+  gearasmlib.SQLInsertRecord("PIECES",{"models/sprops/mechanics/bgears/bevel_10t_s.mdl", "SProps Bevel Small", "#", 45, " 2.793, 0, 0.7", "", "-1.1249650924583e-005, 0.00030727940611541, -0.50872629880905"})
+  gearasmlib.SQLInsertRecord("PIECES",{"models/sprops/mechanics/bgears/bevel_12t_s.mdl", "SProps Bevel Small", "#", 45, " 3.289, 0, 0.7", "", "0.021812098100781, 0.034060511738062, -0.48147577047348"})
+  gearasmlib.SQLInsertRecord("PIECES",{"models/sprops/mechanics/bgears/bevel_14t_s.mdl", "SProps Bevel Small", "#", 45, " 3.784, 0, 0.7", "", "0.012455121614039, 0.0088365506380796, -0.46449995040894"})
+  gearasmlib.SQLInsertRecord("PIECES",{"models/sprops/mechanics/bgears/bevel_16t_s.mdl", "SProps Bevel Small", "#", 45, " 4.279, 0, 0.7", "", "0.00057214515982196, 0.00084737170254812, -0.44488653540611"})
+  gearasmlib.SQLInsertRecord("PIECES",{"models/sprops/mechanics/bgears/bevel_18t_s.mdl", "SProps Bevel Small", "#", 45, " 4.775, 0, 0.7", "", "-0.015875330194831, -0.0061574815772474, -0.42753458023071"})
+  gearasmlib.SQLInsertRecord("PIECES",{"models/sprops/mechanics/bgears/bevel_24t_s.mdl", "SProps Bevel Small", "#", 45, " 6.264, 0, 0.7", "", "-2.9411880859698e-006, -1.5586849713145e-006, -0.40141621232033"})
+  gearasmlib.SQLInsertRecord("PIECES",{"models/sprops/mechanics/bgears/bevel_30t_s.mdl", "SProps Bevel Small", "#", 45, " 7.755, 0, 0.7", "", "0.011199345812202, -0.0023416457697749, -0.3832374215126"})
+  gearasmlib.SQLInsertRecord("PIECES",{"models/sprops/mechanics/bgears/bevel_36t_s.mdl", "SProps Bevel Small", "#", 45, " 9.249, 0, 0.7", "", "-2.1506830307771e-005, -0.0082621555775404, -0.37152001261711"})
+  gearasmlib.SQLInsertRecord("PIECES",{"models/sprops/mechanics/bgears/bevel_42t_s.mdl", "SProps Bevel Small", "#", 45, "10.744, 0, 0.7", "", "-1.2801006050722e-006, 1.4830366978913e-007, -0.36367011070251"})
+  gearasmlib.SQLInsertRecord("PIECES",{"models/sprops/mechanics/bgears/bevel_48t_s.mdl", "SProps Bevel Small", "#", 45, "12.240, 0, 0.7", "", "-0.026493191719055, 0.041309744119644, -0.35398504137993"})
+  gearasmlib.SQLInsertRecord("PIECES",{"models/sprops/mechanics/bgears/bevel_54t_s.mdl", "SProps Bevel Small", "#", 45, "13.737, 0, 0.7", "", "0.011715604923666, -0.0062104072421789, -0.35115513205528"})
+  gearasmlib.SQLInsertRecord("PIECES",{"models/sprops/mechanics/bgears/bevel_60t_s.mdl", "SProps Bevel Small", "#", 45, "15.234, 0, 0.7", "", "0.002376772928983, -0.0096677150577307, -0.34716984629631"})
+  --- SProps Rack Large
+  gearasmlib.SQLInsertRecord("PIECES",{"models/sprops/mechanics/racks/rack_12t_l.mdl", "SProps Rack Large", "#", 0, " 2.100, 0, 0", "-90, 0, 180", "-7.0960714992907e-007, 9.5314753707498e-006, -0.66472762823105"})
+  gearasmlib.SQLInsertRecord("PIECES",{"models/sprops/mechanics/racks/rack_24t_l.mdl", "SProps Rack Large", "#", 0, " 2.100, 0, 0", "-90, 0, 180", "2.0629582309084e-007, 9.6307467174483e-006, -0.67044341564178"})
+  gearasmlib.SQLInsertRecord("PIECES",{"models/sprops/mechanics/racks/rack_36t_l.mdl", "SProps Rack Large", "#", 0, " 2.100, 0, 0", "-90, 0, 180", "-3.4605172061219e-008, -4.9788040996646e-006, -0.67230480909348"})
+  gearasmlib.SQLInsertRecord("PIECES",{"models/sprops/mechanics/racks/rack_48t_l.mdl", "SProps Rack Large", "#", 0, " 2.100, 0, 0", "-90, 0, 180", "3.8946841414145e-006, 4.0884210648073e-006, -0.67322540283203"})
+  gearasmlib.SQLInsertRecord("PIECES",{"models/sprops/mechanics/racks/rack_60t_l.mdl", "SProps Rack Large", "#", 0, " 2.100, 0, 0", "-90, 0, 180", "-4.1661261107606e-009, 4.5187160139903e-005, -0.67377626895905"})
+  gearasmlib.SQLInsertRecord("PIECES",{"models/sprops/mechanics/racks/rack_72t_l.mdl", "SProps Rack Large", "#", 0, " 2.100, 0, 0", "-90, 0, 180", "3.8322218642861e-006, 5.0654783990467e-005, -0.67414307594299"})
+  gearasmlib.SQLInsertRecord("PIECES",{"models/sprops/mechanics/racks/rack_84t_l.mdl", "SProps Rack Large", "#", 0, " 2.100, 0, 0", "-90, 0, 180", "3.9428311282563e-008, 6.2194543716032e-005, -0.67440587282181"})
+  gearasmlib.SQLInsertRecord("PIECES",{"models/sprops/mechanics/racks/rack_96t_l.mdl", "SProps Rack Large", "#", 0, " 2.100, 0, 0", "-90, 0, 180", "-7.7476306614699e-006, 3.583199577406e-005, -0.67460036277771"})
+  --- SProps Rack Small
+  gearasmlib.SQLInsertRecord("PIECES",{"models/sprops/mechanics/racks/rack_12t_s.mdl", "SProps Rack Small", "#", 0, " 1.050, 0, 0", "-90, 0, 180", "-8.9563911842561e-007, 7.623572855664e-006, -0.33236381411552"})
+  gearasmlib.SQLInsertRecord("PIECES",{"models/sprops/mechanics/racks/rack_24t_s.mdl", "SProps Rack Small", "#", 0, " 1.050, 0, 0", "-90, 0, 180", "7.805109447645e-008, 5.1519514272513e-006, -0.33522164821625"})
+  gearasmlib.SQLInsertRecord("PIECES",{"models/sprops/mechanics/racks/rack_36t_s.mdl", "SProps Rack Small", "#", 0, " 1.050, 0, 0", "-90, 0, 180", "-3.1340739781172e-008, 3.3068738503061e-006, -0.33615264296532"})
+  gearasmlib.SQLInsertRecord("PIECES",{"models/sprops/mechanics/racks/rack_48t_s.mdl", "SProps Rack Small", "#", 0, " 1.050, 0, 0", "-90, 0, 180", "3.8751231841161e-006, 7.3969954428321e-006, -0.33661276102066"})
+  gearasmlib.SQLInsertRecord("PIECES",{"models/sprops/mechanics/racks/rack_60t_s.mdl", "SProps Rack Small", "#", 0, " 1.050, 0, 0", "-90, 0, 180", "6.0092202325279e-009, 2.8254335120437e-005, -0.33688813447952"})
+  gearasmlib.SQLInsertRecord("PIECES",{"models/sprops/mechanics/racks/rack_72t_s.mdl", "SProps Rack Small", "#", 0, " 1.050, 0, 0", "-90, 0, 180", "3.8311595744744e-006, 2.3214635803015e-005, -0.33707144856453"})
+  gearasmlib.SQLInsertRecord("PIECES",{"models/sprops/mechanics/racks/rack_84t_s.mdl", "SProps Rack Small", "#", 0, " 1.050, 0, 0", "-90, 0, 180", "4.1014533991302e-008, 2.9928796720924e-005, -0.33720290660858"})
+  gearasmlib.SQLInsertRecord("PIECES",{"models/sprops/mechanics/racks/rack_96t_s.mdl", "SProps Rack Small", "#", 0, " 1.050, 0, 0", "-90, 0, 180", "-7.6562746471609e-006, 2.0776307792403e-005, -0.33730128407478"})
+  --- Propeller
+  gearasmlib.SQLInsertRecord("PIECES",{"models/gears/gear_3.mdl" , "Propeller", "#", 0, " 1.903, 0, 0", "", "-8.8830764966019e-009, 1.7266756913159e-005, 4.0000004768372"})
+  gearasmlib.SQLInsertRecord("PIECES",{"models/gears/gear_6.mdl" , "Propeller", "#", 0, " 3.098, 0, 0", "", "6.2004239964608e-008, 7.2985351096122e-009, 3.9999983310699"})
+  gearasmlib.SQLInsertRecord("PIECES",{"models/gears/gear_12.mdl", "Propeller", "#", 0, " 5.234, 0, 0", "", "2.1442920328241e-008, 2.595057146948e-008, 4.0000009536743"})
+  gearasmlib.SQLInsertRecord("PIECES",{"models/gears/gear_24.mdl", "Propeller", "#", 0, " 9.470, 0, 0", "", "-2.3349744537882e-007, -1.7496104192105e-006, 3.9999997615814"})
+  gearasmlib.SQLInsertRecord("PIECES",{"models/gears/planet_16.mdl", "Propeller", "#", 180, " 9.523, 0, 0", "", "2.1667046894436e-006, -1.2715023558485e-006, 5.6510457992554"})
 
 end
