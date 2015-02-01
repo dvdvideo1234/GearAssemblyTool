@@ -4,7 +4,7 @@
 
 set "BinPath=F:\Games\Steam\steamapps\common\GarrysMod\bin"
 
-set  Dir[0]=Gearassembly
+set  Dir[0]=GearAssembly
 set  IDs[0]=384782853
 
 echo Press Crtl+C to terminate !
