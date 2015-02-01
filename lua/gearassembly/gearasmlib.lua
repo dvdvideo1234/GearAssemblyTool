@@ -1741,7 +1741,7 @@ end
 function GetCustomAngBBZ(oEnt,oRec,nMode)
   if(not (oEnt and oEnt:IsValid())) then return 0 end
   local Mode = nMode or 0
-  if(Mode ~= 0 and oRec) then
+  if(oRec and Mode ~= 0) then
     local aAngDB = Angle(oRec.A[caP],oRec.A[caY],oRec.A[caR])
     local vOBB = oEnt:OBBMins()
           SubVector(vOBB,oRec.M)
@@ -1783,7 +1783,9 @@ function GetNORSpawn(stTrace, sModel, ucsPosX, ucsPosY, ucsPosZ,
   stSpawn.R:Set(stSpawn.DAng:Right())
   stSpawn.U:Set(stSpawn.DAng:Up())
   stSpawn.SAng:Set(stSpawn.DAng)
-  AddAngle(stSpawn.SAng,hdRec.A)
+  stSpawn.SAng:RotateAroundAxis(stSpawn.SAng:Right()  ,hdRec.A[caP] * hdRec.A[csX])
+  stSpawn.SAng:RotateAroundAxis(stSpawn.SAng:Up()     ,hdRec.A[caY] * hdRec.A[csY])
+  stSpawn.SAng:RotateAroundAxis(stSpawn.SAng:Forward(),hdRec.A[caR] * hdRec.A[csZ])
   stSpawn.SPos:Set(stTrace.HitPos)
   stSpawn.SPos:Add((ucsPosX or 0) * stSpawn.F)
   stSpawn.SPos:Add((ucsPosY or 0) * stSpawn.R)

@@ -1,4 +1,9 @@
 -- Shared include
+
+if(SERVER) then
+  AddCSLuaFile("gearassembly/gearasmlib.lua")
+end
+
 include("gearassembly/gearasmlib.lua")
 
 -- INITIALIZE DB
