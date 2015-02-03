@@ -163,7 +163,7 @@ if(SERVER) then
   cleanup.Register("GearAssemblys")
 
   function LoadDupeGearAssemblyNoPhysgun(Ply,oEnt,tData)
-    if tData.NoPhysgun then
+    if(tData.NoPhysgun) then
       oEnt:SetMoveType(MOVETYPE_NONE)
       oEnt:SetUnFreezable(true)
       oEnt.PhysgunDisabled = true
@@ -1114,8 +1114,8 @@ function TOOL:MakeGhostEntity(sModel,vPos,aAngle)
 end
 
 function TOOL:UpdateGhost(oEnt, oPly)
-  if not oEnt then return end
-  if not oEnt:IsValid() then return end
+  if(not oEnt) then return end
+  if(not oEnt:IsValid()) then return end
   local Trace = util.TraceLine(util.GetPlayerTrace(oPly))
   if(not Trace) then return end
   local trEnt = Trace.Entity
