@@ -9,23 +9,18 @@ include("gearassembly/gearasmlib.lua")
 -- INITIALIZE DB
 gearasmlib.SQLCreateTable("PIECES",{{1},{2},{3},{1,4},{1,2},{2,4},{1,2,3}},true,true)
 
-if(file.Exists(gearasmlib.BASPath()..gearasmlib.DSVPath().."db_"..gearasmlib.GetToolPrefixU().."PIECES.txt", "DATA")) then
-  gearasmlib.PrintInstance("GEARASSEMBLY: DB PIECES exported, populating from DSV.")
-  gearasmlib.SQLImportFromDSV("db_","PIECES","\t",true)
+if(file.Exists(gearasmlib.BASPath()..gearasmlib.DSVPath().."db_sv_"..gearasmlib.GetToolPrefixU().."PIECES.txt", "DATA")) then
+  gearasmlib.PrintInstance(gearasmlib.GetToolNameU()..": DB PIECES from DSV")
+  gearasmlib.SQLImportFromDSV("PIECES","\t",true,"db_sv_")
 else
-  gearasmlib.PrintInstance("GEARASSEMBLY: DB PIECES not exported, populating from LUA.")
-
+  gearasmlib.PrintInstance(gearasmlib.GetToolNameU()..": DB PIECES from LUA")
   ------- DEV -------
   --gearasmlib.SQLInsertRecord("PIECES",{"models/props_wasteland/wheel02b.mdl",   "Development", "Dev1", 45, "65, 0, 0", "-90, 90, 180", "0.29567885398865,0.3865530192852,-0.36239844560623"})
-  gearasmlib.SQLInsertRecord("PIECES",{"models/props_wasteland/wheel02b.mdl",   "Development", "Dev2", 45, "65, 0, 0", "45, -180, -90", "0.29567885398865,0.3865530192852,-0.36239844560623"})
-
   ------ PIECES ------
   --- Gmod 10
   gearasmlib.SQLInsertRecord("PIECES",{"models/props_phx/mechanics/medgear.mdl", "Old Gmod 10", "#", 0, "24.173, 0, 0", "", "-0.015172731131315, 0.0090782083570957, 3.5684652328491"})
   gearasmlib.SQLInsertRecord("PIECES",{"models/props_phx/mechanics/biggear.mdl", "Old Gmod 10", "#", 0, "33.811, 0, 0", "", "-0.00017268359079026, -0.0035230871289968, 3.5217847824097"})
   gearasmlib.SQLInsertRecord("PIECES",{"models/props_phx/mechanics/slider1.mdl", "Old Gmod 10", "#", 0, " 3.000, 0, 0", "-90.000, 90.000, 180.000", "0.17126856744289, -0.10668225586414, 3.5165667533875"})
-
-
   --- PHX Spur
   gearasmlib.SQLInsertRecord("PIECES",{"models/props_phx/gears/spur9.mdl" , "PHX Spotted Flat", "#", 0, " 7.467, 0, 0", "", "-0.0015837327810004, 0.00016171450261027, 2.8354094028473"})
   gearasmlib.SQLInsertRecord("PIECES",{"models/props_phx/gears/spur12.mdl", "PHX Spotted Flat", "#", 0, " 9.703, 0, 0", "", "-0.0015269597060978, 0.00021413757349364, 2.8405227661133"})
