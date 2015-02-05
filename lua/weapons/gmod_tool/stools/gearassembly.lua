@@ -609,10 +609,10 @@ function TOOL:Reload(Trace)
       end
     end
     if(exportdb ~= 0) then
-      gearasmlib.PrintInstance("Reload + SPEED --> Exporting DB ...")
-      gearasmlib.ExportSQL2Lua("PIECES")
-      gearasmlib.ExportSQL2Inserts("PIECES")
-      gearasmlib.SQLExportIntoDSV("db_","PIECES","\t")
+      gearasmlib.PrintInstance("TOOL:Reload(Trace) > Exporting DB ...")
+      gearasmlib.ExportSQL2Lua("PIECES","db_sv_")
+      gearasmlib.ExportSQL2Inserts("PIECES","db_sv_")
+      gearasmlib.SQLExportIntoDSV("PIECES","\t","db_sv_")
     end
   end
   if(not gearasmlib.IsPhysTrace(Trace)) then return false end

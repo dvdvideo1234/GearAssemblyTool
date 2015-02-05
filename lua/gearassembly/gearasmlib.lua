@@ -1429,7 +1429,7 @@ end
 ---------------------- AssemblyLib EXPORT --------------------------------
 
 -- Used to define DB as a Lua table
-function ExportSQL2Lua(sTable)
+function ExportSQL2Lua(sTable,sPrefix)
   if(type(sTable) ~= "string") then return end
   local TableKey = LibToolPrefixU..sTable
   if(not LibTables[TableKey]) then return end
@@ -1440,11 +1440,11 @@ function ExportSQL2Lua(sTable)
   if(not file.Exists(LibBASPath..LibEXPPath,"DATA")) then
     file.CreateDir(LibBASPath..LibEXPPath)
   end
-  local F = file.Open(LibBASPath..LibEXPPath..
+  local F = file.Open(LibBASPath..LibEXPPath..(sPrefix or "")..
                       "sql2lua_"..TableKey..".txt", "w", "DATA" )
   if(not F) then
-    LogInstance("ExportSQL2Lua: file.Open("..LibBASPath..LibEXPPath
-                                           .."sql2lua_"..TableKey..".txt) Failed")
+    LogInstance("ExportSQL2Lua: file.Open("..LibBASPath..LibEXPPath..
+                (sPrefix or "").."sql2lua_"..TableKey..".txt) Failed")
     return
   end
   local Q
@@ -1495,7 +1495,7 @@ function ExportSQL2Lua(sTable)
 end
 
 -- Used to generate inserts based on the DB itself
-function ExportSQL2Inserts(sTable)
+function ExportSQL2Inserts(sTable,sPrefix)
   if(type(sTable) ~= "string") then return end
   local TableKey = LibToolPrefixU..sTable
   if(not LibTables[TableKey]) then return end
@@ -1506,11 +1506,11 @@ function ExportSQL2Inserts(sTable)
   if(not file.Exists(LibBASPath..LibEXPPath,"DATA")) then
     file.CreateDir(LibBASPath..LibEXPPath)
   end
-  local F = file.Open(LibBASPath..LibEXPPath..
+  local F = file.Open(LibBASPath..LibEXPPath..(sPrefix or "")..
                       "sql2inserts_"..TableKey..".txt", "w", "DATA" )
   if(not F) then
-    LogInstance("ExportSQL2Inserts: file.Open("..LibBASPath..LibEXPPath
-                                               .."sql2inserts_"..TableKey..".txt) Failed")
+    LogInstance("ExportSQL2Inserts: file.Open("..LibBASPath..LibEXPPath..
+                (sPrefix or "").."sql2inserts_"..TableKey..".txt) Failed")
     return
   end
   local Q
@@ -1554,7 +1554,7 @@ function ExportSQL2Inserts(sTable)
   F:Close()
 end
 
-function ExportLua2Inserts(tTable,sName)
+function ExportLua2Inserts(tTable,sName,sPrefix)
   if(not tTable) then return end
   if(not file.Exists(LibBASPath,"DATA")) then
     file.CreateDir(LibBASPath)
@@ -1562,12 +1562,11 @@ function ExportLua2Inserts(tTable,sName)
   if(not file.Exists(LibBASPath..LibEXPPath,"DATA")) then
     file.CreateDir(LibBASPath..LibEXPPath)
   end
-  local F = file.Open(LibBASPath..
-                      LibEXPPath..
+  local F = file.Open(LibBASPath..LibEXPPath..(sPrefix or "")..
                       "lua2inserts_"..(sName or "Data")..".txt", "w", "DATA" )
   if(not F) then
-    LogInstance("ExportLua2Inserts: file.Open("..LibBASPath..LibEXPPath
-              .."lua2inserts_"..(sName or "Data")..".txt) Failed")
+    LogInstance("ExportLua2Inserts: file.Open("..LibBASPath..LibEXPPath..
+                (sPrefix or "").."lua2inserts_"..(sName or "Data")..".txt) Failed")
     return
   end
   if(tTable) then
@@ -1600,22 +1599,22 @@ end
  * Save/Load the DB Using Excel or
  * anything that supports delimiter
  * separated digital tables
- * sSuffix = Something that separates exported table from the rest ( e.g. db_)
+ * sPrefix = Something that separates exported table from the rest ( e.g. db_ )
  * sTable  = Definition KEY to export to
  * sDelim  = Delimiter CHAR data separator
  * bCommit = true to insert the read values
 ]]
-function SQLImportFromDSV(sSuffix,sTable,sDelim,bCommit)
+function SQLImportFromDSV(sTable,sDelim,bCommit,sPrefix)
   if(type(sTable) ~= "string") then return end
   local TableKey = LibToolPrefixU..sTable
   if(not LibTables[TableKey]) then
     LogInstance("SQLImportFromDSV: Missing: Table definition for "..sTable)
     return
   end
-  local F = file.Open(LibBASPath..LibDSVPath..(sSuffix or "")..TableKey..".txt", "r", "DATA" )
+  local F = file.Open(LibBASPath..LibDSVPath..(sPrefix or "")..TableKey..".txt", "r", "DATA" )
   if(not F) then
     LogInstance("SQLImportFromDSV: file.Open("..LibBASPath..LibDSVPath..
-               (sSuffix or "")..TableKey..".txt) Failed")
+               (sPrefix or "")..TableKey..".txt) Failed")
     return
   end
   local Line = ""
@@ -1654,7 +1653,7 @@ function SQLImportFromDSV(sSuffix,sTable,sDelim,bCommit)
   F:Close()
 end
 
-function SQLExportIntoDSV(sSuffix,sTable,sDelim)
+function SQLExportIntoDSV(sTable,sDelim,sPrefix)
   if(type(sTable) ~= "string") then return end
   local TableKey = LibToolPrefixU..sTable
   if(not LibTables[TableKey]) then
@@ -1668,10 +1667,10 @@ function SQLExportIntoDSV(sSuffix,sTable,sDelim)
   if(not file.Exists(LibBASPath..LibDSVPath,"DATA")) then
     file.CreateDir(LibBASPath..LibDSVPath)
   end
-  local F = file.Open(LibBASPath..LibDSVPath..(sSuffix or "")..TableKey..".txt", "w", "DATA" )
+  local F = file.Open(LibBASPath..LibDSVPath..(sPrefix or "")..TableKey..".txt", "w", "DATA" )
   if(not F) then
     LogInstance("SQLExportIntoDSV: file.Open("..LibBASPath..LibDSVPath..
-               (sSuffix or "")..TableKey..".txt) Failed")
+               (sPrefix or "")..TableKey..".txt) Failed")
     return
   end
   local Q
