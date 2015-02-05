@@ -9,7 +9,7 @@ include("gearassembly/gearasmlib.lua")
 -- INITIALIZE DB
 gearasmlib.SQLCreateTable("PIECES",{{1},{2},{3},{1,4},{1,2},{2,4},{1,2,3}},true,true)
 
-if(file.Exists(gearasmlib.BASPath()..gearasmlib.DSVPath().."db_"..gearasmlib.GetTablePrefix().."PIECES.txt", "DATA")) then
+if(file.Exists(gearasmlib.BASPath()..gearasmlib.DSVPath().."db_"..gearasmlib.GetToolPrefixU().."PIECES.txt", "DATA")) then
   gearasmlib.PrintInstance("GEARASSEMBLY: DB PIECES exported, populating from DSV.")
   gearasmlib.SQLImportFromDSV("db_","PIECES","\t",true)
 else

@@ -71,12 +71,17 @@ local timer          = timer
 local string         = string
 
 -- How is the tool called
-local LibToolName = "gearassembly"
+local LibToolNameL = "gearassembly"
+
+-- Table prefix to avoid overlapping and conflicts
+local LibToolNameU   = string.upper(LibToolNameL)
+local LibToolPrefixU = LibToolNameU .. "_"
+local LibToolPrefixL = LibToolNameL .. "_"
 
 -- Library Debug Settings. The file is created in
 -- the DATA folder :3 *.txt is appended
 local LibDebugEn = 0
-local LibLogFile = LibToolName .. "_log"
+local LibLogFile = LibToolNameL .. "_log"
 local LibMaxLogs = 10000
 local LibCurLogs = 0
 
@@ -86,13 +91,10 @@ local LibSymRevSign = "@"
 local LibSymDevider = "_"
 
 -- Operating paths
-local LibBASPath = LibToolName .. "/"
+local LibBASPath = LibToolNameL .. "/"
 local LibEXPPath = "export/"
 local LibDSVPath = "dsvbase/"
 local LibLOGPath = ""
-
--- Table prefix to avoid overlapping and conflicts
-local LibTablePrefix = string.upper(LibToolName) .. "_"
 
 -- Spawn Struct table Space
 local LibSpawn = {
@@ -133,7 +135,7 @@ local LibSQLBuildError = ""
 ---------------- TABLE DEFINITIONS SPACE----------------
 
 local LibTables = {
-  [LibTablePrefix.."PIECES"] = {
+  [LibToolPrefixU.."PIECES"] = {
     Size = 7,
     Keep = 3600,
     [1] = {"MODEL" , "TEXT", "L"},
@@ -151,6 +153,25 @@ module( "gearasmlib" )
 -------------- BEGIN SQL AssemblyLib -------------
 
 ---------------------------- AssemblyLib COMMON ----------------------------
+
+--- Prefixes
+
+function GetToolNameU()
+  return LibToolNameU
+end
+
+function GetToolNameL()
+  return LibToolNameL
+end
+
+
+function GetToolPrefixU()
+  return LibToolPrefixU
+end
+
+function GetToolPrefixL()
+  return LibToolPrefixL
+end
 
 --- Angle
 
@@ -283,13 +304,13 @@ function SetTableDefinition(sTable, tDefinition)
   for k,v in pairs(LibTables) do
     if(k == sTable) then return false end
   end
-  LibTables[LibTablePrefix..sTable] = tDefinition
+  LibTables[LibToolPrefixU..sTable] = tDefinition
   return true
 end
 
 function GetTableDefinition(sTable)
   if(sTable and type(sTable) == "string") then
-    return LibTables[LibTablePrefix..sTable]
+    return LibTables[LibToolPrefixU..sTable]
   end
   return nil
 end
@@ -324,10 +345,6 @@ function LOGPath(sPath)
     LibLOGPath = sPath .. "/"
   end
   return LibLOGPath
-end
-
-function GetTablePrefix()
-  return LibTablePrefix
 end
 
 function IsOther(oEnt)
@@ -1103,7 +1120,7 @@ end
 
 function SQLInsertRecord(sTable,tData)
   if(not type(sTable) == "string") then return false end
-  local TableKey = LibTablePrefix..sTable
+  local TableKey = LibToolPrefixU..sTable
   if(not LibTables[TableKey]) then
     LogInstance("SQLInsertRecord: Missing: Table definition for "..sTable)
     return false
@@ -1206,7 +1223,7 @@ end
 
 function SQLCreateTable(sTable,tIndex,bDelete,bReload)
   if(not type(sTable) == "string") then return false end
-  local TableKey = LibTablePrefix..sTable
+  local TableKey = LibToolPrefixU..sTable
   local tQ = SQLBuildCreate(TableKey,tIndex)
   if(tQ) then
     if(bDelete and sql.TableExists(TableKey)) then
@@ -1333,7 +1350,7 @@ function CacheQueryPiece(sModel)
   if(type(sModel) ~= "string") then return nil end
   if(sModel == "") then return nil end
   if(not util.IsValidModel(sModel)) then return nil end
-  local TableKey = LibTablePrefix.."PIECES"
+  local TableKey = LibToolPrefixU.."PIECES"
   local CacheInd = {TableKey,sModel}
   if(not LibCache[TableKey]) then
     LibCache[TableKey] = {}
@@ -1396,7 +1413,7 @@ end
 
 --- Used to Populate the CPanel Tree
 function PanelQueryPieces()
-  local Q = SQLBuildSelect(LibTablePrefix.."PIECES",{1,2,3},nil,{2,3})
+  local Q = SQLBuildSelect(LibToolPrefixU.."PIECES",{1,2,3},nil,{2,3})
   if(Q) then
     local qData = sql.Query(Q)
     if(qData and qData[1]) then
@@ -1414,7 +1431,7 @@ end
 -- Used to define DB as a Lua table
 function ExportSQL2Lua(sTable)
   if(type(sTable) ~= "string") then return end
-  local TableKey = LibTablePrefix..sTable
+  local TableKey = LibToolPrefixU..sTable
   if(not LibTables[TableKey]) then return end
   local defTable = LibTables[TableKey]
   if(not file.Exists(LibBASPath,"DATA")) then
@@ -1480,7 +1497,7 @@ end
 -- Used to generate inserts based on the DB itself
 function ExportSQL2Inserts(sTable)
   if(type(sTable) ~= "string") then return end
-  local TableKey = LibTablePrefix..sTable
+  local TableKey = LibToolPrefixU..sTable
   if(not LibTables[TableKey]) then return end
   local defTable = LibTables[TableKey]
   if(not file.Exists(LibBASPath,"DATA")) then
@@ -1590,7 +1607,7 @@ end
 ]]
 function SQLImportFromDSV(sSuffix,sTable,sDelim,bCommit)
   if(type(sTable) ~= "string") then return end
-  local TableKey = LibTablePrefix..sTable
+  local TableKey = LibToolPrefixU..sTable
   if(not LibTables[TableKey]) then
     LogInstance("SQLImportFromDSV: Missing: Table definition for "..sTable)
     return
@@ -1639,7 +1656,7 @@ end
 
 function SQLExportIntoDSV(sSuffix,sTable,sDelim)
   if(type(sTable) ~= "string") then return end
-  local TableKey = LibTablePrefix..sTable
+  local TableKey = LibToolPrefixU..sTable
   if(not LibTables[TableKey]) then
     LogInstance("SQLExportIntoDSV: Missing: Table definition for "..tostring(sTable))
     return

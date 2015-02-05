@@ -99,28 +99,28 @@ local csD = 4
 ------------- LOCAL FUNCTIONS AND STUFF ----------------
 
 if(CLIENT) then
-  language.Add("Tool.gearassembly.name", "Gear Assembly")
-  language.Add("Tool.gearassembly.desc", "Assembles gears to mesh together")
-  language.Add("Tool.gearassembly.0"   , "Left click to spawn/stack, Right to change mode, Reload to remove a piece")
-  language.Add("Cleanup.gearassembly"  , "Gear Assembly")
-  language.Add("Cleaned.gearassemblys" , "Cleaned up all Pieces")
+  language.Add("Tool."   ..trackasmlib.GetToolNameL()..".name", "Gear Assembly")
+  language.Add("Tool."   ..trackasmlib.GetToolNameL()..".desc", "Assembles gears to mesh together")
+  language.Add("Tool."   ..trackasmlib.GetToolNameL()..".0"   , "Left click to spawn/stack, Right to change mode, Reload to remove a piece")
+  language.Add("Cleanup."..trackasmlib.GetToolNameL()         , "Gear Assembly")
+  language.Add("Cleaned."..trackasmlib.GetToolNameL().."s"    , "Cleaned up all Pieces")
 
   local function ResetOffsets(oPly,oCom,oArgs)
     -- Reset all of the offset options to zero
-    oPly:ConCommand("gearassembly_nextx 0\n")
-    oPly:ConCommand("gearassembly_nexty 0\n")
-    oPly:ConCommand("gearassembly_nextz 0\n")
-    oPly:ConCommand("gearassembly_rotpiv 0\n")
-    oPly:ConCommand("gearassembly_nextpic 0\n")
-    oPly:ConCommand("gearassembly_nextyaw 0\n")
-    oPly:ConCommand("gearassembly_nextrol 0\n")
+    oPly:ConCommand(gearasmlib.GetToolPrefixL().."nextx 0\n")
+    oPly:ConCommand(gearasmlib.GetToolPrefixL().."nexty 0\n")
+    oPly:ConCommand(gearasmlib.GetToolPrefixL().."nextz 0\n")
+    oPly:ConCommand(gearasmlib.GetToolPrefixL().."rotpiv 0\n")
+    oPly:ConCommand(gearasmlib.GetToolPrefixL().."nextpic 0\n")
+    oPly:ConCommand(gearasmlib.GetToolPrefixL().."nextyaw 0\n")
+    oPly:ConCommand(gearasmlib.GetToolPrefixL().."nextrol 0\n")
   end
-  concommand.Add("gearassembly_resetoffs",ResetOffsets)
+  concommand.Add(gearasmlib.GetToolPrefixL().."resetoffs",ResetOffsets)
   txToolgunBackground = surface.GetTextureID("vgui/white")
 end
 
 TOOL.Category   = "Construction"            -- Name of the category
-TOOL.Name       = "#Tool.gearassembly.name" -- Name to display
+TOOL.Name       = "#Tool."..trackasmlib.GetToolNameL()..".name" -- Name to display
 TOOL.Command    = nil                       -- Command on click ( nil )
 TOOL.ConfigName = nil                       -- Config file name ( nil )
 TOOL.AddToMenu  = true                      -- Yo add it to the Q menu or not ( true )
@@ -160,18 +160,18 @@ TOOL.ClientConVar = {
 
 if(SERVER) then
 
-  cleanup.Register("GearAssemblys")
+  cleanup.Register(trackasmlib.GetToolNameU().."s")
 
   function LoadDupeGearAssemblyNoPhysgun(Ply,oEnt,tData)
     if(tData.NoPhysgun) then
       oEnt:SetMoveType(MOVETYPE_NONE)
       oEnt:SetUnFreezable(true)
       oEnt.PhysgunDisabled = true
-      duplicator.StoreEntityModifier(oEnt,"gearassembly_nophysgun",{NoPhysgun = true })
+      duplicator.StoreEntityModifier(oEnt,gearasmlib.GetToolPrefixL().."nophysgun",{NoPhysgun = true })
     end
   end
 
-  duplicator.RegisterEntityModifier("gearassembly_nophysgun",LoadDupeGearAssemblyNoPhysgun)
+  duplicator.RegisterEntityModifier(gearasmlib.GetToolPrefixL().."nophysgun",LoadDupeGearAssemblyNoPhysgun)
 
   function eMakeGearAssemblyPiece(sModel,vPos,aAng,nMass,sBgSkIDs)
     -- You never know .. ^_^
@@ -179,17 +179,17 @@ if(SERVER) then
     if(not stPiece) then return nil end -- Not present in the DB
     local ePiece = ents.Create("prop_physics")
     if(ePiece and ePiece:IsValid()) then
-      ePiece:SetCollisionGroup(COLLISION_GROUP_NONE);
-      ePiece:SetSolid(SOLID_VPHYSICS);
+      ePiece:SetCollisionGroup(COLLISION_GROUP_NONE)
+      ePiece:SetSolid(SOLID_VPHYSICS)
       ePiece:SetMoveType(MOVETYPE_VPHYSICS)
-      ePiece:SetNotSolid(false);
+      ePiece:SetNotSolid(false)
       ePiece:SetModel(sModel)
       ePiece:SetPos(vPos)
       ePiece:SetAngles(aAng)
       ePiece:Spawn()
       ePiece:Activate()
-      ePiece:SetColor(stDrawDyes.White)
       ePiece:SetRenderMode(RENDERMODE_TRANSALPHA)
+      ePiece:SetColor(stDrawDyes.White)
       ePiece:DrawShadow(true)
       ePiece:PhysWake()
       local phPiece = ePiece:GetPhysicsObject()
@@ -227,7 +227,7 @@ if(SERVER) then
       -- Weld Ground is my custom child ...
       ePiece:SetUnFreezable(true)
       ePiece.PhysgunDisabled = true
-      duplicator.StoreEntityModifier(ePiece,"gearassembly_nophysgun",{NoPhysgun = true})
+      duplicator.StoreEntityModifier(ePiece,gearasmlib.GetToolPrefixL().."nophysgun",{NoPhysgun = true})
       IsIn = true
     end
     local pyPiece = ePiece:GetPhysicsObject()
@@ -360,7 +360,7 @@ function TOOL:LeftClick(Trace)
     else
       ePiece:Remove()
       gearasmlib.PrintNotify(ply,"Position out of map bounds!","ERROR")
-      gearasmlib.LogInstance("GEARASSEMBLY: Additional Error INFO"
+      gearasmlib.LogInstance(trackasmlib.GetToolNameU().." Additional Error INFO"
       .."\n   Event  : Spawning when HitNormal"
       .."\n   Player : "..ply:Nick()
       .."\n   hdModel: "..gearasmlib.GetModelFileName(model)
@@ -397,7 +397,7 @@ function TOOL:LeftClick(Trace)
   if(gearasmlib.PlyLoadKey(ply,"DUCK")) then
     -- USE: Use the VALID Trace.Entity as a piece
     gearasmlib.PrintNotify(ply,"Model: "..gearasmlib.GetModelFileName(trModel).." selected !","GENERIC")
-    ply:ConCommand("gearassembly_model "..trModel.."\n")
+    ply:ConCommand(gearasmlib.GetToolPrefixL().."model "..trModel.."\n")
     return true
   end
 
@@ -428,7 +428,7 @@ function TOOL:LeftClick(Trace)
         else
           ePieceN:Remove()
           gearasmlib.PrintNotify(ply,"Position out of map bounds!","ERROR")
-          gearasmlib.LogInstance("GEARASSEMBLY: Additional Error INFO"
+          gearasmlib.LogInstance(trackasmlib.GetToolNameU().." Additional Error INFO"
           .."\n   Event  : Stacking > Position out of map bounds"
           .."\n   StMode : "..stSMode[stmode]
           .."\n   Iterats: "..tostring(count-i)
@@ -461,7 +461,7 @@ function TOOL:LeftClick(Trace)
         end
         if(not stSpawn) then
           gearasmlib.PrintNotify(ply,"Failed to obtain spawn data!","ERROR")
-          gearasmlib.LogInstance("GEARASSEMBLY: Additional Error INFO"
+          gearasmlib.LogInstance(trackasmlib.GetToolNameU().." Additional Error INFO"
           .."\n   Event  : Stacking > Failed to obtain spawn data"
           .."\n   StMode : "..stSMode[stmode]
           .."\n   Iterats: "..tostring(count-i)
@@ -485,7 +485,7 @@ function TOOL:LeftClick(Trace)
       end
       if(nTrys <= 0) then
         gearasmlib.PrintNotify(ply,"Make attempts ran off!","ERROR")
-        gearasmlib.LogInstance("GEARASSEMBLY: Additional Error INFO"
+        gearasmlib.LogInstance(trackasmlib.GetToolNameU().." Additional Error INFO"
         .."\n   Event  : Stacking > Failed to allocate memory for a piece"
         .."\n   StMode : "..stSMode[stmode]
         .."\n   Iterats: "..tostring(count-i)
@@ -523,7 +523,7 @@ function TOOL:LeftClick(Trace)
       else
         ePiece:Remove()
         gearasmlib.PrintNotify(ply,"Position out of map bounds !","ERROR")
-        gearasmlib.LogInstance("GEARASSEMBLY: Additional Error INFO"
+        gearasmlib.LogInstance(trackasmlib.GetToolNameU().." Additional Error INFO"
         .."\n   Event  : Spawn one piece relative to another"
         .."\n   Player : "..ply:Nick()
         .."\n   Anchor : "..gearasmlib.GetModelFileName(bsModel)
@@ -562,7 +562,7 @@ function TOOL:RightClick(Trace)
         svEnt:SetColor(stDrawDyes.White)
       end
       gearasmlib.PrintNotify(ply,"Anchor: Cleaned !","CLEANUP")
-      ply:ConCommand("gearassembly_anchor N/A\n")
+      ply:ConCommand(gearasmlib.GetToolPrefixL().."anchor N/A\n")
       self:ClearObjects()
       return true
     elseif(trEnt and trEnt:IsValid()) then
@@ -578,7 +578,7 @@ function TOOL:RightClick(Trace)
       trEnt:SetRenderMode(RENDERMODE_TRANSALPHA)
       trEnt:SetColor(stDrawDyes.Anchr)
       local trModel = gearasmlib.GetModelFileName(trEnt:GetModel())
-      ply:ConCommand("gearassembly_anchor ["..trEnt:EntIndex().."] "..trModel.."\n")
+      ply:ConCommand(gearasmlib.GetToolPrefixL().."anchor ["..trEnt:EntIndex().."] "..trModel.."\n")
       gearasmlib.PrintNotify(ply,"Anchor: Set "..trModel.." !","UNDO")
       return true
     end
@@ -586,7 +586,7 @@ function TOOL:RightClick(Trace)
   else
     local stmode = gearasmlib.GetCorrectID(self:GetClientInfo("stmode"),stSMode)
           stmode = gearasmlib.GetCorrectID(stmode + 1,stSMode)
-    ply:ConCommand("gearassembly_stmode "..stmode.."\n")
+    ply:ConCommand(gearasmlib.GetToolPrefixL().."stmode "..stmode.."\n")
     gearasmlib.PrintNotify(ply,"Stack Mode: "..stSMode[stmode].." !","UNDO")
     return true
   end
@@ -841,24 +841,24 @@ function TOOL.BuildCPanel(CPanel)
   Combo["MenuButton"] = "1"
   Combo["Folder"]     = "gearassembly"
   Combo["CVars"]      = {}
-  Combo["CVars"][ 1]  = "gearassembly_mass"
-  Combo["CVars"][ 2]  = "gearassembly_stmode"
-  Combo["CVars"][ 3]  = "gearassembly_model"
-  Combo["CVars"][ 4]  = "gearassembly_count"
-  Combo["CVars"][ 4]  = "gearassembly_contyp"
-  Combo["CVars"][ 5]  = "gearassembly_freeze"
-  Combo["CVars"][ 6]  = "gearassembly_advise"
-  Combo["CVars"][ 7]  = "gearassembly_igntyp"
-  Combo["CVars"][ 8]  = "gearassembly_nextpic"
-  Combo["CVars"][ 9]  = "gearassembly_nextyaw"
-  Combo["CVars"][10]  = "gearassembly_nextrol"
-  Combo["CVars"][11]  = "gearassembly_nextx"
-  Combo["CVars"][12]  = "gearassembly_nexty"
-  Combo["CVars"][13]  = "gearassembly_nextz"
-  Combo["CVars"][14]  = "gearassembly_enghost"
-  Combo["CVars"][15]  = "gearassembly_engravity"
-  Combo["CVars"][14]  = "gearassembly_nocollide"
-  Combo["CVars"][15]  = "gearassembly_forcelim"
+  Combo["CVars"][ 1]  = gearasmlib.GetToolPrefixL().."mass"
+  Combo["CVars"][ 2]  = gearasmlib.GetToolPrefixL().."stmode"
+  Combo["CVars"][ 3]  = gearasmlib.GetToolPrefixL().."model"
+  Combo["CVars"][ 4]  = gearasmlib.GetToolPrefixL().."count"
+  Combo["CVars"][ 4]  = gearasmlib.GetToolPrefixL().."contyp"
+  Combo["CVars"][ 5]  = gearasmlib.GetToolPrefixL().."freeze"
+  Combo["CVars"][ 6]  = gearasmlib.GetToolPrefixL().."advise"
+  Combo["CVars"][ 7]  = gearasmlib.GetToolPrefixL().."igntyp"
+  Combo["CVars"][ 8]  = gearasmlib.GetToolPrefixL().."nextpic"
+  Combo["CVars"][ 9]  = gearasmlib.GetToolPrefixL().."nextyaw"
+  Combo["CVars"][10]  = gearasmlib.GetToolPrefixL().."nextrol"
+  Combo["CVars"][11]  = gearasmlib.GetToolPrefixL().."nextx"
+  Combo["CVars"][12]  = gearasmlib.GetToolPrefixL().."nexty"
+  Combo["CVars"][13]  = gearasmlib.GetToolPrefixL().."nextz"
+  Combo["CVars"][14]  = gearasmlib.GetToolPrefixL().."enghost"
+  Combo["CVars"][15]  = gearasmlib.GetToolPrefixL().."engravity"
+  Combo["CVars"][14]  = gearasmlib.GetToolPrefixL().."nocollide"
+  Combo["CVars"][15]  = gearasmlib.GetToolPrefixL().."forcelim"
 
   CPanel:AddControl("ComboBox",Combo)
   CurY = CurY + 25
@@ -902,10 +902,10 @@ function TOOL.BuildCPanel(CPanel)
       pNode:SetName(Name)
       pNode.Icon:SetImage("icon16/control_play_blue.png")
       pNode.DoClick = function()
-        RunConsoleCommand("gearassembly_model"  , Model)
+        RunConsoleCommand(gearasmlib.GetToolPrefixL().."model"  , Model)
       end
     else
-      gearasmlib.PrintInstance("GEARASSEMBLY: Model "
+      gearasmlib.PrintInstance(trackasmlib.GetToolNameU().." Model "
              .. Model
              .. " is not available in"
              .. " your system .. SKIPPING !")
@@ -914,10 +914,10 @@ function TOOL.BuildCPanel(CPanel)
   end
   CPanel:AddItem(pTree)
   CurY = CurY + pTree:GetTall() + 2
-  gearasmlib.PrintInstance("GEARASSEMBLY: Found #"..tostring(Cnt-1).." piece items.")
+  gearasmlib.PrintInstance(trackasmlib.GetToolNameU().." Found #"..tostring(Cnt-1).." piece items.")
 
   -- http://wiki.garrysmod.com/page/Category:DComboBox
-  local ConID = gearasmlib.GetCorrectID(GetConVarString("gearassembly_contyp"),stCType)
+  local ConID = gearasmlib.GetCorrectID(GetConVarString(gearasmlib.GetToolPrefixL().."contyp"),stCType)
   local pConsType = vgui.Create("DComboBox")
         pConsType:SetPos(2, CurY)
         pConsType:SetTall(18)
@@ -928,7 +928,7 @@ function TOOL.BuildCPanel(CPanel)
   while(Val) do
     pConsType:AddChoice(Val.Name)
     pConsType.OnSelect = function(panel,index,value)
-      RunConsoleCommand("gearassembly_contyp",index)
+      RunConsoleCommand(gearasmlib.GetToolPrefixL().."contyp",index)
     end
     Cnt = Cnt + 1
     Val = stCType[Cnt]
@@ -940,11 +940,11 @@ function TOOL.BuildCPanel(CPanel)
   local pText = vgui.Create("DTextEntry")
         pText:SetPos(2,300)
         pText:SetTall(18)
-        pText:SetText(gearasmlib.GetDefaultString(GetConVarString("gearassembly_bgskids"),
+        pText:SetText(gearasmlib.GetDefaultString(GetConVarString(gearasmlib.GetToolPrefixL().."bgskids"),
                                            "Bodygroup IDs separated with commas > ENTER"))
         pText.OnEnter = function(self)
           local sTX = self:GetValue() or ""
-          RunConsoleCommand("gearassembly_bgskids",sTX)
+          RunConsoleCommand(gearasmlib.GetToolPrefixL().."bgskids",sTX)
         end
         CurY = CurY + pText:GetTall() + 2
 
@@ -957,7 +957,7 @@ function TOOL.BuildCPanel(CPanel)
         pButton.DoClick = function()
           local sBG = gearasmlib.GetBodygroupTrace().."/"..gearasmlib.GetSkinTrace()
           pText:SetValue(sBG)
-          RunConsoleCommand("gearassembly_bgskids",sBG)
+          RunConsoleCommand(gearasmlib.GetToolPrefixL().."bgskids",sBG)
         end
         CurY = CurY + pButton:GetTall() + 2
   CPanel:AddItem(pButton)
@@ -968,18 +968,18 @@ function TOOL.BuildCPanel(CPanel)
             Type    = "Integer",
             Min     = 1,
             Max     = 50000,
-            Command = "gearassembly_mass"})
+            Command = gearasmlib.GetToolPrefixL().."mass"})
 
   CPanel:AddControl("Slider", {
             Label   = "Pieces count: ",
             Type    = "Integer",
             Min     = 1,
             Max     = 200,
-            Command = "gearassembly_count"})
+            Command = gearasmlib.GetToolPrefixL().."count"})
 
   CPanel:AddControl("Button", {
             Label   = "V Reset Offset Values V",
-            Command = "gearassembly_resetoffs",
+            Command = gearasmlib.GetToolPrefixL().."resetoffs",
             Text    = "Reset All Offsets" })
 
   CPanel:AddControl("Slider", {
@@ -987,95 +987,95 @@ function TOOL.BuildCPanel(CPanel)
             Type    = "Float",
             Min     = -360,
             Max     =  360,
-            Command = "gearassembly_rotpiv"})
+            Command = gearasmlib.GetToolPrefixL().."rotpiv"})
 
   CPanel:AddControl("Slider", {
             Label   = "End angle pivot: ",
             Type    = "Float",
             Min     = -360,
             Max     =  360,
-            Command = "gearassembly_deltarot"})
+            Command = gearasmlib.GetToolPrefixL().."deltarot"})
 
   CPanel:AddControl("Slider", {
             Label   = "Piece rotation: ",
             Type    = "Float",
             Min     = -360,
             Max     =  360,
-            Command = "gearassembly_nextyaw"})
+            Command = gearasmlib.GetToolPrefixL().."nextyaw"})
 
   CPanel:AddControl("Slider", {
             Label   = "UCS pitch: ",
             Type    = "Float",
             Min     = -360,
             Max     =  360,
-            Command = "gearassembly_nextpic"})
+            Command = gearasmlib.GetToolPrefixL().."nextpic"})
 
   CPanel:AddControl("Slider", {
             Label   = "UCS roll: ",
             Type    = "Float",
             Min     = -360,
             Max     =  360,
-            Command = "gearassembly_nextrol"})
+            Command = gearasmlib.GetToolPrefixL().."nextrol"})
 
   CPanel:AddControl("Slider", {
             Label   = "Offset X: ",
             Type    = "Float",
             Min     = -100,
             Max     =  100,
-            Command = "gearassembly_nextx"})
+            Command = gearasmlib.GetToolPrefixL().."nextx"})
 
   CPanel:AddControl("Slider", {
             Label = "Offset Y: ",
             Type  = "Float",
             Min   = -100,
             Max   =  100,
-            Command = "gearassembly_nexty"})
+            Command = gearasmlib.GetToolPrefixL().."nexty"})
 
   CPanel:AddControl("Slider", {
             Label   = "Offset Z: ",
             Type    = "Float",
             Min     = -100,
             Max     =  100,
-            Command = "gearassembly_nextz"})
+            Command = gearasmlib.GetToolPrefixL().."nextz"})
 
   CPanel:AddControl("Slider", {
             Label   = "Force Limit: ",
             Type    = "Float",
             Min     = 0,
             Max     = 1000000,
-            Command = "gearassembly_forcelim"})
+            Command = gearasmlib.GetToolPrefixL().."forcelim"})
 
   CPanel:AddControl("Checkbox", {
             Label   = "NoCollide new pieces to the anchor",
-            Command = "gearassembly_nocollide"})
+            Command = gearasmlib.GetToolPrefixL().."nocollide"})
 
   CPanel:AddControl("Checkbox", {
             Label   = "Freeze pieces",
-            Command = "gearassembly_freeze"})
+            Command = gearasmlib.GetToolPrefixL().."freeze"})
 
   CPanel:AddControl("Checkbox", {
             Label   = "Enable pieces gravity",
-            Command = "gearassembly_engravity"})
+            Command = gearasmlib.GetToolPrefixL().."engravity"})
 
   CPanel:AddControl("Checkbox", {
             Label   = "Use origin angle from trace",
-            Command = "gearassembly_orangtr"})
+            Command = gearasmlib.GetToolPrefixL().."orangtr"})
 
   CPanel:AddControl("Checkbox", {
             Label   = "Ignore gear type",
-            Command = "gearassembly_igntyp"})
+            Command = gearasmlib.GetToolPrefixL().."igntyp"})
 
   CPanel:AddControl("Checkbox", {
             Label   = "Enable flat gear spawn",
-            Command = "gearassembly_spwnflat"})
+            Command = gearasmlib.GetToolPrefixL().."spwnflat"})
 
   CPanel:AddControl("Checkbox", {
             Label   = "Enable advisor",
-            Command = "gearassembly_advise"})
+            Command = gearasmlib.GetToolPrefixL().."advise"})
 
   CPanel:AddControl("Checkbox", {
             Label   = "Enable ghosting",
-            Command = "gearassembly_enghost"})
+            Command = gearasmlib.GetToolPrefixL().."enghost"})
 end
 
 function TOOL:MakeGhostEntity(sModel,vPos,aAngle)
