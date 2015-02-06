@@ -1150,10 +1150,10 @@ function SQLInsertRecord(sTable,tData)
           tData[3] = Model2Name(tData[1])
         end
       else
-        tData[3] = "Some Gear Piece"
+        tData[3] = "Some "..LibToolNameL.." piece"
       end
     else
-      tData[3] = "Some Gear Piece"
+      tData[3] = "Some "..LibToolNameL.." piece"
     end
   end
 
