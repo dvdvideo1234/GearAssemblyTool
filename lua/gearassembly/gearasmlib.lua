@@ -70,33 +70,8 @@ local file           = file
 local timer          = timer
 local string         = string
 
--- How is the tool called
-local LibToolNameL = "gearassembly"
+-- Spawn Structures Table Space
 
--- Table prefix to avoid overlapping and conflicts
-local LibToolNameU   = string.upper(LibToolNameL)
-local LibToolPrefixU = LibToolNameU .. "_"
-local LibToolPrefixL = LibToolNameL .. "_"
-
--- Library Debug Settings. The file is created in
--- the DATA folder :3 *.txt is appended
-local LibDebugEn = 0
-local LibLogFile = LibToolNameL .. "_log"
-local LibMaxLogs = 10000
-local LibCurLogs = 0
-
--- Library Syms
-local LibSymDisable = "#"
-local LibSymRevSign = "@"
-local LibSymDevider = "_"
-
--- Operating paths
-local LibBASPath = LibToolNameL .. "/"
-local LibEXPPath = "export/"
-local LibDSVPath = "dsvbase/"
-local LibLOGPath = ""
-
--- Spawn Struct table Space
 local LibSpawn = {
   ["ENT"] = {
     F    = Vector(),
@@ -132,6 +107,30 @@ local LibCache = {}
 -- Used to store the last SQL error message
 local LibSQLBuildError = ""
 
+-- How is the tool called
+local LibToolNameL   = ""
+local LibToolNameU   = ""
+local LibToolPrefixU = ""
+local LibToolPrefixL = ""
+
+-- Library Debug Settings. The file is created in
+-- the DATA folder :3 *.txt is appended
+local LibDebugEn = 0
+local LibLogFile = ""
+local LibMaxLogs = 0
+local LibCurLogs = 0
+
+-- Library Syms
+local LibSymDisable = "#"
+local LibSymRevSign = "@"
+local LibSymDevider = "_"
+
+-- Operating paths
+local LibBASPath = ""
+local LibEXPPath = "export/"
+local LibDSVPath = "dsvbase/"
+local LibLOGPath = ""
+
 ---------------- TABLE DEFINITIONS SPACE----------------
 
 local LibTables = {
@@ -154,7 +153,15 @@ module( "gearasmlib" )
 
 ---------------------------- AssemblyLib COMMON ----------------------------
 
---- Prefixes
+function SetToolName(sName)
+  if(type(sName) ~= "string") then return end
+  if(string.len(sName) < 1 and
+     tonumber(string.sub(sName,1,1))) then return end
+  LibToolNameL   = string.lower(sName)
+  LibToolNameU   = string.upper(LibToolNameL)
+  LibToolPrefixU = LibToolNameU .. "_"
+  LibToolPrefixL = LibToolNameL .. "_"
+end
 
 function GetToolNameU()
   return LibToolNameU
@@ -171,6 +178,38 @@ end
 
 function GetToolPrefixL()
   return LibToolPrefixL
+end
+
+function GetSQLBuildError()
+  return LibSQLBuildError
+end
+
+function BASPath(sPath)
+  if(sPath and type(sPath) == "string") then
+    LibBASPath = sPath .. "/"
+  end
+  return LibBASPath
+end
+
+function EXPPath(sPath)
+  if(sPath and type(sPath) == "string") then
+    LibEXPPath = sPath .. "/"
+  end
+  return LibEXPPath
+end
+
+function DSVPath(sPath)
+  if(sPath and type(sPath) == "string") then
+    LibDSVPath = sPath .. "/"
+  end
+  return LibDSVPath
+end
+
+function LOGPath(sPath)
+  if(sPath and type(sPath) == "string") then
+    LibLOGPath = sPath .. "/"
+  end
+  return LibLOGPath
 end
 
 --- Angle
@@ -313,38 +352,6 @@ function GetTableDefinition(sTable)
     return LibTables[LibToolPrefixU..sTable]
   end
   return nil
-end
-
-function GetSQLBuildError()
-  return LibSQLBuildError
-end
-
-function BASPath(sPath)
-  if(sPath and type(sPath) == "string") then
-    LibBASPath = sPath .. "/"
-  end
-  return LibBASPath
-end
-
-function EXPPath(sPath)
-  if(sPath and type(sPath) == "string") then
-    LibEXPPath = sPath .. "/"
-  end
-  return LibEXPPath
-end
-
-function DSVPath(sPath)
-  if(sPath and type(sPath) == "string") then
-    LibDSVPath = sPath .. "/"
-  end
-  return LibDSVPath
-end
-
-function LOGPath(sPath)
-  if(sPath and type(sPath) == "string") then
-    LibLOGPath = sPath .. "/"
-  end
-  return LibLOGPath
 end
 
 function IsOther(oEnt)

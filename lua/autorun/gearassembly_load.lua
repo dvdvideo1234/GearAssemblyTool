@@ -6,6 +6,11 @@ end
 
 include("gearassembly/gearasmlib.lua")
 
+-- CONFIGURE ASMLIB
+trackasmlib.SetToolName("gearassembly")
+trackasmlib.SetLogControl(1,10000,"")
+trackasmlib.BASPath(trackasmlib.GetToolNameL())
+
 -- INITIALIZE DB
 gearasmlib.SQLCreateTable("PIECES",{{1},{2},{3},{1,4},{1,2},{2,4},{1,2,3}},true,true)
 
