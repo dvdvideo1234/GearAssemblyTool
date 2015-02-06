@@ -703,7 +703,7 @@ function Log(anyStuff)
         LibCurLogs = 0
       end
     else
-      PrintInstance("GEARASSEMBLY LOG: "..tostring(anyStuff))
+      PrintInstance(LibToolNameU.." LOG: "..tostring(anyStuff))
     end
   end
 end
@@ -1998,15 +1998,15 @@ function HookOnRemove(oBas,oEnt,arCTable,nMax)
   local Ind = 1
   while(Ind <= nMax) do
     if(not arCTable[Ind]) then
-      LogInstance("GEARASSEMBLY: HookOnRemove > Nil value on index "..Ind..", ignored !")
+      LogInstance(LibToolNameU..": HookOnRemove > Nil value on index "..Ind..", ignored !")
       return
     end
     oEnt:DeleteOnRemove(arCTable[Ind])
     oBas:DeleteOnRemove(arCTable[Ind])
     Ind = Ind + 1
   end
-  LogInstance("GEARASSEMBLY: HookOnRemove > Done "..(Ind-1).." of "..nMax..".")
+  LogInstance(LibToolNameU..": HookOnRemove > Done "..(Ind-1).." of "..nMax..".")
   return
 end
 
-PrintInstance("GEARASSEMBLY: Library loaded successfully !")
+PrintInstance(LibToolNameU..": Library loaded successfully !")

@@ -99,11 +99,11 @@ local csD = 4
 ------------- LOCAL FUNCTIONS AND STUFF ----------------
 
 if(CLIENT) then
-  language.Add("Tool."   ..trackasmlib.GetToolNameL()..".name", "Gear Assembly")
-  language.Add("Tool."   ..trackasmlib.GetToolNameL()..".desc", "Assembles gears to mesh together")
-  language.Add("Tool."   ..trackasmlib.GetToolNameL()..".0"   , "Left click to spawn/stack, Right to change mode, Reload to remove a piece")
-  language.Add("Cleanup."..trackasmlib.GetToolNameL()         , "Gear Assembly")
-  language.Add("Cleaned."..trackasmlib.GetToolNameL().."s"    , "Cleaned up all Pieces")
+  language.Add("Tool."   ..gearasmlib.GetToolNameL()..".name", "Gear Assembly")
+  language.Add("Tool."   ..gearasmlib.GetToolNameL()..".desc", "Assembles gears to mesh together")
+  language.Add("Tool."   ..gearasmlib.GetToolNameL()..".0"   , "Left click to spawn/stack, Right to change mode, Reload to remove a piece")
+  language.Add("Cleanup."..gearasmlib.GetToolNameL()         , "Gear Assembly")
+  language.Add("Cleaned."..gearasmlib.GetToolNameL().."s"    , "Cleaned up all Pieces")
 
   local function ResetOffsets(oPly,oCom,oArgs)
     -- Reset all of the offset options to zero
@@ -116,11 +116,12 @@ if(CLIENT) then
     oPly:ConCommand(gearasmlib.GetToolPrefixL().."nextrol 0\n")
   end
   concommand.Add(gearasmlib.GetToolPrefixL().."resetoffs",ResetOffsets)
+  
   txToolgunBackground = surface.GetTextureID("vgui/white")
 end
 
 TOOL.Category   = "Construction"            -- Name of the category
-TOOL.Name       = "#Tool."..trackasmlib.GetToolNameL()..".name" -- Name to display
+TOOL.Name       = "#Tool."..gearasmlib.GetToolNameL()..".name" -- Name to display
 TOOL.Command    = nil                       -- Command on click ( nil )
 TOOL.ConfigName = nil                       -- Config file name ( nil )
 TOOL.AddToMenu  = true                      -- Yo add it to the Q menu or not ( true )
@@ -160,7 +161,7 @@ TOOL.ClientConVar = {
 
 if(SERVER) then
 
-  cleanup.Register(trackasmlib.GetToolNameU().."s")
+  cleanup.Register(gearasmlib.GetToolNameU().."s")
 
   function LoadDupeGearAssemblyNoPhysgun(Ply,oEnt,tData)
     if(tData.NoPhysgun) then
@@ -360,7 +361,7 @@ function TOOL:LeftClick(Trace)
     else
       ePiece:Remove()
       gearasmlib.PrintNotify(ply,"Position out of map bounds!","ERROR")
-      gearasmlib.LogInstance(trackasmlib.GetToolNameU().." Additional Error INFO"
+      gearasmlib.LogInstance(gearasmlib.GetToolNameU().." Additional Error INFO"
       .."\n   Event  : Spawning when HitNormal"
       .."\n   Player : "..ply:Nick()
       .."\n   hdModel: "..gearasmlib.GetModelFileName(model)
@@ -428,7 +429,7 @@ function TOOL:LeftClick(Trace)
         else
           ePieceN:Remove()
           gearasmlib.PrintNotify(ply,"Position out of map bounds!","ERROR")
-          gearasmlib.LogInstance(trackasmlib.GetToolNameU().." Additional Error INFO"
+          gearasmlib.LogInstance(gearasmlib.GetToolNameU().." Additional Error INFO"
           .."\n   Event  : Stacking > Position out of map bounds"
           .."\n   StMode : "..stSMode[stmode]
           .."\n   Iterats: "..tostring(count-i)
@@ -461,7 +462,7 @@ function TOOL:LeftClick(Trace)
         end
         if(not stSpawn) then
           gearasmlib.PrintNotify(ply,"Failed to obtain spawn data!","ERROR")
-          gearasmlib.LogInstance(trackasmlib.GetToolNameU().." Additional Error INFO"
+          gearasmlib.LogInstance(gearasmlib.GetToolNameU().." Additional Error INFO"
           .."\n   Event  : Stacking > Failed to obtain spawn data"
           .."\n   StMode : "..stSMode[stmode]
           .."\n   Iterats: "..tostring(count-i)
@@ -485,7 +486,7 @@ function TOOL:LeftClick(Trace)
       end
       if(nTrys <= 0) then
         gearasmlib.PrintNotify(ply,"Make attempts ran off!","ERROR")
-        gearasmlib.LogInstance(trackasmlib.GetToolNameU().." Additional Error INFO"
+        gearasmlib.LogInstance(gearasmlib.GetToolNameU().." Additional Error INFO"
         .."\n   Event  : Stacking > Failed to allocate memory for a piece"
         .."\n   StMode : "..stSMode[stmode]
         .."\n   Iterats: "..tostring(count-i)
@@ -523,7 +524,7 @@ function TOOL:LeftClick(Trace)
       else
         ePiece:Remove()
         gearasmlib.PrintNotify(ply,"Position out of map bounds !","ERROR")
-        gearasmlib.LogInstance(trackasmlib.GetToolNameU().." Additional Error INFO"
+        gearasmlib.LogInstance(gearasmlib.GetToolNameU().." Additional Error INFO"
         .."\n   Event  : Spawn one piece relative to another"
         .."\n   Player : "..ply:Nick()
         .."\n   Anchor : "..gearasmlib.GetModelFileName(bsModel)
@@ -609,10 +610,10 @@ function TOOL:Reload(Trace)
       end
     end
     if(exportdb ~= 0) then
-      gearasmlib.PrintInstance("TOOL:Reload(Trace) > Exporting DB ...")
-      gearasmlib.ExportSQL2Lua("PIECES","db_sv_")
-      gearasmlib.ExportSQL2Inserts("PIECES","db_sv_")
-      gearasmlib.SQLExportIntoDSV("PIECES","\t","db_sv_")
+      gearasmlib.PrintInstance("TOOL:Reload(Trace) > Exporting DB")
+      gearasmlib.ExportSQL2Lua("PIECES")
+      gearasmlib.ExportSQL2Inserts("PIECES")
+      gearasmlib.SQLExportIntoDSV("PIECES","\t")
     end
   end
   if(not gearasmlib.IsPhysTrace(Trace)) then return false end
@@ -905,7 +906,7 @@ function TOOL.BuildCPanel(CPanel)
         RunConsoleCommand(gearasmlib.GetToolPrefixL().."model"  , Model)
       end
     else
-      gearasmlib.PrintInstance(trackasmlib.GetToolNameU().." Model "
+      gearasmlib.PrintInstance(gearasmlib.GetToolNameU().." Model "
              .. Model
              .. " is not available in"
              .. " your system .. SKIPPING !")
@@ -914,7 +915,7 @@ function TOOL.BuildCPanel(CPanel)
   end
   CPanel:AddItem(pTree)
   CurY = CurY + pTree:GetTall() + 2
-  gearasmlib.PrintInstance(trackasmlib.GetToolNameU().." Found #"..tostring(Cnt-1).." piece items.")
+  gearasmlib.PrintInstance(gearasmlib.GetToolNameU().." Found #"..tostring(Cnt-1).." piece items.")
 
   -- http://wiki.garrysmod.com/page/Category:DComboBox
   local ConID = gearasmlib.GetCorrectID(GetConVarString(gearasmlib.GetToolPrefixL().."contyp"),stCType)
