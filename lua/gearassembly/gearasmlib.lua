@@ -1370,7 +1370,7 @@ function CacheQueryPiece(sModel)
   end
   local defTable = LibTables[TableKey]
   local stPiece  = LibCache[TableKey][sModel]
-  if(stPiece) then
+  if(stPiece and stPiece.Here ~= nil) then
     if(stPiece.Here) then
       RestartTimer(CacheInd,"CacheQueryPiece")
       return LibCache[TableKey][sModel]
