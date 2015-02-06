@@ -14,13 +14,15 @@ trackasmlib.BASPath(trackasmlib.GetToolNameL())
 -- INITIALIZE DB
 gearasmlib.SQLCreateTable("PIECES",{{1},{2},{3},{1,4},{1,2},{2,4},{1,2,3}},true,true)
 
-if(file.Exists(gearasmlib.BASPath()..gearasmlib.DSVPath().."db_sv_"..gearasmlib.GetToolPrefixU().."PIECES.txt", "DATA")) then
+if(file.Exists(gearasmlib.BASPath()..gearasmlib.DSVPath()..
+  gearasmlib.GetInstancePrefix()..gearasmlib.GetToolPrefixU().."PIECES.txt", "DATA")
+) then
   gearasmlib.PrintInstance(gearasmlib.GetToolNameU()..": DB PIECES from DSV")
-  gearasmlib.SQLImportFromDSV("PIECES","\t",true,"db_sv_")
+  gearasmlib.SQLImportFromDSV("PIECES","\t",true)
 else
   gearasmlib.PrintInstance(gearasmlib.GetToolNameU()..": DB PIECES from LUA")
   ------- DEV -------
-  --gearasmlib.SQLInsertRecord("PIECES",{"models/props_wasteland/wheel02b.mdl",   "Development", "Dev1", 45, "65, 0, 0", "-90, 90, 180", "0.29567885398865,0.3865530192852,-0.36239844560623"})
+  -- gearasmlib.SQLInsertRecord("PIECES",{"models/props_wasteland/wheel02b.mdl",   "Development", "Dev1", 45, "65, 0, 0", "-90, 90, 180", "0.29567885398865,0.3865530192852,-0.36239844560623"})
   ------ PIECES ------
   --- Gmod 10
   gearasmlib.SQLInsertRecord("PIECES",{"models/props_phx/mechanics/medgear.mdl", "Old Gmod 10", "#", 0, "24.173, 0, 0", "", "-0.015172731131315, 0.0090782083570957, 3.5684652328491"})

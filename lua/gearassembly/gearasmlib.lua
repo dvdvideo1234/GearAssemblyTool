@@ -212,6 +212,12 @@ function LOGPath(sPath)
   return LibLOGPath
 end
 
+function GetInstancePrefix()
+  if    (CLIENT) then return "cl_"
+  elseif(SERVER) then return "sv_" end
+  return "na_"
+end
+
 --- Angle
 
 function AddAngle(aBase, adbAdd)
@@ -1447,11 +1453,11 @@ function ExportSQL2Lua(sTable,sPrefix)
   if(not file.Exists(LibBASPath..LibEXPPath,"DATA")) then
     file.CreateDir(LibBASPath..LibEXPPath)
   end
-  local F = file.Open(LibBASPath..LibEXPPath..(sPrefix or "")..
+  local F = file.Open(LibBASPath..LibEXPPath..(sPrefix or GetInstancePrefix())..
                       "sql2lua_"..TableKey..".txt", "w", "DATA" )
   if(not F) then
     LogInstance("ExportSQL2Lua: file.Open("..LibBASPath..LibEXPPath..
-                (sPrefix or "").."sql2lua_"..TableKey..".txt) Failed")
+                (sPrefix or GetInstancePrefix()).."sql2lua_"..TableKey..".txt) Failed")
     return
   end
   local Q
@@ -1513,11 +1519,11 @@ function ExportSQL2Inserts(sTable,sPrefix)
   if(not file.Exists(LibBASPath..LibEXPPath,"DATA")) then
     file.CreateDir(LibBASPath..LibEXPPath)
   end
-  local F = file.Open(LibBASPath..LibEXPPath..(sPrefix or "")..
+  local F = file.Open(LibBASPath..LibEXPPath..(sPrefix or GetInstancePrefix())..
                       "sql2inserts_"..TableKey..".txt", "w", "DATA" )
   if(not F) then
     LogInstance("ExportSQL2Inserts: file.Open("..LibBASPath..LibEXPPath..
-                (sPrefix or "").."sql2inserts_"..TableKey..".txt) Failed")
+                (sPrefix or GetInstancePrefix()).."sql2inserts_"..TableKey..".txt) Failed")
     return
   end
   local Q
@@ -1569,11 +1575,11 @@ function ExportLua2Inserts(tTable,sName,sPrefix)
   if(not file.Exists(LibBASPath..LibEXPPath,"DATA")) then
     file.CreateDir(LibBASPath..LibEXPPath)
   end
-  local F = file.Open(LibBASPath..LibEXPPath..(sPrefix or "")..
+  local F = file.Open(LibBASPath..LibEXPPath..(sPrefix or GetInstancePrefix())..
                       "lua2inserts_"..(sName or "Data")..".txt", "w", "DATA" )
   if(not F) then
     LogInstance("ExportLua2Inserts: file.Open("..LibBASPath..LibEXPPath..
-                (sPrefix or "").."lua2inserts_"..(sName or "Data")..".txt) Failed")
+                (sPrefix or GetInstancePrefix()).."lua2inserts_"..(sName or "Data")..".txt) Failed")
     return
   end
   if(tTable) then
@@ -1618,10 +1624,10 @@ function SQLImportFromDSV(sTable,sDelim,bCommit,sPrefix)
     LogInstance("SQLImportFromDSV: Missing: Table definition for "..sTable)
     return
   end
-  local F = file.Open(LibBASPath..LibDSVPath..(sPrefix or "")..TableKey..".txt", "r", "DATA" )
+  local F = file.Open(LibBASPath..LibDSVPath..(sPrefix or GetInstancePrefix())..TableKey..".txt", "r", "DATA" )
   if(not F) then
     LogInstance("SQLImportFromDSV: file.Open("..LibBASPath..LibDSVPath..
-               (sPrefix or "")..TableKey..".txt) Failed")
+               (sPrefix or GetInstancePrefix())..TableKey..".txt) Failed")
     return
   end
   local Line = ""
@@ -1674,10 +1680,10 @@ function SQLExportIntoDSV(sTable,sDelim,sPrefix)
   if(not file.Exists(LibBASPath..LibDSVPath,"DATA")) then
     file.CreateDir(LibBASPath..LibDSVPath)
   end
-  local F = file.Open(LibBASPath..LibDSVPath..(sPrefix or "")..TableKey..".txt", "w", "DATA" )
+  local F = file.Open(LibBASPath..LibDSVPath..(sPrefix or GetInstancePrefix())..TableKey..".txt", "w", "DATA" )
   if(not F) then
     LogInstance("SQLExportIntoDSV: file.Open("..LibBASPath..LibDSVPath..
-               (sPrefix or "")..TableKey..".txt) Failed")
+               (sPrefix or GetInstancePrefix())..TableKey..".txt) Failed")
     return
   end
   local Q
