@@ -11,6 +11,19 @@ trackasmlib.SetToolName("gearassembly")
 trackasmlib.SetLogControl(1,10000,"")
 trackasmlib.BASPath(trackasmlib.GetToolNameL())
 
+trackasmlib.SetTableDefinition("PIECES",
+{
+    Size = 7,
+    Keep = 3600,
+    [1] = {"MODEL" , "TEXT", "L"},
+    [2] = {"TYPE"  , "TEXT"},
+    [3] = {"NAME"  , "TEXT"},
+    [4] = {"AMESH" , "REAL"},
+    [5] = {"ORIGN" , "TEXT"},
+    [6] = {"ANGLE" , "TEXT"},
+    [7] = {"MASSC" , "TEXT"}
+})
+
 -- INITIALIZE DB
 gearasmlib.SQLCreateTable("PIECES",{{1},{2},{3},{1,4},{1,2},{2,4},{1,2,3}},true,true)
 

@@ -27,48 +27,49 @@ local CLIENT = CLIENT
 
 ---------------- Localizing Player keys ----------------
 
-local IN_USE       = IN_USE
 local IN_ALT1      = IN_ALT1
-local IN_LEFT      = IN_LEFT
-local IN_ZOOM      = IN_ZOOM
-local IN_JUMP      = IN_JUMP
+local IN_ALT2      = IN_ALT2
+local IN_ATTACK    = IN_ATTACK
+local IN_ATTACK2   = IN_ATTACK2
 local IN_BACK      = IN_BACK
 local IN_DUCK      = IN_DUCK
-local IN_ALT2      = IN_ALT2
-local IN_WALK      = IN_WALK
-local IN_SPEED     = IN_SPEED
-local IN_SCORE     = IN_SCORE
-local IN_RIGHT     = IN_RIGHT
-local IN_RELOAD    = IN_RELOAD
-local IN_ATTACK    = IN_ATTACK
 local IN_FORWARD   = IN_FORWARD
-local IN_ATTACK2   = IN_ATTACK2
+local IN_JUMP      = IN_JUMP
+local IN_LEFT      = IN_LEFT
 local IN_MOVELEFT  = IN_MOVELEFT
 local IN_MOVERIGHT = IN_MOVERIGHT
+local IN_RELOAD    = IN_RELOAD
+local IN_RIGHT     = IN_RIGHT
+local IN_SCORE     = IN_SCORE
+local IN_SPEED     = IN_SPEED
+local IN_USE       = IN_USE
+local IN_WALK      = IN_WALK
+local IN_ZOOM      = IN_ZOOM
 
 ---------------- Localizing Libraries ----------------
 
-local type           = type
 local Angle          = Angle
+local collectgarbage = collectgarbage
+local include        = include
+local IsValid        = IsValid
+local LocalPlayer    = LocalPlayer
 local pairs          = pairs
 local print          = print
-local Vector         = Vector
 local require        = require
-local IsValid        = IsValid
-local include        = include
 local tonumber       = tonumber
 local tostring       = tostring
-local LocalPlayer    = LocalPlayer
-local collectgarbage = collectgarbage
+local type           = type
+local Vector         = Vector
+local ents           = ents
+local file           = file
+local math           = math
 local os             = os
 local sql            = sql
-local math           = math
-local ents           = ents
-local util           = util
-local undo           = undo
-local file           = file
-local timer          = timer
 local string         = string
+local table          = table
+local timer          = timer
+local undo           = undo
+local util           = util
 
 -- Spawn Structures Table Space
 
@@ -104,6 +105,12 @@ local LibSpawn = {
 -- Used to cache stuff in a Pool
 local LibCache = {}
 
+-- Here is where the tables are stored
+local LibTables = {}
+
+-- Used to attach external function to the lib
+local LibAction = {}
+
 -- Used to store the last SQL error message
 local LibSQLBuildError = ""
 
@@ -131,22 +138,6 @@ local LibEXPPath = "export/"
 local LibDSVPath = "dsvbase/"
 local LibLOGPath = ""
 
----------------- TABLE DEFINITIONS SPACE----------------
-
-local LibTables = {
-  [LibToolPrefixU.."PIECES"] = {
-    Size = 7,
-    Keep = 3600,
-    [1] = {"MODEL" , "TEXT", "L"},
-    [2] = {"TYPE"  , "TEXT"},
-    [3] = {"NAME"  , "TEXT"},
-    [4] = {"AMESH" , "REAL"},
-    [5] = {"ORIGN" , "TEXT"},
-    [6] = {"ANGLE" , "TEXT"},
-    [7] = {"MASSC" , "TEXT"}
-  }
-}
-
 module( "gearasmlib" )
 
 -------------- BEGIN SQL AssemblyLib -------------
@@ -158,7 +149,7 @@ function SetToolName(sName)
   if(string.len(sName) < 1 and
      tonumber(string.sub(sName,1,1))) then return end
   LibToolNameL   = string.lower(sName)
-  LibToolNameU   = string.upper(LibToolNameL)
+  LibToolNameU   = string.upper(sName)
   LibToolPrefixU = LibToolNameU .. "_"
   LibToolPrefixL = LibToolNameL .. "_"
 end
@@ -170,7 +161,6 @@ end
 function GetToolNameL()
   return LibToolNameL
 end
-
 
 function GetToolPrefixU()
   return LibToolPrefixU
@@ -333,22 +323,21 @@ function GetDefaultString(sBase, sDefault)
   local IsDeft = (type(sDefault) == "string")
   if(IsBase) then
     if(string.len(sBase) > 0) then return sBase end
-    if(IsDeft) then return sDefault end
-    return ""
-  else
+  end
     if(IsDeft) then return sDefault end
     return ""
   end
 end
 
 function SetTableDefinition(sTable, tDefinition)
-  if(not sTable or sTable ~= "string") then return false end
-  if(not tDefinition or tDefinition ~= "table") then return false end
+  if(not (sTable and type(sTable) == "string")) then return false end
+  if(not (tDefinition and type(tDefinition) == "table")) then return false end
   if(not tDefinition.Size) then return false end
   if(not tDefinition[1]) then return false end
   for k,v in pairs(LibTables) do
-    if(k == sTable) then return false end
+    if(k == LibToolPrefixU..sTable) then return false end
   end
+  LogInstance("LibTables[\""..LibToolPrefixU..sTable.."\"] = "..tostring(tDefinition).." ["..tDefinition.Size.."]")
   LibTables[LibToolPrefixU..sTable] = tDefinition
   return true
 end
@@ -358,6 +347,29 @@ function GetTableDefinition(sTable)
     return LibTables[LibToolPrefixU..sTable]
   end
   return nil
+end
+
+function SetAction(sKey,fAct,tDat)
+  if(not (sKey and type(sKey) == "string")) then return false end
+  if(not (fAct and type(fAct) == "function")) then return false end
+  if(not LibAction[sKey]) then
+    LibAction[sKey] = {}
+  end
+  LibAction[sKey].Act = fAct
+  LibAction[sKey].Dat = tDat
+  return true
+end
+
+function GetAction(sKey)
+  if(not (sKey  and type(sKey)  == "string")) then return nil end
+  if(not (LibAction and LibAction[sKey])) then return nil end
+  return LibAction[sKey]
+end
+
+function DoAction(sKey,tArg)
+  if(not (sKey  and type(sKey)  == "string")) then return false end
+  if(not (LibAction and LibAction[sKey])) then return false end
+  return LibAction[sKey].Act(tArg,LibAction[sKey].Dat)
 end
 
 function IsOther(oEnt)
@@ -418,6 +430,54 @@ function Str2BGID(sStr,nLen)
     Cnt = Cnt + 1
   end
   if(Data[1])then return Data end
+  return nil
+end
+
+local function PushSortValues(tTable,snCnt,nsValue,tData)
+  local Cnt = math.floor(tonumber(snCnt) or 0)
+  if(not (tTable and (type(tTable) == "table") and (Cnt > 0))) then return 0 end
+  local Ind  = 1
+  if(not tTable[Ind]) then
+    tTable[Ind] = {Value = nsValue, Table = tData }
+    return Ind
+  else
+    while(tTable[Ind] and (tTable[Ind].Value > nsValue)) do
+      Ind = Ind + 1
+    end
+    if(Ind > Cnt) then return Ind end
+    while(Ind < Cnt) do
+      tTable[Cnt] = tTable[Cnt - 1]
+      Cnt = Cnt - 1
+    end
+    tTable[Ind] = {Value = nsValue, Table = tData}
+    return Ind
+  end
+end
+
+function GetFrequentlyUsed(snCount)
+  local Cnt = tonumber(snCount) or 0
+  if(Cnt < 1) then return nil end
+  local TableKey = LibToolPrefixU.."PIECES"
+  local defTable = LibTables[TableKey]  
+  local Cache    = LibCache[TableKey]
+  local TimerID  = ""
+  local Tim      = 0
+  local Ind      = 1
+  local FreqUse
+  if(not Cache["FREQUENTLYUSED"]) then
+    Cache["FREQUENTLYUSED"] = {}
+  end
+  FreqUse = Cache["FREQUENTLYUSED"]
+  table.Empty(FreqUse)
+  for Model, Record in pairs(Cache) do
+    TimerID  = TableKey.."_"..Model
+    if(timer.Exists(TimerID)) then
+      Tim = timer.TimeLeft(TimerID)
+      Ind = PushSortValues(FreqUse,Cnt,Tim,{Record.Kept,Record.Type,Model})
+      if(Ind < 1) then return nil end
+    end
+  end
+  if(FreqUse and FreqUse[1]) then return FreqUse end
   return nil
 end
 
@@ -683,9 +743,9 @@ function PrintInstance(anyStuff)
 end
 
 function SetLogControl(nEn,nLines,sFile)
-  LibDebugEn = nEn
-  LibLogFile = sFile
-  LibMaxLogs = nLines
+  LibDebugEn = nEn or 0
+  LibLogFile = sFile or ""
+  LibMaxLogs = nLines or 0
   if(not file.Exists(LibBASPath,"DATA") and (string.len(LibLogFile) > 0)) then
     file.CreateDir(LibBASPath)
   end
@@ -703,7 +763,7 @@ function Log(anyStuff)
         LibCurLogs = 0
       end
     else
-      PrintInstance(LibToolNameU.." LOG: "..tostring(anyStuff))
+      print(LibToolNameU.." LOG: "..tostring(anyStuff))
     end
   end
 end
@@ -812,14 +872,7 @@ function PlyLoadKey(pPly, sKey)
   local Cache = LibCache["PLAYERKEYDOWN"]
   if(not pPly) then
     for k,_ in pairs(Cache) do
-      local sTyp = type(Cache[k])
-      if(sTyp == "boolean") then
         Cache[k] = false
-      elseif(sTyp == "number") then
-        Cache[k] = 0
-      elseif(sTyp == "string") then
-        Cache[k] = ""
-      end
     end
     return nil
   end
@@ -1364,14 +1417,14 @@ function CacheQueryPiece(sModel)
   if(sModel == "") then return nil end
   if(not util.IsValidModel(sModel)) then return nil end
   local TableKey = LibToolPrefixU.."PIECES"
-  local CacheInd = {TableKey,sModel}
   if(not LibCache[TableKey]) then
     LibCache[TableKey] = {}
   end
   local defTable = LibTables[TableKey]
   local stPiece  = LibCache[TableKey][sModel]
-  if(stPiece and stPiece.Here ~= nil) then
-    if(stPiece.Here) then
+  local CacheInd = {TableKey,sModel}	
+  if(stPiece and stPiece.Kept ~= nil) then
+    if(stPiece.Kept) then
       RestartTimer(CacheInd,"CacheQueryPiece")
       return LibCache[TableKey][sModel]
     end
@@ -1389,7 +1442,7 @@ function CacheQueryPiece(sModel)
       stPiece.Type = qRec[defTable[2][1]]
       stPiece.Name = qRec[defTable[3][1]]
       stPiece.Mesh = qRec[defTable[4][1]]
-      stPiece.Here = true
+      stPiece.Kept = true
       stPiece.O = {[cvX] = 0, [cvY] = 0,[cvZ] = 0, [csX] = 1, [csY] = 1, [csZ] = 1, [csD] = false}
       stPiece.M = {[cvX] = 0, [cvY] = 0,[cvZ] = 0, [csX] = 1, [csY] = 1, [csZ] = 1, [csD] = false}
       stPiece.A = {[caP] = 0, [caY] = 0,[caR] = 0, [csX] = 1, [csY] = 1, [csZ] = 1, [csD] = false}
@@ -1413,7 +1466,7 @@ function CacheQueryPiece(sModel)
       end
       return stPiece
     else
-      stPiece.Here = false
+      stPiece.Kept = false
     end
   else
     LogInstance("CacheQueryPiece: "..GetSQLBuildError())
