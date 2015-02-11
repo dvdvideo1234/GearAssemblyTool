@@ -252,6 +252,24 @@ function SetAnglePYR(aBase, nP, nY, nR)
   aBase[caR] = (nR or 0)
 end
 
+function RotateAroundDir(aBase, sOrder, nF, nR, nU)
+  if(not aBase) then return end
+  if(not (sOrder and type(sOrder) == "string")) then return end
+  local Ind = 1
+  local C   = string.sub(sOrder,Ind,Ind)
+  while(C ~= "" and Ind <= 3) do
+    if(C == "F") then
+      aBase:RotateAroundAxis(aBase:Forward(),tonumber(nF) or 0)
+    elseif(C == "R") then
+      aBase:RotateAroundAxis(aBase:Right(),tonumber(nR) or 0)
+    elseif(C == "U") then
+      aBase:RotateAroundAxis(aBase:Up(),tonumber(nU) or 0)
+    end
+    Ind = Ind + 1
+    C = string.sub(sOrder,Ind,Ind)
+  end
+end
+
 --- Vector
 
 function GetLengthVector(vdbBase)
@@ -316,6 +334,15 @@ function SetVectorXYZ(vVec, nX, nY, nZ)
   vVec[cvX] = (nX or 0)
   vVec[cvY] = (nY or 0)
   vVec[cvZ] = (nZ or 0)
+end
+
+function DecomposeByAngle(V,A)
+  if(not ( V and A ) ) then
+    return Vector()
+  end
+  return Vector(V:DotProduct(A:Forward()),
+                V:DotProduct(A:Right()),
+                V:DotProduct(A:Up()))
 end
 
 function GetDefaultString(sBase, sDefault)
@@ -719,15 +746,6 @@ function Sort(tTable,tIndexes)
   Cct = Cct - 1
   Qsort(CopyTable,1,Cct)
   return CopyTable
-end
-
-function DecomposeByAngle(V,A)
-  if(not ( V and A ) ) then
-    return Vector()
-  end
-  return Vector(V:DotProduct(A:Forward()),
-                V:DotProduct(A:Right()),
-                V:DotProduct(A:Up()))
 end
 
 ------------------ AssemblyLib LOGS ------------------------
@@ -1469,7 +1487,7 @@ function CacheQueryPiece(sModel)
       stPiece.Kept = false
     end
   else
-    LogInstance("CacheQueryPiece: "..GetSQLBuildError())
+    LogInstance("CacheQueryPiece: "..GetSQLBuildError().."\n")
     return nil
   end
   return nil
@@ -1488,7 +1506,7 @@ function PanelQueryPieces()
     LogInstance("PanelQueryPieces: No data found >"..Q.."<")
     return nil
   end
-  LogInstance("PanelQueryPieces: "..GetSQLBuildError())
+  LogInstance("PanelQueryPieces: "..GetSQLBuildError().."\n")
   return nil
 end
 
@@ -1509,8 +1527,9 @@ function ExportSQL2Lua(sTable,sPrefix)
   local F = file.Open(LibBASPath..LibEXPPath..(sPrefix or GetInstancePrefix())..
                       "sql2lua_"..TableKey..".txt", "w", "DATA" )
   if(not F) then
-    LogInstance("ExportSQL2Lua: file.Open("..LibBASPath..LibEXPPath..
-                (sPrefix or GetInstancePrefix()).."sql2lua_"..TableKey..".txt) Failed")
+    LogInstance("ExportSQL2Lua: file.Open("..LibBASPath..
+                 LibEXPPath..(sPrefix or GetInstancePrefix())..
+                 "sql2lua_"..TableKey..".txt) Failed")
     return
   end
   local Q
@@ -1554,7 +1573,7 @@ function ExportSQL2Lua(sTable,sPrefix)
        F:Write("ExportSQL2Lua: No data found >"..Q.."<")
     end
   else
-     F:Write("ExportSQL2Lua: "..GetSQLBuildError())
+     F:Write("ExportSQL2Lua: "..GetSQLBuildError().."\n")
   end
   F:Flush()
   F:Close()
@@ -1596,7 +1615,7 @@ function ExportSQL2Inserts(sTable,sPrefix)
       F:Write("Return "..#qData.." results !\n")
       F:Write("Function ExportSQL2Inserts: \n\n")
       while(qData[Ind]) do
-        F:Write("SQLInsertRecord(\""..sTable.."\", {")
+        F:Write("SQLInsertRecord(\""..TableKey.."\", {")
         Cnt  = 1
         qRec = qData[Ind]
         while(Cnt <= defTable.Size) do
@@ -1614,14 +1633,15 @@ function ExportSQL2Inserts(sTable,sPrefix)
       end
     end
   else
-     F:Write("ExportSQL2Inserts: "..GetSQLBuildError() .. "\n")
+    LogInstance("ExportSQL2Inserts: "..GetSQLBuildError().."\n")
   end
   F:Flush()
   F:Close()
 end
 
 function ExportLua2Inserts(tTable,sName,sPrefix)
-  if(not tTable) then return end
+  if(not (tTable and type(tTable) == "table"))  then return end
+  if(not (sName  and type(sName)  == "string")) then return end
   if(not file.Exists(LibBASPath,"DATA")) then
     file.CreateDir(LibBASPath)
   end
@@ -1677,7 +1697,8 @@ function SQLImportFromDSV(sTable,sDelim,bCommit,sPrefix)
     LogInstance("SQLImportFromDSV: Missing: Table definition for "..sTable)
     return
   end
-  local F = file.Open(LibBASPath..LibDSVPath..(sPrefix or GetInstancePrefix())..TableKey..".txt", "r", "DATA" )
+  local F = file.Open(LibBASPath..LibDSVPath..(sPrefix or GetInstancePrefix())
+                      ..TableKey..".txt", "r", "DATA" )
   if(not F) then
     LogInstance("SQLImportFromDSV: file.Open("..LibBASPath..LibDSVPath..
                (sPrefix or GetInstancePrefix())..TableKey..".txt) Failed")
@@ -1723,7 +1744,7 @@ function SQLExportIntoDSV(sTable,sDelim,sPrefix)
   if(type(sTable) ~= "string") then return end
   local TableKey = LibToolPrefixU..sTable
   if(not LibTables[TableKey]) then
-    LogInstance("SQLExportIntoDSV: Missing: Table definition for "..tostring(sTable))
+    LogInstance("SQLImportFromDSV: Missing: Table definition for "..sTable)
     return
   end
   local defTable = LibTables[TableKey]
@@ -1733,7 +1754,8 @@ function SQLExportIntoDSV(sTable,sDelim,sPrefix)
   if(not file.Exists(LibBASPath..LibDSVPath,"DATA")) then
     file.CreateDir(LibBASPath..LibDSVPath)
   end
-  local F = file.Open(LibBASPath..LibDSVPath..(sPrefix or GetInstancePrefix())..TableKey..".txt", "w", "DATA" )
+  local F = file.Open(LibBASPath..LibDSVPath..(sPrefix or GetInstancePrefix())
+                      ..TableKey..".txt", "w", "DATA" )
   if(not F) then
     LogInstance("SQLExportIntoDSV: file.Open("..LibBASPath..LibDSVPath..
                (sPrefix or GetInstancePrefix())..TableKey..".txt) Failed")
@@ -1785,7 +1807,7 @@ function SQLExportIntoDSV(sTable,sDelim,sPrefix)
     end
   else
     LogInstance("SQLExportIntoDSV: Failed to assemble query >> "
-                  ..GetSQLBuildError())
+                  ..GetSQLBuildError().."\n")
     return
   end
   F:Flush()
@@ -1999,7 +2021,6 @@ function AttachBodyGroups(ePiece,sBgrpIDs)
   if(not IDs) then return end
   local BG = ePiece:GetBodyGroups()
   Print(IDs,"IDs")
-  Print(BG,"BodyGroups")
   local Cnt = 1
   while(BG[Cnt]) do
     local CurBG = BG[Cnt]
