@@ -346,14 +346,11 @@ function DecomposeByAngle(V,A)
 end
 
 function GetDefaultString(sBase, sDefault)
-  local IsBase = (type(sBase)    == "string")
-  local IsDeft = (type(sDefault) == "string")
-  if(IsBase) then
+  if(type(sBase) == "string") then
     if(string.len(sBase) > 0) then return sBase end
   end
-    if(IsDeft) then return sDefault end
-    return ""
-  end
+  if(type(sDefault) == "string") then return sDefault end
+  return ""
 end
 
 function SetTableDefinition(sTable, tDefinition)
