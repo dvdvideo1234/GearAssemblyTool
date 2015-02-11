@@ -117,6 +117,155 @@ if(CLIENT) then
   end
   concommand.Add(gearasmlib.GetToolPrefixL().."resetoffs",ResetOffsets)
   
+  local function OpenTrackAssemblyFrame(oPly,oCom,oArgs)
+    local Ind = 1
+    local CntN = tonumber(oArgs[1]) or 0
+    local scrW = surface.ScreenWidth()
+    local scrH = surface.ScreenHeight()
+    local FrequentlyUsed = gearasmlib.GetFrequentlyUsed(CntN)
+    if(not FrequentlyUsed) then
+      oPly:ChatPrint(gearasmlib.GetToolNameU()..": Failed to retrieve most frequent models")
+      return
+    end
+    if(not IsValid(pnGearAssemblyFrame)) then
+      pnGearAssemblyFrame = vgui.Create("DFrame")
+      pnGearAssemblyFrame:SetTitle("Frequently used pieces by "..oPly:Nick())
+      pnGearAssemblyFrame:SetVisible(false)
+      pnGearAssemblyFrame:SetDraggable(true)
+      pnGearAssemblyFrame:SetDeleteOnClose(true)
+      pnGearAssemblyFrame:SetPos(scrW/4, scrH/4)
+      pnGearAssemblyFrame:SetSize(750, 280)
+      pnGearAssemblyFrame.OnClose = function()
+        pnGearAssemblyFrame:SetVisible(false)
+        pnGearAssemblyButtonL:Remove()
+        pnGearAssemblyButtonR:Remove()
+        pnGearAssemblyListView:Remove()
+        pnGearAssemblyModelPanel:Remove()
+        pnGearAssemblyProgressBar:Remove()
+      end
+    end
+    if(not IsValid(pnGearAssemblyModelPanel)) then
+      pnGearAssemblyModelPanel = vgui.Create("DModelPanel",pnGearAssemblyFrame)
+      pnGearAssemblyModelPanel:SetParent(pnGearAssemblyFrame)
+      pnGearAssemblyModelPanel:SetPos(500,25)
+      pnGearAssemblyModelPanel:SetSize(250, 255)
+      pnGearAssemblyModelPanel:SetVisible(false)
+      pnGearAssemblyModelPanel.LayoutEntity = function(pnSelf, oEnt)
+        if(pnSelf.bAnimated) then
+          pnSelf:RunAnimation()
+        end
+        local uiRec = gearasmlib.CacheQueryPiece(oEnt:GetModel())
+        if(not uiRec) then return end
+        local Ang  = Angle(0, RealTime() * 5, 0)
+              gearasmlib.RotateAroundDir(Ang,"RUF",uiRec.A[caP],uiRec.A[caY],uiRec.A[caR])
+        local Pos = Vector(uiRec.M[cvX],uiRec.M[cvY],uiRec.M[cvZ])
+        local Rot = Vector()
+              Rot:Set(Pos)
+              Rot:Rotate(Ang)
+              Rot:Mul(-1)
+              Rot:Add(Pos)
+        oEnt:SetAngles(Ang) 
+        oEnt:SetPos(Rot)
+      end
+    end
+    if(not IsValid(pnGearAssemblyProgressBar)) then
+      pnGearAssemblyProgressBar = vgui.Create("DProgress", pnGearAssemblyFrame)
+      pnGearAssemblyProgressBar:SetParent(pnGearAssemblyFrame)
+      pnGearAssemblyProgressBar:SetVisible(false)
+      pnGearAssemblyProgressBar:SetPos(10, 30)
+      pnGearAssemblyProgressBar:SetSize(490, 30)
+      pnGearAssemblyProgressBar:SetFraction(0)
+    end
+    if(not IsValid(pnGearAssemblyButtonL)) then
+      pnGearAssemblyButtonL = vgui.Create("DButton", pnGearAssemblyFrame)
+      pnGearAssemblyButtonL:SetParent(pnGearAssemblyFrame)
+      pnGearAssemblyButtonL:SetText("Export client's DB")
+      pnGearAssemblyButtonL:SetPos(15,30)
+      pnGearAssemblyButtonL:SetSize(230,30)
+      pnGearAssemblyButtonL.DoClick = function()
+        local exportdb = GetConVarNumber(gearasmlib.GetToolPrefixL().."exportdb") or 0
+        if(exportdb ~= 0) then
+          gearasmlib.Log("Button: "..pnGearAssemblyButtonL:GetText())
+          gearasmlib.ExportSQL2Lua    ("PIECES")
+          gearasmlib.ExportSQL2Inserts("PIECES")
+          gearasmlib.SQLExportIntoDSV ("PIECES","\t")
+        end
+      end
+    end
+    if(not IsValid(pnGearAssemblyButtonR)) then
+      pnGearAssemblyButtonR = vgui.Create("DButton", pnGearAssemblyFrame)
+      pnGearAssemblyButtonR:SetParent(pnGearAssemblyFrame)
+      pnGearAssemblyButtonR:SetText("Set client's LOG control")
+      pnGearAssemblyButtonR:SetPos(255,30)
+      pnGearAssemblyButtonR:SetSize(230,30)
+      pnGearAssemblyButtonR.DoClick = function()
+        gearasmlib.Log("Button: "..pnGearAssemblyButtonR:GetText())
+        local logsmax  = GetConVarNumber(gearasmlib.GetToolPrefixL().."logsmax") or 0
+        if(logsmax > 0) then
+          local logsenb = GetConVarNumber(gearasmlib.GetToolPrefixL().."logsenb") or 0
+          local logfile = GetConVarString(gearasmlib.GetToolPrefixL().."logfile") or ""
+          gearasmlib.SetLogControl(logsenb,logsmax,logfile)
+        end
+      end
+    end
+    if(not IsValid(pnGearAssemblyListView)) then
+      pnGearAssemblyListView = vgui.Create("DListView", pnGearAssemblyFrame)
+      pnGearAssemblyListView:SetParent(pnGearAssemblyFrame)
+      pnGearAssemblyListView:SetVisible(false)
+      pnGearAssemblyListView:SetMultiSelect(false)
+      pnGearAssemblyListView:SetPos(10,65)
+      pnGearAssemblyListView:SetSize(480,205)
+      pnGearAssemblyListView:AddColumn("Life"):SetFixedWidth(55)
+      pnGearAssemblyListView:AddColumn("Act"):SetFixedWidth(35)
+      pnGearAssemblyListView:AddColumn("Type"):SetFixedWidth(100)
+      pnGearAssemblyListView:AddColumn("Model"):SetFixedWidth(290)
+      pnGearAssemblyListView.OnRowSelected = function(pnSelf, nRow, pnVal)
+        local uiMod = FrequentlyUsed[nRow].Table[3]
+        pnGearAssemblyModelPanel:SetModel(uiMod)
+        local uiRec = gearasmlib.CacheQueryPiece(uiMod)
+        if(not uiRec) then return end
+        -- OBBCenter ModelPanel Configuration --
+        local uiEnt = pnGearAssemblyModelPanel.Entity
+        local uiCen = Vector(uiRec.M[cvX],uiRec.M[cvY],uiRec.M[cvZ])
+        local uiEye = uiEnt:LocalToWorld(uiCen)
+        gearasmlib.SubVectorXYZ(uiCen,uiRec.O[cvX],uiRec.O[cvY],uiRec.O[cvZ])
+        local uiLen = uiCen:Length()
+        local uiCam = Vector(0.70 * uiLen, 0, 0.30 * uiLen)
+        pnGearAssemblyModelPanel:SetLookAt(uiEye)
+        pnGearAssemblyModelPanel:SetCamPos(2 * uiCam + uiEye)
+        oPly:ConCommand(gearasmlib.GetToolPrefixL().."model "..uiMod.."\n")
+        oPly:ConCommand(gearasmlib.GetToolPrefixL().."pointid 1\n")
+        oPly:ConCommand(gearasmlib.GetToolPrefixL().."pnextid 2\n")
+      end
+    end
+    pnGearAssemblyFrame:SetVisible(true)
+    pnGearAssemblyFrame:Center()
+    pnGearAssemblyFrame:MakePopup()
+    pnGearAssemblyListView:Clear()
+    pnGearAssemblyListView:SetVisible(false)
+    pnGearAssemblyProgressBar:SetVisible(true)
+    pnGearAssemblyProgressBar:SetFraction(0)
+    RestoreCursorPosition()
+    while(FrequentlyUsed[Ind]) do
+      local Val = FrequentlyUsed[Ind]
+      local Rec = gearasmlib.CacheQueryPiece(Val.Table[3])
+      if(Rec) then
+        pnGearAssemblyListView:AddLine(
+          gearasmlib.RoundValue(Val.Value,0.001),
+            Val.Table[1],Val.Table[2],Val.Table[3])
+      end
+      pnGearAssemblyProgressBar:SetFraction(Ind/CntN)
+      Ind = Ind + 1
+    end
+    pnGearAssemblyListView:SetVisible(true)
+    pnGearAssemblyProgressBar:SetVisible(false)
+    pnGearAssemblyButtonL:SetVisible(true)
+    pnGearAssemblyButtonL:SetVisible(true)
+    pnGearAssemblyModelPanel:SetVisible(true)
+    RememberCursorPosition()
+  end
+  concommand.Add(gearasmlib.GetToolPrefixL().."openframe", OpenTrackAssemblyFrame)
+  
   txToolgunBackground = surface.GetTextureID("vgui/white")
 end
 
@@ -554,6 +703,10 @@ function TOOL:RightClick(Trace)
   if(not Trace) then return nil end
   local ply = self:GetOwner()
   gearasmlib.PlyLoadKey(ply)
+  if(Trace.HitWorld and trackasmlib.PlyLoadKey(ply,"USE")) then
+    ply:ConCommand(trackasmlib.GetToolPrefixL().."openframe 20\n")
+    return true
+  end
   if(gearasmlib.PlyLoadKey(ply,"SPEED")) then
     local trEnt = Trace.Entity
     if(Trace.HitWorld) then
