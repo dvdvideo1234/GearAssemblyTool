@@ -252,18 +252,19 @@ function SetAnglePYR(aBase, nP, nY, nR)
   aBase[caR] = (nR or 0)
 end
 
-function RotateAroundDir(aBase, sOrder, nF, nR, nU)
+function RotateAngleDir(aBase, sOrder, nC1, nC2, nC3)
   if(not aBase) then return end
   if(not (sOrder and type(sOrder) == "string")) then return end
   local Ind = 1
+  local Val = {nC1, nC2, nC3}
   local C   = string.sub(sOrder,Ind,Ind)
   while(C ~= "" and Ind <= 3) do
-    if(C == "F") then
-      aBase:RotateAroundAxis(aBase:Forward(),tonumber(nF) or 0)
+    if    (C == "F") then
+      aBase:RotateAroundAxis(aBase:Forward(),tonumber(Val[Ind]) or 0)
     elseif(C == "R") then
-      aBase:RotateAroundAxis(aBase:Right(),tonumber(nR) or 0)
+      aBase:RotateAroundAxis(aBase:Right(),tonumber(Val[Ind]) or 0)
     elseif(C == "U") then
-      aBase:RotateAroundAxis(aBase:Up(),tonumber(nU) or 0)
+      aBase:RotateAroundAxis(aBase:Up(),tonumber(Val[Ind]) or 0)
     end
     Ind = Ind + 1
     C = string.sub(sOrder,Ind,Ind)
@@ -1884,9 +1885,8 @@ function GetNORSpawn(stTrace, sModel, ucsPosX, ucsPosY, ucsPosZ,
   stSpawn.R:Set(stSpawn.DAng:Right())
   stSpawn.U:Set(stSpawn.DAng:Up())
   stSpawn.SAng:Set(stSpawn.DAng)
-  stSpawn.SAng:RotateAroundAxis(stSpawn.SAng:Right()  ,hdRec.A[caP] * hdRec.A[csX])
-  stSpawn.SAng:RotateAroundAxis(stSpawn.SAng:Up()     ,hdRec.A[caY] * hdRec.A[csY])
-  stSpawn.SAng:RotateAroundAxis(stSpawn.SAng:Forward(),hdRec.A[caR] * hdRec.A[csZ])
+  RotateAngleDir(stSpawn.SAng,"RUF", hdRec.A[caP] * hdRec.A[csX],
+    hdRec.A[caY] * hdRec.A[csY], hdRec.A[caR] * hdRec.A[csZ])
   stSpawn.SPos:Set(stTrace.HitPos)
   stSpawn.SPos:Add((ucsPosX or 0) * stSpawn.F)
   stSpawn.SPos:Add((ucsPosY or 0) * stSpawn.R)
@@ -1937,8 +1937,7 @@ function GetENTSpawn(trEnt,nRotPivot,hdModel,enIgnTyp,enOrAngTr,
   -- Do Origin UCS World angle
   stSpawn.SAng:Set(stSpawn.CAng)
   -- Do Origin F,R,U
-  stSpawn.SAng:RotateAroundAxis(stSpawn.SAng:Right(),trRec.Mesh + ucsAngP)
-  stSpawn.SAng:RotateAroundAxis(stSpawn.SAng:Forward(),ucsAngR)
+  RotateAngleDir(stSpawn.SAng,"RF",trRec.Mesh + (ucsAngP or 0),(ucsAngR or 0))
   stSpawn.F:Set(stSpawn.SAng:Forward())
   stSpawn.R:Set(stSpawn.SAng:Right())
   stSpawn.U:Set(stSpawn.SAng:Up())
@@ -1947,17 +1946,16 @@ function GetENTSpawn(trEnt,nRotPivot,hdModel,enIgnTyp,enOrAngTr,
   stSpawn.TRec = trRec
   -- Get the new Domain
   stSpawn.DAng:Set(stSpawn.SAng)
-  stSpawn.DAng:RotateAroundAxis(stSpawn.DAng:Right(),hdRec.Mesh)
-  stSpawn.DAng:RotateAroundAxis(stSpawn.DAng:Up(),ucsAngY + 180)
+  RotateAngleDir(stSpawn.DAng,"RU",hdRec.Mesh,(ucsAngY or 0) + 180)
+  
   -- Get Hold model stuff
 
   SetAngle(stSpawn.MAng, hdRec.A)   
   SetVector(stSpawn.MPos, hdRec.O)
   NegAngle(stSpawn.MAng)
   stSpawn.MPos:Rotate(stSpawn.MAng)
+  RotateAngleDir(stSpawn.MAng,"UR",180,-hdRec.Mesh)
   
-  stSpawn.MAng:RotateAroundAxis(stSpawn.MAng:Up(),180)
-  stSpawn.MAng:RotateAroundAxis(stSpawn.MAng:Right(),-hdRec.Mesh)
   NegVector(stSpawn.MPos)
   stSpawn.MPos:Set(DecomposeByAngle(stSpawn.MPos,stSpawn.MAng))
 
@@ -1965,10 +1963,10 @@ function GetENTSpawn(trEnt,nRotPivot,hdModel,enIgnTyp,enOrAngTr,
   NegAngle(stSpawn.MAng)
   
   stSpawn.SAng:Set(stSpawn.DAng)
-  stSpawn.SAng:RotateAroundAxis(stSpawn.SAng:Right()  ,stSpawn.MAng[caP] * hdRec.A[csX])
-  stSpawn.SAng:RotateAroundAxis(stSpawn.SAng:Up()     ,stSpawn.MAng[caY] * hdRec.A[csY])
-  stSpawn.SAng:RotateAroundAxis(stSpawn.SAng:Forward(),stSpawn.MAng[caR] * hdRec.A[csZ])
-
+  
+  RotateAngleDir(stSpawn.SAng,"RUF",stSpawn.MAng[caP] * hdRec.A[csX],
+                                    stSpawn.MAng[caY] * hdRec.A[csY],
+                                    stSpawn.MAng[caR] * hdRec.A[csZ])
   -- Do Spawn Position
   stSpawn.SPos:Set(stSpawn.OPos)
   stSpawn.SPos:Add((hdRec.O[csX] * stSpawn.MPos[cvX]) * stSpawn.F)

@@ -157,7 +157,7 @@ if(CLIENT) then
         local uiRec = gearasmlib.CacheQueryPiece(oEnt:GetModel())
         if(not uiRec) then return end
         local Ang  = Angle(0, RealTime() * 5, 0)
-              gearasmlib.RotateAroundDir(Ang,"RUF",uiRec.A[caP],uiRec.A[caY],uiRec.A[caR])
+              gearasmlib.RotateAngleDir(Ang,"RUF",uiRec.A[caP],uiRec.A[caY],uiRec.A[caR])
         local Pos = Vector(uiRec.M[cvX],uiRec.M[cvY],uiRec.M[cvZ])
         local Rot = Vector()
               Rot:Set(Pos)
@@ -216,7 +216,7 @@ if(CLIENT) then
       pnGearAssemblyListView:SetPos(10,65)
       pnGearAssemblyListView:SetSize(480,205)
       pnGearAssemblyListView:AddColumn("Life"):SetFixedWidth(55)
-      pnGearAssemblyListView:AddColumn("Act"):SetFixedWidth(35)
+      pnGearAssemblyListView:AddColumn("Mesh"):SetFixedWidth(35)
       pnGearAssemblyListView:AddColumn("Type"):SetFixedWidth(100)
       pnGearAssemblyListView:AddColumn("Model"):SetFixedWidth(290)
       pnGearAssemblyListView.OnRowSelected = function(pnSelf, nRow, pnVal)
@@ -234,8 +234,6 @@ if(CLIENT) then
         pnGearAssemblyModelPanel:SetLookAt(uiEye)
         pnGearAssemblyModelPanel:SetCamPos(2 * uiCam + uiEye)
         oPly:ConCommand(gearasmlib.GetToolPrefixL().."model "..uiMod.."\n")
-        oPly:ConCommand(gearasmlib.GetToolPrefixL().."pointid 1\n")
-        oPly:ConCommand(gearasmlib.GetToolPrefixL().."pnextid 2\n")
       end
     end
     pnGearAssemblyFrame:SetVisible(true)
