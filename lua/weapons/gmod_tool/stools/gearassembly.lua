@@ -230,7 +230,7 @@ if(CLIENT) then
         local uiEye = uiEnt:LocalToWorld(uiCen)
         gearasmlib.SubVectorXYZ(uiCen,uiRec.O[cvX],uiRec.O[cvY],uiRec.O[cvZ])
         local uiLen = uiCen:Length()
-        local uiCam = Vector(0.70 * uiLen, 0, 0.30 * uiLen)
+        local uiCam = Vector(uiLen, 0, 0.5 * uiLen)
         pnGearAssemblyModelPanel:SetLookAt(uiEye)
         pnGearAssemblyModelPanel:SetCamPos(2 * uiCam + uiEye)
         oPly:ConCommand(gearasmlib.GetToolPrefixL().."model "..uiMod.."\n")
@@ -701,8 +701,8 @@ function TOOL:RightClick(Trace)
   if(not Trace) then return nil end
   local ply = self:GetOwner()
   gearasmlib.PlyLoadKey(ply)
-  if(Trace.HitWorld and trackasmlib.PlyLoadKey(ply,"USE")) then
-    ply:ConCommand(trackasmlib.GetToolPrefixL().."openframe 20\n")
+  if(Trace.HitWorld and gearasmlib.PlyLoadKey(ply,"USE")) then
+    ply:ConCommand(gearasmlib.GetToolPrefixL().."openframe 20\n")
     return true
   end
   if(gearasmlib.PlyLoadKey(ply,"SPEED")) then

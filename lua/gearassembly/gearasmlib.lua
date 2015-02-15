@@ -498,7 +498,7 @@ function GetFrequentlyUsed(snCount)
     TimerID  = TableKey.."_"..Model
     if(timer.Exists(TimerID)) then
       Tim = timer.TimeLeft(TimerID)
-      Ind = PushSortValues(FreqUse,Cnt,Tim,{Record.Kept,Record.Type,Model})
+      Ind = PushSortValues(FreqUse,Cnt,Tim,{Record.Mesh,Record.Type,Model})
       if(Ind < 1) then return nil end
     end
   end
@@ -2077,5 +2077,3 @@ function HookOnRemove(oBas,oEnt,arCTable,nMax)
   LogInstance(LibToolNameU..": HookOnRemove > Done "..(Ind-1).." of "..nMax..".")
   return
 end
-
-PrintInstance(LibToolNameU..": Library loaded successfully !")

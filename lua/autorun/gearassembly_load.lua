@@ -7,11 +7,11 @@ end
 include("gearassembly/gearasmlib.lua")
 
 -- CONFIGURE ASMLIB
-trackasmlib.SetToolName("gearassembly")
-trackasmlib.SetLogControl(1,10000,"")
-trackasmlib.BASPath(trackasmlib.GetToolNameL())
+gearasmlib.SetToolName("gearassembly")
+gearasmlib.SetLogControl(0,10000,"")
+gearasmlib.BASPath(gearasmlib.GetToolNameL())
 
-trackasmlib.SetTableDefinition("PIECES",
+gearasmlib.SetTableDefinition("PIECES",
 {
     Size = 7,
     Keep = 3600,
