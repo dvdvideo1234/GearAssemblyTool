@@ -1,4 +1,4 @@
--- Shared include
+------ INCLUDE LIBRARY ------
 
 if(SERVER) then
   AddCSLuaFile("gearassembly/gearasmlib.lua")
@@ -6,11 +6,12 @@ end
 
 include("gearassembly/gearasmlib.lua")
 
--- CONFIGURE ASMLIB
+------ CONFIGURE ASMLIB ------
 gearasmlib.SetToolName("gearassembly")
 gearasmlib.SetLogControl(0,10000,"")
 gearasmlib.BASPath(gearasmlib.GetToolNameL())
 
+------ SET TABLE DEFINITIONS ------
 gearasmlib.SetTableDefinition("PIECES",
 {
     Size = 7,
@@ -24,7 +25,7 @@ gearasmlib.SetTableDefinition("PIECES",
     [7] = {"MASSC" , "TEXT"}
 })
 
--- INITIALIZE DB
+------ INITIALIZE DB ------
 gearasmlib.SQLCreateTable("PIECES",{{1},{2},{3},{1,4},{1,2},{2,4},{1,2,3}},true,true)
 
 if(file.Exists(gearasmlib.BASPath()..gearasmlib.DSVPath()..
