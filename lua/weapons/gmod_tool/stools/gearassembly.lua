@@ -1093,7 +1093,7 @@ function TOOL.BuildCPanel(CPanel)
         pText:SetPos(2,300)
         pText:SetTall(18)
         pText:SetText(gearasmlib.GetDefaultString(GetConVarString(gearasmlib.GetToolPrefixL().."bgskids"),
-                                           "Bodygroup IDs separated with commas > ENTER"))
+                                           "Comma delimited Body/Skin IDs > ENTER"))
         pText.OnEnter = function(self)
           local sTX = self:GetValue() or ""
           RunConsoleCommand(gearasmlib.GetToolPrefixL().."bgskids",sTX)
@@ -1107,7 +1107,8 @@ function TOOL.BuildCPanel(CPanel)
         pButton:SetPos(2,CurY)
         pButton:SetTall(18)
         pButton.DoClick = function()
-          local sBG = gearasmlib.GetBodygroupTrace().."/"..gearasmlib.GetSkinTrace()
+          local sBG = gearasmlib.GetBodygroupTrace()
+               .."/"..gearasmlib.GetSkinTrace()
           pText:SetValue(sBG)
           RunConsoleCommand(gearasmlib.GetToolPrefixL().."bgskids",sBG)
         end
