@@ -1,8 +1,10 @@
 GearAssemblyTool
 ================
 
-On the Steam WS: http://steamcommunity.com/sharedfiles/filedetails/?id=384782853
+![GearAssemblyTool](https://raw.githubusercontent.com/dvdvideo1234/GearAssemblyTool/master/screenshot.jpg)
 
+<br> On the Steam WS: http://steamcommunity.com/sharedfiles/filedetails/?id=384782853
+<br>
 <br>This is a Gmod tool for assembling Gears 
 <br>
 <br>I made this thing, because I am pissed of mesing my gears over and over and ... you get the idea xD
