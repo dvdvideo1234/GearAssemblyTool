@@ -1886,7 +1886,8 @@ function GetNORSpawn(stTrace, sModel, ucsPosX, ucsPosY, ucsPosZ,
   stSpawn.U:Set(stSpawn.DAng:Up())
   stSpawn.SAng:Set(stSpawn.DAng)
   RotateAngleDir(stSpawn.SAng,"RUF", hdRec.A[caP] * hdRec.A[csX],
-    hdRec.A[caY] * hdRec.A[csY], hdRec.A[caR] * hdRec.A[csZ])
+                                     hdRec.A[caY] * hdRec.A[csY],
+                                     hdRec.A[caR] * hdRec.A[csZ])
   stSpawn.SPos:Set(stTrace.HitPos)
   stSpawn.SPos:Add((ucsPosX or 0) * stSpawn.F)
   stSpawn.SPos:Add((ucsPosY or 0) * stSpawn.R)
