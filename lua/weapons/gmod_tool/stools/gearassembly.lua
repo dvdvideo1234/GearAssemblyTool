@@ -117,7 +117,7 @@ if(CLIENT) then
   end
   concommand.Add(gearasmlib.GetToolPrefixL().."resetoffs",ResetOffsets)
   
-  local function OpenTrackAssemblyFrame(oPly,oCom,oArgs)
+  local function OpenGearAssemblyFrame(oPly,oCom,oArgs)
     local Ind = 1
     local CntN = tonumber(oArgs[1]) or 0
     local scrW = surface.ScreenWidth()
@@ -262,7 +262,7 @@ if(CLIENT) then
     pnGearAssemblyModelPanel:SetVisible(true)
     RememberCursorPosition()
   end
-  concommand.Add(gearasmlib.GetToolPrefixL().."openframe", OpenTrackAssemblyFrame)
+  concommand.Add(gearasmlib.GetToolPrefixL().."openframe", OpenGearAssemblyFrame)
   
   txToolgunBackground = surface.GetTextureID("vgui/white")
 end
