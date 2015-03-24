@@ -50,11 +50,11 @@ local stDrawDyes = {
   Txtsk = Color(161,161,161,255)
 }
 
-local SMode = Container(2,"Stack Mode")
+local SMode = gearasmlib.Container(2,"Stack Mode")
       SMode:Insert(1,"Forward based")
       SMode:Insert(2,"Around pivot")
                                                                               
-local CType = Container(13,"Constraint Type")                                 
+local CType = gearasmlib.Container(13,"Constraint Type")                                 
       CType:Insert(1 ,{Name = "Free Spawn"  , Make = nil}                     )
       CType:Insert(2 ,{Name = "No PhysGun"  , Make = nil}                     )
       CType:Insert(3 ,{Name = "Parent Piece", Make = nil}                     )
