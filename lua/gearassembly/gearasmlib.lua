@@ -374,6 +374,64 @@ function GetTableDefinition(sTable)
   return nil
 end
 
+function Container(nSz, sInfo)
+  local Size = tonumber(nSz  ) or 0
+  local Info = tostring(sInfo) or "Store Container"
+  local Data = {}
+        Data["Method"]   = ""
+        Data["Insert"]   = 0
+        Data["Select"]   = 0
+        Data["Delete"]   = 0
+  self = {}
+  function self:GetInfo()
+    return Info
+  end
+  function self:SetSize(nSz)
+    local Sz = tonumber(nSz) or 0
+    if(Sz < Size) then
+      while(Size > Sz) do
+        Data[Size] = nil
+        Size = Size - 1
+      end
+      collectgarbage()
+    end
+  end
+  function self:GetSize()
+    return Size
+  end
+  function self:Insert(nID,anyValue)
+    if(type(nID) ~= "number") then return end
+    if(nID < 1 or nID > Size) then return end
+    Data[nID]      = anyValue
+    Data["Insert"] = nID
+    Data["Method"] = "Insert"
+    collectgarbage()
+  end
+  function self:Select(nID)
+    if(type(nID) == "number") then
+      Data["Select"] = nID
+      Data["Method"] = "Select"
+      return Data[nID]
+    end
+    return nil
+  end
+  function self:Delete(nID)
+    if(type(nID) ~= "number") then return end
+    if(nID < 1 or nID > Size) then return end
+    Data[nID] = nil
+    Data["Delete"] = nID
+    Data["Method"] = "Delete"
+    collectgarbage()
+  end
+  function self:GetHistory(sMeth)
+    if(type(sMeth) ~= "string") then
+      return Data["Method"]
+    end
+    return Data[sMeth]
+  end
+  return self
+end
+
 function SetAction(sKey,fAct,tDat)
   if(not (sKey and type(sKey) == "string")) then return false end
   if(not (fAct and type(fAct) == "function")) then return false end
@@ -516,11 +574,13 @@ function GetViewRadius(plPly,vPos)
   return math.Clamp(500 / (vPos - plPly:GetPos()):Length(),1,100)
 end
 
-function GetCorrectID(anyValue,stSettings)
+function GetCorrectID(anyValue,oContainer)
   local Value = tonumber(anyValue)
   if(not Value) then return 1 end
-  if(Value > stSettings["MAX"]) then Value = 1 end
-  if(Value < 1) then Value = stSettings["MAX"] end
+  if(not oContainer) then return 1 end
+  local Max = oContainer:GetSize()
+  if(Value > Max) then Value = 1 end
+  if(Value < 1) then Value = Max end
   return Value
 end
 

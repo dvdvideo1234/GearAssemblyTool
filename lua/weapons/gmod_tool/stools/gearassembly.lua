@@ -50,30 +50,24 @@ local stDrawDyes = {
   Txtsk = Color(161,161,161,255)
 }
 
-local stSMode = {
-  ["MAX"]  = 2,
-  ["ACT"] = "Stack Mode",
-  [1] = "Forward based",
-  [2] = "Around pivot"
-}
-
-local stCType = {
-  ["MAX"] = 13,
-  ["ACT"] = "Constraint Type",
-  [1]  = {Name = "Free Spawn"  , Make = nil},
-  [2]  = {Name = "No PhysGun"  , Make = nil},
-  [3]  = {Name = "Parent Piece", Make = nil},
-  [4]  = {Name = "Weld Piece"  , Make = constraint.Weld},
-  [5]  = {Name = "Axis Piece"  , Make = constraint.Axis},
-  [6]  = {Name = "Ball-Sock HM", Make = constraint.Ballsocket},
-  [7]  = {Name = "Ball-Sock TM", Make = constraint.Ballsocket},
-  [8]  = {Name = "AdvBS Lock X", Make = constraint.AdvBallsocket},
-  [9]  = {Name = "AdvBS Lock Y", Make = constraint.AdvBallsocket},
-  [10] = {Name = "AdvBS Lock Z", Make = constraint.AdvBallsocket},
-  [11] = {Name = "AdvBS Spin X", Make = constraint.AdvBallsocket},
-  [12] = {Name = "AdvBS Spin Y", Make = constraint.AdvBallsocket},
-  [13] = {Name = "AdvBS Spin Z", Make = constraint.AdvBallsocket}
-}
+local SMode = Container(2,"Stack Mode")
+      SMode:Insert(1,"Forward based")
+      SMode:Insert(2,"Around pivot")
+                                                                              
+local CType = Container(13,"Constraint Type")                                 
+      CType:Insert(1 ,{Name = "Free Spawn"  , Make = nil}                     )
+      CType:Insert(2 ,{Name = "No PhysGun"  , Make = nil}                     )
+      CType:Insert(3 ,{Name = "Parent Piece", Make = nil}                     )
+      CType:Insert(4 ,{Name = "Weld Piece"  , Make = constraint.Weld}         )
+      CType:Insert(5 ,{Name = "Axis Piece"  , Make = constraint.Axis}         )
+      CType:Insert(6 ,{Name = "Ball-Sock HM", Make = constraint.Ballsocket}   )
+      CType:Insert(7 ,{Name = "Ball-Sock TM", Make = constraint.Ballsocket}   )
+      CType:Insert(8 ,{Name = "AdvBS Lock X", Make = constraint.AdvBallsocket})
+      CType:Insert(9 ,{Name = "AdvBS Lock Y", Make = constraint.AdvBallsocket})
+      CType:Insert(10,{Name = "AdvBS Lock Z", Make = constraint.AdvBallsocket})
+      CType:Insert(11,{Name = "AdvBS Spin X", Make = constraint.AdvBallsocket})
+      CType:Insert(12,{Name = "AdvBS Spin Y", Make = constraint.AdvBallsocket})
+      CType:Insert(13,{Name = "AdvBS Spin Z", Make = constraint.AdvBallsocket})
 
 --- Because Vec[1] is actually faster than Vec.X
 --- Vector Component indexes ---
@@ -363,9 +357,10 @@ if(SERVER) then
     local NoCollid = nNoCollid     or 0
     local ForceLim = nForceLim     or 0
     local IsIn     = false
-    if(not stCType[ConID]) then return true end
-    gearasmlib.LogInstance("ConstraintGearAssemblyPiece: Creating "..stCType[ConID].Name..".")
-    local ConstrInfo = stCType[ConID]
+    if(CType:Select(ConID) == nil) then return true end
+    local ConstrInfo = CType:Select(ConID)
+    gearasmlib.LogInstance("ConstraintGearAssemblyPiece: Creating "..ConstrInfo.Name..".")
+    
     -- Check for "Free Spawn" ( No constraints ) , coz nothing to be done after it.
     if(not IsIn and ConID == 1) then IsIn = true end
     if(not (ePiece and ePiece:IsValid())) then return true end
@@ -489,8 +484,8 @@ function TOOL:LeftClick(Trace)
   local nextrol   = math.Clamp(self:GetClientNumber("nextrol") or 0,-360,360)
   local deltarot  = math.Clamp(self:GetClientNumber("deltarot") or 0,-360,360)
   local forcelim  = math.Clamp(self:GetClientNumber("forcelim") or 0,0,1000000)
-  local stmode    = gearasmlib.GetCorrectID(self:GetClientInfo("stmode"),stSMode)
-  local contyp    = gearasmlib.GetCorrectID(self:GetClientInfo("contyp"),stCType)
+  local stmode    = gearasmlib.GetCorrectID(self:GetClientInfo("stmode"),SMode)
+  local contyp    = gearasmlib.GetCorrectID(self:GetClientInfo("contyp"),CType)
   gearasmlib.PlyLoadKey(ply)
   if(not gearasmlib.PlyLoadKey(ply,"SPEED") and
      not gearasmlib.PlyLoadKey(ply,"DUCK")) then
@@ -517,7 +512,7 @@ function TOOL:LeftClick(Trace)
     end
     undo.Create("Last Gear Assembly")
     if(ConstraintGearAssemblyPiece(eBase,ePiece,Trace.HitPos,Trace.HitNormal,contyp,nocollide,forcelim,freeze,engravity)) then
-      gearasmlib.PrintNotify(ply,"Ignore constraint "..stCType[contyp].Name..".","UNDO")
+      gearasmlib.PrintNotify(ply,"Ignore constraint "..CType:Select(contyp).Name..".","UNDO")
     end
     gearasmlib.EmitSoundPly(ply)
     undo.AddEntity(ePiece)
@@ -554,7 +549,7 @@ function TOOL:LeftClick(Trace)
   if(count > 1 and
      gearasmlib.PlyLoadKey(ply,"SPEED") and
      stmode >= 1 and
-     stmode <= stSMode["MAX"]
+     stmode <= SMode:GetSize()
   ) then
     local stSpawn = gearasmlib.GetENTSpawn(trEnt,rotpiv,model,igntyp,orangtr,
                                            nextx,nexty,nextz,
@@ -578,7 +573,7 @@ function TOOL:LeftClick(Trace)
           gearasmlib.PrintNotify(ply,"Position out of map bounds!","ERROR")
           gearasmlib.LogInstance(gearasmlib.GetToolNameU().." Additional Error INFO"
           .."\n   Event  : Stacking > Position out of map bounds"
-          .."\n   StMode : "..stSMode[stmode]
+          .."\n   StMode : "..SMode:Select(stmode)
           .."\n   Iterats: "..tostring(count-i)
           .."\n   StackTr: "..tostring(nTrys).." ?= "..tostring(staatts)
           .."\n   Player : "..ply:Nick()
@@ -611,7 +606,7 @@ function TOOL:LeftClick(Trace)
           gearasmlib.PrintNotify(ply,"Failed to obtain spawn data!","ERROR")
           gearasmlib.LogInstance(gearasmlib.GetToolNameU().." Additional Error INFO"
           .."\n   Event  : Stacking > Failed to obtain spawn data"
-          .."\n   StMode : "..stSMode[stmode]
+          .."\n   StMode : "..SMode:Select(stmode)
           .."\n   Iterats: "..tostring(count-i)
           .."\n   StackTr: "..tostring(nTrys).." ?= "..tostring(staatts)
           .."\n   Player : "..ply:Nick()
@@ -635,7 +630,7 @@ function TOOL:LeftClick(Trace)
         gearasmlib.PrintNotify(ply,"Make attempts ran off!","ERROR")
         gearasmlib.LogInstance(gearasmlib.GetToolNameU().." Additional Error INFO"
         .."\n   Event  : Stacking > Failed to allocate memory for a piece"
-        .."\n   StMode : "..stSMode[stmode]
+        .."\n   StMode : "..SMode:Select(stmode)
         .."\n   Iterats: "..tostring(count-i)
         .."\n   StackTr: "..tostring(nTrys).." ?= "..tostring(staatts)
         .."\n   Player : "..ply:Nick()
@@ -682,7 +677,7 @@ function TOOL:LeftClick(Trace)
       end
       undo.Create("Last Gear Assembly")
       if(ConstraintGearAssemblyPiece(eBase,ePiece,stSpawn.SPos,stSpawn.DAng:Up(),contyp,nocollide,forcelim,freeze,engravity)) then
-        gearasmlib.PrintNotify(ply,"Ignore constraint "..stCType[contyp].Name..".","UNDO")
+        gearasmlib.PrintNotify(ply,"Ignore constraint "..CType:Select(contyp).Name..".","UNDO")
       end
       gearasmlib.EmitSoundPly(ply)
       undo.AddEntity(ePiece)
@@ -736,10 +731,10 @@ function TOOL:RightClick(Trace)
     end
     return false
   else
-    local stmode = gearasmlib.GetCorrectID(self:GetClientInfo("stmode"),stSMode)
-          stmode = gearasmlib.GetCorrectID(stmode + 1,stSMode)
+    local stmode = gearasmlib.GetCorrectID(self:GetClientInfo("stmode"),SMode)
+          stmode = gearasmlib.GetCorrectID(stmode + 1,SMode)
     ply:ConCommand(gearasmlib.GetToolPrefixL().."stmode "..stmode.."\n")
-    gearasmlib.PrintNotify(ply,"Stack Mode: "..stSMode[stmode].." !","UNDO")
+    gearasmlib.PrintNotify(ply,"Stack Mode: "..SMode:Select(stmode).." !","UNDO")
     return true
   end
   return false
@@ -958,7 +953,7 @@ function TOOL:DrawToolScreen(w, h)
   end
   DrawTextRowColor(txPos,"Holds Model: Valid")
   local NoAV  = "N/A"
-  local stmode  = gearasmlib.GetCorrectID(self:GetClientInfo("stmode"),stSMode)
+  local stmode  = gearasmlib.GetCorrectID(self:GetClientInfo("stmode"),SMode)
   local trEnt = Trace.Entity
   local trOrig, trModel, trMesh, trRad
   if(trEnt and trEnt:IsValid()) then
@@ -978,7 +973,7 @@ function TOOL:DrawToolScreen(w, h)
   DrawTextRowColor(txPos,"Anc: "..self:GetClientInfo("anchor"),stDrawDyes.Anchr)
   DrawTextRowColor(txPos,"Mesh: "..tostring(trMesh or NoAV).." > "..tostring(gearasmlib.RoundValue(hdRec.Mesh,0.01) or NoAV),stDrawDyes.Yello)
   DrawTextRowColor(txPos,"Ratio: "..tostring(Ratio).." > "..tostring(trRad or NoAV).."/"..tostring(hdRad))
-  DrawTextRowColor(txPos,"StackMod: "..stSMode[stmode],stDrawDyes.Red)
+  DrawTextRowColor(txPos,"StackMod: "..SMode:Select(stmode),stDrawDyes.Red)
   DrawTextRowColor(txPos,tostring(os.date()),stDrawDyes.White)
   DrawRatioVisual(w,h,txPos.y+2,trRad,hdRad,7)
 end
@@ -1069,21 +1064,21 @@ function TOOL.BuildCPanel(CPanel)
   gearasmlib.PrintInstance(gearasmlib.GetToolNameU().." Found #"..tostring(Cnt-1).." piece items.")
 
   -- http://wiki.garrysmod.com/page/Category:DComboBox
-  local ConID = gearasmlib.GetCorrectID(GetConVarString(gearasmlib.GetToolPrefixL().."contyp"),stCType)
+  local ConID = gearasmlib.GetCorrectID(GetConVarString(gearasmlib.GetToolPrefixL().."contyp"),CType)
   local pConsType = vgui.Create("DComboBox")
         pConsType:SetPos(2, CurY)
         pConsType:SetTall(18)
-        pConsType:SetValue(stCType[ConID].Name or ("<"..stCType["ACT"]..">"))
+        pConsType:SetValue(CType:Select(ConID).Name or ("<"..CType:GetInfo()..">"))
         CurY = CurY + pConsType:GetTall() + 2
   local Cnt = 1
-  local Val = stCType[Cnt]
+  local Val = CType:Select(Cnt)
   while(Val) do
     pConsType:AddChoice(Val.Name)
     pConsType.OnSelect = function(panel,index,value)
       RunConsoleCommand(gearasmlib.GetToolPrefixL().."contyp",index)
     end
     Cnt = Cnt + 1
-    Val = stCType[Cnt]
+    Val = CType:Select(Cnt)
   end
   pConsType:ChooseOptionID(ConID)
   CPanel:AddItem(pConsType)
