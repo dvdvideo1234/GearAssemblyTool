@@ -979,7 +979,7 @@ function TOOL:DrawToolScreen(w, h)
 end
 
 function TOOL.BuildCPanel(CPanel)
-  Header = CPanel:AddControl("Header", { Text        = "#Tool.gearassembly.Name",
+  Header = CPanel:AddControl("Header", { Text        = "#Tool.gearassembly.name",
                                          Description = "#Tool.gearassembly.desc" })
   local CurY = Header:GetTall() + 2
 
@@ -1273,10 +1273,10 @@ function TOOL:UpdateGhost(oEnt, oPly)
     if(gearasmlib.IsOther(trEnt)) then return end
     local trRec = gearasmlib.CacheQueryPiece(trEnt:GetModel())
     if(trRec) then
+      local model   = self:GetClientInfo("model") or ""
       local nextx   = self:GetClientNumber("nextx") or 0
       local nexty   = self:GetClientNumber("nexty") or 0
       local nextz   = self:GetClientNumber("nextz") or 0
-      local model   = self:GetClientInfo("model") or ""
       local igntyp  = self:GetClientNumber("igntyp") or 0
       local orangtr = self:GetClientNumber("orangtr") or 0
       local rotpiv  = math.Clamp(self:GetClientNumber("rotpiv") or 0,-360,360)
