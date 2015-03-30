@@ -114,11 +114,15 @@ local LibAction = {}
 -- Used to store the last SQL error message
 local LibSQLBuildError = ""
 
+-- Used to store default piece type ( if non-provided for PIECES ) 
+local LibDefPieceType = ""
+
 -- How is the tool called
 local LibToolNameL   = ""
 local LibToolNameU   = ""
 local LibToolPrefixU = ""
 local LibToolPrefixL = ""
+local LibToolAsmType = ""
 
 -- Library Debug Settings. The file is created in
 -- the DATA folder :3 *.txt is appended
@@ -144,14 +148,15 @@ module( "gearasmlib" )
 
 ---------------------------- AssemblyLib COMMON ----------------------------
 
-function SetToolName(sName)
-  if(type(sName) ~= "string") then return end
-  if(string.len(sName) < 1 and
-     tonumber(string.sub(sName,1,1))) then return end
-  LibToolNameL   = string.lower(sName)
-  LibToolNameU   = string.upper(sName)
+function SetToolAssembly(sPurpose)
+  if(type(sPurpose) ~= "string") then return end
+  if(string.len(sPurpose) < 1 and
+     tonumber(string.sub(sPurpose,1,1))) then return end
+  LibToolAsmType = string.upper(sPurpose)
+  LibToolNameL   = string.lower(sPurpose).."assembly"
+  LibToolNameU   = string.upper(LibToolNameL)
   LibToolPrefixU = LibToolNameU .. "_"
-  LibToolPrefixL = LibToolNameL .. "_"
+  LibToolPrefixL = LibToolNameL .. "_"  
 end
 
 function GetToolNameU()
@@ -200,6 +205,14 @@ function LOGPath(sPath)
     LibLOGPath = sPath .. "/"
   end
   return LibLOGPath
+end
+
+function SetDefPieceType(sType)
+  if(type(sType) == "string") then
+    if(string.len(sType) > 0) then
+      LibDefPieceType = sType
+    end
+  end
 end
 
 function GetInstancePrefix()
@@ -352,6 +365,19 @@ function GetDefaultString(sBase, sDefault)
   end
   if(type(sDefault) == "string") then return sDefault end
   return ""
+end
+
+function GetDisableString(sBase, sDisable, sDefault)
+  if(type(sBase) == "string") then
+    if(string.len(sBase) > 0 and
+       string.sub(sBase,1,1) ~= LibSymDisable
+    ) then
+      return sBase
+    elseif(string.sub(sBase,1,1) == LibSymDisable)
+      if(type(sDisable) == "string") then return sDisable end
+    end
+  end
+  return "Some "..LibToolAsmType.." "..tostring(sDefault)
 end
 
 function SetTableDefinition(sTable, tDefinition)
@@ -1285,40 +1311,30 @@ function SQLInsertRecord(sTable,tData)
     return false
   end
   if(sTable == "PIECES") then
-    --Used only in PecesDB !!!
-    if(tData[3]) then
-      if(type(tData[3]) == "string") then
-        if(string.sub(tData[3],1,1) == LibSymDisable) then
-          tData[3] = Model2Name(tData[1])
-        end
-      else
-        tData[3] = "Some "..LibToolNameL.." piece"
-      end
-    else
-      tData[3] = "Some "..LibToolNameL.." piece"
-    end
+    -- Used only in PecesDB !!!
+    tData[2] = GetDisableString(tData[2],LibDefPieceType,"TYPE")
+    tData[3] = GetDisableString(tData[3],Model2Name(tData[1]),"MODEL")
   end
-
   -- Malloc Some Index Arrays
   local Fields = {}
   local Ind = 1
   while(defTable[Ind]) do
+    local DataTyp = type(tData[Ind])
     local FieldDef = defTable[Ind]
-    local FieldTyp = type(tData[Ind])
 
     -- Different Type handling
-    if(( FieldTyp == "string" and FieldDef[2] == "TEXT" ) or
-       ( FieldTyp == "number" and FieldDef[2] == "INTEGER" ) or
-       ( FieldTyp == "number" and FieldDef[2] == "REAL" )
+    if(( DataTyp == "string" and FieldDef[2] == "TEXT" ) or
+       ( DataTyp == "number" and FieldDef[2] == "INTEGER" ) or
+       ( DataTyp == "number" and FieldDef[2] == "REAL" )
     ) then
-      if(FieldTyp    == "number" and
+      if(DataTyp    == "number" and
         (FieldDef[2] == "INTEGER" or FieldDef[2] == "REAL")
       ) then
         if(FieldDef[2] == "INTEGER") then
           tData[Ind] = math.floor(tData[Ind])
         end
       end
-    elseif(FieldTyp    == "string" and
+    elseif(DataTyp    == "string" and
           (FieldDef[2] == "INTEGER" or FieldDef[2] == "REAL")
     ) then
       local toNB = tonumber(tData[Ind])
@@ -1331,11 +1347,11 @@ function SQLInsertRecord(sTable,tData)
                                    ..tData[Ind].." at field "..FieldDef[1].." ("..Ind..")")
         return false
       end
-    elseif(FieldTyp == "number" and FieldDef[2] == "TEXT") then
+    elseif(DataTyp == "number" and FieldDef[2] == "TEXT") then
       tData[Ind] = tostring(tData[Ind])
     else
       LogInstance("SQLInsertRecord: Data type mismatch: "
-              ..FieldTyp.." <> "..FieldDef[2]
+              ..DataTyp.." <> "..FieldDef[2]
               .." at field "..FieldDef[1].." ("..Ind..") on table "..sTable)
       return false
     end
@@ -1346,6 +1362,7 @@ function SQLInsertRecord(sTable,tData)
     elseif(FieldDef[3] == "U" and FieldDef[2] == "TEXT") then
       tData[Ind] = string.upper(tData[Ind])
     end
+       
     Fields[Ind] = Ind
     Ind = Ind + 1
   end
