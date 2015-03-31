@@ -432,7 +432,7 @@ function Container(sInfo)
     local Typ = type(nsKey)
     if(Typ ~= "number" and 
        Typ ~= "string"
-    ) then return end
+    ) then
       return nil
     end
     return Data[nsKey]
