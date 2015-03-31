@@ -400,60 +400,59 @@ function GetTableDefinition(sTable)
   return nil
 end
 
-function Container(nSz, sInfo)
-  local Size = tonumber(nSz  ) or 0
+function Container(sInfo)
   local Info = tostring(sInfo) or "Store Container"
+  local Curs = 0
   local Data = {}
-        Data["Method"]   = ""
-        Data["Insert"]   = 0
-        Data["Select"]   = 0
-        Data["Delete"]   = 0
+  local Sel  = ""
+  local Ins  = ""
+  local Del  = ""
+  local Met  = ""
   self = {}
   function self:GetInfo()
     return Info
   end
-  function self:SetSize(nSz)
-    local Sz = tonumber(nSz) or 0
-    if(Sz < Size) then
-      while(Size > Sz) do
-        Data[Size] = nil
-        Size = Size - 1
-      end
+  function self:GetSize()
+    return Curs
+  end
+  function self:Insert(nsKey,anyValue)
+    local Typ = type(nsKey)
+    if(Typ ~= "number" and
+       Typ ~= "string"
+    ) then return end
+    Ins = nsKey
+    Met = "I"
+    if(Data[nsKey] == nil) then
+      Curs = Curs + 1
+    end
+    Data[nsKey] = anyValue
+    collectgarbage()
+  end
+  function self:Select(nsKey)
+    local Typ = type(nsKey)
+    if(Typ ~= "number" and 
+       Typ ~= "string"
+    ) then return end
+      return nil
+    end
+    return Data[nsKey]
+  end
+  function self:Delete(nsKey)
+    local Typ = type(nsKey)
+    if(Typ ~= "number" and 
+       Typ ~= "string"
+    ) then return end
+    Del = nsKey
+    Met = "D"
+    if(Data[nsKey] != nil) then
+      Data[nsKey] = nil
+      Curs = Curs - 1
       collectgarbage()
     end
   end
-  function self:GetSize()
-    return Size
-  end
-  function self:Insert(nID,anyValue)
-    if(type(nID) ~= "number") then return end
-    if(nID < 1 or nID > Size) then return end
-    Data[nID]      = anyValue
-    Data["Insert"] = nID
-    Data["Method"] = "Insert"
-    collectgarbage()
-  end
-  function self:Select(nID)
-    if(type(nID) == "number") then
-      Data["Select"] = nID
-      Data["Method"] = "Select"
-      return Data[nID]
-    end
-    return nil
-  end
-  function self:Delete(nID)
-    if(type(nID) ~= "number") then return end
-    if(nID < 1 or nID > Size) then return end
-    Data[nID] = nil
-    Data["Delete"] = nID
-    Data["Method"] = "Delete"
-    collectgarbage()
-  end
-  function self:GetHistory(sMeth)
-    if(type(sMeth) ~= "string") then
-      return Data["Method"]
-    end
-    return Data[sMeth]
+  function self:GetHistory()
+    return Met.."@"..Sel.."/"..
+           Ins.."/"..Del
   end
   return self
 end

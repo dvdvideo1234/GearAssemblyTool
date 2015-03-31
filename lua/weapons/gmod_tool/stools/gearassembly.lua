@@ -36,25 +36,24 @@ local ANG_ZERO = Angle (0,0,0)
 local txToolgunBackground
 
 --- Render Base Colours
-local stDrawDyes = {
-  Red   = Color(255, 0 , 0 ,255),
-  Green = Color( 0 ,255, 0 ,255),
-  Blue  = Color( 0 , 0 ,255,255),
-  Cyan  = Color( 0 ,255,255,255),
-  Magen = Color(255, 0 ,255,255),
-  Yello = Color(255,255, 0 ,255),
-  White = Color(255,255,255,255),
-  Black = Color( 0 , 0 , 0 ,255),
-  Ghost = Color(255,255,255,150),
-  Anchr = Color(180,255,150,255),
-  Txtsk = Color(161,161,161,255)
-}
+local DDyes = Container("Colours")
+      DDyes:Insert("r" ,Color(255, 0 , 0 ,255))
+      DDyes:Insert("g" ,Color( 0 ,255, 0 ,255))
+      DDyes:Insert("b" ,Color( 0 , 0 ,255,255))
+      DDyes:Insert("c" ,Color( 0 ,255,255,255))
+      DDyes:Insert("m" ,Color(255, 0 ,255,255))
+      DDyes:Insert("y" ,Color(255,255, 0 ,255))
+      DDyes:Insert("w" ,Color(255,255,255,255))
+      DDyes:Insert("k" ,Color( 0 , 0 , 0 ,255))
+      DDyes:Insert("gh",Color(255,255,255,150))
+      DDyes:Insert("an",Color(180,255,150,255))
+      DDyes:Insert("tx",Color(161,161,161,255))
 
-local SMode = gearasmlib.Container(2,"Stack Mode")
+local SMode = gearasmlib.Container("Stack Mode")
       SMode:Insert(1,"Forward based")
       SMode:Insert(2,"Around pivot")
                                                                               
-local CType = gearasmlib.Container(13,"Constraint Type")                                 
+local CType = gearasmlib.Container("Constraint Type")                                 
       CType:Insert(1 ,{Name = "Free Spawn"  , Make = nil}                     )
       CType:Insert(2 ,{Name = "No PhysGun"  , Make = nil}                     )
       CType:Insert(3 ,{Name = "Parent Piece", Make = nil}                     )
@@ -331,7 +330,7 @@ if(SERVER) then
       ePiece:Spawn()
       ePiece:Activate()
       ePiece:SetRenderMode(RENDERMODE_TRANSALPHA)
-      ePiece:SetColor(stDrawDyes.White)
+      ePiece:SetColor(DDyes:Select("w"))
       ePiece:DrawShadow(true)
       ePiece:PhysWake()
       local phPiece = ePiece:GetPhysicsObject()
@@ -706,7 +705,7 @@ function TOOL:RightClick(Trace)
       local svEnt = self:GetEnt(1)
       if(svEnt and svEnt:IsValid()) then
         svEnt:SetRenderMode(RENDERMODE_TRANSALPHA)
-        svEnt:SetColor(stDrawDyes.White)
+        svEnt:SetColor(DDyes:Select("w"))
       end
       gearasmlib.PrintNotify(ply,"Anchor: Cleaned !","CLEANUP")
       ply:ConCommand(gearasmlib.GetToolPrefixL().."anchor N/A\n")
@@ -716,14 +715,14 @@ function TOOL:RightClick(Trace)
       local svEnt = self:GetEnt(1)
       if(svEnt and svEnt:IsValid()) then
         svEnt:SetRenderMode(RENDERMODE_TRANSALPHA)
-        svEnt:SetColor(stDrawDyes.White)
+        svEnt:SetColor(DDyes:Select("w"))
       end
       self:ClearObjects()
       pyEnt = trEnt:GetPhysicsObject()
       if(not (pyEnt and pyEnt:IsValid())) then return false end
       self:SetObject(1,trEnt,Trace.HitPos,pyEnt,Trace.PhysicsBone,Trace.HitNormal)
       trEnt:SetRenderMode(RENDERMODE_TRANSALPHA)
-      trEnt:SetColor(stDrawDyes.Anchr)
+      trEnt:SetColor(DDyes:Select("an"))
       local trModel = gearasmlib.GetModelFileName(trEnt:GetModel())
       ply:ConCommand(gearasmlib.GetToolPrefixL().."anchor ["..trEnt:EntIndex().."] "..trModel.."\n")
       gearasmlib.PrintNotify(ply,"Anchor: Set "..trModel.." !","UNDO")
@@ -813,7 +812,7 @@ local function DrawAdditionalInfo(stSpawn)
   txPos.x = surface.ScreenWidth() / 2 + 10
   txPos.y = surface.ScreenHeight()/ 2 + 10
   surface.SetFont("Trebuchet18")
-  DrawTextRowColor(txPos,"Org POS: "..tostring(stSpawn.OPos),stDrawDyes.Black)
+  DrawTextRowColor(txPos,"Org POS: "..tostring(stSpawn.OPos),DDyes:Select("k"))
   DrawTextRowColor(txPos,"Dom ANG: "..tostring(stSpawn.DAng))
   DrawTextRowColor(txPos,"Mod POS: "..tostring(stSpawn.MPos))
   DrawTextRowColor(txPos,"Mod ANG: "..tostring(stSpawn.MAng))
@@ -860,18 +859,18 @@ function TOOL:DrawHUD()
       local Cp =  stSpawn.CPos:ToScreen()
       local Cu = (stSpawn.CPos + 15 * stSpawn.CAng:Up()):ToScreen()
       -- Draw UCS
-      DrawLineColor(Op,Xs,scrW,scrH,stDrawDyes.Red)
-      DrawLineColor(Op,Ys,scrW,scrH,stDrawDyes.Green)
-      DrawLineColor(Op,Zs,scrW,scrH,stDrawDyes.Blue)
-      DrawLineColor(Cp,Cu,scrW,scrH,stDrawDyes.Yello)
-      DrawLineColor(Cp,Op,scrW,scrH,stDrawDyes.Green)
-      surface.DrawCircle(Op.x,Op.y,RadScal,stDrawDyes.Yello)
-      surface.DrawCircle(Cp.x,Cp.y,RadScal,stDrawDyes.Green)
+      DrawLineColor(Op,Xs,scrW,scrH,DDyes:Select("r"))
+      DrawLineColor(Op,Ys,scrW,scrH,DDyes:Select("g"))
+      DrawLineColor(Op,Zs,scrW,scrH,DDyes:Select("b"))
+      DrawLineColor(Cp,Cu,scrW,scrH,DDyes:Select("y"))
+      DrawLineColor(Cp,Op,scrW,scrH,DDyes:Select("g"))
+      surface.DrawCircle(Op.x,Op.y,DDyes:Select("y"))
+      surface.DrawCircle(Cp.x,Cp.y,RadScal,DDyes:Select("g"))
       -- Draw Spawn
-      DrawLineColor(Op,Sp,scrW,scrH,stDrawDyes.Magen)
-      DrawLineColor(Sp,Du,scrW,scrH,stDrawDyes.Cyan)
-      DrawLineColor(Sp,Df,scrW,scrH,stDrawDyes.Red)
-      surface.DrawCircle(Sp.x,Sp.y,RadScal,stDrawDyes.Magen)
+      DrawLineColor(Op,Sp,scrW,scrH,DDyes:Select("m"))
+      DrawLineColor(Sp,Du,scrW,scrH,DDyes:Select("c"))
+      DrawLineColor(Sp,Df,scrW,scrH,DDyes:Select("r"))
+      surface.DrawCircle(Sp.x,Sp.y,RadScal,DDyes:Select("m"))
       if(addinfo ~= 0) then
         DrawAdditionalInfo(stSpawn)
       end
@@ -884,10 +883,10 @@ function TOOL:DrawHUD()
       local Xs = (stSpawn.SPos + 15 * stSpawn.F):ToScreen()
       local Ys = (stSpawn.SPos + 15 * stSpawn.R):ToScreen()
       local Zs = (stSpawn.SPos + 15 * stSpawn.U):ToScreen()
-      DrawLineColor(Os,Xs,scrW,scrH,stDrawDyes.Red)
-      DrawLineColor(Os,Ys,scrW,scrH,stDrawDyes.Green)
-      DrawLineColor(Os,Zs,scrW,scrH,stDrawDyes.Blue)
-      surface.DrawCircle(Os.x,Os.y,RadScal,stDrawDyes.Yello)
+      DrawLineColor(Os,Xs,scrW,scrH,DDyes:Select("r"))
+      DrawLineColor(Os,Ys,scrW,scrH,DDyes:Select("g"))
+      DrawLineColor(Os,Zs,scrW,scrH,DDyes:Select("b"))
+      surface.DrawCircle(Os.x,Os.y,RadScal,DDyes:Select("y"))
       if(addinfo ~= 0) then
         DrawAdditionalInfo(stSpawn)
       end
@@ -899,9 +898,9 @@ local function DrawRatioVisual(nW,nH,nY,nTrR,nHdR,nDeep)
   if(nY >= nH) then return end
   local D2 = math.floor((nDeep or 0) / 2)
   if(D2 <= 2) then return end
-  local MColor = stDrawDyes.Yello
-  local TColor = stDrawDyes.Green
-  local HColor = stDrawDyes.Magen
+  local MColor = DDyes:Select("y")
+  local TColor = DDyes:Select("g")
+  local HColor = DDyes:Select("m")
   if(nTrR) then
     -- Trace Teeth
     surface.SetDrawColor(MColor)
@@ -935,16 +934,16 @@ end
 function TOOL:DrawToolScreen(w, h)
   if(SERVER) then return end
   surface.SetTexture(txToolgunBackground)
-  surface.SetDrawColor(stDrawDyes.Black)
+  surface.SetDrawColor(DDyes:Select("k"))
   surface.DrawTexturedRect(0,0,w,h)
   surface.SetFont("Trebuchet24")
   local Trace = LocalPlayer():GetEyeTrace()
   local txPos = {x = 0, y = 0, w = 0, h = 0}
   if(not Trace) then
-    DrawTextRowColor(txPos,"Trace status: Invalid",stDrawDyes.White)
+    DrawTextRowColor(txPos,"Trace status: Invalid",DDyes:Select("w"))
     return
   end
-  DrawTextRowColor(txPos,"Trace status: Valid",stDrawDyes.White)
+  DrawTextRowColor(txPos,"Trace status: Valid",DDyes:Select("w"))
   local model = self:GetClientInfo("model") or ""
   local hdRec = gearasmlib.CacheQueryPiece(model)
   if(not hdRec) then
@@ -968,13 +967,13 @@ function TOOL:DrawToolScreen(w, h)
   end
   local hdRad = gearasmlib.RoundValue(gearasmlib.GetLengthVector(hdRec.O),0.01)
   local Ratio = gearasmlib.RoundValue((trRad or 0) / hdRad,0.01)
-  DrawTextRowColor(txPos,"TM: "..(trModel or NoAV),stDrawDyes.Green)
-  DrawTextRowColor(txPos,"HM: "..(gearasmlib.GetModelFileName(model) or NoAV),stDrawDyes.Magen)
-  DrawTextRowColor(txPos,"Anc: "..self:GetClientInfo("anchor"),stDrawDyes.Anchr)
-  DrawTextRowColor(txPos,"Mesh: "..tostring(trMesh or NoAV).." > "..tostring(gearasmlib.RoundValue(hdRec.Mesh,0.01) or NoAV),stDrawDyes.Yello)
+  DrawTextRowColor(txPos,"TM: "..(trModel or NoAV),DDyes:Select("g"))
+  DrawTextRowColor(txPos,"HM: "..(gearasmlib.GetModelFileName(model) or NoAV),DDyes:Select("m"))
+  DrawTextRowColor(txPos,"Anc: "..self:GetClientInfo("anchor"),DDyes:Select("an"))
+  DrawTextRowColor(txPos,"Mesh: "..tostring(trMesh or NoAV).." > "..tostring(gearasmlib.RoundValue(hdRec.Mesh,0.01) or NoAV),DDyes:Select("y"))
   DrawTextRowColor(txPos,"Ratio: "..tostring(Ratio).." > "..tostring(trRad or NoAV).."/"..tostring(hdRad))
-  DrawTextRowColor(txPos,"StackMod: "..SMode:Select(stmode),stDrawDyes.Red)
-  DrawTextRowColor(txPos,tostring(os.date()),stDrawDyes.White)
+  DrawTextRowColor(txPos,"StackMod: "..SMode:Select(stmode),DDyes:Select("r"))
+  DrawTextRowColor(txPos,tostring(os.date()),DDyes:Select("w"))
   DrawRatioVisual(w,h,txPos.y+2,trRad,hdRad,7)
 end
 
@@ -1036,7 +1035,7 @@ function TOOL.BuildCPanel(CPanel)
         end
         local FolderLabel = pItem.Label
         function FolderLabel:UpdateColours(skin)
-          return self:SetTextStyleColor(stDrawDyes.Txtsk)
+          return self:SetTextStyleColor(DDyes:Select("tx"))
         end
         pFolders[Type] = pItem
       end
@@ -1258,7 +1257,7 @@ function TOOL:MakeGhostEntity(sModel,vPos,aAngle)
   self.GhostEntity:SetMoveType(MOVETYPE_NONE)
   self.GhostEntity:SetNotSolid(true);
   self.GhostEntity:SetRenderMode(RENDERMODE_TRANSALPHA)
-  self.GhostEntity:SetColor(stDrawDyes.Ghost)
+  self.GhostEntity:SetColor(DDyes:Select("gh"))
 end
 
 function TOOL:UpdateGhost(oEnt, oPly)
