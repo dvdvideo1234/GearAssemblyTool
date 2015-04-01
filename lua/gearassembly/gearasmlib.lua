@@ -887,16 +887,15 @@ function Print(tT,sS)
   local S = type(sS)
   local T = type(tT)
   local Key  = ""
-  if(S and (S == "string" or
-            S == "number" )
-       and S ~= ""
-  ) then
+  if(S == "string") then
+    S = sS
+  elseif(S == "number") then
     S = tostring(sS)
   else
     S = "Data"
   end
   if(T ~= "table") then
-    LogInstance("{"..T.."}["..S.."] => "..tostring(tT))
+    LogInstance("{"..T.."}["..tostring(sS or "N/A").."] = "..tostring(tT))
     return
   end
   T = tT
@@ -905,7 +904,7 @@ function Print(tT,sS)
     if(type(k) == "string") then
       Key = S.."[\""..k.."\"]"
     else
-      Key = S.."["..k.."]"
+      Key = S.."["..tostring(k).."]"
     end
     if(type(v) ~= "table") then
       if(type(v) == "string") then
