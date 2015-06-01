@@ -3,6 +3,8 @@ GearAssemblyTool
 
 Copyright 2015 ME !
 
+<br>IF YOU HAPPEN TO FIND REUPLOADS WITH DIFFERENT ORIGIN REPORT THEM TO ME IMMIDEATELY !!! 
+
 ![GearAssemblyTool](https://raw.githubusercontent.com/dvdvideo1234/GearAssemblyTool/master/screenshot.jpg)
 
 <br> On the Steam WS: http://steamcommunity.com/sharedfiles/filedetails/?id=384782853
