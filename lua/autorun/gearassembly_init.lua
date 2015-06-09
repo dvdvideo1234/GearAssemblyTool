@@ -154,6 +154,7 @@ if(CLIENT) then
         pnButtonR:Remove()
         pnListView:Remove()
         pnModelPanel:Remove()
+        gearasmlib.LogInstance("OPEN_FRAME: Form removed")
       end
       ------------ ModelPanel --------------
       pnModelPanel:SetParent(pnFrame)
