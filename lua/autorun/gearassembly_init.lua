@@ -106,7 +106,7 @@ if(CLIENT) then
       local Ind = 1
       local Frequent = gearasmlib.GetFrequentModels(oArgs[1])
       if(not Frequent) then
-        gearasmlib.StatusLog(nil,"OPEN_FRAME: Failed to retrieve most frequent models")
+        gearasmlib.StatusLog(false,"OPEN_FRAME: Failed to retrieve most frequent models")
       end
       local pnFrame = vgui.Create("DFrame")
       local pnButtonL = vgui.Create("DButton", pnFrame)
@@ -114,29 +114,29 @@ if(CLIENT) then
       local pnListView = vgui.Create("DListView", pnFrame)
       local pnModelPanel = vgui.Create("DModelPanel",pnFrame)
       if(not IsValid(pnFrame)) then
-        return gearasmlib.StatusLog(nil,"OPEN_FRAME: Failed to create DFrame")
+        return gearasmlib.StatusLog(false,"OPEN_FRAME: Failed to create DFrame")
       end
       if(not IsValid(pnButtonL)) then
         pnFrame:Remove()
-        return gearasmlib.StatusLog(nil,"OPEN_FRAME: Failed to create DButton-L")
+        return gearasmlib.StatusLog(false,"OPEN_FRAME: Failed to create DButton-L")
       end
       if(not IsValid(pnButtonR)) then
         pnFrame:Remove()
         pnButtonL:Remove()
-        return gearasmlib.StatusLog(nil,"OPEN_FRAME: Failed to create DButton-R")
+        return gearasmlib.StatusLog(false,"OPEN_FRAME: Failed to create DButton-R")
       end
       if(not IsValid(pnListView)) then
         pnFrame:Remove()
         pnButtonL:Remove()
         pnButtonR:Remove()
-        return gearasmlib.StatusLog(nil,"OPEN_FRAME: Failed to create DListView")
+        return gearasmlib.StatusLog(false,"OPEN_FRAME: Failed to create DListView")
       end
       if(not IsValid(pnModelPanel)) then
         pnFrame:Remove()
         pnButtonL:Remove()
         pnButtonR:Remove()
         pnListView:Remove()
-        return gearasmlib.StatusLog(nil,"OPEN_FRAME: Failed to create DModelPanel")
+        return gearasmlib.StatusLog(false,"OPEN_FRAME: Failed to create DModelPanel")
       end
       local scrW = surface.ScreenWidth()
       local scrH = surface.ScreenHeight()
@@ -248,6 +248,7 @@ if(CLIENT) then
       pnFrame:SetVisible(true)
       pnFrame:Center()
       pnFrame:MakePopup()
+      return true
     end)
 end
 
