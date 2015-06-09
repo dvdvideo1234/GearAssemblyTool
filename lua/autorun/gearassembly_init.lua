@@ -108,25 +108,35 @@ if(CLIENT) then
       if(not Frequent) then
         gearasmlib.StatusLog(nil,"OPEN_FRAME: Failed to retrieve most frequent models")
       end
-      local pnFrame
-      local pnButtonL
-      local pnButtonR
-      local pnListView
-      local pnModelPanel
+      local pnFrame = vgui.Create("DFrame")
+      local pnButtonL = vgui.Create("DButton", pnFrame)
+      local pnButtonR = vgui.Create("DButton", pnFrame)
+      local pnListView = vgui.Create("DListView", pnFrame)
+      local pnModelPanel = vgui.Create("DModelPanel",pnFrame)
       if(not IsValid(pnFrame)) then
-        pnFrame = vgui.Create("DFrame")
+        return gearasmlib.StatusLog(nil,"OPEN_FRAME: Failed to create DFrame")
       end
       if(not IsValid(pnButtonL)) then
-        pnButtonL = vgui.Create("DButton", pnFrame)
+        pnFrame:Remove()
+        return gearasmlib.StatusLog(nil,"OPEN_FRAME: Failed to create DButton-L")
       end
       if(not IsValid(pnButtonR)) then
-        pnButtonR = vgui.Create("DButton", pnFrame)
+        pnFrame:Remove()
+        pnButtonL:Remove()
+        return gearasmlib.StatusLog(nil,"OPEN_FRAME: Failed to create DButton-R")
       end
       if(not IsValid(pnListView)) then
-        pnListView = vgui.Create("DListView", pnFrame)
+        pnFrame:Remove()
+        pnButtonL:Remove()
+        pnButtonR:Remove()
+        return gearasmlib.StatusLog(nil,"OPEN_FRAME: Failed to create DListView")
       end
       if(not IsValid(pnModelPanel)) then
-        pnModelPanel = vgui.Create("DModelPanel",pnFrame)
+        pnFrame:Remove()
+        pnButtonL:Remove()
+        pnButtonR:Remove()
+        pnListView:Remove()
+        return gearasmlib.StatusLog(nil,"OPEN_FRAME: Failed to create DModelPanel")
       end
       local scrW = surface.ScreenWidth()
       local scrH = surface.ScreenHeight()
@@ -210,7 +220,7 @@ if(CLIENT) then
         pnModelPanel:SetModel(uiMod)
         local uiRec = gearasmlib.CacheQueryPiece(uiMod)
         if(not uiRec) then
-          return trackasmlib.StatusLog(false,"OPEN_FRAME: Failed to retrieve model "..uiMod)
+          return gearasmlib.StatusLog(false,"OPEN_FRAME: Failed to retrieve model "..uiMod)
         end
         -- OBBCenter ModelPanel Configuration --
         local uiEnt = pnModelPanel.Entity
