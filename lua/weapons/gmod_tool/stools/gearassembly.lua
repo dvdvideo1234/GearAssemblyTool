@@ -323,13 +323,13 @@ function TOOL:LeftClick(Trace)
     if(not stSpawn) then return false end
     undo.Create("Last Gear Assembly")
     local ePieceN, ePieceO = nil, trEnt
-    local i      = count
+    local iNdex  = count
     local nTrys  = staatts
     local dRot   = deltarot / count
     local aIter  = ePieceO:GetAngles()
     local aStart = ePieceO:GetAngles()
-    while(i > 0) do
-      if(i ~= count) then
+    while(iNdex > 0) do
+      if(iNdex ~= count) then
         ePieceN = ePieceO:Duplicate()
       else
         ePieceN = gearasmlib.MakePiece(model,ePieceO:GetPos(),ANG_ZERO,mass,bgskids,DDyes:Select("w"))
@@ -342,13 +342,13 @@ function TOOL:LeftClick(Trace)
           ePieceN:Remove()
           gearasmlib.EmitSoundPly(ply)
           undo.SetPlayer(ply)
-          undo.SetCustomUndoText("Undone Assembly ( Stack #"..tostring(count-i).." )")
+          undo.SetCustomUndoText("Undone Assembly ( Stack #"..tostring(count-iNdex).." )")
           undo.Finish()
           gearasmlib.PrintNotify(ply,"Position out of map bounds!","ERROR")
           return gearasmlib.StatusLog(true,gsToolNameU.." Additional Error INFO"
           .."\n   Event  : Stacking > Position out of map bounds"
           .."\n   StMode : "..SMode:Select(stmode)
-          .."\n   Iterats: "..tostring(count-i)
+          .."\n   Iterats: "..tostring(count-iNdex)
           .."\n   StackTr: "..tostring(nTrys).." ?= "..tostring(staatts)
           .."\n   Player : "..ply:Nick()
           .."\n   DeltaRt: "..dRot
@@ -374,12 +374,12 @@ function TOOL:LeftClick(Trace)
           gearasmlib.PrintNotify(ply,"Failed to obtain spawn data!","ERROR")
           gearasmlib.EmitSoundPly(ply)
           undo.SetPlayer(ply)
-          undo.SetCustomUndoText("Undone Assembly ( Stack #"..tostring(count-i).." )")
+          undo.SetCustomUndoText("Undone Assembly ( Stack #"..tostring(count-iNdex).." )")
           undo.Finish()
           return gearasmlib.StatusLog(true,gsToolNameU.." Additional Error INFO"
           .."\n   Event  : Stacking > Failed to obtain spawn data"
           .."\n   StMode : "..SMode:Select(stmode)
-          .."\n   Iterats: "..tostring(count-i)
+          .."\n   Iterats: "..tostring(count-iNdex)
           .."\n   StackTr: "..tostring(nTrys).." ?= "..tostring(staatts)
           .."\n   Player : "..ply:Nick()
           .."\n   DeltaRt: "..dRot
@@ -387,7 +387,7 @@ function TOOL:LeftClick(Trace)
           .."\n   trModel: "..gearasmlib.GetModelFileName(trModel)
           .."\n   hdModel: "..gearasmlib.GetModelFileName(model))
         end
-        i = i - 1
+        iNdex = iNdex - 1
         nTrys = staatts
       else
         nTrys = nTrys - 1
@@ -396,12 +396,12 @@ function TOOL:LeftClick(Trace)
         gearasmlib.PrintNotify(ply,"Make attempts ran off!","ERROR")
         gearasmlib.EmitSoundPly(ply)
         undo.SetPlayer(ply)
-        undo.SetCustomUndoText("Undone Assembly ( Stack #"..tostring(count-i).." )")
+        undo.SetCustomUndoText("Undone Assembly ( Stack #"..tostring(count-iNdex).." )")
         undo.Finish()
         return gearasmlib.StatusLog(false,gsToolNameU.." Additional Error INFO"
         .."\n   Event  : Stacking > Failed to allocate memory for a piece"
         .."\n   StMode : "..SMode:Select(stmode)
-        .."\n   Iterats: "..tostring(count-i)
+        .."\n   Iterats: "..tostring(count-iNdex)
         .."\n   StackTr: "..tostring(nTrys).." ?= "..tostring(staatts)
         .."\n   Player : "..ply:Nick()
         .."\n   DeltaRt: "..dRot
@@ -413,7 +413,7 @@ function TOOL:LeftClick(Trace)
     trEnt:SetAngles(aStart)
     gearasmlib.EmitSoundPly(ply)
     undo.SetPlayer(ply)
-    undo.SetCustomUndoText("Undone Assembly ( Stack #"..tostring(count-i).." )")
+    undo.SetCustomUndoText("Undone Assembly ( Stack #"..tostring(count-iNdex).." )")
     undo.Finish()
     return true
   end
