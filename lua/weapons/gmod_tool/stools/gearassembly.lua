@@ -363,7 +363,6 @@ function TOOL:LeftClick(Trace)
         if(stmode == 1) then
           stSpawn = gearasmlib.GetEntitySpawn(ePieceN,rotpiv,model,igntyp,
                       trorang,nextx,nexty,nextz,nextpic,nextyaw,nextrol)
-          ePieceO = ePieceN
         elseif(stmode == 2) then
           aIter:RotateAroundAxis(stSpawn.CAng:Up(),-dRot)
           trEnt:SetAngles(aIter)
@@ -387,6 +386,7 @@ function TOOL:LeftClick(Trace)
           .."\n   trModel: "..gearasmlib.GetModelFileName(trModel)
           .."\n   hdModel: "..gearasmlib.GetModelFileName(model))
         end
+        ePieceO = ePieceN
         iNdex = iNdex - 1
         nTrys = staatts
       else
