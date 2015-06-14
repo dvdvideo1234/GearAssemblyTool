@@ -2700,7 +2700,9 @@ function MakePiece(sModel,vPos,aAng,nMass,sBgSkIDs,clColor)
           ePiece.PhysgunDisabled = true
           duplicator.StoreEntityModifier(ePiece,GetToolPrefL().."nophysgun",{[1] = true})
         end
-        if(not IsIn and ConID == 1) then IsIn = 1 end
+        if(not IsIn and ConID == 1) then
+            IsIn = ConID
+        end
         if(not (eBase and eBase:IsValid())) then
           return StatusLog(0,"Piece:Anchor() Base not valid")
         end
