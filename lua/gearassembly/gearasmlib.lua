@@ -982,7 +982,7 @@ end
 function SetLogControl(nLines,sFile)
   SetOpVar("LOG_LOGFILE",sFile or "")
   SetOpVar("LOG_MAXLOGS",nLines or 0)
-  SetOpVar("LOG_CURLOGS",0,"SetLogControl")
+  SetOpVar("LOG_CURLOGS",0)
   if(not file.Exists(GetOpVar("DIRPATH_BAS"),"DATA") and
     (string.len(GetOpVar("LOG_LOGFILE")) > 0)
   ) then
@@ -2669,17 +2669,17 @@ function MakePiece(sModel,vPos,aAng,nMass,sBgSkIDs,clColor)
         local NoCollid = nNoCollid     or 0
         local ForceLim = nForceLim     or 0
         local NoPhyGun = nNoPhyGun     or 0
-        local IsIn     = false
+        local IsIn
         local ConstrInfo = ConstrDB:Select(ConID)
         if(not IsExistent(ConstrInfo)) then
           return StatusLog(false,"Piece:Anchor() Constraint not available")
         end
         LogInstance("Piece:Anchor() Creating "..ConstrInfo.Name)
         if(not (ePiece and ePiece:IsValid())) then
-          return StatusLog(false,"Piece:Anchor() Entity not valid")
+          return StatusLog(false,"Piece:Anchor() Piece not valid")
         end
         if(IsOther(ePiece)) then
-          return StatusLog(false,"Piece:Anchor() Piece is not a prop")
+          return StatusLog(false,"Piece:Anchor() Piece is other object")
         end
         if(not constraint.CanConstrain(ePiece,0)) then
           return StatusLog(false,"Piece:Anchor() Cannot constrain Piece")
@@ -2700,25 +2700,25 @@ function MakePiece(sModel,vPos,aAng,nMass,sBgSkIDs,clColor)
           ePiece.PhysgunDisabled = true
           duplicator.StoreEntityModifier(ePiece,GetToolPrefL().."nophysgun",{[1] = true})
         end
-        if(not IsIn and ConID == 1) then IsIn = true end
+        if(not IsIn and ConID == 1) then IsIn = 1 end
         if(not (eBase and eBase:IsValid())) then
-          return StatusLog(false,"Piece:Anchor() Base not valid")
+          return StatusLog(0,"Piece:Anchor() Base not valid")
         end
         if(not constraint.CanConstrain(eBase,0)) then
           return StatusLog(false,"Piece:Anchor() Cannot constrain Base")
         end
         if(IsOther(eBase)) then
-          return StatusLog(false,"Piece:Anchor() Base is not a prop")
+          return StatusLog(false,"Piece:Anchor() Base is other object")
         end
         if(not IsIn and ConID == 2) then
           -- http://wiki.garrysmod.com/page/Entity/SetParent
           ePiece:SetParent(eBase)
-          IsIn = true
+          IsIn = ConID
         elseif(not IsIn and ConID == 3) then
           -- http://wiki.garrysmod.com/page/constraint/Weld
           local C = ConstrInfo.Make(ePiece,eBase,0,0,ForceLim,(NoCollid ~= 0),false)
           HookOnRemove(eBase,ePiece,{C},1)
-          IsIn = true
+          IsIn = ConID
         end
         if(not IsIn and ConID == 4 and vNorm) then
           -- http://wiki.garrysmod.com/page/constraint/Axis
@@ -2729,52 +2729,54 @@ function MakePiece(sModel,vPos,aAng,nMass,sBgSkIDs,clColor)
           local C = ConstrInfo.Make(ePiece,eBase,0,0,
                       LPos1,LPos2,ForceLim,0,0,NoCollid)
            HookOnRemove(eBase,ePiece,{C},1)
-           IsIn = true
+           IsIn = ConID
         elseif(not IsIn and ConID == 5) then
           -- http://wiki.garrysmod.com/page/constraint/Ballsocket ( HD )
           local C = ConstrInfo.Make(eBase,ePiece,0,0,pyPiece:GetMassCenter(),ForceLim,0,NoCollid)
           HookOnRemove(eBase,ePiece,{C},1)
-          IsIn = true
+          IsIn = ConID
         elseif(not IsIn and ConID == 6 and vPos) then
           -- http://wiki.garrysmod.com/page/constraint/Ballsocket ( TR )
           local vLPos2 = eBase:WorldToLocal(vPos)
           local C = ConstrInfo.Make(ePiece,eBase,0,0,vLPos2,ForceLim,0,NoCollid)
           HookOnRemove(eBase,ePiece,{C},1)
-          IsIn = true
+          IsIn = ConID
         end
         -- http://wiki.garrysmod.com/page/constraint/AdvBallsocket
         local pyBase = eBase:GetPhysicsObject()
-        if(not (pyBase and pyBase:IsValid())) then return true end
+        if(not (pyBase and pyBase:IsValid())) then
+          return StatusLog(false,"Piece:Anchor() Phys Base not valid")
+        end
         local Min,Max = 0.01,180
         local LPos1 = pyBase:GetMassCenter()
         local LPos2 = pyPiece:GetMassCenter()
         if(not IsIn and ConID == 7) then -- Lock X
           local C = ConstrInfo.Make(ePiece,eBase,0,0,LPos1,LPos2,ForceLim,0,-Min,-Max,-Max,Min,Max,Max,0,0,0,1,NoCollid)
           HookOnRemove(eBase,ePiece,{C},1)
-          IsIn = true
+          IsIn = ConID
         elseif(not IsIn and ConID == 8) then -- Lock Y
           local C = ConstrInfo.Make(ePiece,eBase,0,0,LPos1,LPos2,ForceLim,0,-Max,-Min,-Max,Max,Min,Max,0,0,0,1,NoCollid)
           HookOnRemove(eBase,ePiece,{C},1)
-          IsIn = true
+          IsIn = ConID
         elseif(not IsIn and ConID == 9) then -- Lock Z
           local C = ConstrInfo.Make(ePiece,eBase,0,0,LPos1,LPos2,ForceLim,0,-Max,-Max,-Min,Max,Max,Min,0,0,0,1,NoCollid)
           HookOnRemove(eBase,ePiece,{C},1)
-          IsIn = true
+          IsIn = ConID
         elseif(not IsIn and ConID == 10) then -- Spin X
           local C1 = ConstrInfo.Make(ePiece,eBase,0,0,LPos1,LPos2,ForceLim,0,-Max,-Min,-Min,Max, Min, Min,0,0,0,1,NoCollid)
           local C2 = ConstrInfo.Make(ePiece,eBase,0,0,LPos1,LPos2,ForceLim,0,-Max, Min, Min,Max,-Min,-Min,0,0,0,1,NoCollid)
           HookOnRemove(eBase,ePiece,{C1,C2},2)
-          IsIn = true
+          IsIn = ConID
         elseif(not IsIn and ConID == 11) then -- Spin Y
           local C1 = ConstrInfo.Make(ePiece,eBase,0,0,LPos1,LPos2,ForceLim,0,-Min,-Max,-Min, Min,Max, Min,0,0,0,1,NoCollid)
           local C2 = ConstrInfo.Make(ePiece,eBase,0,0,LPos1,LPos2,ForceLim,0, Min,-Max, Min,-Min,Max,-Min,0,0,0,1,NoCollid)
           HookOnRemove(eBase,ePiece,{C1,C2},2)
-          IsIn = true
+          IsIn = ConID
         elseif(not IsIn and ConID == 12) then -- Spin Z
           local C1 = ConstrInfo.Make(ePiece,eBase,0,0,LPos1,LPos2,ForceLim,0,-Min,-Min,-Max, Min, Min,Max,0,0,0,1,NoCollid)
           local C2 = ConstrInfo.Make(ePiece,eBase,0,0,LPos1,LPos2,ForceLim,0, Min, Min,-Max,-Min,-Min,Max,0,0,0,1,NoCollid)
           HookOnRemove(eBase,ePiece,{C1,C2},2)
-          IsIn = true
+          IsIn = ConID
         end
         return StatusLog(IsIn,"Piece:Anchor() status is <"..tostring(IsIn)..">")
       end

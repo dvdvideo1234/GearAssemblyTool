@@ -472,7 +472,7 @@ function TOOL:RightClick(Trace)
       ply:ConCommand(gsToolPrefL.."anchor N/A\n")
       self:ClearObjects()
       return true
-    elseif(trEnt and trEnt:IsValid()) then
+    elseif(trEnt and trEnt:IsValid() and not gearasmlib.IsOther(trEnt)) then
       local svEnt = self:GetEnt(1)
       if(svEnt and svEnt:IsValid()) then
         svEnt:SetRenderMode(RENDERMODE_TRANSALPHA)
