@@ -4,7 +4,7 @@ if(SERVER) then
 end
 
 include("gearassembly/gearasmlib.lua")
------- MODULE POINTER ------- 
+------ MODULE POINTER -------
 local asmlib = gearasmlib
 
 ------ CONFIGURE ASMLIB ------

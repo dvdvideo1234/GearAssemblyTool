@@ -1955,7 +1955,7 @@ function CacheQueryPiece(sModel)
         stPiece.O[csX] = 1
         stPiece.O[csY] = 1
         stPiece.O[csZ] = 1
-        stPiece.O[csD] = false    
+        stPiece.O[csD] = false
       end
       Item = qRec[defTable[6][1]] -- Angle
       if((Item ~= "") and (Item ~= "NULL")) then
@@ -1974,7 +1974,7 @@ function CacheQueryPiece(sModel)
         stPiece.A[csX] = 1
         stPiece.A[csY] = 1
         stPiece.A[csZ] = 1
-        stPiece.A[csD] = false      
+        stPiece.A[csD] = false
       end
       Item = qRec[defTable[7][1]]-- MassCentre
       if((Item ~= "") and (Item ~= "NULL")) then
