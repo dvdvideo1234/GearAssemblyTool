@@ -27,33 +27,34 @@ local duplicator        = duplicator
 local constraint        = constraint
 
 ----------------- TOOL Global Parameters ----------------
-
+--- Store a pointer to our module
+local asmlib = gearasmlib
 --- Because Vec[1] is actually faster than Vec.X
 --- Vector Component indexes ---
-local cvX, cvY, cvZ = gearasmlib.GetIndexes("V")
+local cvX, cvY, cvZ = asmlib.GetIndexes("V")
 --- Angle Component indexes ---
-local caP, caY, caR = gearasmlib.GetIndexes("A")
+local caP, caY, caR = asmlib.GetIndexes("A")
 
 --- ZERO Objects
-local VEC_ZERO = gearasmlib.GetOpVar("VEC_ZERO")
-local ANG_ZERO = gearasmlib.GetOpVar("ANG_ZERO")
+local VEC_ZERO = asmlib.GetOpVar("VEC_ZERO")
+local ANG_ZERO = asmlib.GetOpVar("ANG_ZERO")
 
 local goToolScr
 local goMonitor
-local gnMaxMass   = gearasmlib.GetOpVar("MAXCONVAR_MASS")
-local gnMaxOffLin = gearasmlib.GetOpVar("MAXCONVAR_LINEAR")
-local gnMaxOffRot = gearasmlib.GetOpVar("MAXCONVAR_ROTATION")
-local gnMaxFreUse = gearasmlib.GetOpVar("MAXCONVAR_FREQUSED")
-local gnMaxForLim = gearasmlib.GetOpVar("MAXCONVAR_FOCELIMIT")
-local gnMaxStaCnt = gearasmlib.GetOpVar("MAXCONVAR_STACKCOUNT")
-local gsToolPrefL = gearasmlib.GetToolPrefL()
-local gsToolNameL = gearasmlib.GetToolNameL()
-local gsToolPrefU = gearasmlib.GetToolPrefU()
-local gsToolNameU = gearasmlib.GetToolNameU()
+local gnMaxMass   = asmlib.GetOpVar("MAXCONVAR_MASS")
+local gnMaxOffLin = asmlib.GetOpVar("MAXCONVAR_LINEAR")
+local gnMaxOffRot = asmlib.GetOpVar("MAXCONVAR_ROTATION")
+local gnMaxFreUse = asmlib.GetOpVar("MAXCONVAR_FREQUSED")
+local gnMaxForLim = asmlib.GetOpVar("MAXCONVAR_FOCELIMIT")
+local gnMaxStaCnt = asmlib.GetOpVar("MAXCONVAR_STACKCOUNT")
+local gsToolPrefL = asmlib.GetToolPrefL()
+local gsToolNameL = asmlib.GetToolNameL()
+local gsToolPrefU = asmlib.GetToolPrefU()
+local gsToolNameU = asmlib.GetToolNameU()
 
 
 --- Render Base Colours
-local DDyes = gearasmlib.MakeContainer("Colours")
+local DDyes = asmlib.MakeContainer("Colours")
       DDyes:Insert("r" ,Color(255, 0 , 0 ,255))
       DDyes:Insert("g" ,Color( 0 ,255, 0 ,255))
       DDyes:Insert("b" ,Color( 0 , 0 ,255,255))
@@ -66,8 +67,8 @@ local DDyes = gearasmlib.MakeContainer("Colours")
       DDyes:Insert("an",Color(180,255,150,255))
       DDyes:Insert("tx",Color(161,161,161,255))
 
-local SMode = gearasmlib.GetOpVar("STACK_MODE")
-local CType = gearasmlib.GetOpVar("CONSTRAINT_TYPE")
+local SMode = asmlib.GetOpVar("STACK_MODE")
+local CType = asmlib.GetOpVar("CONSTRAINT_TYPE")
 
 ------------- LOCAL FUNCTIONS AND STUFF ----------------
 
@@ -77,13 +78,13 @@ if(CLIENT) then
   language.Add("tool."   ..gsToolNameL..".0"   , "Left click to spawn/stack, Right to change mode, Reload to remove a piece")
   language.Add("cleanup."..gsToolNameL         , "Gear Assembly")
   language.Add("cleaned."..gsToolNameL.."s"    , "Cleaned up all Pieces")
-  concommand.Add(gsToolPrefL.."resetoffs", gearasmlib.GetActionCode("RESET_OFFSETS"))
-  concommand.Add(gsToolPrefL.."openframe", gearasmlib.GetActionCode("OPEN_FRAME"))
+  concommand.Add(gsToolPrefL.."resetoffs", asmlib.GetActionCode("RESET_OFFSETS"))
+  concommand.Add(gsToolPrefL.."openframe", asmlib.GetActionCode("OPEN_FRAME"))
 end
 
 if(SERVER) then
   cleanup.Register(gsToolNameU.."s")
-  duplicator.RegisterEntityModifier(gsToolPrefL.."nophysgun",gearasmlib.GetActionCode("NO_PHYSGUN"))
+  duplicator.RegisterEntityModifier(gsToolPrefL.."nophysgun",asmlib.GetActionCode("NO_PHYSGUN"))
 end
 
 TOOL.Category   = "Construction"            -- Name of the category
@@ -253,35 +254,35 @@ function TOOL:LeftClick(Trace)
   local nophysgun = self:GetNoPhysgun()
   local nextx  , nexty  , nextz   = self:GetPosOffsets()
   local nextpic, nextyaw, nextrol = self:GetAngOffsets()
-  local stmode    = gearasmlib.GetCorrectID(self:GetStackMode(),SMode)
-  local contyp    = gearasmlib.GetCorrectID(self:GetContrType(),CType)
-  gearasmlib.PlyLoadKey(ply)
-  if(not gearasmlib.PlyLoadKey(ply,"SPEED") and
-     not gearasmlib.PlyLoadKey(ply,"DUCK")) then
+  local stmode    = asmlib.GetCorrectID(self:GetStackMode(),SMode)
+  local contyp    = asmlib.GetCorrectID(self:GetContrType(),CType)
+  asmlib.PlyLoadKey(ply)
+  if(not asmlib.PlyLoadKey(ply,"SPEED") and
+     not asmlib.PlyLoadKey(ply,"DUCK")) then
     -- Direct Snapping
     if(not (eBase and eBase:IsValid()) and (trEnt and trEnt:IsValid())) then eBase = trEnt end
-    local ePiece = gearasmlib.MakePiece(model,Trace.HitPos,ANG_ZERO,mass,bgskids,DDyes:Select("w"))
+    local ePiece = asmlib.MakePiece(model,Trace.HitPos,ANG_ZERO,mass,bgskids,DDyes:Select("w"))
     if(not ePiece) then return false end
-    local stSpawn = gearasmlib.GetNormalSpawn(Trace,model,nextx,nexty,nextz,
+    local stSpawn = asmlib.GetNormalSpawn(Trace,model,nextx,nexty,nextz,
                                               nextpic,nextyaw,nextrol)
     if(not stSpawn) then return false end
-    stSpawn.SPos:Add(gearasmlib.GetCustomAngBBZ(ePiece,stSpawn.HRec,spnflat) * Trace.HitNormal)
+    stSpawn.SPos:Add(asmlib.GetCustomAngBBZ(ePiece,stSpawn.HRec,spnflat) * Trace.HitNormal)
     ePiece:SetAngles(stSpawn.SAng)
     if(util.IsInWorld(stSpawn.SPos)) then
-      gearasmlib.SetMCWorld(ePiece,stSpawn.HRec.M,stSpawn.SPos)
+      asmlib.SetMCWorld(ePiece,stSpawn.HRec.M,stSpawn.SPos)
     else
       ePiece:Remove()
-      gearasmlib.PrintNotify(ply,"Position out of map bounds!","ERROR")
-      return gearasmlib.StatusLog(false,gsToolNameU.." Additional Error INFO"
+      asmlib.PrintNotify(ply,"Position out of map bounds!","ERROR")
+      return asmlib.StatusLog(false,gsToolNameU.." Additional Error INFO"
       .."\n   Event  : Spawning when HitNormal"
       .."\n   Player : "..ply:Nick()
-      .."\n   hdModel: "..gearasmlib.GetModelFileName(model))
+      .."\n   hdModel: "..asmlib.GetModelFileName(model))
     end
     undo.Create("Last Gear Assembly")
     if(not ePiece:Anchor(eBase,Trace.HitPos,Trace.HitNormal,contyp,nocollide,forcelim,freeze,engravity,nophysgun)) then
-      gearasmlib.PrintNotify(ply,"Failed creating "..CType:Select(contyp).Name,"ERROR")
+      asmlib.PrintNotify(ply,"Failed creating "..CType:Select(contyp).Name,"ERROR")
     end
-    gearasmlib.EmitSoundPly(ply)
+    asmlib.EmitSoundPly(ply)
     undo.AddEntity(ePiece)
     undo.SetPlayer(ply)
     undo.SetCustomUndoText("Undone Assembly ( Normal Spawn )")
@@ -291,22 +292,22 @@ function TOOL:LeftClick(Trace)
   -- Hit Prop
   if(not trEnt) then return false end
   if(not trEnt:IsValid()) then return false end
-  if(not gearasmlib.IsPhysTrace(Trace)) then return false end
-  if(gearasmlib.IsOther(trEnt)) then return false end
+  if(not asmlib.IsPhysTrace(Trace)) then return false end
+  if(asmlib.IsOther(trEnt)) then return false end
 
   local trModel = trEnt:GetModel()
   local bsModel = "N/A"
   if(eBase and eBase:IsValid()) then bsModel = eBase:GetModel() end
 
   --No need stacking relative to non-persistent props or using them...
-  local hdRec   = gearasmlib.CacheQueryPiece(model)
-  local trRec   = gearasmlib.CacheQueryPiece(trModel)
+  local hdRec   = asmlib.CacheQueryPiece(model)
+  local trRec   = asmlib.CacheQueryPiece(trModel)
 
   if(not trRec) then return false end
 
-  if(gearasmlib.PlyLoadKey(ply,"DUCK")) then
+  if(asmlib.PlyLoadKey(ply,"DUCK")) then
     -- USE: Use the VALID Trace.Entity as a piece
-    gearasmlib.PrintNotify(ply,"Model: "..gearasmlib.GetModelFileName(trModel).." selected !","GENERIC")
+    asmlib.PrintNotify(ply,"Model: "..asmlib.GetModelFileName(trModel).." selected !","GENERIC")
     ply:ConCommand(gsToolPrefL.."model "..trModel.."\n")
     return true
   end
@@ -314,11 +315,11 @@ function TOOL:LeftClick(Trace)
   if(not hdRec) then return false end
 
   if(count > 1 and
-     gearasmlib.PlyLoadKey(ply,"SPEED") and
+     asmlib.PlyLoadKey(ply,"SPEED") and
      stmode >= 1 and
      stmode <= SMode:GetSize()
   ) then
-    local stSpawn = gearasmlib.GetEntitySpawn(trEnt,rotpiv,model,igntyp,
+    local stSpawn = asmlib.GetEntitySpawn(trEnt,rotpiv,model,igntyp,
                       trorang,nextx,nexty,nextz,nextpic,nextyaw,nextrol)
     if(not stSpawn) then return false end
     undo.Create("Last Gear Assembly")
@@ -332,59 +333,59 @@ function TOOL:LeftClick(Trace)
       if(iNdex ~= count) then
         ePieceN = ePieceO:Duplicate()
       else
-        ePieceN = gearasmlib.MakePiece(model,ePieceO:GetPos(),ANG_ZERO,mass,bgskids,DDyes:Select("w"))
+        ePieceN = asmlib.MakePiece(model,ePieceO:GetPos(),ANG_ZERO,mass,bgskids,DDyes:Select("w"))
       end
       if(ePieceN) then
         ePieceN:SetAngles(stSpawn.SAng)
         if(util.IsInWorld(stSpawn.SPos)) then
-          gearasmlib.SetMCWorld(ePieceN,stSpawn.HRec.M,stSpawn.SPos)
+          asmlib.SetMCWorld(ePieceN,stSpawn.HRec.M,stSpawn.SPos)
         else
           ePieceN:Remove()
-          gearasmlib.EmitSoundPly(ply)
+          asmlib.EmitSoundPly(ply)
           undo.SetPlayer(ply)
           undo.SetCustomUndoText("Undone Assembly ( Stack #"..tostring(count-iNdex).." )")
           undo.Finish()
-          gearasmlib.PrintNotify(ply,"Position out of map bounds!","ERROR")
-          return gearasmlib.StatusLog(true,gsToolNameU.." Additional Error INFO"
+          asmlib.PrintNotify(ply,"Position out of map bounds!","ERROR")
+          return asmlib.StatusLog(true,gsToolNameU.." Additional Error INFO"
           .."\n   Event  : Stacking > Position out of map bounds"
           .."\n   StMode : "..SMode:Select(stmode)
           .."\n   Iterats: "..tostring(count-iNdex)
           .."\n   StackTr: "..tostring(nTrys).." ?= "..tostring(staatts)
           .."\n   Player : "..ply:Nick()
           .."\n   DeltaRt: "..dRot
-          .."\n   Anchor : "..gearasmlib.GetModelFileName(bsModel)
-          .."\n   trModel: "..gearasmlib.GetModelFileName(trModel)
-          .."\n   hdModel: "..gearasmlib.GetModelFileName(model))
+          .."\n   Anchor : "..asmlib.GetModelFileName(bsModel)
+          .."\n   trModel: "..asmlib.GetModelFileName(trModel)
+          .."\n   hdModel: "..asmlib.GetModelFileName(model))
         end
         if(not ePieceN:Anchor(eBase,stSpawn.SPos,stSpawn.DAng:Up(),contyp,nocollide,forcelim,freeze,engravity,nophysgun)) then
-          gearasmlib.PrintNotify(ply,"Failed creating "..CType:Select(contyp).Name,"ERROR")
+          asmlib.PrintNotify(ply,"Failed creating "..CType:Select(contyp).Name,"ERROR")
         end
         undo.AddEntity(ePieceN)
         if(stmode == 1) then
-          stSpawn = gearasmlib.GetEntitySpawn(ePieceN,rotpiv,model,igntyp,
+          stSpawn = asmlib.GetEntitySpawn(ePieceN,rotpiv,model,igntyp,
                       trorang,nextx,nexty,nextz,nextpic,nextyaw,nextrol)
         elseif(stmode == 2) then
           aIter:RotateAroundAxis(stSpawn.CAng:Up(),-dRot)
           trEnt:SetAngles(aIter)
-          stSpawn = gearasmlib.GetEntitySpawn(trEnt,rotpiv,model,igntyp,
+          stSpawn = asmlib.GetEntitySpawn(trEnt,rotpiv,model,igntyp,
                       trorang,nextx,nexty,nextz,nextpic,nextyaw,nextrol)
         end
         if(not stSpawn) then
-          gearasmlib.PrintNotify(ply,"Failed to obtain spawn data!","ERROR")
-          gearasmlib.EmitSoundPly(ply)
+          asmlib.PrintNotify(ply,"Failed to obtain spawn data!","ERROR")
+          asmlib.EmitSoundPly(ply)
           undo.SetPlayer(ply)
           undo.SetCustomUndoText("Undone Assembly ( Stack #"..tostring(count-iNdex).." )")
           undo.Finish()
-          return gearasmlib.StatusLog(true,gsToolNameU.." Additional Error INFO"
+          return asmlib.StatusLog(true,gsToolNameU.." Additional Error INFO"
           .."\n   Event  : Stacking > Failed to obtain spawn data"
           .."\n   StMode : "..SMode:Select(stmode)
           .."\n   Iterats: "..tostring(count-iNdex)
           .."\n   StackTr: "..tostring(nTrys).." ?= "..tostring(staatts)
           .."\n   Player : "..ply:Nick()
           .."\n   DeltaRt: "..dRot
-          .."\n   Anchor : "..gearasmlib.GetModelFileName(bsModel)
-          .."\n   trModel: "..gearasmlib.GetModelFileName(trModel)
-          .."\n   hdModel: "..gearasmlib.GetModelFileName(model))
+          .."\n   Anchor : "..asmlib.GetModelFileName(bsModel)
+          .."\n   trModel: "..asmlib.GetModelFileName(trModel)
+          .."\n   hdModel: "..asmlib.GetModelFileName(model))
         end
         ePieceO = ePieceN
         iNdex = iNdex - 1
@@ -393,54 +394,54 @@ function TOOL:LeftClick(Trace)
         nTrys = nTrys - 1
       end
       if(nTrys <= 0) then
-        gearasmlib.PrintNotify(ply,"Make attempts ran off!","ERROR")
-        gearasmlib.EmitSoundPly(ply)
+        asmlib.PrintNotify(ply,"Make attempts ran off!","ERROR")
+        asmlib.EmitSoundPly(ply)
         undo.SetPlayer(ply)
         undo.SetCustomUndoText("Undone Assembly ( Stack #"..tostring(count-iNdex).." )")
         undo.Finish()
-        return gearasmlib.StatusLog(false,gsToolNameU.." Additional Error INFO"
+        return asmlib.StatusLog(false,gsToolNameU.." Additional Error INFO"
         .."\n   Event  : Stacking > Failed to allocate memory for a piece"
         .."\n   StMode : "..SMode:Select(stmode)
         .."\n   Iterats: "..tostring(count-iNdex)
         .."\n   StackTr: "..tostring(nTrys).." ?= "..tostring(staatts)
         .."\n   Player : "..ply:Nick()
         .."\n   DeltaRt: "..dRot
-        .."\n   Anchor : "..gearasmlib.GetModelFileName(bsModel)
-        .."\n   trModel: "..gearasmlib.GetModelFileName(trModel)
-        .."\n   hdModel: "..gearasmlib.GetModelFileName(model))
+        .."\n   Anchor : "..asmlib.GetModelFileName(bsModel)
+        .."\n   trModel: "..asmlib.GetModelFileName(trModel)
+        .."\n   hdModel: "..asmlib.GetModelFileName(model))
       end
     end
     trEnt:SetAngles(aStart)
-    gearasmlib.EmitSoundPly(ply)
+    asmlib.EmitSoundPly(ply)
     undo.SetPlayer(ply)
     undo.SetCustomUndoText("Undone Assembly ( Stack #"..tostring(count-iNdex).." )")
     undo.Finish()
     return true
   end
 
-  local stSpawn = gearasmlib.GetEntitySpawn(trEnt,rotpiv,model,igntyp,
+  local stSpawn = asmlib.GetEntitySpawn(trEnt,rotpiv,model,igntyp,
                     trorang,nextx,nexty,nextz,nextpic,nextyaw,nextrol)
   if(stSpawn) then
-    local ePiece = gearasmlib.MakePiece(model,Trace.HitPos,ANG_ZERO,mass,bgskids,DDyes:Select("w"))
+    local ePiece = asmlib.MakePiece(model,Trace.HitPos,ANG_ZERO,mass,bgskids,DDyes:Select("w"))
     if(ePiece) then
       ePiece:SetAngles(stSpawn.SAng)
       if(util.IsInWorld(stSpawn.SPos)) then
-        gearasmlib.SetMCWorld(ePiece,stSpawn.HRec.M,stSpawn.SPos)
+        asmlib.SetMCWorld(ePiece,stSpawn.HRec.M,stSpawn.SPos)
       else
         ePiece:Remove()
-        gearasmlib.PrintNotify(ply,"Position out of map bounds !","ERROR")
-        return gearasmlib.StatusLog(true,gsToolNameU.." Additional Error INFO"
+        asmlib.PrintNotify(ply,"Position out of map bounds !","ERROR")
+        return asmlib.StatusLog(true,gsToolNameU.." Additional Error INFO"
         .."\n   Event  : Spawn one piece relative to another"
         .."\n   Player : "..ply:Nick()
-        .."\n   Anchor : "..gearasmlib.GetModelFileName(bsModel)
-        .."\n   trModel: "..gearasmlib.GetModelFileName(trModel)
-        .."\n   hdModel: "..gearasmlib.GetModelFileName(model))
+        .."\n   Anchor : "..asmlib.GetModelFileName(bsModel)
+        .."\n   trModel: "..asmlib.GetModelFileName(trModel)
+        .."\n   hdModel: "..asmlib.GetModelFileName(model))
       end
       undo.Create("Last Gear Assembly")
       if(not ePiece:Anchor(eBase,stSpawn.SPos,stSpawn.DAng:Up(),contyp,nocollide,forcelim,freeze,engravity,nophysgun)) then
-        gearasmlib.PrintNotify(ply,"Failed creating "..CType:Select(contyp).Name,"ERROR")
+        asmlib.PrintNotify(ply,"Failed creating "..CType:Select(contyp).Name,"ERROR")
       end
-      gearasmlib.EmitSoundPly(ply)
+      asmlib.EmitSoundPly(ply)
       undo.AddEntity(ePiece)
       undo.SetPlayer(ply)
       undo.SetCustomUndoText("Undone Assembly ( Prop Relative )")
@@ -455,12 +456,12 @@ function TOOL:RightClick(Trace)
   if(CLIENT) then return true end
   if(not Trace) then return false end
   local ply = self:GetOwner()
-  gearasmlib.PlyLoadKey(ply)
-  if(Trace.HitWorld and gearasmlib.PlyLoadKey(ply,"USE")) then
+  asmlib.PlyLoadKey(ply)
+  if(Trace.HitWorld and asmlib.PlyLoadKey(ply,"USE")) then
     ply:ConCommand(gsToolPrefL.."openframe "..gnMaxFreUse.."\n")
     return true
   end
-  if(gearasmlib.PlyLoadKey(ply,"SPEED")) then
+  if(asmlib.PlyLoadKey(ply,"SPEED")) then
     local trEnt = Trace.Entity
     if(Trace.HitWorld) then
       local svEnt = self:GetEnt(1)
@@ -468,11 +469,11 @@ function TOOL:RightClick(Trace)
         svEnt:SetRenderMode(RENDERMODE_TRANSALPHA)
         svEnt:SetColor(DDyes:Select("w"))
       end
-      gearasmlib.PrintNotify(ply,"Anchor: Cleaned !","CLEANUP")
+      asmlib.PrintNotify(ply,"Anchor: Cleaned !","CLEANUP")
       ply:ConCommand(gsToolPrefL.."anchor N/A\n")
       self:ClearObjects()
       return true
-    elseif(trEnt and trEnt:IsValid() and not gearasmlib.IsOther(trEnt)) then
+    elseif(trEnt and trEnt:IsValid() and not asmlib.IsOther(trEnt)) then
       local svEnt = self:GetEnt(1)
       if(svEnt and svEnt:IsValid()) then
         svEnt:SetRenderMode(RENDERMODE_TRANSALPHA)
@@ -484,18 +485,18 @@ function TOOL:RightClick(Trace)
       self:SetObject(1,trEnt,Trace.HitPos,pyEnt,Trace.PhysicsBone,Trace.HitNormal)
       trEnt:SetRenderMode(RENDERMODE_TRANSALPHA)
       trEnt:SetColor(DDyes:Select("an"))
-      local trModel = gearasmlib.GetModelFileName(trEnt:GetModel())
+      local trModel = asmlib.GetModelFileName(trEnt:GetModel())
       ply:ConCommand(gsToolPrefL.."anchor ["..trEnt:EntIndex().."] "..trModel.."\n")
-      gearasmlib.PrintNotify(ply,"Anchor: Set "..trModel.." !","UNDO")
+      asmlib.PrintNotify(ply,"Anchor: Set "..trModel.." !","UNDO")
       return true
     else
       return false
     end
   else
-    local stmode = gearasmlib.GetCorrectID(self:GetStackMode(),SMode)
-          stmode = gearasmlib.GetCorrectID(stmode + 1,SMode)
+    local stmode = asmlib.GetCorrectID(self:GetStackMode(),SMode)
+          stmode = asmlib.GetCorrectID(stmode + 1,SMode)
     ply:ConCommand(gsToolPrefL.."stmode "..stmode.."\n")
-    gearasmlib.PrintNotify(ply,"Stack Mode: "..SMode:Select(stmode).." !","UNDO")
+    asmlib.PrintNotify(ply,"Stack Mode: "..SMode:Select(stmode).." !","UNDO")
     return true
   end
 end
@@ -504,20 +505,20 @@ function TOOL:Reload(Trace)
   if(CLIENT) then return true end
   if(not Trace) then return false end
   local ply       = self:GetOwner()
-  gearasmlib.PlyLoadKey(ply)
-  if(gearasmlib.PlyLoadKey(ply,"SPEED") and Trace.HitWorld) then
-    gearasmlib.SetLogControl(self:GetLogLines(),self:GetLogFile())
+  asmlib.PlyLoadKey(ply)
+  if(asmlib.PlyLoadKey(ply,"SPEED") and Trace.HitWorld) then
+    asmlib.SetLogControl(self:GetLogLines(),self:GetLogFile())
     if(self:GetExportDB() ~= 0) then
-      gearasmlib.SQLExportIntoLua    ("PIECES")
-      gearasmlib.SQLExportIntoInserts("PIECES")
-      gearasmlib.SQLExportIntoDSV    ("PIECES","\t")
-      return gearasmlib.StatusLog(true,"TOOL:Reload(Trace) > DB Exported")
+      asmlib.SQLExportIntoLua    ("PIECES")
+      asmlib.SQLExportIntoInserts("PIECES")
+      asmlib.SQLExportIntoDSV    ("PIECES","\t")
+      return asmlib.StatusLog(true,"TOOL:Reload(Trace) > DB Exported")
     end
   end
-  if(not gearasmlib.IsPhysTrace(Trace)) then return false end
+  if(not asmlib.IsPhysTrace(Trace)) then return false end
   local trEnt = Trace.Entity
-  if(gearasmlib.IsOther(trEnt)) then return false end
-  local trRec = gearasmlib.CacheQueryPiece(trEnt:GetModel())
+  if(asmlib.IsOther(trEnt)) then return false end
+  local trRec = asmlib.CacheQueryPiece(trEnt:GetModel())
   if(trRec) then
     trEnt:Remove()
     return true
@@ -549,11 +550,11 @@ end
 function TOOL:DrawHUD()
   if(SERVER) then return end
   if(not goMonitor) then
-    goMonitor = gearasmlib.MakeScreen(0,0,
+    goMonitor = asmlib.MakeScreen(0,0,
                   surface.ScreenWidth(),
                   surface.ScreenHeight(),DDyes,false)
     if(not goMonitor) then
-      gearasmlib.PrintInstance(gsToolNameU..": DrawHUD: Invalid screen")
+      asmlib.PrintInstance(gsToolNameU..": DrawHUD: Invalid screen")
       return
     end
   end
@@ -568,14 +569,14 @@ function TOOL:DrawHUD()
     local addinfo = self:GetAdditionalInfo()
     local nextx, nexty, nextz = self:GetPosOffsets()
     local nextpic, nextyaw, nextrol = self:GetAngOffsets()
-    local RadScal = gearasmlib.GetViewRadius(ply,Trace.HitPos)
-    gearasmlib.PlyLoadKey(ply)
-    if(trEnt and trEnt:IsValid() and gearasmlib.PlyLoadKey(ply,"SPEED")) then
-      if(gearasmlib.IsOther(trEnt)) then return end
+    local RadScal = asmlib.GetViewRadius(ply,Trace.HitPos)
+    asmlib.PlyLoadKey(ply)
+    if(trEnt and trEnt:IsValid() and asmlib.PlyLoadKey(ply,"SPEED")) then
+      if(asmlib.IsOther(trEnt)) then return end
       local igntyp  = self:GetIgnoreType()
       local trorang = self:GetTraceOriginAngle()
       local rotpiv  = self:GetRotatePivot()
-      local stSpawn = gearasmlib.GetEntitySpawn(trEnt,rotpiv,model,igntyp,
+      local stSpawn = asmlib.GetEntitySpawn(trEnt,rotpiv,model,igntyp,
                         trorang,nextx,nexty,nextz,nextpic,nextyaw,nextrol)
       if(not stSpawn) then return end
       local Op =  stSpawn.OPos:ToScreen()
@@ -603,7 +604,7 @@ function TOOL:DrawHUD()
         DrawAdditionalInfo(goMonitor,stSpawn)
       end
     else
-      local stSpawn  = gearasmlib.GetNormalSpawn(Trace,model,
+      local stSpawn  = asmlib.GetNormalSpawn(Trace,model,
                          nextx,nexty,nextz,nextpic,nextyaw,nextrol)
       if(not stSpawn) then return false end
       local Os = stSpawn.SPos:ToScreen()
@@ -644,9 +645,9 @@ end
 function TOOL:DrawToolScreen(w, h)
   if(SERVER) then return end
   if(not goToolScr) then
-    goToolScr = gearasmlib.MakeScreen(0,0,w,h,DDyes,false)
+    goToolScr = asmlib.MakeScreen(0,0,w,h,DDyes,false)
     if(not goToolScr) then
-      gearasmlib.PrintInstance(gsToolNameU..": DrawToolScreen: Invalid screen")
+      asmlib.PrintInstance(gsToolNameU..": DrawToolScreen: Invalid screen")
       return
     end
   end
@@ -660,7 +661,7 @@ function TOOL:DrawToolScreen(w, h)
   end
   goToolScr:DrawText("Trace status: Valid","g")
   local model = self:GetModel()
-  local hdRec = gearasmlib.CacheQueryPiece(model)
+  local hdRec = asmlib.CacheQueryPiece(model)
   if(not hdRec) then
     goToolScr:DrawText("Holds Model: Invalid","r")
     return
@@ -669,23 +670,23 @@ function TOOL:DrawToolScreen(w, h)
   local NoAV  = "N/A"
   local trEnt = Trace.Entity
   local trOrig, trModel, trMesh, trRad
-  local stmode = gearasmlib.GetCorrectID(self:GetStackMode(),SMode)
+  local stmode = asmlib.GetCorrectID(self:GetStackMode(),SMode)
   if(trEnt and trEnt:IsValid()) then
-    if(gearasmlib.IsOther(trEnt)) then return end
+    if(asmlib.IsOther(trEnt)) then return end
           trModel = trEnt:GetModel()
-    local trRec   = gearasmlib.CacheQueryPiece(trModel)
-          trModel = gearasmlib.GetModelFileName(trModel)
+    local trRec   = asmlib.CacheQueryPiece(trModel)
+          trModel = asmlib.GetModelFileName(trModel)
     if(trRec) then
-      trMesh = gearasmlib.RoundValue(trRec.Mesh,0.01)
-      trRad  = gearasmlib.RoundValue(gearasmlib.GetLengthVector(trRec.O),0.01)
+      trMesh = asmlib.RoundValue(trRec.Mesh,0.01)
+      trRad  = asmlib.RoundValue(asmlib.GetLengthVector(trRec.O),0.01)
     end
   end
-  local hdRad = gearasmlib.RoundValue(gearasmlib.GetLengthVector(hdRec.O),0.01)
-  local Ratio = gearasmlib.RoundValue((trRad or 0) / hdRad,0.01)
+  local hdRad = asmlib.RoundValue(asmlib.GetLengthVector(hdRec.O),0.01)
+  local Ratio = asmlib.RoundValue((trRad or 0) / hdRad,0.01)
   goToolScr:DrawText("TM: "..(trModel or NoAV),"g")
-  goToolScr:DrawText("HM: "..(gearasmlib.GetModelFileName(model) or NoAV),"m")
+  goToolScr:DrawText("HM: "..(asmlib.GetModelFileName(model) or NoAV),"m")
   goToolScr:DrawText("Anc: "..self:GetClientInfo("anchor"),"an")
-  goToolScr:DrawText("Mesh: "..tostring(trMesh or NoAV).." > "..tostring(gearasmlib.RoundValue(hdRec.Mesh,0.01) or NoAV),"y")
+  goToolScr:DrawText("Mesh: "..tostring(trMesh or NoAV).." > "..tostring(asmlib.RoundValue(hdRec.Mesh,0.01) or NoAV),"y")
   goToolScr:DrawText("Ratio: "..tostring(Ratio).." > "..tostring(trRad or NoAV).."/"..tostring(hdRad))
   goToolScr:DrawText("StackMod: "..SMode:Select(stmode),"r")
   goToolScr:DrawText(tostring(os.date()),"w")
@@ -724,8 +725,8 @@ function TOOL.BuildCPanel(CPanel)
 
   CPanel:AddControl("ComboBox",Combo)
   CurY = CurY + 25
-  local Sorted  = gearasmlib.CacheQueryPanel()
-  local stTable = gearasmlib.GetTableDefinition("PIECES")
+  local Sorted  = asmlib.CacheQueryPanel()
+  local stTable = asmlib.GetTableDefinition("PIECES")
   local pTree   = vgui.Create("DTree")
         pTree:SetPos(2, CurY)
         pTree:SetSize(2, 250)
@@ -767,7 +768,7 @@ function TOOL.BuildCPanel(CPanel)
         RunConsoleCommand(gsToolPrefL.."model"  , Mod)
       end
     else
-      gearasmlib.PrintInstance(gsToolNameU.." Model "
+      asmlib.PrintInstance(gsToolNameU.." Model "
              .. Mod
              .. " is not available in"
              .. " your system .. SKIPPING !")
@@ -776,10 +777,10 @@ function TOOL.BuildCPanel(CPanel)
   end
   CPanel:AddItem(pTree)
   CurY = CurY + pTree:GetTall() + 2
-  gearasmlib.PrintInstance(gsToolNameU.." Found #"..tostring(Cnt-1).." piece items.")
+  asmlib.PrintInstance(gsToolNameU.." Found #"..tostring(Cnt-1).." piece items.")
 
   -- http://wiki.garrysmod.com/page/Category:DComboBox
-  local ConID = gearasmlib.GetCorrectID(GetConVarString(gsToolPrefL.."contyp"),CType)
+  local ConID = asmlib.GetCorrectID(GetConVarString(gsToolPrefL.."contyp"),CType)
   local pConsType = vgui.Create("DComboBox")
         pConsType:SetPos(2, CurY)
         pConsType:SetTall(18)
@@ -802,12 +803,12 @@ function TOOL.BuildCPanel(CPanel)
   local pText = vgui.Create("DTextEntry")
         pText:SetPos(2, 300)
         pText:SetTall(18)
-        pText:SetText(gearasmlib.GetDefaultString(GetConVarString(gsToolPrefL.."bgskids"),
+        pText:SetText(asmlib.GetDefaultString(GetConVarString(gsToolPrefL.."bgskids"),
                  "Comma delimited Body/Skin IDs > ENTER ( TAB to Auto-fill from Trace )"))
         pText.OnKeyCodeTyped = function(pnSelf, nKeyEnum)
           if(nKeyEnum == KEY_TAB) then
-            local sTX = gearasmlib.GetPropBodyGrp()
-                 .."/"..gearasmlib.GetPropSkin()
+            local sTX = asmlib.GetPropBodyGrp()
+                 .."/"..asmlib.GetPropSkin()
             pnSelf:SetText(sTX)
             pnSelf:SetValue(sTX)
           elseif(nKeyEnum == KEY_ENTER) then
@@ -979,10 +980,10 @@ function TOOL:UpdateGhost(oEnt, oPly)
   if(not Trace) then return end
   local trEnt = Trace.Entity
   oEnt:SetNoDraw(true)
-  gearasmlib.PlyLoadKey(oPly)
-  if(trEnt and trEnt:IsValid() and gearasmlib.PlyLoadKey(oPly,"SPEED")) then
-    if(gearasmlib.IsOther(trEnt)) then return end
-    local trRec = gearasmlib.CacheQueryPiece(trEnt:GetModel())
+  asmlib.PlyLoadKey(oPly)
+  if(trEnt and trEnt:IsValid() and asmlib.PlyLoadKey(oPly,"SPEED")) then
+    if(asmlib.IsOther(trEnt)) then return end
+    local trRec = asmlib.CacheQueryPiece(trEnt:GetModel())
     if(trRec) then
       local model   = self:GetModel()
       local nextx, nexty, nextz = self:GetPosOffsets()
@@ -990,25 +991,25 @@ function TOOL:UpdateGhost(oEnt, oPly)
       local trorang = self:GetTraceOriginAngle()
       local rotpiv  = self:GetRotatePivot()
       local nextpic, nextyaw, nextrol = self:GetAngOffsets()
-      local stSpawn = gearasmlib.GetEntitySpawn(trEnt,rotpiv,model,igntyp,
+      local stSpawn = asmlib.GetEntitySpawn(trEnt,rotpiv,model,igntyp,
                         trorang,nextx,nexty,nextz,nextpic,nextyaw,nextrol)
       if(not stSpawn) then return end
       oEnt:SetNoDraw(false)
       oEnt:SetAngles(stSpawn.SAng)
-      gearasmlib.SetMCWorld(oEnt,stSpawn.HRec.M,stSpawn.SPos)
+      asmlib.SetMCWorld(oEnt,stSpawn.HRec.M,stSpawn.SPos)
     end
   else
     local model = self:GetModel()
     local nextx, nexty, nextz = self:GetPosOffsets()
     local nextpic, nextyaw, nextrol = self:GetAngOffsets()
-    local stSpawn = gearasmlib.GetNormalSpawn(Trace,model,
+    local stSpawn = asmlib.GetNormalSpawn(Trace,model,
                       nextx,nexty,nextz,nextpic,nextyaw,nextrol)
     if(not stSpawn) then return end
     local spnflat = self:GetSpawnFlat()
     oEnt:SetNoDraw(false)
     oEnt:SetAngles(stSpawn.SAng)
-    stSpawn.SPos:Add(gearasmlib.GetCustomAngBBZ(oEnt,stSpawn.HRec,spnflat) * Trace.HitNormal)
-    gearasmlib.SetMCWorld(oEnt,stSpawn.HRec.M,stSpawn.SPos)
+    stSpawn.SPos:Add(asmlib.GetCustomAngBBZ(oEnt,stSpawn.HRec,spnflat) * Trace.HitNormal)
+    asmlib.SetMCWorld(oEnt,stSpawn.HRec.M,stSpawn.SPos)
     return
   end
 end
