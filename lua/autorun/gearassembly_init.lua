@@ -2,8 +2,8 @@
 if(SERVER) then
   AddCSLuaFile("gearassembly/gearasmlib.lua")
 end
-
 include("gearassembly/gearasmlib.lua")
+
 ------ MODULE POINTER -------
 local asmlib = gearasmlib
 
