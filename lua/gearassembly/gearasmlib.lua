@@ -717,13 +717,14 @@ function CallAction(sKey,A1,A2,A3,A4)
 end
 
 function IsOther(oEnt)
-  if(not oEnt)         then return true end
-  if(oEnt:IsPlayer())  then return true end
-  if(oEnt:IsVehicle()) then return true end
-  if(oEnt:IsNPC())     then return true end
-  if(oEnt:IsRagdoll()) then return true end
-  if(oEnt:IsWeapon())  then return true end
-  if(oEnt:IsWidget())  then return true end
+  if(not oEnt)           then return true end
+  if(not oEnt:IsValid()) then return true end
+  if(oEnt:IsPlayer())    then return true end
+  if(oEnt:IsVehicle())   then return true end
+  if(oEnt:IsNPC())       then return true end
+  if(oEnt:IsRagdoll())   then return true end
+  if(oEnt:IsWeapon())    then return true end
+  if(oEnt:IsWidget())    then return true end
   return false
 end
 
