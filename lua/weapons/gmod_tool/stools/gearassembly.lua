@@ -938,7 +938,7 @@ function TOOL.BuildCPanel(CPanel)
             Command = gsToolPrefL.."enghost"})
 end
 
-function TOOL:MakeGhostEntity(sModel,vPos,aAngle)
+function TOOL:MakeGhostEntity(sModel)
   -- Check for invalid model
   if(not util.IsValidModel(sModel)) then return end
   util.PrecacheModel(sModel)
@@ -963,8 +963,8 @@ function TOOL:MakeGhostEntity(sModel,vPos,aAngle)
     return
   end
   self.GhostEntity:SetModel(sModel)
-  self.GhostEntity:SetPos(vPos)
-  self.GhostEntity:SetAngles(aAngle)
+  self.GhostEntity:SetPos(VEC_ZERO)
+  self.GhostEntity:SetAngles(ANG_ZERO)
   self.GhostEntity:Spawn()
   self.GhostEntity:SetSolid(SOLID_VPHYSICS);
   self.GhostEntity:SetMoveType(MOVETYPE_NONE)
@@ -1022,7 +1022,7 @@ function TOOL:Think()
             self.GhostEntity:GetModel() ~= model
     ) then
       -- If none ...
-      self:MakeGhostEntity(model, VEC_ZERO, ANG_ZERO)
+      self:MakeGhostEntity(model)
     end
     self:UpdateGhost(self.GhostEntity, self:GetOwner())
   else
