@@ -46,8 +46,7 @@ A: Repeat the same procedure as the planetary gear above, but with bevels.
    point to one of the planetary bevels use the meshing function.
 
 Q: How can I stack gears in one particular direction.
-A: Orient the first gear's forward to point in the desired direction.
-   Freeze it.
+A: Orient the first gear's forward to point in the desired direction. Freeze it.
    Adjust stack mode to "Forward based", set stack count to two or more
    You can also use the used manual offsets like the TA. Now mesh those things !
    
