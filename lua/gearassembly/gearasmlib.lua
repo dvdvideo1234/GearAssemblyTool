@@ -56,6 +56,7 @@ local duplicator     = duplicator
 local ents           = ents
 local file           = file
 local getmetatable   = getmetatable
+local setmetatable   = setmetatable
 local include        = include
 local IsValid        = IsValid
 local LocalPlayer    = LocalPlayer
@@ -459,6 +460,10 @@ function MakeContainer(sInfo,sDefKey)
            tostring(Ins).."/"..
            tostring(Del)
   end
+  if(not GetOpVar("TYPE_CONTAINER")) then
+    SetOpVar("TYPE_CONTAINER",{})
+  end
+  setmetatable(self,GetOpVar("TYPE_CONTAINER"))
   return self
 end
 
@@ -482,7 +487,7 @@ function MakeScreen(sW,sH,eW,eH,conPalette,sEst)
         Text.LastW = 0
         Text.LastH = 0
   local Palette
-  if(conPalette and conPalette.Create == MakeContainer) then
+  if(getmetatable(conPalette) == GetOpVar("TYPE_CONTAINER")) then
     Palette = conPalette
   end
   local Texture = {}
@@ -684,6 +689,10 @@ function MakeScreen(sW,sH,eW,eH,conPalette,sEst)
       surface.DrawLine(xyS.x,xyS.y,xyE.x,xyE.y)
     end
   end
+  if(not GetOpVar("TYPE_SCREEN")) then
+    SetOpVar("TYPE_SCREEN",{})
+  end
+  setmetatable(self,GetOpVar("TYPE_SCREEN"))
   return self
 end
 
@@ -790,7 +799,7 @@ end
 function GetCorrectID(anyValue,oContainer)
   local Value = tonumber(anyValue)
   if(not Value) then return 1 end
-  if(not oContainer) then return 1 end
+  if(getmetatable(oContainer) ~= GetOpVar("TYPE_CONTAINER")) then return 1 end
   local Max = oContainer:GetSize()
   if(Value > Max) then Value = 1 end
   if(Value < 1) then Value = Max end
@@ -2664,12 +2673,12 @@ function MakePiece(sModel,vPos,aAng,nMass,sBgSkIDs,clColor)
       ePiece.Create = MakePiece
       ePiece.Anchor = function(ePiece,eBase,vPos,vNorm,nID,nNoCollid,nForceLim,nFreeze,nGrav,nNoPhyGun)
         local ConstrDB = GetOpVar("CONSTRAINT_TYPE")
-        local ConID    = tonumber(nID) or 1
-        local Freeze   = nFreeze       or 0
-        local Grav     = nGrav         or 0
-        local NoCollid = nNoCollid     or 0
-        local ForceLim = nForceLim     or 0
-        local NoPhyGun = nNoPhyGun     or 0
+        local ConID    = tonumber(nID      ) or 1
+        local Freeze   = tonumber(nFreeze  ) or 0
+        local Grav     = tonumber(nGrav    ) or 0
+        local NoCollid = tonumber(nNoCollid) or 0
+        local ForceLim = tonumber(nForceLim) or 0
+        local NoPhyGun = tonumber(nNoPhyGun) or 0
         local IsIn
         local ConstrInfo = ConstrDB:Select(ConID)
         if(not IsExistent(ConstrInfo)) then
@@ -2690,13 +2699,13 @@ function MakePiece(sModel,vPos,aAng,nMass,sBgSkIDs,clColor)
           return StatusLog(false,"Piece:Anchor() Phys Piece not valid")
         end
         construct.SetPhysProp(nil,ePiece,0,pyPiece,{Material = "gmod_ice"})
-        if(nFreeze and Freeze == 0) then
+        if(Freeze == 0) then
           pyPiece:EnableMotion(true)
         end
         if(Grav == 0) then
           construct.SetPhysProp(nil,ePiece,0,pyPiece,{GravityToggle = false})
         end
-        if(NoPhyGun and NoPhyGun ~= 0) then --  is my custom child ...
+        if(NoPhyGun ~= 0) then --  is my custom child ...
           ePiece:SetUnFreezable(true)
           ePiece.PhysgunDisabled = true
           duplicator.StoreEntityModifier(ePiece,GetToolPrefL().."nophysgun",{[1] = true})
