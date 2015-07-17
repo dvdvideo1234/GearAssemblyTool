@@ -252,10 +252,10 @@ function TOOL:LeftClick(Trace)
   local deltarot  = self:GetDeltaRotation()
   local forcelim  = self:GetForceLimit()
   local nophysgun = self:GetNoPhysgun()
-  local nextx  , nexty  , nextz   = self:GetPosOffsets()
-  local nextpic, nextyaw, nextrol = self:GetAngOffsets()
   local stmode    = asmlib.GetCorrectID(self:GetStackMode(),SMode)
   local contyp    = asmlib.GetCorrectID(self:GetContrType(),CType)
+  local nextx  , nexty  , nextz   = self:GetPosOffsets()
+  local nextpic, nextyaw, nextrol = self:GetAngOffsets()
   asmlib.PlyLoadKey(ply)
   if(not asmlib.PlyLoadKey(ply,"SPEED") and
      not asmlib.PlyLoadKey(ply,"DUCK")) then
