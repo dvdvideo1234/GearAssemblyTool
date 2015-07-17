@@ -2,5 +2,5 @@
 {
   "name" "Gear Assembly Tool"
   "author_name" "DVD"
-  "info" "Asembles gears to mesh together"
+  "info" "Assembles gears to mesh together"
 }
