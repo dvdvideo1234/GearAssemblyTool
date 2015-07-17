@@ -2675,7 +2675,7 @@ function MakePiece(sModel,vPos,aAng,nMass,sBgSkIDs,clColor)
         local ConstrDB = GetOpVar("CONSTRAINT_TYPE")
         local ConID    = tonumber(nID      ) or 1
         local Freeze   = tonumber(nFreeze  ) or 0
-        local Grav     = tonumber(nGrav    ) or 0
+        local Gravity  = tonumber(nGrav    ) or 0
         local NoCollid = tonumber(nNoCollid) or 0
         local ForceLim = tonumber(nForceLim) or 0
         local NoPhyGun = tonumber(nNoPhyGun) or 0
@@ -2702,7 +2702,7 @@ function MakePiece(sModel,vPos,aAng,nMass,sBgSkIDs,clColor)
         if(Freeze == 0) then
           pyPiece:EnableMotion(true)
         end
-        if(Grav == 0) then
+        if(Gravity == 0) then
           construct.SetPhysProp(nil,ePiece,0,pyPiece,{GravityToggle = false})
         end
         if(NoPhyGun ~= 0) then --  is my custom child ...
