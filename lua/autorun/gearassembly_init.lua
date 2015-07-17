@@ -179,12 +179,12 @@ if(CLIENT) then
       pnButton:SetSize(55,30)
       pnButton:SetVisible(true)
       pnButton.DoClick = function()
-        asmlib.LogInstance("Button: "..pnButton:GetText())
+        asmlib.LogInstance("OPEN_FRAME: Button "..pnButton:GetText().." clicked")
         asmlib.SetLogControl(GetConVar(gsToolPrefL.."logsmax"):GetFloat()  or 0,
                              GetConVar(gsToolPrefL.."logfile"):GetString() or "")
         local ExportDB     = GetConVar(gsToolPrefL.."exportdb"):GetFloat() or 0
         if(ExportDB ~= 0) then
-          asmlib.Log("Export DB")
+          asmlib.LogInstance("OPEN_FRAME: Button Exporting DB")
           asmlib.SQLExportIntoLua    ("PIECES")
           asmlib.SQLExportIntoInserts("PIECES")
           asmlib.SQLExportIntoDSV    ("PIECES","\t")
