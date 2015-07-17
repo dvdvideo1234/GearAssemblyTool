@@ -188,7 +188,7 @@ if(CLIENT) then
       pnButtonL:SetSize(230,30)
       pnButtonL:SetVisible(true)
       pnButtonL.DoClick = function()
-        local exportdb = GetConVarNumber(gsToolPrefL.."exportdb") or 0
+        local exportdb = GetConVar(gsToolPrefL.."exportdb"):GetFloat() or 0
         if(exportdb ~= 0) then
           asmlib.Log("Button: "..pnButtonL:GetText())
           asmlib.SQLExportIntoLua    ("PIECES")
@@ -204,8 +204,8 @@ if(CLIENT) then
       pnButtonR:SetVisible(true)
       pnButtonR.DoClick = function()
         asmlib.LogInstance("Button: "..pnButtonR:GetText())
-        asmlib.SetLogControl(GetConVarNumber(gsToolPrefL.."logsmax") or 0,
-                                 GetConVarString(gsToolPrefL.."logfile") or "")
+        asmlib.SetLogControl(GetConVar(gsToolPrefL.."logsmax"):GetFloat()  or 0,
+                             GetConVar(gsToolPrefL.."logfile"):GetString() or "")
       end
       ------------ ListView --------------
       pnListView:SetParent(pnFrame)

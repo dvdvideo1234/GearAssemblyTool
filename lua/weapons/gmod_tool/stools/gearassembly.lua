@@ -11,7 +11,7 @@ local IsValid           = IsValid
 local tonumber          = tonumber
 local tostring          = tostring
 local LocalPlayer       = LocalPlayer
-local GetConVarString   = GetConVarString
+local GetConVar         = GetConVar
 local RunConsoleCommand = RunConsoleCommand
 local os                = os
 local sql               = sql
@@ -780,7 +780,7 @@ function TOOL.BuildCPanel(CPanel)
   asmlib.PrintInstance(gsToolNameU.." Found #"..tostring(Cnt-1).." piece items.")
 
   -- http://wiki.garrysmod.com/page/Category:DComboBox
-  local ConID = asmlib.GetCorrectID(GetConVarString(gsToolPrefL.."contyp"),CType)
+  local ConID = asmlib.GetCorrectID(GetConVar(gsToolPrefL.."contyp"):GetString(),CType)
   local pConsType = vgui.Create("DComboBox")
         pConsType:SetPos(2, CurY)
         pConsType:SetTall(18)
@@ -803,7 +803,7 @@ function TOOL.BuildCPanel(CPanel)
   local pText = vgui.Create("DTextEntry")
         pText:SetPos(2, 300)
         pText:SetTall(18)
-        pText:SetText(asmlib.GetDefaultString(GetConVarString(gsToolPrefL.."bgskids"),
+        pText:SetText(asmlib.GetDefaultString(GetConVar(gsToolPrefL.."bgskids"):GetString(),
                  "Comma delimited Body/Skin IDs > ENTER ( TAB to Auto-fill from Trace )"))
         pText.OnKeyCodeTyped = function(pnSelf, nKeyEnum)
           if(nKeyEnum == KEY_TAB) then
