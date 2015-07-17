@@ -111,32 +111,24 @@ if(CLIENT) then
         asmlib.StatusLog(false,"OPEN_FRAME: Failed to retrieve most frequent models")
       end
       local pnFrame = vgui.Create("DFrame")
-      local pnButtonL = vgui.Create("DButton", pnFrame)
-      local pnButtonR = vgui.Create("DButton", pnFrame)
+      local pnButton = vgui.Create("DButton", pnFrame)
       local pnListView = vgui.Create("DListView", pnFrame)
       local pnModelPanel = vgui.Create("DModelPanel",pnFrame)
       if(not IsValid(pnFrame)) then
         return asmlib.StatusLog(false,"OPEN_FRAME: Failed to create DFrame")
       end
-      if(not IsValid(pnButtonL)) then
+      if(not IsValid(pnButton)) then
         pnFrame:Remove()
         return asmlib.StatusLog(false,"OPEN_FRAME: Failed to create DButton-L")
       end
-      if(not IsValid(pnButtonR)) then
-        pnFrame:Remove()
-        pnButtonL:Remove()
-        return asmlib.StatusLog(false,"OPEN_FRAME: Failed to create DButton-R")
-      end
       if(not IsValid(pnListView)) then
         pnFrame:Remove()
-        pnButtonL:Remove()
-        pnButtonR:Remove()
+        pnButton:Remove()
         return asmlib.StatusLog(false,"OPEN_FRAME: Failed to create DListView")
       end
       if(not IsValid(pnModelPanel)) then
         pnFrame:Remove()
-        pnButtonL:Remove()
-        pnButtonR:Remove()
+        pnButton:Remove()
         pnListView:Remove()
         return asmlib.StatusLog(false,"OPEN_FRAME: Failed to create DModelPanel")
       end
@@ -152,8 +144,7 @@ if(CLIENT) then
       pnFrame.OnClose = function()
         pnFrame:SetVisible(false)
         pnFrame:Remove()
-        pnButtonL:Remove()
-        pnButtonR:Remove()
+        pnButton:Remove()
         pnListView:Remove()
         pnModelPanel:Remove()
         asmlib.LogInstance("OPEN_FRAME: Form removed")
@@ -181,31 +172,23 @@ if(CLIENT) then
         oEnt:SetAngles(Ang)
         oEnt:SetPos(Rot)
       end
-      ------------ ButtonL --------------
-      pnButtonL:SetParent(pnFrame)
-      pnButtonL:SetText("Export client's DB")
-      pnButtonL:SetPos(15,30)
-      pnButtonL:SetSize(230,30)
-      pnButtonL:SetVisible(true)
-      pnButtonL.DoClick = function()
-        local exportdb = GetConVar(gsToolPrefL.."exportdb"):GetFloat() or 0
-        if(exportdb ~= 0) then
-          asmlib.Log("Button: "..pnButtonL:GetText())
+      ------------ Button --------------
+      pnButton:SetParent(pnFrame)
+      pnButton:SetText("Export DB")
+      pnButton:SetPos(15,30)
+      pnButton:SetSize(55,30)
+      pnButton:SetVisible(true)
+      pnButton.DoClick = function()
+        asmlib.LogInstance("Button: "..pnButton:GetText())
+        asmlib.SetLogControl(GetConVar(gsToolPrefL.."logsmax"):GetFloat()  or 0,
+                             GetConVar(gsToolPrefL.."logfile"):GetString() or "")
+        local ExportDB     = GetConVar(gsToolPrefL.."exportdb"):GetFloat() or 0
+        if(ExportDB ~= 0) then
+          asmlib.Log("Export DB")
           asmlib.SQLExportIntoLua    ("PIECES")
           asmlib.SQLExportIntoInserts("PIECES")
           asmlib.SQLExportIntoDSV    ("PIECES","\t")
         end
-      end
-      ------------ ButtonR --------------
-      pnButtonR:SetParent(pnFrame)
-      pnButtonR:SetText("Set client's LOG control")
-      pnButtonR:SetPos(255,30)
-      pnButtonR:SetSize(230,30)
-      pnButtonR:SetVisible(true)
-      pnButtonR.DoClick = function()
-        asmlib.LogInstance("Button: "..pnButtonR:GetText())
-        asmlib.SetLogControl(GetConVar(gsToolPrefL.."logsmax"):GetFloat()  or 0,
-                             GetConVar(gsToolPrefL.."logfile"):GetString() or "")
       end
       ------------ ListView --------------
       pnListView:SetParent(pnFrame)
