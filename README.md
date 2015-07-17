@@ -50,18 +50,18 @@ A: Orient the first gear's forward to point in the desired direction. Freeze it.
    Adjust stack mode to "Forward based", set stack count to two or more
    You can also use the used manual offsets like the TA. Now mesh those things !
    
+Q: How can chose the constraint type when I want to automatically constrain a gear?
+A: Below the gear selection tree, there is a drop-down menu. ( It shows "<Constraint Type>" at first )
+   Click on it to select constraint type like Axis, BS, and so on ..
+   
 Q: How should I chose an anchor prop to constrain the gears to and how can I know what did I select?
 A: Easy, see the "Anc:" selection on the toolgun's screen. It indicates which prop is
    selected for "Anchor" ( A prop that the gears will be automatically constrained to )
    If it shows "N/A" ( Not Available ), then no anchor is selected.
    If it shows for example "[Entity_ID] Some_model_from_gmod.mdl", then an anchor
-   is select and all gears will automatically constrain to it.
-   You can also clear it any time by pointing to the world and using
-   IN_SPEED ( Def: Shift ) + click IN_ATTACK2 ( Def: Right mouse button ). 
-   
-Q: How can chose the constraint type when I want to automatically constrain a gear?
-A: Below the gear selection tree, there is a drop-down menu. ( It shows "<Constraint Type>" at first )
-   Click on it to select constraint type like Axis, BS, and so on ..
+   is selected and all gears will be automatically constrained to it if enabled
+   ( Constraint type different than "Free spawn" ). You can also clear it any time by pointing
+   to the world and using IN_SPEED ( Def: Shift ) + click IN_ATTACK2 ( Def: Right mouse button ). 
    
 Q: You said this thing is pretty mush like the TA, which settings are the same?
 A: The handling of Bodygroup/Skin selection, Mass, Gear's physical properties,
