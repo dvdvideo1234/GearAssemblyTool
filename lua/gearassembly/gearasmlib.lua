@@ -2672,7 +2672,7 @@ function MakePiece(sModel,vPos,aAng,nMass,sBgSkIDs,clColor)
       end
       ePiece.Create = MakePiece
       ePiece.Anchor = function(ePiece,eBase,vPos,vNorm,nID,nNoCollid,nForceLim,nFreeze,nGrav,nNoPhyGun)
-        local ConstrDB = GetOpVar("CONSTRAINT_TYPE")
+        local ConstrDB = GetOpVar("CONTAIN_CONSTRAINT_TYPE")
         local ConID    = tonumber(nID      ) or 1
         local Freeze   = tonumber(nFreeze  ) or 0
         local Gravity  = tonumber(nGrav    ) or 0

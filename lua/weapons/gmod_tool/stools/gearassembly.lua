@@ -67,8 +67,8 @@ local DDyes = asmlib.MakeContainer("Colours")
       DDyes:Insert("an",Color(180,255,150,255))
       DDyes:Insert("tx",Color(161,161,161,255))
 
-local SMode = asmlib.GetOpVar("STACK_MODE")
-local CType = asmlib.GetOpVar("CONSTRAINT_TYPE")
+local SMode = asmlib.GetOpVar("CONTAIN_STACK_MODE")
+local CType = asmlib.GetOpVar("CONTAIN_CONSTRAINT_TYPE")
 
 ------------- LOCAL FUNCTIONS AND STUFF ----------------
 

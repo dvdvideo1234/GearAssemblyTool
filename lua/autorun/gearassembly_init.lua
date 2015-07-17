@@ -23,8 +23,8 @@ asmlib.SetOpVar("MAXCONVAR_FREQUSED",50)
 asmlib.SetOpVar("MAXCONVAR_ROTATION",360)
 asmlib.SetOpVar("MAXCONVAR_STACKCOUNT",200)
 asmlib.SetOpVar("MAXCONVAR_FOCELIMIT",1000000)
-asmlib.SetOpVar("STACK_MODE",asmlib.MakeContainer("Stack Mode"))
-asmlib.SetOpVar("CONSTRAINT_TYPE",asmlib.MakeContainer("Constraint Type"))
+asmlib.SetOpVar("CONTAIN_STACK_MODE",asmlib.MakeContainer("Stack Mode"))
+asmlib.SetOpVar("CONTAIN_CONSTRAINT_TYPE",asmlib.MakeContainer("Constraint Type"))
 asmlib.SetLogControl(0,"gearasmlib_log")
 
 ------ GLOBAL VARIABLES -------
@@ -40,11 +40,11 @@ local gsFullDir   = gsPathBAS  ..gsPathDSV..
 
 if(SERVER) then
 
-  local SMode = asmlib.GetOpVar("STACK_MODE")
+  local SMode = asmlib.GetOpVar("CONTAIN_STACK_MODE")
         SMode:Insert(1,"Forward based")
         SMode:Insert(2,"Around pivot")
 
-  local CType = asmlib.GetOpVar("CONSTRAINT_TYPE")
+  local CType = asmlib.GetOpVar("CONTAIN_CONSTRAINT_TYPE")
         CType:Insert(1 ,{Name = "Free Spawn"  , Make = nil}                     )
         CType:Insert(2 ,{Name = "Parent Piece", Make = nil}                     )
         CType:Insert(3 ,{Name = "Weld Piece"  , Make = constraint.Weld}         )
@@ -73,11 +73,11 @@ end
 
 if(CLIENT) then
 
-  local SMode = asmlib.GetOpVar("STACK_MODE")
+  local SMode = asmlib.GetOpVar("CONTAIN_STACK_MODE")
         SMode:Insert(1,"Forward based")
         SMode:Insert(2,"Around pivot")
 
-  local CType = asmlib.GetOpVar("CONSTRAINT_TYPE")
+  local CType = asmlib.GetOpVar("CONTAIN_CONSTRAINT_TYPE")
         CType:Insert(1 ,{Name = "Free Spawn"  })
         CType:Insert(2 ,{Name = "Parent Piece"})
         CType:Insert(3 ,{Name = "Weld Piece"  })
