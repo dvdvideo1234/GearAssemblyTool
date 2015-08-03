@@ -83,6 +83,12 @@ if(CLIENT) then
 end
 
 if(SERVER) then
+  CreateConVar(gsToolPrefL.."bnderrmod","1",FCVAR_ARCHIVE      +
+                                            FCVAR_ARCHIVE_XBOX +
+                                            FCVAR_NOTIFY       +
+                                            FCVAR_REPLICATED   +
+                                            FCVAR_PROTECTED    +
+                                            FCVAR_PRINTABLEONLY)
   cleanup.Register(gsToolNameU.."s")
   duplicator.RegisterEntityModifier(gsToolPrefL.."nophysgun",asmlib.GetActionCode("NO_PHYSGUN"))
 end
@@ -230,6 +236,10 @@ function TOOL:GetNoPhysgun()
   return (self:GetClientNumber("nophysgun") or 0)
 end
 
+function TOOL:GetBoundErrorMode()
+  return math.floor(math.Clamp((GetConVar(gsToolPrefL.."bnderrmod"):GetFloat() or 0),0,gnMaxErMode))
+end
+
 function TOOL:LeftClick(Trace)
   if(CLIENT) then self:ClearObjects() return true end
   if(not Trace) then return false end
@@ -252,6 +262,7 @@ function TOOL:LeftClick(Trace)
   local deltarot  = self:GetDeltaRotation()
   local forcelim  = self:GetForceLimit()
   local nophysgun = self:GetNoPhysgun()
+  local bnderrmod = self:GetBoundErrorMode()
   local stmode    = asmlib.GetCorrectID(self:GetStackMode(),SMode)
   local contyp    = asmlib.GetCorrectID(self:GetContrType(),CType)
   local nextx  , nexty  , nextz   = self:GetPosOffsets()
@@ -268,16 +279,10 @@ function TOOL:LeftClick(Trace)
     if(not stSpawn) then return false end
     stSpawn.SPos:Add(asmlib.GetCustomAngBBZ(ePiece,stSpawn.HRec,spnflat) * Trace.HitNormal)
     ePiece:SetAngles(stSpawn.SAng)
-    if(util.IsInWorld(stSpawn.SPos)) then
-      asmlib.SetMCWorld(ePiece,stSpawn.HRec.M,stSpawn.SPos)
-    else
-      ePiece:Remove()
-      asmlib.PrintNotify(ply,"Position out of map bounds!","ERROR")
-      return asmlib.StatusLog(false,gsToolNameU.." Additional Error INFO"
+    if(ePiece:SetMapBoundPos(stSpawn.SPos,ply,bnderrmod,"Additional Error INFO"
       .."\n   Event  : Spawning when HitNormal"
       .."\n   Player : "..ply:Nick()
-      .."\n   hdModel: "..asmlib.GetModelFileName(model))
-    end
+      .."\n   hdModel: "..asmlib.GetModelFileName(model))) then return false end
     undo.Create("Last Gear Assembly")
     if(not ePiece:Anchor(eBase,Trace.HitPos,Trace.HitNormal,contyp,nocollide,forcelim,freeze,engravity,nophysgun)) then
       asmlib.PrintNotify(ply,"Failed creating "..CType:Select(contyp).Name,"ERROR")
@@ -337,16 +342,7 @@ function TOOL:LeftClick(Trace)
       end
       if(ePieceN) then
         ePieceN:SetAngles(stSpawn.SAng)
-        if(util.IsInWorld(stSpawn.SPos)) then
-          asmlib.SetMCWorld(ePieceN,stSpawn.HRec.M,stSpawn.SPos)
-        else
-          ePieceN:Remove()
-          asmlib.EmitSoundPly(ply)
-          undo.SetPlayer(ply)
-          undo.SetCustomUndoText("Undone Assembly ( Stack #"..tostring(count-iNdex).." )")
-          undo.Finish()
-          asmlib.PrintNotify(ply,"Position out of map bounds!","ERROR")
-          return asmlib.StatusLog(true,gsToolNameU.." Additional Error INFO"
+        if(ePiece:SetMapBoundPos(stSpawn.SPos,ply,bnderrmod,"Additional Error INFO"
           .."\n   Event  : Stacking > Position out of map bounds"
           .."\n   StMode : "..SMode:Select(stmode)
           .."\n   Iterats: "..tostring(count-iNdex)
@@ -355,7 +351,11 @@ function TOOL:LeftClick(Trace)
           .."\n   DeltaRt: "..dRot
           .."\n   Anchor : "..asmlib.GetModelFileName(bsModel)
           .."\n   trModel: "..asmlib.GetModelFileName(trModel)
-          .."\n   hdModel: "..asmlib.GetModelFileName(model))
+          .."\n   hdModel: "..asmlib.GetModelFileName(model))) then
+          undo.SetPlayer(ply)
+          undo.SetCustomUndoText("Undone Assembly ( Stack #"..tostring(count-iNdex).." )")
+          undo.Finish()
+          return false
         end
         if(not ePieceN:Anchor(eBase,stSpawn.SPos,stSpawn.DAng:Up(),contyp,nocollide,forcelim,freeze,engravity,nophysgun)) then
           asmlib.PrintNotify(ply,"Failed creating "..CType:Select(contyp).Name,"ERROR")
@@ -425,18 +425,12 @@ function TOOL:LeftClick(Trace)
     local ePiece = asmlib.MakePiece(model,Trace.HitPos,ANG_ZERO,mass,bgskids,DDyes:Select("w"))
     if(ePiece) then
       ePiece:SetAngles(stSpawn.SAng)
-      if(util.IsInWorld(stSpawn.SPos)) then
-        asmlib.SetMCWorld(ePiece,stSpawn.HRec.M,stSpawn.SPos)
-      else
-        ePiece:Remove()
-        asmlib.PrintNotify(ply,"Position out of map bounds !","ERROR")
-        return asmlib.StatusLog(true,gsToolNameU.." Additional Error INFO"
+      if(ePiece:SetMapBoundPos(stSpawn.SPos,ply,bnderrmod,"Additional Error INFO"
         .."\n   Event  : Spawn one piece relative to another"
         .."\n   Player : "..ply:Nick()
         .."\n   Anchor : "..asmlib.GetModelFileName(bsModel)
         .."\n   trModel: "..asmlib.GetModelFileName(trModel)
-        .."\n   hdModel: "..asmlib.GetModelFileName(model))
-      end
+        .."\n   hdModel: "..asmlib.GetModelFileName(model))) then return false end      
       undo.Create("Last Gear Assembly")
       if(not ePiece:Anchor(eBase,stSpawn.SPos,stSpawn.DAng:Up(),contyp,nocollide,forcelim,freeze,engravity,nophysgun)) then
         asmlib.PrintNotify(ply,"Failed creating "..CType:Select(contyp).Name,"ERROR")

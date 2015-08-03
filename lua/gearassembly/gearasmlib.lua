@@ -2792,6 +2792,56 @@ function MakePiece(sModel,vPos,aAng,nMass,sBgSkIDs,clColor)
         end
         return StatusLog(IsIn,"Piece:Anchor() status is <"..tostring(IsIn)..">")
       end
+      ePiece.SetMapBoundPos = function(ePiece,vPos,oPly,nBndErrMode,anyMessage)
+        local Message = tostring(anyMessage)
+        if(not vPos) then
+          return StatusLog(true,"ePiece:SetMapBoundPos() Position invalid: \n"..Message)
+        end
+        if(not oPly) then
+          return StatusLog(true,"ePiece:SetMapBoundPos() Player invalid: \n"..Message)
+        end
+        local BndErrMode = (tonumber(nBndErrMode) or 0)
+        if(BndErrMode == 0) then
+          ePiece:SetPos(vPos)
+          return false
+        elseif(BndErrMode == 1) then
+          if(util.IsInWorld(vPos)) then
+            ePiece:SetPos(vPos)
+          else
+            ePiece:Remove()
+            return StatusLog(true,"ePiece:SetMapBoundPos("..BndErrMode..") Position out of map bounds: \n"..anyMessage)
+          end
+          return false
+        elseif(BndErrMode == 2) then
+          if(util.IsInWorld(vPos)) then
+            ePiece:SetPos(vPos)
+          else
+            ePiece:Remove()
+            PrintNotify(oPly,"Position out of map bounds!","HINT")
+            return StatusLog(true,"ePiece:SetMapBoundPos("..BndErrMode..") Position out of map bounds: \n"..anyMessage)
+          end
+          return false
+        elseif(BndErrMode == 3) then
+          if(util.IsInWorld(vPos)) then
+            ePiece:SetPos(vPos)
+          else
+            ePiece:Remove()
+            PrintNotify(oPly,"Position out of map bounds!","GENERIC")
+            return StatusLog(true,"ePiece:SetMapBoundPos("..BndErrMode..") Position out of map bounds: \n"..anyMessage)
+          end
+          return false
+        elseif(BndErrMode == 4) then
+          if(util.IsInWorld(vPos)) then
+            ePiece:SetPos(vPos)
+          else
+            ePiece:Remove()
+            PrintNotify(oPly,"Position out of map bounds!","ERROR")
+            return StatusLog(true,"ePiece:SetMapBoundPos("..BndErrMode..") Position out of map bounds: \n"..anyMessage)
+          end
+          return false
+        end
+        return StatusLog(true,"ePiece:SetMapBoundPos() Mode #"..BndErrMode.." not found: \n"..Message)
+      end
       return ePiece
     end
     ePiece:Remove()
