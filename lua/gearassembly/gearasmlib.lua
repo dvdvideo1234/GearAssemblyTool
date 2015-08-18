@@ -173,7 +173,12 @@ function InitAssembly(sName)
   SetOpVar("TOOLNAME_NU",string.upper(sName))
   SetOpVar("TOOLNAME_PL",LibOpVars["TOOLNAME_NL"].."_")
   SetOpVar("TOOLNAME_PU",LibOpVars["TOOLNAME_NU"].."_")
+  SetOpVar("TYPEMT_SCREEN",{})
+  SetOpVar("TYPEMT_CONTAINER",{})
   SetOpVar("ARRAY_DECODEPOA",{0,0,0,1,1,1,false})
+  SetOpVar("TABLE_FREQUENT_MODELS",{})
+  SetOpVar("HASH_USER_PANEL",GetOpVar("TOOLNAME_PU").."USER_PANEL")
+  SetOpVar("HASH_QUERY_STORE",GetOpVar("TOOLNAME_PU").."QHASH_QUERY")
   SetOpVar("ANG_ZERO",Angle())
   SetOpVar("VEC_ZERO",Vector())
   SetOpVar("OPSYM_DISABLE","#")
@@ -460,10 +465,7 @@ function MakeContainer(sInfo,sDefKey)
            tostring(Ins).."/"..
            tostring(Del)
   end
-  if(not GetOpVar("TYPE_CONTAINER")) then
-    SetOpVar("TYPE_CONTAINER",{})
-  end
-  setmetatable(self,GetOpVar("TYPE_CONTAINER"))
+  setmetatable(self,GetOpVar("TYPEMT_CONTAINER"))
   return self
 end
 
@@ -487,7 +489,7 @@ function MakeScreen(sW,sH,eW,eH,conPalette,sEst)
         Text.LastW = 0
         Text.LastH = 0
   local Palette
-  if(getmetatable(conPalette) == GetOpVar("TYPE_CONTAINER")) then
+  if(getmetatable(conPalette) == GetOpVar("TYPEMT_CONTAINER")) then
     Palette = conPalette
   end
   local Texture = {}
@@ -689,10 +691,7 @@ function MakeScreen(sW,sH,eW,eH,conPalette,sEst)
       surface.DrawLine(xyS.x,xyS.y,xyE.x,xyE.y)
     end
   end
-  if(not GetOpVar("TYPE_SCREEN")) then
-    SetOpVar("TYPE_SCREEN",{})
-  end
-  setmetatable(self,GetOpVar("TYPE_SCREEN"))
+  setmetatable(self,GetOpVar("TYPEMT_SCREEN"))
   return self
 end
 
@@ -761,18 +760,13 @@ end
 function GetFrequentModels(snCount)
   local Cnt = tonumber(snCount) or 0
   if(Cnt < 1) then return nil end
+  local FreqUse  = GetOpVar("TABLE_FREQUENT_MODELS")
   local TableKey = GetOpVar("QTABLE_PIECES")
   local defTable = LibTables[TableKey]
   local Cache    = LibCache[TableKey]
-  local FreqNam  = "FREQUENT_MODELS"
-  local FreqUse  = GetOpVar(FreqNam)
   local TimerID  = ""
   local Tim      = 0
   local Ind      = 1
-  if(not IsExistent(FreqUse)) then
-    SetOpVar(FreqNam,{})
-    FreqUse = GetOpVar(FreqNam)
-  end
   table.Empty(FreqUse)
   for Model, Record in pairs(Cache) do
     TimerID  = TableKey.."_"..Model
@@ -799,7 +793,7 @@ end
 function GetCorrectID(anyValue,oContainer)
   local Value = tonumber(anyValue)
   if(not Value) then return 1 end
-  if(getmetatable(oContainer) ~= GetOpVar("TYPE_CONTAINER")) then return 1 end
+  if(getmetatable(oContainer) ~= GetOpVar("TYPEMT_CONTAINER")) then return 1 end
   local Max = oContainer:GetSize()
   if(Value > Max) then Value = 1 end
   if(Value < 1) then Value = Max end
@@ -1400,26 +1394,32 @@ function SQLBuildCreate(sTable,tIndex)
   return Command
 end
 
-function SQLHashQuery(sTable,tFields,tWhere,tOrderBy,sQuery)
+function SQLStoreQuery(sTable,tFields,tWhere,tOrderBy,sQuery)
   local Val
   local Base
-  local nField = 1
-  local nWhere = 1
-  local nOrder = 1
-  local Place  = LibGetSQL[sTable]
-  if(not Place) then
-    LibGetSQL[sTable] = {}
-    Place = LibGetSQL[sTable]
+  local Field = 1
+  local Where = 1
+  local Order = 1
+  local CacheKey = GetOpVar("HASH_QUERY_STORE")
+  local Cache    = LibCache[CacheKey]
+  if(not IsExistent(Cache)) then
+    LibCache[CacheKey] = {}
+    Cache = LibCache[CacheKey]
+  end
+  local Place = Cache[sTable]
+  if(not IsExistent(Place)) then
+    Cache[sTable] = {}
+    Place = Cache[sTable]
   end
   local defTable = LibTables[sTable]
   if(not IsExistent(defTable)) then
-    return StatusLog(nil,"SQLHashQuery: Missing: Table definition for "..tostring(sTable))
+    return StatusLog(nil,"SQLStoreQuery: Missing: Table definition for "..tostring(sTable))
   end
   if(tFields) then
-    while(tFields[nField]) do
-      local Val = defTable[tFields[nField]][1]
+    while(tFields[Field]) do
+      local Val = defTable[tFields[Field]][1]
       if(not IsExistent(Val)) then
-        return StatusLog(nil,"SQLHashQuery: Missing: Field key for #"..tostring(nField))
+        return StatusLog(nil,"SQLStoreQuery: Missing: Field key for #"..tostring(Field))
       end
       if(Place[Val]) then
         Place = Place[Val]
@@ -1431,7 +1431,7 @@ function SQLHashQuery(sTable,tFields,tWhere,tOrderBy,sQuery)
         return nil
       end
       if(not Place) then return nil end
-      nField = nField + 1
+      Field = Field + 1
     end
   else
     Val = "ALL_FIELDS"
@@ -1446,8 +1446,8 @@ function SQLHashQuery(sTable,tFields,tWhere,tOrderBy,sQuery)
     end
   end
   if(tOrderBy) then
-    while(tOrderBy[nOrder]) do
-      Val = tOrderBy[nOrder]
+    while(tOrderBy[Order]) do
+      Val = tOrderBy[Order]
       if(Place[Val]) then
         Base = Place
         Place = Place[Val]
@@ -1458,14 +1458,14 @@ function SQLHashQuery(sTable,tFields,tWhere,tOrderBy,sQuery)
       else
         return nil
       end
-      nOrder = nOrder + 1
+      Order = Order + 1
     end
   end
   if(tWhere) then
-    while(tWhere[nWhere]) do
-      Val = defTable[tWhere[nWhere][1]][1]
+    while(tWhere[Where]) do
+      Val = defTable[tWhere[Where][1]][1]
       if(not IsExistent(Val)) then
-        return StatusLog(nil,"SQLHashQuery: Missing: Where field key for #"..tostring(nWhere))
+        return StatusLog(nil,"SQLStoreQuery: Missing: Where field key for #"..tostring(Where))
       end
       if(Place[Val]) then
         Base = Place
@@ -1477,9 +1477,9 @@ function SQLHashQuery(sTable,tFields,tWhere,tOrderBy,sQuery)
       else
         return nil
       end
-      Val = tWhere[nWhere][2]
+      Val = tWhere[Where][2]
       if(not IsExistent(Val)) then
-        return StatusLog(nil,"SQLHashQuery: Missing: Where value key for #"..tostring(nWhere))
+        return StatusLog(nil,"SQLStoreQuery: Missing: Where value key for #"..tostring(Where))
       end
       if(Place[Val]) then
         Base = Place
@@ -1489,7 +1489,7 @@ function SQLHashQuery(sTable,tFields,tWhere,tOrderBy,sQuery)
         Place[Val] = {}
         Place = Place[Val]
       end
-      nWhere = nWhere + 1
+      Where = Where + 1
     end
   end
   if(sQuery) then
@@ -1515,9 +1515,9 @@ function SQLBuildSelect(sTable,tFields,tWhere,tOrderBy)
   ) then
     return SQLSetBuildErr("SQLBuildSelect: Missing: Table "..sTable.." field definitions")
   end
-  local Hash = GetOpVar("QHASH_ENABLE") or false
-  if(Hash) then
-    local Q = SQLHashQuery(sTable,tFields,tWhere,tOrderBy)
+  local EnStore = GetOpVar("EN_QUERY_STORE") or false
+  if(EnStore) then
+    local Q = SQLStoreQuery(sTable,tFields,tWhere,tOrderBy)
     if(Q) then
       return Q
     end
@@ -1603,8 +1603,8 @@ function SQLBuildSelect(sTable,tFields,tWhere,tOrderBy)
         Cnt = Cnt + 1
       end
     else
-      if(Hash) then
-        return SQLHashQuery(sTable,tFields,tWhere,tOrderBy,Command..";")
+      if(EnStore) then
+        return SQLStoreQuery(sTable,tFields,tWhere,tOrderBy,Command..";")
       else
         return Command..";"
       end
@@ -1635,8 +1635,8 @@ function SQLBuildSelect(sTable,tFields,tWhere,tOrderBy)
     end
   end
   SetOpVar("SQL_BUILD_ERR", "")
-  if(Hash) then
-    return SQLHashQuery(sTable,tFields,tWhere,tOrderBy,Command..";")
+  if(EnStore) then
+    return SQLStoreQuery(sTable,tFields,tWhere,tOrderBy,Command..";")
   else
     return Command..";"
   end
@@ -2022,7 +2022,7 @@ end
 --- Used to Populate the CPanel Tree
 function CacheQueryPanel()
   local TableKey = GetOpVar("QTABLE_PIECES")
-  local CacheKey = "USER_PANEL"
+  local CacheKey = GetOpVar("HASH_USER_PANEL")
   local Cache = LibCache[TableKey]
   if(not IsExistent(Cache)) then
     LibCache[TableKey] = {}
@@ -2848,4 +2848,17 @@ function MakePiece(sModel,vPos,aAng,nMass,sBgSkIDs,clColor)
     return nil
   end
   return nil
+end
+
+function MakeCvar(sShortName, sValue, sInfo)
+  if(not IsString(sShortName)) then return StatusLog(nil,"MakeCvar() Wrong CVar name") end
+  if(not IsString(sValue)) then return StatusLog(nil,"MakeCvar() Wrong default value") end
+  if(not IsString(sInfo)) then return StatusLog(nil,"MakeCvar() Wrong CVar information") end
+  return CreateConVar(GetToolPrefL()..string.lower(sShortName), sValue,
+    bit.bor(FCVAR_ARCHIVE, FCVAR_ARCHIVE_XBOX, FCVAR_NOTIFY, FCVAR_REPLICATED, FCVAR_PRINTABLEONLY), sInfo)
+end
+
+function GetCvar(sShortName)
+  if(not IsString(sShortName)) then return StatusLog(nil,"GetCvar() Wrong CVar name") end
+  return GetConVar(GetToolPrefL()..string.lower(sShortName))
 end

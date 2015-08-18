@@ -44,9 +44,8 @@ local goMonitor
 local gnMaxMass   = asmlib.GetOpVar("MAXCONVAR_MASS")
 local gnMaxOffLin = asmlib.GetOpVar("MAXCONVAR_LINEAR")
 local gnMaxOffRot = asmlib.GetOpVar("MAXCONVAR_ROTATION")
-local gnMaxFreUse = asmlib.GetOpVar("MAXCONVAR_FREQUSED")
 local gnMaxForLim = asmlib.GetOpVar("MAXCONVAR_FOCELIMIT")
-local gnMaxStaCnt = asmlib.GetOpVar("MAXCONVAR_STACKCOUNT")
+local gnMaxErMode = asmlib.GetOpVar("MAX_BNDERRMODE")
 local gsToolPrefL = asmlib.GetToolPrefL()
 local gsToolNameL = asmlib.GetToolNameL()
 local gsToolPrefU = asmlib.GetToolPrefU()
@@ -83,12 +82,6 @@ if(CLIENT) then
 end
 
 if(SERVER) then
-  CreateConVar(gsToolPrefL.."bnderrmod","1",FCVAR_ARCHIVE      +
-                                            FCVAR_ARCHIVE_XBOX +
-                                            FCVAR_NOTIFY       +
-                                            FCVAR_REPLICATED   +
-                                            FCVAR_PROTECTED    +
-                                            FCVAR_PRINTABLEONLY)
   cleanup.Register(gsToolNameU.."s")
   duplicator.RegisterEntityModifier(gsToolPrefL.."nophysgun",asmlib.GetActionCode("NO_PHYSGUN"))
 end
@@ -137,7 +130,7 @@ function TOOL:GetModel()
 end
 
 function TOOL:GetCount()
-  return math.Clamp(self:GetClientNumber("count"),1,gnMaxStaCnt)
+  return math.Clamp(self:GetClientNumber("count"),1,asmlib.GetCvar("maxstcnt"):GetInt())
 end
 
 function TOOL:GetMass()
@@ -237,7 +230,7 @@ function TOOL:GetNoPhysgun()
 end
 
 function TOOL:GetBoundErrorMode()
-  return math.floor(math.Clamp((GetConVar(gsToolPrefL.."bnderrmod"):GetFloat() or 0),0,gnMaxErMode))
+  return math.floor(math.Clamp(asmlib.GetCvar("bnderrmod"):GetInt() or 0),0,gnMaxErMode))
 end
 
 function TOOL:LeftClick(Trace)
@@ -452,7 +445,7 @@ function TOOL:RightClick(Trace)
   local ply = self:GetOwner()
   asmlib.PlyLoadKey(ply)
   if(Trace.HitWorld and asmlib.PlyLoadKey(ply,"USE")) then
-    ply:ConCommand(gsToolPrefL.."openframe "..gnMaxFreUse.."\n")
+    ply:ConCommand(gsToolPrefL.."openframe "..asmlib.GetCvar("maxfruse"):GetInt().."\n")
     return true
   end
   if(asmlib.PlyLoadKey(ply,"SPEED")) then
@@ -824,7 +817,7 @@ function TOOL.BuildCPanel(CPanel)
             Label   = "Pieces count: ",
             Type    = "Integer",
             Min     = 1,
-            Max     = gnMaxStaCnt,
+            Max     = asmlib.GetCvar("maxstcnt"):GetInt(),
             Command = gsToolPrefL.."count"})
 
   CPanel:AddControl("Button", {

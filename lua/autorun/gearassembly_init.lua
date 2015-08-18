@@ -16,12 +16,10 @@ asmlib.SetOpVar("DIRPATH_BAS",asmlib.GetToolNameL().."/")
 asmlib.SetOpVar("DIRPATH_EXP","export/")
 asmlib.SetOpVar("DIRPATH_DSV","dsvbase/")
 asmlib.SetOpVar("DIRPATH_LOG","")
-asmlib.SetOpVar("QHASH_ENABLE",true)
+asmlib.SetOpVar("EN_QUERY_STORE",true)
 asmlib.SetOpVar("MAXCONVAR_MASS",50000)
 asmlib.SetOpVar("MAXCONVAR_LINEAR",100)
-asmlib.SetOpVar("MAXCONVAR_FREQUSED",50)
 asmlib.SetOpVar("MAXCONVAR_ROTATION",360)
-asmlib.SetOpVar("MAXCONVAR_STACKCOUNT",200)
 asmlib.SetOpVar("MAXCONVAR_FOCELIMIT",1000000)
 asmlib.SetOpVar("MAXCONVAR_BNDERRMODE",4)
 asmlib.SetOpVar("CONTAIN_STACK_MODE",asmlib.MakeContainer("Stack Mode"))
@@ -39,6 +37,14 @@ local gsPathDSV   = asmlib.GetOpVar("DIRPATH_DSV")
 local gsFullDir   = gsPathBAS  ..gsPathDSV..
                     gsInstPrefx..gsToolPrefU
 
+------ CONFIGURE CVARS -----
+asmlib.MakeCvar("maxstcnt" ,"200","Maximum pieces spawn in stack mode")
+if(SERVER) then
+  asmlib.MakeCvar("bnderrmod","1"  ,"Unreasonable position error handling mode")
+  asmlib.MakeCvar("maxfruse" ,"50" ,"Maximum frequent pieces to be listed")
+end
+
+------ CONFIGURE TOOL -----                
 if(SERVER) then
 
   local SMode = asmlib.GetOpVar("CONTAIN_STACK_MODE")
@@ -476,3 +482,4 @@ end
 
 -------- CACHE PANEL STUFF ---------
 asmlib.CacheQueryPanel()
+asmlib.PrintInstance(asmlib.GetToolNameU().." Loaded successfully [ master ] Rev.196")
