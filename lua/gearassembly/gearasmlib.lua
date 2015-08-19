@@ -162,6 +162,8 @@ end
 
 function InitAssembly(sName)
   SetOpVar("TYPEMT_STRING",getmetatable("TYPEMT_STRING"))
+  SetOpVar("TYPEMT_SCREEN",{})
+  SetOpVar("TYPEMT_CONTAINER",{})
   if(not IsString(sName)) then
     PrintInstance("gearasmlib.lua: Error initializing. Expecting string argument")
     return false
@@ -173,8 +175,6 @@ function InitAssembly(sName)
   SetOpVar("TOOLNAME_NU",string.upper(sName))
   SetOpVar("TOOLNAME_PL",LibOpVars["TOOLNAME_NL"].."_")
   SetOpVar("TOOLNAME_PU",LibOpVars["TOOLNAME_NU"].."_")
-  SetOpVar("TYPEMT_SCREEN",{})
-  SetOpVar("TYPEMT_CONTAINER",{})
   SetOpVar("ARRAY_DECODEPOA",{0,0,0,1,1,1,false})
   SetOpVar("TABLE_FREQUENT_MODELS",{})
   SetOpVar("HASH_USER_PANEL",GetOpVar("TOOLNAME_PU").."USER_PANEL")
