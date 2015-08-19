@@ -41,10 +41,10 @@ local ANG_ZERO = asmlib.GetOpVar("ANG_ZERO")
 
 local goToolScr
 local goMonitor
-local gnMaxMass   = asmlib.GetOpVar("MAXCONVAR_MASS")
-local gnMaxOffLin = asmlib.GetOpVar("MAXCONVAR_LINEAR")
-local gnMaxOffRot = asmlib.GetOpVar("MAXCONVAR_ROTATION")
-local gnMaxForLim = asmlib.GetOpVar("MAXCONVAR_FOCELIMIT")
+local gnMaxMass   = asmlib.GetOpVar("MAX_MASS")
+local gnMaxOffLin = asmlib.GetOpVar("MAX_LINEAR")
+local gnMaxOffRot = asmlib.GetOpVar("MAX_ROTATION")
+local gnMaxForLim = asmlib.GetOpVar("MAX_FOCELIMIT")
 local gnMaxErMode = asmlib.GetOpVar("MAX_BNDERRMODE")
 local gsToolPrefL = asmlib.GetToolPrefL()
 local gsToolNameL = asmlib.GetToolNameL()

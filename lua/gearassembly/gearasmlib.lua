@@ -1881,7 +1881,7 @@ function AttachKillTimer(oLocation,tKeys,defTable,anyMessage)
   local Duration = 0
   local TimerID = StringImplode(tKeys,"_")
   if(defTable) then
-    Duration = tonumber(defTable.CacheLife) or 0
+    Duration = tonumber(defTable.Life) or 0
   end
   LogInstance("AttachKillTimer: Place["..tostring(Key).."] Marked !")
   LogInstance("AttachKillTimer: TimID: <"..TimerID..">")

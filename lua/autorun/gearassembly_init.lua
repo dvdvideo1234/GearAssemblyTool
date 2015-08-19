@@ -17,11 +17,11 @@ asmlib.SetOpVar("DIRPATH_EXP","export/")
 asmlib.SetOpVar("DIRPATH_DSV","dsvbase/")
 asmlib.SetOpVar("DIRPATH_LOG","")
 asmlib.SetOpVar("EN_QUERY_STORE",true)
-asmlib.SetOpVar("MAXCONVAR_MASS",50000)
-asmlib.SetOpVar("MAXCONVAR_LINEAR",100)
-asmlib.SetOpVar("MAXCONVAR_ROTATION",360)
-asmlib.SetOpVar("MAXCONVAR_FOCELIMIT",1000000)
-asmlib.SetOpVar("MAXCONVAR_BNDERRMODE",4)
+asmlib.SetOpVar("MAX_MASS",50000)
+asmlib.SetOpVar("MAX_LINEAR",100)
+asmlib.SetOpVar("MAX_ROTATION",360)
+asmlib.SetOpVar("MAX_FOCELIMIT",1000000)
+asmlib.SetOpVar("MAX_BNDERRMODE",4)
 asmlib.SetOpVar("CONTAIN_STACK_MODE",asmlib.MakeContainer("Stack Mode"))
 asmlib.SetOpVar("CONTAIN_CONSTRAINT_TYPE",asmlib.MakeContainer("Constraint Type"))
 asmlib.SetLogControl(0,"gearasmlib_log")
@@ -249,7 +249,7 @@ end
 asmlib.SetTableDefinition("PIECES",
 {
     Size = 7,
-    CacheLife = 3600,
+    Life = 3600,
     [1] = {"MODEL" , "TEXT", "L"},
     [2] = {"TYPE"  , "TEXT"},
     [3] = {"NAME"  , "TEXT"},
@@ -482,4 +482,4 @@ end
 
 -------- CACHE PANEL STUFF ---------
 asmlib.CacheQueryPanel()
-asmlib.PrintInstance(asmlib.GetToolNameU().." Loaded successfully [ master ] Rev.197")
+asmlib.PrintInstance(asmlib.GetToolNameU().." Loaded successfully [ master ] Rev.198")
