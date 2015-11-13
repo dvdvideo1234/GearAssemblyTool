@@ -45,7 +45,7 @@ local gnMaxMass   = asmlib.GetOpVar("MAX_MASS")
 local gnMaxOffLin = asmlib.GetOpVar("MAX_LINEAR")
 local gnMaxOffRot = asmlib.GetOpVar("MAX_ROTATION")
 local gnMaxForLim = asmlib.GetOpVar("MAX_FOCELIMIT")
-local gnMaxErMode = asmlib.GetOpVar("MAX_BNDERRMODE")
+local gnMaxErMode = asmlib.GetConVar("bnderrmod")
 local gsToolPrefL = asmlib.GetToolPrefL()
 local gsToolNameL = asmlib.GetToolNameL()
 local gsToolPrefU = asmlib.GetToolPrefU()
@@ -130,7 +130,7 @@ function TOOL:GetModel()
 end
 
 function TOOL:GetCount()
-  return math.Clamp(self:GetClientNumber("count"),1,asmlib.GetCvar("maxstcnt"):GetInt())
+  return math.Clamp(self:GetClientNumber("count"),1,asmlib.GetCoVar("maxstcnt"):GetInt())
 end
 
 function TOOL:GetMass()
@@ -230,7 +230,7 @@ function TOOL:GetNoPhysgun()
 end
 
 function TOOL:GetBoundErrorMode()
-  return math.floor(math.Clamp(asmlib.GetCvar("bnderrmod"):GetInt() or 0),0,gnMaxErMode))
+  return math.floor(math.Clamp(asmlib.GetCoVar("bnderrmod"):GetInt() or 0),0,gnMaxErMode))
 end
 
 function TOOL:LeftClick(Trace)
@@ -445,7 +445,7 @@ function TOOL:RightClick(Trace)
   local ply = self:GetOwner()
   asmlib.PlyLoadKey(ply)
   if(Trace.HitWorld and asmlib.PlyLoadKey(ply,"USE")) then
-    ply:ConCommand(gsToolPrefL.."openframe "..asmlib.GetCvar("maxfruse"):GetInt().."\n")
+    ply:ConCommand(gsToolPrefL.."openframe "..asmlib.GetCoVar("maxfruse"):GetInt().."\n")
     return true
   end
   if(asmlib.PlyLoadKey(ply,"SPEED")) then
@@ -817,7 +817,7 @@ function TOOL.BuildCPanel(CPanel)
             Label   = "Pieces count: ",
             Type    = "Integer",
             Min     = 1,
-            Max     = asmlib.GetCvar("maxstcnt"):GetInt(),
+            Max     = asmlib.GetCoVar("maxstcnt"):GetInt(),
             Command = gsToolPrefL.."count"})
 
   CPanel:AddControl("Button", {

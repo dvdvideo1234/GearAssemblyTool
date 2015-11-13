@@ -1,4 +1,4 @@
-GearAssemblyTool-a
+GearAssemblyTool
 ================
 
 **Copyright 2015 ME !**
