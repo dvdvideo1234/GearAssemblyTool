@@ -46,10 +46,10 @@ local gnMaxOffLin = asmlib.GetOpVar("MAX_LINEAR")
 local gnMaxOffRot = asmlib.GetOpVar("MAX_ROTATION")
 local gnMaxForLim = asmlib.GetOpVar("MAX_FOCELIMIT")
 local gnMaxErMode = asmlib.GetConVar("bnderrmod")
-local gsToolPrefL = asmlib.GetToolPrefL()
-local gsToolNameL = asmlib.GetToolNameL()
-local gsToolPrefU = asmlib.GetToolPrefU()
-local gsToolNameU = asmlib.GetToolNameU()
+local gsToolPrefL = asmlib.GetOpVar("TOOLNAME_PL")
+local gsToolNameL = asmlib.GetOpVar("TOOLNAME_NL")
+local gsToolPrefU = asmlib.GetOpVar("TOOLNAME_PU")
+local gsToolNameU = asmlib.GetOpVar("TOOLNAME_NU")
 
 
 --- Render Base Colours
@@ -556,7 +556,7 @@ function TOOL:DrawHUD()
     local addinfo = self:GetAdditionalInfo()
     local nextx, nexty, nextz = self:GetPosOffsets()
     local nextpic, nextyaw, nextrol = self:GetAngOffsets()
-    local RadScal = asmlib.GetViewRadius(ply,Trace.HitPos)
+    local plyrad = mathClamp(500 / (vPos - ply:GetPos()):Length(),1,100)
     asmlib.PlyLoadKey(ply)
     if(trEnt and trEnt:IsValid() and asmlib.PlyLoadKey(ply,"SPEED")) then
       if(asmlib.IsOther(trEnt)) then return end
@@ -580,12 +580,12 @@ function TOOL:DrawHUD()
       goMonitor:DrawLine(Sp,Df)           -- Next
       goMonitor:DrawLine(Op,Zs,"b")       -- Base Z
       goMonitor:DrawLine(Cp,Cu,"y")       -- Base Z
-      goMonitor:DrawCircle(Op,RadScal)    -- Base O
+      goMonitor:DrawCircle(Op,plyrad)     -- Base O
       goMonitor:DrawLine(Op,Ys,"g")       --
       goMonitor:DrawLine(Cp,Op)           --
-      goMonitor:DrawCircle(Cp,RadScal)    --
+      goMonitor:DrawCircle(Cp,plyrad)     --
       goMonitor:DrawLine(Op,Sp,"m")       --
-      goMonitor:DrawCircle(Sp,Sp,RadScal) --
+      goMonitor:DrawCircle(Sp,Sp,plyrad)  --
       goMonitor:DrawLine(Sp,Du,"c")       --
       if(addinfo ~= 0) then
         DrawAdditionalInfo(goMonitor,stSpawn)
@@ -601,7 +601,7 @@ function TOOL:DrawHUD()
       goMonitor:DrawLine(Os,Xs,"r")
       goMonitor:DrawLine(Os,Ys,"g")
       goMonitor:DrawLine(Os,Zs,"b")
-      goMonitor:DrawCircle(Os,RadScal,"y")
+      goMonitor:DrawCircle(Os,plyrad,"y")
       if(addinfo ~= 0) then
         DrawAdditionalInfo(stSpawn)
       end
@@ -713,7 +713,7 @@ function TOOL.BuildCPanel(CPanel)
   CPanel:AddControl("ComboBox",Combo)
   CurY = CurY + 25
   local Sorted  = asmlib.CacheQueryPanel()
-  local stTable = asmlib.GetTableDefinition("PIECES")
+  local stTable = asmlib.GetOpVar("DEFTABLE_PIECES")
   local pTree   = vgui.Create("DTree")
         pTree:SetPos(2, CurY)
         pTree:SetSize(2, 250)

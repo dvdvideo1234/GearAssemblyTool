@@ -4,6 +4,20 @@ if(SERVER) then
 end
 include("gearassembly/gearasmlib.lua")
 
+------ LOCALIZNG FUNCTIONS ---
+local tonumber             = tonumber
+local tostring             = tostring
+local Vector               = Vector
+local Angle                = Angle
+local IsValid              = IsValid
+local bitBor               = bit and bit.bor
+local vguiCreate           = vgui and vgui.Create
+local fileExists           = file and file.Exists
+local stringExplode        = string and string.Explode
+local surfaceScreenWidth   = surface and surface.ScreenWidth
+local surfaceScreenHeight  = surface and surface.ScreenHeight
+local duplicatorStoreEntityModifier = duplicator and duplicator.StoreEntityModifier
+
 ------ MODULE POINTER -------
 local asmlib = gearasmlib
 
@@ -28,6 +42,7 @@ asmlib.SetLogControl(0,"gearasmlib_log")
 
 ------ CONFIGURE CVARS -----
 asmlib.MakeCoVar("enwiremod", "1"  , {0,1  } ,bit.bor(FCVAR_ARCHIVE, FCVAR_ARCHIVE_XBOX, FCVAR_NOTIFY, FCVAR_REPLICATED, FCVAR_PRINTABLEONLY), "Maximum active radius to search for a point ID")
+asmlib.MakeCoVar("devmode"  , "0"  , {0, 1 } ,bitBor(FCVAR_ARCHIVE, FCVAR_ARCHIVE_XBOX, FCVAR_NOTIFY, FCVAR_REPLICATED, FCVAR_PRINTABLEONLY), "Toggle the wire extension on/off server side")
 asmlib.MakeCoVar("maxstcnt" , "200", {1,200} ,bit.bor(FCVAR_ARCHIVE, FCVAR_ARCHIVE_XBOX, FCVAR_NOTIFY, FCVAR_REPLICATED, FCVAR_PRINTABLEONLY), "Maximum pieces to spawn in stack mode")
 if(SERVER) then
   asmlib.MakeCoVar("bnderrmod", "1" , {0,4}   ,bit.bor(FCVAR_ARCHIVE, FCVAR_ARCHIVE_XBOX, FCVAR_NOTIFY, FCVAR_REPLICATED, FCVAR_PRINTABLEONLY), "Unreasonable position error handling mode")
@@ -43,10 +58,10 @@ asmlib.SetOpVar("MODE_DATABASE" , asmlib.GetCoVar("modedb","STR"))
 asmlib.SetOpVar("EN_QUERY_STORE",(asmlib.GetCoVar("enqstore","INT") ~= 0) and true or false)
 
 ------ GLOBAL VARIABLES -------
-local gsToolPrefL = asmlib.GetToolPrefL()
-local gsToolPrefU = asmlib.GetToolPrefU()
-local gsToolNameL = asmlib.GetToolNameL()
-local gsToolNameU = asmlib.GetToolNameU()
+local gsToolPrefL = asmlib.GetOpVar("TOOLNAME_PL")
+local gsToolPrefU = asmlib.GetOpVar("TOOLNAME_PU")
+local gsToolNameL = asmlib.GetOpVar("TOOLNAME_NL")
+local gsToolNameU = asmlib.GetOpVar("TOOLNAME_NU")
 local gsInstPrefx = asmlib.GetInstPref()
 local gsPathBAS   = asmlib.GetOpVar("DIRPATH_BAS")
 local gsPathDSV   = asmlib.GetOpVar("DIRPATH_DSV")
@@ -310,7 +325,7 @@ asmlib.CreateTable("PIECES",
 },true,true)
 
 
-if(file.Exists(gsFullDSV.."PIECES.txt", "DATA")
+if(fileExists(gsFullDSV.."PIECES.txt", "DATA")
 ) then
   asmlib.PrintInstance(gsToolNameU..": DB PIECES from DSV")
   asmlib.ImportFromDSV("PIECES","\t",true)
