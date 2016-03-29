@@ -135,44 +135,49 @@ if(CLIENT) then
       oPly:ConCommand(gsToolPrefL.."nextrol 0\n")
     end)
 
-  asmlib.SetAction("OPEN_FRAME",
+asmlib.SetAction("OPEN_FRAME",
     function(oPly,oCom,oArgs)
-      local Ind = 1
-      local frUsed = asmlib.GetFrequentModels(oArgs[1])
-      if(not frUsed) then
-        asmlib.StatusLog(false,"OPEN_FRAME: Failed to retrieve most frequent models")
+    local frUsed, nCount = asmlib.GetFrequentModels(oArgs[1])
+    if(not asmlib.IsExistent(frUsed)) then
+      return asmlib.StatusLog(false,"OPEN_FRAME: Failed to retrieve most frequent models ["..tostring(oArgs[1]).."]")
       end
       local defTable = asmlib.GetOpVar("DEFTABLE_PIECES")
-      if(not defTable) then return StatusLog(false,"Missing definition for table PIECES") end
+    if(not defTable) then return StatusLog(false,"OPEN_FRAME: Missing definition for table PIECES") end
       local pnFrame = vguiCreate("DFrame")
       if(not IsValid(pnFrame)) then
         pnFrame:Remove()
-        return asmlib.StatusLog(false,"OPEN_FRAME: Failed to create elements frame")
+      return asmlib.StatusLog(false,"OPEN_FRAME: Failed to create base frame")
       end
       local pnElements = asmlib.MakeContainer("FREQ_VGUI")
-            pnElements:Insert(1,{Label = { "DButton"    ,"ExportDB"   }})
-            pnElements:Insert(2,{Label = { "DListView"  ,"ItemRoutine"}})
-            pnElements:Insert(3,{Label = { "DModelPanel","ItemScreen" }})
-            pnElements:Insert(4,{Label = { "DTextEntry" ,"ItemSearch" }})
-            pnElements:Insert(5,{Label = { "DComboBox"  ,"StatSearch" }})
+          pnElements:Insert(1,{Label = { "DButton"    ,"Export DB"     ,"Click to export the client database as a file"}})
+          pnElements:Insert(2,{Label = { "DListView"  ,"Routine Items" ,"The list of your frequently used track pieces"}})
+          pnElements:Insert(3,{Label = { "DModelPanel","Piece Display" ,"The model of your track piece is displayed here"}})
+          pnElements:Insert(4,{Label = { "DTextEntry" ,"Enter Pattern" ,"Enter a pattern here and hit enter to preform a search"}})
+          pnElements:Insert(5,{Label = { "DComboBox"  ,"Select Column" ,"Choose which list column you want to preform a search on"}})
       ------------ Manage the invalid panels -------------------
       local iNdex, iSize, vItem = 1, pnElements:GetSize(), nil
       while(iNdex <= iSize) do
         vItem = pnElements:Select(iNdex)
-        asmlib.LogInstance("OPEN_FRAME: Create "..vItem.Label[1].." name "..vItem.Label[2].." ID #"..iNdex)
         vItem.Panel = vguiCreate(vItem.Label[1],pnFrame)
         if(not IsValid(vItem.Panel)) then
-          asmlib.LogInstance("OPEN_FRAME: Failed to create "..vItem.Label[1].." name "..vItem.Label[2].." ID #"..iNdex)
-          iNdex = iNdex - 1
-          while(iNdex >= 1) do
-            asmlib.LogInstance("OPEN_FRAME: Delete invalid #"..iNdex)
-            pnElements:Select(iNdex):Remove()
+        asmlib.LogInstance("OPEN_FRAME: Failed to create ID #"..iNdex)
+        iNdex, vItem = 1, nil
+        while(iNdex <= iSize) do
+          vItem = pnElements:Select(iNdex)
+          if(IsValid(vItem.Panel)) then
+            vItem.Panel:Remove()
+            asmlib.LogInstance("OPEN_FRAME: Deleted panel ID #"..iNdex)
+          end
+          pnElements:Delete(iNdex)
+          asmlib.LogInstance("OPEN_FRAME: Deleted entry ID #"..iNdex)
+          iNdex = iNdex + 1
           end
           pnFrame:Remove()
-          pnElements:Empty() -- Be sure to wipe everything, with pairs
-          return StatusLog(false,"OPEN_FRAME: Invalid panel found. Frame removed")
+        collectgarbage()
+        return StatusLog(false,"OPEN_FRAME: Invalid panel created. Frame removed")
         end
         vItem.Panel:SetName(vItem.Label[2])
+      vItem.Panel:SetTooltip(vItem.Label[3])
         iNdex = iNdex + 1
       end
       ------ Screen resolution and elements -------
@@ -184,51 +189,46 @@ if(CLIENT) then
       local pnTextEntry  = pnElements:Select(4).Panel
       local pnComboBox   = pnElements:Select(5).Panel
       ------------ Frame --------------
-      pnFrame:SetTitle("Frequent pieces by "..oPly:GetName().." (Ver."..asmlib.GetOpVar("TOOL_VERSION")..")")
-      pnFrame:SetVisible(false)
+    pnFrame:SetTitle("Frequent pieces by "..oPly:GetName().." v."..asmlib.GetOpVar("TOOL_VERSION"))
+    pnFrame:SetVisible(true)
       pnFrame:SetDraggable(true)
       pnFrame:SetDeleteOnClose(true)
       pnFrame:SetPos(scrW/4, scrH/4)
       pnFrame:SetSize(750, 280)
       pnFrame.OnClose = function()
         pnFrame:SetVisible(false)
-        local iNdex, iSize, vItem = 1, pnElements:GetSize(), nil
-        while(iNdex <= iSize) do
+      local iNdex, iSize = 1, pnElements:GetSize()
+      while(iNdex <= iSize) do -- All panels are valid
           asmlib.LogInstance("OPEN_FRAME: Frame.OnClose: Delete #"..iNdex)
-          vItem = pnElements:Select(iNdex)
-          vItem.Panel:Remove()
+        pnElements:Select(iNdex).Panel:Remove()
+        pnElements:Delete(iNdex)
           iNdex = iNdex + 1
         end
         pnFrame:Remove()
-        pnElements:Empty() -- Be sure to wipe everything, with pairs
+      collectgarbage()
         asmlib.LogInstance("OPEN_FRAME: Frame.OnClose: Form removed")
       end
       ------------ ModelPanel --------------
       pnModelPanel:SetParent(pnFrame)
       pnModelPanel:SetPos(500,25)
-      pnModelPanel:SetSize(250, 255)
+      pnModelPanel:SetSize(250,255)
       pnModelPanel:SetVisible(true)
       pnModelPanel.LayoutEntity = function(pnSelf, oEnt)
-        if(pnSelf.bAnimated) then
-          pnSelf:RunAnimation()
-        end
-        local uiRec = asmlib.CacheQueryPiece(oEnt:GetModel())
-        if(not uiRec) then return end
-        local Ang  = Angle(0, RealTime() * 5, 0)
-        local uiP, uiY, uiR = asmlib.ExpAngle(uiRec.A)
-              asmlib.RotateAngleDir(Ang,"RUF",uiP,uiY,uiR)
-        local Pos = asmlib.ToVector(uiRec.M)
-        local Rot = Vector()
-              Rot:Set(Pos)
-              Rot:Rotate(Ang)
-              Rot:Mul(-1)
-              Rot:Add(Pos)
-        oEnt:SetAngles(Ang)
-        oEnt:SetPos(Rot)
+      if(pnSelf.bAnimated) then pnSelf:RunAnimation() end
+      local uiBox = asmlib.CacheBoxLayout(oEnt,40)
+      if(not asmlib.IsExistent(uiBox)) then
+        return asmlib.StatusLog(false,"OPEN_FRAME: pnModelPanel.LayoutEntity: Box invalid") end
+      local stSpawn = asmlib.GetNormalSpawn(asmlib.GetOpVar("VEC_ZERO"),uiBox.Ang,oEnt:GetModel(),1)
+            stSpawn.SPos:Set(uiBox.Cen)
+            stSpawn.SPos:Rotate(stSpawn.SAng)
+            stSpawn.SPos:Mul(-1)
+            stSpawn.SPos:Add(uiBox.Cen)
+      oEnt:SetAngles(stSpawn.SAng)
+      oEnt:SetPos(stSpawn.SPos)
       end
       ------------ Button --------------
       pnButton:SetParent(pnFrame)
-      pnButton:SetText("Export DB")
+    pnButton:SetText(pnElements:Select(1).Label[2])
       pnButton:SetPos(15,30)
       pnButton:SetSize(55,30)
       pnButton:SetVisible(true)
@@ -245,32 +245,27 @@ if(CLIENT) then
       end
       ------------ ListView --------------
       pnListView:SetParent(pnFrame)
-      pnListView:SetVisible(true)
+      pnListView:SetVisible(false)
+      pnListView:SetSortable(true)
       pnListView:SetMultiSelect(false)
-      pnListView:Clear()
       pnListView:SetPos(10,65)
       pnListView:SetSize(480,205)
-      pnListView:AddColumn("Used"):SetFixedWidth(55)
-      pnListView:AddColumn("Mesh"):SetFixedWidth(35)
-      pnListView:AddColumn("Type"):SetFixedWidth(100)
-      pnListView:AddColumn("Model"):SetFixedWidth(290)
-      pnListView.OnRowSelected = function(pnSelf, nRow, pnLine)
-        local uiMod = pnLine:GetColumnText(4)
+      pnListView:AddColumn("Used"):SetFixedWidth(55)   -- (1)
+      pnListView:AddColumn("Mesh"):SetFixedWidth(35)   -- (2)
+      pnListView:AddColumn("Type"):SetFixedWidth(100)  -- (3)
+      pnListView:AddColumn("Model"):SetFixedWidth(290) -- (4)
+      pnListView.OnRowSelected = function(pnSelf, nIndex, pnLine)
+      local uiMod = pnLine:GetColumnText(4) -- Forth index is actually the model in the table
         pnModelPanel:SetModel(uiMod)
-        local uiRec = asmlib.CacheQueryPiece(uiMod)
-        if(not uiRec) then
-          return asmlib.StatusLog(false,"OPEN_FRAME: Failed to retrieve model "..uiMod)
-        end
-        -- OBBCenter ModelPanel Configuration --
-        local uiEnt = pnModelPanel.Entity
-        local uiCen = asmlib.ToVector(uiRec.M)
-        local uiEye = uiEnt:LocalToWorld(uiCen)
-        asmlib.SubVector(uiCen,uiRec.O)
-        local uiLen = uiCen:Length()
-        local uiCam = Vector(uiLen, 0, 0.5 * uiLen)
-        pnModelPanel:SetLookAt(uiEye)
-        pnModelPanel:SetCamPos(2 * uiCam + uiEye)
-        oPly:ConCommand(gsToolPrefL.."model "..uiMod.."\n")
+      local uiEnt = pnModelPanel:GetEntity()
+      local uiBox = asmlib.CacheBoxLayout(uiEnt,0,1.5,0.6)
+      if(not asmlib.IsExistent(uiBox)) then
+        return asmlib.StatusLog(false,"OPEN_FRAME: ListView.OnRowSelected: Box invalid for <"..uiMod..">") end
+      pnModelPanel:SetLookAt(uiBox.Eye)
+      pnModelPanel:SetCamPos(uiBox.Cam)
+      asmlib.ConCommandPly(oPly, "model" ,uiMod)
+      asmlib.ConCommandPly(oPly,"pointid",  1  )
+      asmlib.ConCommandPly(oPly,"pnextid",  2  )
       end
        if(not asmlib.UpdateListView(pnListView,frUsed,nCount)) then
         asmlib.StatusLog(false,"OPEN_FRAME: ListView.OnRowSelected: Populate the list view failed")
@@ -286,28 +281,30 @@ if(CLIENT) then
       pnComboBox:AddChoice("Name" ,defTable[3][1])
       pnComboBox:AddChoice("Mesh" ,defTable[4][1])
       pnComboBox.OnSelect = function(pnSelf, nInd, sVal, anyData)
-        asmlib.LogInstance("OPEN_FRAME: ComboBox.OnSelect: ID #"..nInd.." >> "..sVal.." >> "..tostring(anyData))
+      asmlib.LogInstance("OPEN_FRAME: ComboBox.OnSelect: ID #"..nInd.."<"..sVal..">"..tostring(anyData))
         pnSelf:SetValue(sVal)
       end
       ------------ TextEntry --------------
       pnTextEntry:SetParent(pnFrame)
       pnTextEntry:SetPos(175,30)
-      pnTextEntry:SetSize(300,30)
+      pnTextEntry:SetSize(305,30)
       pnTextEntry:SetVisible(true)
       pnTextEntry.OnEnter = function(pnSelf)
         local sName, sField = pnComboBox:GetSelected()
               sName    = tostring(sName  or "")
               sField   = tostring(sField or "")
         local sPattern = tostring(pnSelf:GetValue() or "")
-        asmlib.LogInstance("OPEN_FRAME: TextEntry.OnEnter: "..sName.." >> "..sField.." >> "..sPattern)
-        local bStatus  = asmlib.UpdateListView(pnListView,frUsed,nCount,sField,sPattern)
-        asmlib.LogInstance("OPEN_FRAME: TextEntry.OnEnter: ["..tostring(bStatus).."]")
+      if(not asmlib.UpdateListView(pnListView,frUsed,nCount,sField,sPattern)) then
+        return asmlib.StatusLog(false,"OPEN_FRAME: TextEntry.OnEnter: Failed to update ListView {"..sName.."#"..sField.."#"..sPattern.."}")
       end
+      end
+      ------------ Show the completed panel --------------
       pnFrame:SetVisible(true)
       pnFrame:Center()
       pnFrame:MakePopup()
-      return true
-    end)
+    collectgarbage()
+    return asmlib.StatusLog(true,"OPEN_FRAME: Success")
+  end)
 end
 
 ------ INITIALIZE DB ------
@@ -323,7 +320,6 @@ asmlib.CreateTable("PIECES",
     [5] = {"ORIGN" , "TEXT"},
     [6] = {"ANGLE" , "TEXT"}
 },true,true)
-
 
 if(fileExists(gsFullDSV.."PIECES.txt", "DATA")
 ) then
