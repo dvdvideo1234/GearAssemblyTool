@@ -1157,9 +1157,11 @@ local function RegisterPOA(stPiece, ivID, sP, sO, sA)
   if((sO ~= "") and (sO ~= "NULL")) then DecodePOA(sO) else ReloadPOA() end
   if(not IsExistent(TransferPOA(tOffs.O,"V"))) then
     return StatusLog(nil,"RegisterPOA: Cannot transfer origin") end
-  if((sP ~= "") and (sP ~= "NULL")) then DecodePOA(sP) else ReloadPOA() end
+  if((sP ~= "") and (sP ~= "NULL")) then DecodePOA(sP) end
   if(not IsExistent(TransferPOA(tOffs.P,"V"))) then
-    return StatusLog(nil,"RegisterPOA: Cannot transfer point") end
+    return StatusLog(nil,"RegisterPOA: Cannot transfer point")
+  end -- In the POA array still persists the decoded Origin
+  if(stringSub(sP,1,1) == GetOpVar("OPSYM_DISABLE")) then tOffs.P[csD] = true else tOffs.P[csD] = false end
   if((sA ~= "") and (sA ~= "NULL")) then DecodePOA(sA) else ReloadPOA() end
   if(not IsExistent(TransferPOA(tOffs.A,"A"))) then
     return StatusLog(nil,"RegisterPOA: Cannot transfer angle") end
@@ -1879,21 +1881,19 @@ function InsertRecord(sTable,tData)
         Cache[snPrimaryKey] = {}
         tLine = Cache[snPrimaryKey]
       end
+      if(not IsExistent(tLine.Kept)) then tLine.Kept = 1        end
       if(not IsExistent(tLine.Type)) then tLine.Type = tData[2] end
       if(not IsExistent(tLine.Name)) then tLine.Name = tData[3] end
-      if(not IsExistent(tLine.Kept)) then tLine.Kept = 0        end
       if(not IsExistent(tLine.Slot)) then tLine.Slot = snPrimaryKey end
-      local nOffsID = MatchType(defTable,tData[4],4) -- LineID has to be set properly
-      if(not IsExistent(nOffsID)) then
+      if(not IsExistent(tLine.Mesh)) then tLine.Mesh = MatchType(defTable,tData[4],4) end
+      if(not IsExistent(tLine.Mesh)) then
         return StatusLog(nil,"InsertRecord: Cannot match "
                             ..sTable.." <"..tostring(tData[4]).."> to "
                             ..defTable[4][1].." for "..tostring(snPrimaryKey))
       end
-      local stRezul = RegisterPOA(tLine,nOffsID,tData[5],tData[6],tData[7])
+      local stRezul = RegisterPOA(tLine,tLine.Kept,tData[5],tData[6],tData[7])
       if(not IsExistent(stRezul)) then
-        return StatusLog(nil,"InsertRecord: Cannot process offset #"..tostring(nOffsID).." for "..tostring(snPrimaryKey)) end
-      if(nOffsID > tLine.Kept) then tLine.Kept = nOffsID else
-        return StatusLog(nil,"InsertRecord: Offset #"..tostring(nOffsID).." sequentiality mismatch") end
+        return StatusLog(nil,"InsertRecord: Cannot process offset for "..tostring(snPrimaryKey)) end
     else
       return StatusLog(false,"InsertRecord: No settings for table "..sTable)
     end
