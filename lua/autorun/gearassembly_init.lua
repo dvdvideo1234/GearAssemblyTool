@@ -22,23 +22,14 @@ local duplicatorStoreEntityModifier = duplicator and duplicator.StoreEntityModif
 local asmlib = gearasmlib
 
 ------ CONFIGURE ASMLIB ------
+asmlib.InitAssembly("gear")
+asmlib.SetOpVar("TOOL_VERSION","4.92")
+asmlib.SetLogControl(0,"gearasmlib_log")
 asmlib.SetIndexes("V",1,2,3)
 asmlib.SetIndexes("A",1,2,3)
 asmlib.SetIndexes("S",4,5,6,7)
-asmlib.InitAssembly("gear")
-asmlib.SetOpVar("TOOL_VERSION","4.92")
-asmlib.SetOpVar("DIRPATH_BAS",asmlib.GetOpVar("TOOLNAME_NL")..asmlib.GetOpVar("OPSYM_DIRECTORY"))
-asmlib.SetOpVar("DIRPATH_EXP","exp"..asmlib.GetOpVar("OPSYM_DIRECTORY"))
-asmlib.SetOpVar("DIRPATH_DSV","dsv"..asmlib.GetOpVar("OPSYM_DIRECTORY"))
-asmlib.SetOpVar("DIRPATH_LOG","")
-asmlib.SetOpVar("MAX_MASS",50000)
-asmlib.SetOpVar("MAX_LINEAR",100)
-asmlib.SetOpVar("MAX_ROTATION",360)
-asmlib.SetOpVar("MAX_FOCELIMIT",1000000)
-asmlib.SetOpVar("MAX_BNDERRMODE",4)
 asmlib.SetOpVar("CONTAIN_STACK_MODE",asmlib.MakeContainer("Stack Mode"))
 asmlib.SetOpVar("CONTAIN_CONSTRAINT_TYPE",asmlib.MakeContainer("Constraint Type"))
-asmlib.SetLogControl(0,"gearasmlib_log")
 
 ------ CONFIGURE CVARS -----
 asmlib.MakeCoVar("enwiremod", "1"  , {0,1  } ,bitbor(FCVAR_ARCHIVE, FCVAR_ARCHIVE_XBOX, FCVAR_NOTIFY, FCVAR_REPLICATED, FCVAR_PRINTABLEONLY), "Maximum active radius to search for a point ID")
@@ -135,49 +126,49 @@ if(CLIENT) then
       oPly:ConCommand(gsToolPrefL.."nextrol 0\n")
     end)
 
-asmlib.SetAction("OPEN_FRAME",
+  asmlib.SetAction("OPEN_FRAME",
     function(oPly,oCom,oArgs)
-    local frUsed, nCount = asmlib.GetFrequentModels(oArgs[1])
-    if(not asmlib.IsExistent(frUsed)) then
-      return asmlib.StatusLog(false,"OPEN_FRAME: Failed to retrieve most frequent models ["..tostring(oArgs[1]).."]")
+      local frUsed, nCount = asmlib.GetFrequentModels(oArgs[1])
+      if(not asmlib.IsExistent(frUsed)) then
+        return asmlib.StatusLog(false,"OPEN_FRAME: Failed to retrieve most frequent models ["..tostring(oArgs[1]).."]")
       end
       local defTable = asmlib.GetOpVar("DEFTABLE_PIECES")
-    if(not defTable) then return StatusLog(false,"OPEN_FRAME: Missing definition for table PIECES") end
+      if(not defTable) then return StatusLog(false,"OPEN_FRAME: Missing definition for table PIECES") end
       local pnFrame = vguiCreate("DFrame")
       if(not IsValid(pnFrame)) then
         pnFrame:Remove()
-      return asmlib.StatusLog(false,"OPEN_FRAME: Failed to create base frame")
+        return asmlib.StatusLog(false,"OPEN_FRAME: Failed to create base frame")
       end
       local pnElements = asmlib.MakeContainer("FREQ_VGUI")
-          pnElements:Insert(1,{Label = { "DButton"    ,"Export DB"     ,"Click to export the client database as a file"}})
-          pnElements:Insert(2,{Label = { "DListView"  ,"Routine Items" ,"The list of your frequently used track pieces"}})
-          pnElements:Insert(3,{Label = { "DModelPanel","Piece Display" ,"The model of your track piece is displayed here"}})
-          pnElements:Insert(4,{Label = { "DTextEntry" ,"Enter Pattern" ,"Enter a pattern here and hit enter to preform a search"}})
-          pnElements:Insert(5,{Label = { "DComboBox"  ,"Select Column" ,"Choose which list column you want to preform a search on"}})
+            pnElements:Insert(1,{Label = { "DButton"    ,"Export DB"     ,"Click to export the client database as a file"}})
+            pnElements:Insert(2,{Label = { "DListView"  ,"Routine Items" ,"The list of your frequently used track pieces"}})
+            pnElements:Insert(3,{Label = { "DModelPanel","Piece Display" ,"The model of your track piece is displayed here"}})
+            pnElements:Insert(4,{Label = { "DTextEntry" ,"Enter Pattern" ,"Enter a pattern here and hit enter to preform a search"}})
+            pnElements:Insert(5,{Label = { "DComboBox"  ,"Select Column" ,"Choose which list column you want to preform a search on"}})
       ------------ Manage the invalid panels -------------------
       local iNdex, iSize, vItem = 1, pnElements:GetSize(), nil
       while(iNdex <= iSize) do
         vItem = pnElements:Select(iNdex)
         vItem.Panel = vguiCreate(vItem.Label[1],pnFrame)
         if(not IsValid(vItem.Panel)) then
-        asmlib.LogInstance("OPEN_FRAME: Failed to create ID #"..iNdex)
-        iNdex, vItem = 1, nil
-        while(iNdex <= iSize) do
-          vItem = pnElements:Select(iNdex)
-          if(IsValid(vItem.Panel)) then
-            vItem.Panel:Remove()
-            asmlib.LogInstance("OPEN_FRAME: Deleted panel ID #"..iNdex)
-          end
-          pnElements:Delete(iNdex)
-          asmlib.LogInstance("OPEN_FRAME: Deleted entry ID #"..iNdex)
-          iNdex = iNdex + 1
+          asmlib.LogInstance("OPEN_FRAME: Failed to create ID #"..iNdex)
+          iNdex, vItem = 1, nil
+          while(iNdex <= iSize) do
+            vItem = pnElements:Select(iNdex)
+            if(IsValid(vItem.Panel)) then
+              vItem.Panel:Remove()
+              asmlib.LogInstance("OPEN_FRAME: Deleted panel ID #"..iNdex)
+            end
+            pnElements:Delete(iNdex)
+            asmlib.LogInstance("OPEN_FRAME: Deleted entry ID #"..iNdex)
+            iNdex = iNdex + 1
           end
           pnFrame:Remove()
-        collectgarbage()
-        return StatusLog(false,"OPEN_FRAME: Invalid panel created. Frame removed")
+          collectgarbage()
+          return StatusLog(false,"OPEN_FRAME: Invalid panel created. Frame removed")
         end
         vItem.Panel:SetName(vItem.Label[2])
-      vItem.Panel:SetTooltip(vItem.Label[3])
+        vItem.Panel:SetTooltip(vItem.Label[3])
         iNdex = iNdex + 1
       end
       ------ Screen resolution and elements -------
@@ -189,23 +180,23 @@ asmlib.SetAction("OPEN_FRAME",
       local pnTextEntry  = pnElements:Select(4).Panel
       local pnComboBox   = pnElements:Select(5).Panel
       ------------ Frame --------------
-    pnFrame:SetTitle("Frequent pieces by "..oPly:GetName().." v."..asmlib.GetOpVar("TOOL_VERSION"))
-    pnFrame:SetVisible(true)
+      pnFrame:SetTitle("Frequent pieces by "..oPly:GetName().." v."..asmlib.GetOpVar("TOOL_VERSION"))
+      pnFrame:SetVisible(true)
       pnFrame:SetDraggable(true)
       pnFrame:SetDeleteOnClose(true)
       pnFrame:SetPos(scrW/4, scrH/4)
       pnFrame:SetSize(750, 280)
       pnFrame.OnClose = function()
         pnFrame:SetVisible(false)
-      local iNdex, iSize = 1, pnElements:GetSize()
-      while(iNdex <= iSize) do -- All panels are valid
+        local iNdex, iSize = 1, pnElements:GetSize()
+        while(iNdex <= iSize) do -- All panels are valid
           asmlib.LogInstance("OPEN_FRAME: Frame.OnClose: Delete #"..iNdex)
-        pnElements:Select(iNdex).Panel:Remove()
-        pnElements:Delete(iNdex)
+          pnElements:Select(iNdex).Panel:Remove()
+          pnElements:Delete(iNdex)
           iNdex = iNdex + 1
         end
         pnFrame:Remove()
-      collectgarbage()
+        collectgarbage()
         asmlib.LogInstance("OPEN_FRAME: Frame.OnClose: Form removed")
       end
       ------------ ModelPanel --------------
@@ -214,21 +205,21 @@ asmlib.SetAction("OPEN_FRAME",
       pnModelPanel:SetSize(250,255)
       pnModelPanel:SetVisible(true)
       pnModelPanel.LayoutEntity = function(pnSelf, oEnt)
-      if(pnSelf.bAnimated) then pnSelf:RunAnimation() end
-      local uiBox = asmlib.CacheBoxLayout(oEnt,40)
-      if(not asmlib.IsExistent(uiBox)) then
-        return asmlib.StatusLog(false,"OPEN_FRAME: pnModelPanel.LayoutEntity: Box invalid") end
-      local stSpawn = asmlib.GetNormalSpawn(asmlib.GetOpVar("VEC_ZERO"),uiBox.Ang,oEnt:GetModel(),1)
-            stSpawn.SPos:Set(uiBox.Cen)
-            stSpawn.SPos:Rotate(stSpawn.SAng)
-            stSpawn.SPos:Mul(-1)
-            stSpawn.SPos:Add(uiBox.Cen)
-      oEnt:SetAngles(stSpawn.SAng)
-      oEnt:SetPos(stSpawn.SPos)
+        if(pnSelf.bAnimated) then pnSelf:RunAnimation() end
+        local uiBox = asmlib.CacheBoxLayout(oEnt,40)
+        if(not asmlib.IsExistent(uiBox)) then
+          return asmlib.StatusLog(false,"OPEN_FRAME: pnModelPanel.LayoutEntity: Box invalid") end
+        local stSpawn = asmlib.GetNormalSpawn(asmlib.GetOpVar("VEC_ZERO"),uiBox.Ang,oEnt:GetModel(),1)
+              stSpawn.SPos:Set(uiBox.Cen)
+              stSpawn.SPos:Rotate(stSpawn.SAng)
+              stSpawn.SPos:Mul(-1)
+              stSpawn.SPos:Add(uiBox.Cen)
+        oEnt:SetAngles(stSpawn.SAng)
+        oEnt:SetPos(stSpawn.SPos)
       end
       ------------ Button --------------
       pnButton:SetParent(pnFrame)
-    pnButton:SetText(pnElements:Select(1).Label[2])
+      pnButton:SetText(pnElements:Select(1).Label[2])
       pnButton:SetPos(15,30)
       pnButton:SetSize(55,30)
       pnButton:SetVisible(true)
@@ -240,7 +231,11 @@ asmlib.SetAction("OPEN_FRAME",
         if(ExportDB ~= 0) then
           asmlib.LogInstance("OPEN_FRAME: Button Exporting DB")
           asmlib.ExportIntoFile("PIECES",",","INS")
+
+
           asmlib.ExportIntoFile("PIECES","\t","DSV")
+
+
         end
       end
       ------------ ListView --------------
@@ -255,17 +250,17 @@ asmlib.SetAction("OPEN_FRAME",
       pnListView:AddColumn("Type"):SetFixedWidth(100)  -- (3)
       pnListView:AddColumn("Model"):SetFixedWidth(290) -- (4)
       pnListView.OnRowSelected = function(pnSelf, nIndex, pnLine)
-      local uiMod = pnLine:GetColumnText(4) -- Forth index is actually the model in the table
-        pnModelPanel:SetModel(uiMod)
-      local uiEnt = pnModelPanel:GetEntity()
-      local uiBox = asmlib.CacheBoxLayout(uiEnt,0,1.5,0.6)
-      if(not asmlib.IsExistent(uiBox)) then
-        return asmlib.StatusLog(false,"OPEN_FRAME: ListView.OnRowSelected: Box invalid for <"..uiMod..">") end
-      pnModelPanel:SetLookAt(uiBox.Eye)
-      pnModelPanel:SetCamPos(uiBox.Cam)
-      asmlib.ConCommandPly(oPly, "model" ,uiMod)
-      asmlib.ConCommandPly(oPly,"pointid",  1  )
-      asmlib.ConCommandPly(oPly,"pnextid",  2  )
+        local uiMod = pnLine:GetColumnText(4) -- Forth index is actually the model in the table
+                      pnModelPanel:SetModel(uiMod)
+        local uiEnt = pnModelPanel:GetEntity()
+        local uiBox = asmlib.CacheBoxLayout(uiEnt,0,1.5,0.6)
+        if(not asmlib.IsExistent(uiBox)) then
+          return asmlib.StatusLog(false,"OPEN_FRAME: ListView.OnRowSelected: Box invalid for <"..uiMod..">") end
+        pnModelPanel:SetLookAt(uiBox.Eye)
+        pnModelPanel:SetCamPos(uiBox.Cam)
+        asmlib.ConCommandPly(oPly, "model" ,uiMod)
+        asmlib.ConCommandPly(oPly,"pointid",  1  )
+        asmlib.ConCommandPly(oPly,"pnextid",  2  )
       end
        if(not asmlib.UpdateListView(pnListView,frUsed,nCount)) then
         asmlib.StatusLog(false,"OPEN_FRAME: ListView.OnRowSelected: Populate the list view failed")
@@ -281,7 +276,7 @@ asmlib.SetAction("OPEN_FRAME",
       pnComboBox:AddChoice("Name" ,defTable[3][1])
       pnComboBox:AddChoice("Mesh" ,defTable[4][1])
       pnComboBox.OnSelect = function(pnSelf, nInd, sVal, anyData)
-      asmlib.LogInstance("OPEN_FRAME: ComboBox.OnSelect: ID #"..nInd.."<"..sVal..">"..tostring(anyData))
+        asmlib.LogInstance("OPEN_FRAME: ComboBox.OnSelect: ID #"..nInd.."<"..sVal..">"..tostring(anyData))
         pnSelf:SetValue(sVal)
       end
       ------------ TextEntry --------------
@@ -294,17 +289,17 @@ asmlib.SetAction("OPEN_FRAME",
               sName    = tostring(sName  or "")
               sField   = tostring(sField or "")
         local sPattern = tostring(pnSelf:GetValue() or "")
-      if(not asmlib.UpdateListView(pnListView,frUsed,nCount,sField,sPattern)) then
-        return asmlib.StatusLog(false,"OPEN_FRAME: TextEntry.OnEnter: Failed to update ListView {"..sName.."#"..sField.."#"..sPattern.."}")
-      end
+        if(not asmlib.UpdateListView(pnListView,frUsed,nCount,sField,sPattern)) then
+          return asmlib.StatusLog(false,"OPEN_FRAME: TextEntry.OnEnter: Failed to update ListView {"..sName.."#"..sField.."#"..sPattern.."}")
+        end
       end
       ------------ Show the completed panel --------------
       pnFrame:SetVisible(true)
       pnFrame:Center()
       pnFrame:MakePopup()
-    collectgarbage()
-    return asmlib.StatusLog(true,"OPEN_FRAME: Success")
-  end)
+      collectgarbage()
+      return asmlib.StatusLog(true,"OPEN_FRAME: Success")
+    end)
 end
 
 ------ INITIALIZE DB ------
@@ -327,17 +322,16 @@ if(fileExists(gsFullDSV.."PIECES.txt", "DATA")
   asmlib.ImportFromDSV("PIECES","\t",true)
 else
   asmlib.PrintInstance(gsToolNameU..": DB PIECES from LUA")
-  
   if(asmlib.GetCoVar("devmode" ,"INT") ~= 0) then
     asmlib.DefaultType("Develop random")
-asmlib.InsertRecord("PIECES",{"models/props_wasteland/wheel02b.mdl",   "Development", "Dev1", 45, "65, 0, 0", "0.29567885398865,0.3865530192852,-0.36239844560623", "-90, 90, 180"})
+    asmlib.InsertRecord("PIECES",{"models/props_wasteland/wheel02b.mdl",   "Development", "Dev1", 45, "65, 0, 0", "0.29567885398865,0.3865530192852,-0.36239844560623", "-90, 90, 180"})
   end
   ------ PIECES ------
   asmlib.DefaultTable("PIECES")
   asmlib.DefaultType("Old Gmod 10")
   asmlib.InsertRecord({"models/props_phx/mechanics/medgear.mdl", "#", "#", 0, "24.173, 0, 0", "-0.01517273113131500,  0.0090782083570957, 3.5684652328491", ""})
   asmlib.InsertRecord({"models/props_phx/mechanics/biggear.mdl", "#", "#", 0, "33.811, 0, 0", "-0.00017268359079026, -0.0035230871289968, 3.5217847824097", ""})
-  asmlib.InsertRecord({"models/props_phx/mechanics/slider1.mdl", "#", "#", 0, " 3.000, 0, 0", " 0.17126856744289000, -0.1066822558641400, 3.5165667533875", "-90.000, 90.000, 180.000"})
+  asmlib.InsertRecord({"models/props_phx/mechanics/slider1.mdl", "#", "#", 0, " 3.000, 0, 0", " 0.17126856744289000, -0.1066822558641400, 3.5165667533875", "-90, 90, 180"})
   asmlib.DefaultType("PHX Spotted Flat")
   asmlib.InsertRecord({"models/props_phx/gears/spur9.mdl" , "#", "#", 0, " 7.467, 0, 0", "-0.0015837327810004,  0.000161714502610270, 2.8354094028473", ""})
   asmlib.InsertRecord({"models/props_phx/gears/spur12.mdl", "#", "#", 0, " 9.703, 0, 0", "-0.0015269597060978,  0.000214137573493640, 2.8405227661133", ""})
@@ -543,5 +537,5 @@ end
 
 -------- CACHE PANEL STUFF ---------
 asmlib.CacheQueryPanel()
-asmlib.PrintInstance(asmlib.GetToolNameU().." Loaded successfully [ master ] Rev.199")
+asmlib.PrintInstance("Ver."..asmlib.GetOpVar("TOOL_VERSION"))
 collectgarbage()
