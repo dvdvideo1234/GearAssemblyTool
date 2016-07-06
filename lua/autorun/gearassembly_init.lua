@@ -22,31 +22,37 @@ local duplicatorStoreEntityModifier = duplicator and duplicator.StoreEntityModif
 local asmlib = gearasmlib
 
 ------ CONFIGURE ASMLIB ------
-asmlib.InitAssembly("gear")
+asmlib.InitAssembly("gear","assembly")
 asmlib.SetOpVar("TOOL_VERSION","4.92")
-asmlib.SetLogControl(0,"gearasmlib_log")
 asmlib.SetIndexes("V",1,2,3)
 asmlib.SetIndexes("A",1,2,3)
 asmlib.SetIndexes("S",4,5,6,7)
 asmlib.SetOpVar("CONTAIN_STACK_MODE",asmlib.MakeContainer("Stack Mode"))
 asmlib.SetOpVar("CONTAIN_CONSTRAINT_TYPE",asmlib.MakeContainer("Constraint Type"))
 
+------ CONFIGURE LOGGING ------
+asmlib.MakeAsmVar("logsmax"  , "0" , {0}, bitBor(FCVAR_ARCHIVE, FCVAR_ARCHIVE_XBOX, FCVAR_NOTIFY, FCVAR_PRINTABLEONLY), "Maximum logging lines to be printed")
+asmlib.MakeAsmVar("logfile"  , ""  , nil , bitBor(FCVAR_ARCHIVE, FCVAR_ARCHIVE_XBOX, FCVAR_NOTIFY, FCVAR_PRINTABLEONLY), "File to store the logs ( if any )")
+asmlib.SetLogControl(asmlib.GetAsmVar("logsmax","INT"),asmlib.GetAsmVar("logfile","STR"))
+
+
 ------ CONFIGURE CVARS -----
-asmlib.MakeCoVar("enwiremod", "1"  , {0,1  } ,bitbor(FCVAR_ARCHIVE, FCVAR_ARCHIVE_XBOX, FCVAR_NOTIFY, FCVAR_REPLICATED, FCVAR_PRINTABLEONLY), "Maximum active radius to search for a point ID")
-asmlib.MakeCoVar("devmode"  , "0"  , {0, 1 } ,bitBor(FCVAR_ARCHIVE, FCVAR_ARCHIVE_XBOX, FCVAR_NOTIFY, FCVAR_REPLICATED, FCVAR_PRINTABLEONLY), "Toggle the wire extension on/off server side")
-asmlib.MakeCoVar("maxstcnt" , "200", {1,200} ,bitbor(FCVAR_ARCHIVE, FCVAR_ARCHIVE_XBOX, FCVAR_NOTIFY, FCVAR_REPLICATED, FCVAR_PRINTABLEONLY), "Maximum pieces to spawn in stack mode")
+asmlib.MakeAsmVar("enwiremod", "1"  , {0,1  } ,bitbor(FCVAR_ARCHIVE, FCVAR_ARCHIVE_XBOX, FCVAR_NOTIFY, FCVAR_REPLICATED, FCVAR_PRINTABLEONLY), "Maximum active radius to search for a point ID")
+asmlib.MakeAsmVar("devmode"  , "0"  , {0, 1 } ,bitBor(FCVAR_ARCHIVE, FCVAR_ARCHIVE_XBOX, FCVAR_NOTIFY, FCVAR_REPLICATED, FCVAR_PRINTABLEONLY), "Toggle the wire extension on/off server side")
+asmlib.MakeAsmVar("maxstcnt" , "200", {1,200} ,bitbor(FCVAR_ARCHIVE, FCVAR_ARCHIVE_XBOX, FCVAR_NOTIFY, FCVAR_REPLICATED, FCVAR_PRINTABLEONLY), "Maximum pieces to spawn in stack mode")
 if(SERVER) then
-  asmlib.MakeCoVar("bnderrmod", "1" , {0,4}   ,bitbor(FCVAR_ARCHIVE, FCVAR_ARCHIVE_XBOX, FCVAR_NOTIFY, FCVAR_REPLICATED, FCVAR_PRINTABLEONLY), "Unreasonable position error handling mode")
-  asmlib.MakeCoVar("maxfruse" , "50", {1,100} ,bitbor(FCVAR_ARCHIVE, FCVAR_ARCHIVE_XBOX, FCVAR_NOTIFY, FCVAR_REPLICATED, FCVAR_PRINTABLEONLY), "Maximum frequent pieces to be listed")
+  CreateConVar("sbox_max"..asmlib.GetOpVar("CVAR_LIMITNAME"), "1500", bitBor(FCVAR_ARCHIVE, FCVAR_ARCHIVE_XBOX, FCVAR_NOTIFY, FCVAR_REPLICATED, FCVAR_PRINTABLEONLY), "Maximum number of gears to be spawned")
+  asmlib.MakeAsmVar("bnderrmod", "1" , {0,4}   ,bitbor(FCVAR_ARCHIVE, FCVAR_ARCHIVE_XBOX, FCVAR_NOTIFY, FCVAR_REPLICATED, FCVAR_PRINTABLEONLY), "Unreasonable position error handling mode")
+  asmlib.MakeAsmVar("maxfruse" , "50", {1,100} ,bitbor(FCVAR_ARCHIVE, FCVAR_ARCHIVE_XBOX, FCVAR_NOTIFY, FCVAR_REPLICATED, FCVAR_PRINTABLEONLY), "Maximum frequent pieces to be listed")
 end
 ------ CONFIGURE NON-REPLICATED CVARS ----- Client's got a mind of its own
-asmlib.MakeCoVar("modedb"   , "SQL", nil, bitbor(FCVAR_ARCHIVE, FCVAR_ARCHIVE_XBOX, FCVAR_NOTIFY, FCVAR_PRINTABLEONLY), "Database operating mode")
-asmlib.MakeCoVar("enqstore" ,     1, nil, bitbor(FCVAR_ARCHIVE, FCVAR_ARCHIVE_XBOX, FCVAR_NOTIFY, FCVAR_PRINTABLEONLY), "Enable cache for built queries")
-asmlib.MakeCoVar("timermode", "CQT@3600@1@1", nil, bitbor(FCVAR_ARCHIVE, FCVAR_ARCHIVE_XBOX, FCVAR_NOTIFY, FCVAR_PRINTABLEONLY), "Cache management setting when DB mode is SQL")
+asmlib.MakeAsmVar("modedb"   , "SQL", nil, bitbor(FCVAR_ARCHIVE, FCVAR_ARCHIVE_XBOX, FCVAR_NOTIFY, FCVAR_PRINTABLEONLY), "Database operating mode")
+asmlib.MakeAsmVar("enqstore" ,   1  , nil, bitbor(FCVAR_ARCHIVE, FCVAR_ARCHIVE_XBOX, FCVAR_NOTIFY, FCVAR_PRINTABLEONLY), "Enable cache for built queries")
+asmlib.MakeAsmVar("timermode", "CQT@3600@1@1", nil, bitbor(FCVAR_ARCHIVE, FCVAR_ARCHIVE_XBOX, FCVAR_NOTIFY, FCVAR_PRINTABLEONLY), "Cache management setting when DB mode is SQL")
 
 ------ CONFIGURE MODES -----
-asmlib.SetOpVar("MODE_DATABASE" , asmlib.GetCoVar("modedb","STR"))
-asmlib.SetOpVar("EN_QUERY_STORE",(asmlib.GetCoVar("enqstore","INT") ~= 0) and true or false)
+asmlib.SetOpVar("MODE_DATABASE" , asmlib.GetAsmVar("modedb","STR"))
+asmlib.SetOpVar("EN_QUERY_STORE",(asmlib.GetAsmVar("enqstore","INT") ~= 0) and true or false)
 
 ------ GLOBAL VARIABLES -------
 local gsToolPrefL = asmlib.GetOpVar("TOOLNAME_PL")
@@ -57,10 +63,10 @@ local gsInstPrefx = asmlib.GetInstPref()
 local gsPathBAS   = asmlib.GetOpVar("DIRPATH_BAS")
 local gsPathDSV   = asmlib.GetOpVar("DIRPATH_DSV")
 local gsFullDSV   = gsPathBAS..gsPathDSV..gsInstPrefx..gsToolPrefU
-local gaTimerSet  = asmlib.StringExplode(asmlib.GetCoVar("timermode","STR"),asmlib.GetOpVar("OPSYM_DIRECTORY"))
+local gaTimerSet  = asmlib.StringExplode(asmlib.GetAsmVar("timermode","STR"),asmlib.GetOpVar("OPSYM_DIRECTORY"))
 
------- CONFIGURE TOOL -----   
-             
+------ CONFIGURE TOOL -----
+
 if(SERVER) then
 
   local SMode = asmlib.GetOpVar("CONTAIN_STACK_MODE")
@@ -126,6 +132,77 @@ if(CLIENT) then
       oPly:ConCommand(gsToolPrefL.."nextrol 0\n")
     end)
 
+ asmlib.SetAction("RESET_VARIABLES",
+    function(oPly,oCom,oArgs)
+      local devmode = asmlib.GetAsmVar("devmode" ,"INT")
+      local bgskids = asmlib.GetAsmVar("bgskids", "STR")
+      asmlib.LogInstance("RESET_VARIABLES: {"..tostring(devmode)..asmlib.GetOpVar("OPSYM_DISABLE")..tostring(command).."}")
+      asmlib.ConCommandPly(oPly,"nextx"  , 0)
+      asmlib.ConCommandPly(oPly,"nexty"  , 0)
+      asmlib.ConCommandPly(oPly,"nextz"  , 0)
+      asmlib.ConCommandPly(oPly,"nextpic", 0)
+      asmlib.ConCommandPly(oPly,"nextyaw", 0)
+      asmlib.ConCommandPly(oPly,"nextrol", 0)
+      asmlib.ConCommandPly(oPly,"rotpiv" , 0)
+      if(devmode == 0) then
+        return asmlib.StatusLog(true,"RESET_VARIABLES: Developer mode disabled") end
+      if(bgskids == "reset cvars") then -- Reset the limit also
+        oPly:ConCommand("sbox_max"..asmlib.GetOpVar("CVAR_LIMITNAME").." 1500\n")
+        local anchor = asmlib.GetOpVar("MISS_NOID")..
+                       asmlib.GetOpVar("OPSYM_REVSIGN")..
+                       asmlib.GetOpVar("MISS_NOMD")
+        asmlib.ConCommandPly(oPly, "weld"     , "1")
+        asmlib.ConCommandPly(oPly, "mass"     , "25000")
+        asmlib.ConCommandPly(oPly, "model"    , "models/props_phx/trains/tracks/track_1x.mdl")
+        asmlib.ConCommandPly(oPly, "count"    , "5")
+        asmlib.ConCommandPly(oPly, "freeze"   , "1")
+        asmlib.ConCommandPly(oPly, "anchor"   , anchor)
+        asmlib.ConCommandPly(oPly, "igntype"  , "0")
+        asmlib.ConCommandPly(oPly, "spnflat"  , "0")
+        asmlib.ConCommandPly(oPly, "ydegsnp"  , "45")
+        asmlib.ConCommandPly(oPly, "pointid"  , "1")
+        asmlib.ConCommandPly(oPly, "pnextid"  , "2")
+        asmlib.ConCommandPly(oPly, "logsmax"  , "0")
+        asmlib.ConCommandPly(oPly, "logfile"  , "")
+        asmlib.ConCommandPly(oPly, "mcspawn"  , "0")
+        asmlib.ConCommandPly(oPly, "bgskids"  , "0/0")
+        asmlib.ConCommandPly(oPly, "gravity"  , "1")
+        asmlib.ConCommandPly(oPly, "adviser"  , "1")
+        asmlib.ConCommandPly(oPly, "activrad" , "45")
+        asmlib.ConCommandPly(oPly, "pntasist" , "1")
+        asmlib.ConCommandPly(oPly, "surfsnap" , "0")
+        asmlib.ConCommandPly(oPly, "exportdb" , "0")
+        asmlib.ConCommandPly(oPly, "offsetup" , "0")
+        asmlib.ConCommandPly(oPly, "forcelim" , "0")
+        asmlib.ConCommandPly(oPly, "ignphysgn", "0")
+        asmlib.ConCommandPly(oPly, "ghosthold", "1")
+        asmlib.ConCommandPly(oPly, "maxstatts", "3")
+        asmlib.ConCommandPly(oPly, "nocollide", "1")
+        asmlib.ConCommandPly(oPly, "physmater", "metal")
+        asmlib.ConCommandPly(oPly, "maxactrad", "150")
+        asmlib.ConCommandPly(oPly, "enwiremod", "1")
+        asmlib.ConCommandPly(oPly, "devmode"  , "0")
+        asmlib.ConCommandPly(oPly, "maxstcnt" , "200")
+        asmlib.ConCommandPly(oPly, "bnderrmod", "LOG")
+        asmlib.ConCommandPly(oPly, "maxfruse" , "50")
+        asmlib.ConCommandPly(oPly, "modedb"   , "LUA")
+        asmlib.ConCommandPly(oPly, "enqstore" , "1")
+        asmlib.ConCommandPly(oPly, "timermode", "CQT@1800@1@1/CQT@900@1@1/CQT@600@1@1")
+        asmlib.PrintInstance("RESET_VARIABLES: Variables reset complete")
+      elseif(stringFind(bgskids,"delete ") == 1) then
+        local indWord = 1
+        local insPref = stringGsub(bgskids,"delete ","")
+        local expWord = stringExplode(" ",insPref)
+        while(expWord[indWord]) do
+         local sWord = expWord[indWord]
+         asmlib.DeleteExternalDatabase("PIECES","DSV",sWord.."_")
+         asmlib.LogInstance("RESET_VARIABLES: Match <"..sWord..">")
+         indWord = indWord + 1
+        end
+      else return asmlib.StatusLog(true,"RESET_VARIABLES: Command <"..bgskids.."> skipped") end
+      return asmlib.StatusLog(true,"RESET_VARIABLES: Success")
+    end)
+
   asmlib.SetAction("OPEN_FRAME",
     function(oPly,oCom,oArgs)
       local frUsed, nCount = asmlib.GetFrequentModels(oArgs[1])
@@ -146,25 +223,21 @@ if(CLIENT) then
             pnElements:Insert(4,{Label = { "DTextEntry" ,"Enter Pattern" ,"Enter a pattern here and hit enter to preform a search"}})
             pnElements:Insert(5,{Label = { "DComboBox"  ,"Select Column" ,"Choose which list column you want to preform a search on"}})
       ------------ Manage the invalid panels -------------------
-      local iNdex, iSize, vItem = 1, pnElements:GetSize(), nil
+      local iNdex, iSize, sItem, vItem = 1, pnElements:GetSize(), "", nil
       while(iNdex <= iSize) do
         vItem = pnElements:Select(iNdex)
         vItem.Panel = vguiCreate(vItem.Label[1],pnFrame)
         if(not IsValid(vItem.Panel)) then
-          asmlib.LogInstance("OPEN_FRAME: Failed to create ID #"..iNdex)
+          asmlib.LogInstance("OPEN_FRAME: Failed to create ID #"..tonumber(iNdex))
           iNdex, vItem = 1, nil
           while(iNdex <= iSize) do
-            vItem = pnElements:Select(iNdex)
-            if(IsValid(vItem.Panel)) then
-              vItem.Panel:Remove()
-              asmlib.LogInstance("OPEN_FRAME: Deleted panel ID #"..iNdex)
-            end
+            vItem, sItem = pnElements:Select(iNdex), ""
+            if(IsValid(vItem.Panel)) then vItem.Panel:Remove(); sItem = "and panel " end
             pnElements:Delete(iNdex)
-            asmlib.LogInstance("OPEN_FRAME: Deleted entry ID #"..iNdex)
+            asmlib.LogInstance("OPEN_FRAME: Deleted entry "..sItem.."ID #"..tonumber(iNdex))
             iNdex = iNdex + 1
           end
-          pnFrame:Remove()
-          collectgarbage()
+          pnFrame:Remove(); collectgarbage()
           return StatusLog(false,"OPEN_FRAME: Invalid panel created. Frame removed")
         end
         vItem.Panel:SetName(vItem.Label[2])
@@ -172,20 +245,30 @@ if(CLIENT) then
         iNdex = iNdex + 1
       end
       ------ Screen resolution and elements -------
-      local scrW = surfaceScreenWidth()
-      local scrH = surfaceScreenHeight()
+      local scrW         = surfaceScreenWidth()
+      local scrH         = surfaceScreenHeight()
       local pnButton     = pnElements:Select(1).Panel
       local pnListView   = pnElements:Select(2).Panel
       local pnModelPanel = pnElements:Select(3).Panel
       local pnTextEntry  = pnElements:Select(4).Panel
       local pnComboBox   = pnElements:Select(5).Panel
+      local nRatio       = asmlib.GetOpVar("GOLDEN_RATIO")
+      local xyZero       = {x =  0, y = 20} -- The start location of left-top
+      local xyDelta      = {x = 10, y = 10} -- Distance between panels
+      local xySiz        = {x =  0, y =  0} -- Current panel size
+      local xyPos        = {x =  0, y =  0} -- Current panel position
+      local xyTmp        = {x =  0, y =  0} -- Temporary coordinate
       ------------ Frame --------------
+      xyPos.x = (scrW / 4)
+      xyPos.y = (scrH / 4)
+      xySiz.x = 750
+      xySiz.y = mathFloor(xySiz.x / (1 + nRatio))
       pnFrame:SetTitle("Frequent pieces by "..oPly:GetName().." v."..asmlib.GetOpVar("TOOL_VERSION"))
       pnFrame:SetVisible(true)
       pnFrame:SetDraggable(true)
       pnFrame:SetDeleteOnClose(true)
-      pnFrame:SetPos(scrW/4, scrH/4)
-      pnFrame:SetSize(750, 280)
+      pnFrame:SetPos(xyPos.x, xyPos.y)
+      pnFrame:SetSize(xySiz.x, xySiz.y)
       pnFrame.OnClose = function()
         pnFrame:SetVisible(false)
         local iNdex, iSize = 1, pnElements:GetSize()
@@ -195,14 +278,63 @@ if(CLIENT) then
           pnElements:Delete(iNdex)
           iNdex = iNdex + 1
         end
-        pnFrame:Remove()
-        collectgarbage()
+        pnFrame:Remove(); collectgarbage()
         asmlib.LogInstance("OPEN_FRAME: Frame.OnClose: Form removed")
       end
+      ------------ Button --------------
+      xyPos.x = xyZero.x + xyDelta.x
+      xyPos.y = xyZero.y + xyDelta.y
+      xySiz.x = 55 -- Display properly the name
+      xySiz.y = 25 -- Used by combo-box and text-box
+      pnButton:SetParent(pnFrame)
+      pnButton:SetText(pnElements:Select(1).Label[2])
+      pnButton:SetPos(xyPos.x, xyPos.y)
+      pnButton:SetSize(xySiz.x, xySiz.y)
+      pnButton:SetVisible(true)
+      pnButton.DoClick = function()
+        asmlib.LogInstance("OPEN_FRAME: Button.DoClick: <"..pnButton:GetText().."> clicked")
+        asmlib.SetLogControl(asmlib.GetAsmVar("logsmax", "INT"),
+                             asmlib.GetAsmVar("logfile", "STR"))
+        local ExportDB     = asmlib.GetAsmVar("exportdb","INT")
+        if(ExportDB ~= 0) then
+          asmlib.LogInstance("OPEN_FRAME: Button Exporting DB")
+          asmlib.StoreExternalDatabase("PIECES",",","INS")
+          asmlib.StoreExternalDatabase("ADDITIONS",",","INS")
+          asmlib.StoreExternalDatabase("PHYSPROPERTIES",",","INS")
+          asmlib.StoreExternalDatabase("PIECES","\t","DSV")
+          asmlib.StoreExternalDatabase("ADDITIONS","\t","DSV")
+          asmlib.StoreExternalDatabase("PHYSPROPERTIES","\t","DSV")
+        end
+      end
+      ------------- ComboBox ---------------
+      xyPos.x, xyPos.y = pnButton:GetPos()
+      xyTmp.x, xyTmp.y = pnButton:GetSize()
+      xyPos.x = xyPos.x + xyTmp.x + xyDelta.x
+      xySiz.x = nRatio * xyTmp.x
+      xySiz.y = xyTmp.y
+      pnComboBox:SetParent(pnFrame)
+      pnComboBox:SetPos(xyPos.x,xyPos.y)
+      pnComboBox:SetSize(xySiz.x,xySiz.y)
+      pnComboBox:SetVisible(true)
+      pnComboBox:SetValue("<Search BY>")
+      pnComboBox:AddChoice("Model",defTable[1][1])
+      pnComboBox:AddChoice("Type" ,defTable[2][1])
+      pnComboBox:AddChoice("Name" ,defTable[3][1])
+      pnComboBox:AddChoice("Mesh" ,defTable[4][1])
+      pnComboBox.OnSelect = function(pnSelf, nInd, sVal, anyData)
+        asmlib.LogInstance("OPEN_FRAME: ComboBox.OnSelect: ID #"..nInd.."<"..sVal..">"..tostring(anyData))
+        pnSelf:SetValue(sVal)
+      end
       ------------ ModelPanel --------------
+      xySiz.x = 250 -- Display model properly
+      xyTmp.x, xyTmp.y = pnFrame:GetSize()
+      xyPos.x, xyPos.y = pnComboBox:GetPos()
+      xyPos.x = xyTmp.x - xySiz.x - xyDelta.x
+      xySiz.y = xyTmp.y - xyPos.y - xyDelta.y
+      --------------------------------------
       pnModelPanel:SetParent(pnFrame)
-      pnModelPanel:SetPos(500,25)
-      pnModelPanel:SetSize(250,255)
+      pnModelPanel:SetPos(xyPos.x,xyPos.y)
+      pnModelPanel:SetSize(xySiz.x,xySiz.y)
       pnModelPanel:SetVisible(true)
       pnModelPanel.LayoutEntity = function(pnSelf, oEnt)
         if(pnSelf.bAnimated) then pnSelf:RunAnimation() end
@@ -217,72 +349,18 @@ if(CLIENT) then
         oEnt:SetAngles(stSpawn.SAng)
         oEnt:SetPos(stSpawn.SPos)
       end
-      ------------ Button --------------
-      pnButton:SetParent(pnFrame)
-      pnButton:SetText(pnElements:Select(1).Label[2])
-      pnButton:SetPos(15,30)
-      pnButton:SetSize(55,30)
-      pnButton:SetVisible(true)
-      pnButton.DoClick = function()
-        asmlib.LogInstance("OPEN_FRAME: Button.DoClick: <"..pnButton:GetText().."> clicked")
-        asmlib.SetLogControl(asmlib.GetCoVar("logsmax", "INT"),
-                             asmlib.GetCoVar("logfile", "STR"))
-        local ExportDB     = asmlib.GetCoVar("exportdb","INT")
-        if(ExportDB ~= 0) then
-          asmlib.LogInstance("OPEN_FRAME: Button Exporting DB")
-          asmlib.ExportIntoFile("PIECES",",","INS")
-
-
-          asmlib.ExportIntoFile("PIECES","\t","DSV")
-
-
-        end
-      end
-      ------------ ListView --------------
-      pnListView:SetParent(pnFrame)
-      pnListView:SetVisible(false)
-      pnListView:SetSortable(true)
-      pnListView:SetMultiSelect(false)
-      pnListView:SetPos(10,65)
-      pnListView:SetSize(480,205)
-      pnListView:AddColumn("Used"):SetFixedWidth(55)   -- (1)
-      pnListView:AddColumn("Mesh"):SetFixedWidth(35)   -- (2)
-      pnListView:AddColumn("Type"):SetFixedWidth(100)  -- (3)
-      pnListView:AddColumn("Model"):SetFixedWidth(290) -- (4)
-      pnListView.OnRowSelected = function(pnSelf, nIndex, pnLine)
-        local uiMod = pnLine:GetColumnText(4) -- Forth index is actually the model in the table
-                      pnModelPanel:SetModel(uiMod)
-        local uiEnt = pnModelPanel:GetEntity()
-        local uiBox = asmlib.CacheBoxLayout(uiEnt,0,1.5,0.6)
-        if(not asmlib.IsExistent(uiBox)) then
-          return asmlib.StatusLog(false,"OPEN_FRAME: ListView.OnRowSelected: Box invalid for <"..uiMod..">") end
-        pnModelPanel:SetLookAt(uiBox.Eye)
-        pnModelPanel:SetCamPos(uiBox.Cam)
-        asmlib.ConCommandPly(oPly, "model" ,uiMod)
-        asmlib.ConCommandPly(oPly,"pointid",  1  )
-        asmlib.ConCommandPly(oPly,"pnextid",  2  )
-      end
-       if(not asmlib.UpdateListView(pnListView,frUsed,nCount)) then
-        asmlib.StatusLog(false,"OPEN_FRAME: ListView.OnRowSelected: Populate the list view failed")
-      end
-      ------------- ComboBox ---------------
-      pnComboBox:SetParent(pnFrame)
-      pnComboBox:SetPos(75,30)
-      pnComboBox:SetSize(95,30)
-      pnComboBox:SetVisible(true)
-      pnComboBox:SetValue("<Search BY>")
-      pnComboBox:AddChoice("Model",defTable[1][1])
-      pnComboBox:AddChoice("Type" ,defTable[2][1])
-      pnComboBox:AddChoice("Name" ,defTable[3][1])
-      pnComboBox:AddChoice("Mesh" ,defTable[4][1])
-      pnComboBox.OnSelect = function(pnSelf, nInd, sVal, anyData)
-        asmlib.LogInstance("OPEN_FRAME: ComboBox.OnSelect: ID #"..nInd.."<"..sVal..">"..tostring(anyData))
-        pnSelf:SetValue(sVal)
-      end
       ------------ TextEntry --------------
+      xyPos.x, xyPos.y = pnComboBox:GetPos()
+      xyTmp.x, xyTmp.y = pnComboBox:GetSize()
+      xyPos.x = xyPos.x + xyTmp.x + xyDelta.x
+      xySiz.y = xyTmp.y
+      -------------------------------------
+      xyTmp.x, xyTmp.y = pnModelPanel:GetPos()
+      xySiz.x = xyTmp.x - xyPos.x - xyDelta.x
+      -------------------------------------
       pnTextEntry:SetParent(pnFrame)
-      pnTextEntry:SetPos(175,30)
-      pnTextEntry:SetSize(305,30)
+      pnTextEntry:SetPos(xyPos.x,xyPos.y)
+      pnTextEntry:SetSize(xySiz.x,xySiz.y)
       pnTextEntry:SetVisible(true)
       pnTextEntry.OnEnter = function(pnSelf)
         local sName, sField = pnComboBox:GetSelected()
@@ -293,18 +371,54 @@ if(CLIENT) then
           return asmlib.StatusLog(false,"OPEN_FRAME: TextEntry.OnEnter: Failed to update ListView {"..sName.."#"..sField.."#"..sPattern.."}")
         end
       end
+      ------------ ListView --------------
+      xyPos.x, xyPos.y = pnButton:GetPos()
+      xyTmp.x, xyTmp.y = pnButton:GetSize()
+      xyPos.y = xyPos.y + xyTmp.y + xyDelta.y
+      ------------------------------------
+      xyTmp.x, xyTmp.y = pnTextEntry:GetPos()
+      xySiz.x, xySiz.y = pnTextEntry:GetSize()
+      xySiz.x = xyTmp.x + xySiz.x - xyDelta.x
+      ------------------------------------
+      xyTmp.x, xyTmp.y = pnFrame:GetSize()
+      xySiz.y = xyTmp.y - xyPos.y - xyDelta.y
+      ------------------------------------
+      local wUse = mathFloor(0.120377559 * xySiz.x)
+      local wMec = mathFloor(0.047460893 * xySiz.x)
+      local wTyp = mathFloor(0.214127559 * xySiz.x)
+      local wMod = xySiz.x - wUse - wMec - wTyp
+      pnListView:SetParent(pnFrame)
+      pnListView:SetVisible(false)
+      pnListView:SetSortable(true)
+      pnListView:SetMultiSelect(false)
+      pnListView:SetPos(xyPos.x,xyPos.y)
+      pnListView:SetSize(xySiz.x,xySiz.y)
+      pnListView:AddColumn("Used" ):SetFixedWidth(wUse) -- (1)
+      pnListView:AddColumn("Mesh" ):SetFixedWidth(wMec) -- (2)
+      pnListView:AddColumn("Type" ):SetFixedWidth(wTyp) -- (3)
+      pnListView:AddColumn("Model"):SetFixedWidth(wMod) -- (4)
+      pnListView.OnRowSelected = function(pnSelf, nIndex, pnLine)
+        local uiMod = pnLine:GetColumnText(4) -- Forth index is actually the model in the table
+                      pnModelPanel:SetModel(uiMod)
+        local uiEnt = pnModelPanel:GetEntity()
+        local uiBox = asmlib.CacheBoxLayout(uiEnt,0,nRatio,nRatio-1)
+        if(not asmlib.IsExistent(uiBox)) then
+          return asmlib.StatusLog(false,"OPEN_FRAME: ListView.OnRowSelected: Box invalid for <"..uiMod..">") end
+        pnModelPanel:SetLookAt(uiBox.Eye)
+        pnModelPanel:SetCamPos(uiBox.Cam)
+        asmlib.ConCommandPly(oPly, "model" ,uiMod)
+      end
+      if(not asmlib.UpdateListView(pnListView,frUsed,nCount)) then
+        asmlib.StatusLog(false,"OPEN_FRAME: ListView.OnRowSelected: Populate the list view failed") end
       ------------ Show the completed panel --------------
-      pnFrame:SetVisible(true)
-      pnFrame:Center()
-      pnFrame:MakePopup()
-      collectgarbage()
+      pnFrame:SetVisible(true); pnFrame:Center()
+      pnFrame:MakePopup()     ; collectgarbage()
       return asmlib.StatusLog(true,"OPEN_FRAME: Success")
     end)
 end
 
 ------ INITIALIZE DB ------
-asmlib.CreateTable("PIECES",
-{   
+asmlib.CreateTable("PIECES",{
     Timer = asmlib.TimerSettingMode(gaTimerSet[1]),
     Index = {{1},{2},{3},{1,4},{1,2},{2,4},{1,2,3}},
     [1] = {"MODEL" , "TEXT", "LOW", "QMK"},
@@ -322,7 +436,7 @@ if(fileExists(gsFullDSV.."PIECES.txt", "DATA")
   asmlib.ImportFromDSV("PIECES","\t",true)
 else
   asmlib.PrintInstance(gsToolNameU..": DB PIECES from LUA")
-  if(asmlib.GetCoVar("devmode" ,"INT") ~= 0) then
+  if(asmlib.GetAsmVar("devmode" ,"INT") ~= 0) then
     asmlib.DefaultType("Develop random")
     asmlib.InsertRecord("PIECES",{"models/props_wasteland/wheel02b.mdl",   "Development", "Dev1", 45, "65, 0, 0", "0.29567885398865,0.3865530192852,-0.36239844560623", "-90, 90, 180"})
   end

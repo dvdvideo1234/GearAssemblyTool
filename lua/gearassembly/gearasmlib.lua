@@ -128,7 +128,6 @@ local surfaceDrawTexturedRect = surface and surface.DrawTexturedRect
 local duplicatorStoreEntityModifier = duplicator and duplicator.StoreEntityModifier
 
 ---------------- CASHES SPACE --------------------
-
 local libCache  = {} -- Used to cache stuff in a Pool
 local libAction = {} -- Used to attach external function to the lib
 local libOpVars = {} -- Used to Store operational Variable Values
@@ -136,7 +135,6 @@ local libOpVars = {} -- Used to Store operational Variable Values
 module( "gearasmlib" )
 
 ---------------------------- PRIMITIVES ----------------------------
-
 function Delay(nAdd)
   local nAdd = tonumber(nAdd) or 0
   if(nAdd > 0) then
@@ -167,7 +165,7 @@ function IsString(anyValue)
   return (getmetatable(anyValue) == GetOpVar("TYPEMT_STRING"))
 end
 
-local function IsEmptyString(anyValue)
+function IsEmptyString(anyValue)
   if(not IsString(anyValue)) then return false end
   return (anyValue == "")
 end
@@ -182,8 +180,26 @@ function IsNumber(anyValue)
   return ((tonumber(anyValue) and true) or false)
 end
 
------------------- LOGS ------------------------
+function IsPlayer(oPly)
+  if(not IsExistent(oPly)) then return false end
+  if(not oPly:IsValid  ()) then return false end
+  if(not oPly:IsPlayer ()) then return false end
+  return true
+end
 
+function IsOther(oEnt)
+  if(not IsExistent(oEnt)) then return true end
+  if(not oEnt:IsValid())   then return true end
+  if(oEnt:IsPlayer())      then return true end
+  if(oEnt:IsVehicle())     then return true end
+  if(oEnt:IsNPC())         then return true end
+  if(oEnt:IsRagdoll())     then return true end
+  if(oEnt:IsWeapon())      then return true end
+  if(oEnt:IsWidget())      then return true end
+  return false
+end
+
+------------------ LOGS ------------------------
 local function FormatNumberMax(nNum,nMax)
   local nNum = tonumber(nNum)
   local nMax = tonumber(nMax)
@@ -259,14 +275,18 @@ function LogInstance(anyStuff)
     end
     if(not logMe) then return end
   end -- Only the chosen messages are processed
-  local sModeDB  = GetOpVar("MODE_DATABASE")
-  if(SERVER) then
-    Log("SERVER > "..GetOpVar("TOOLNAME_NU").." ["..sModeDB.."] "..anyStuff)
-  elseif(CLIENT) then
-    Log("CLIENT > "..GetOpVar("TOOLNAME_NU").." ["..sModeDB.."] "..anyStuff)
-  else
-    Log("NOINST > "..GetOpVar("TOOLNAME_NU").." ["..sModeDB.."] "..anyStuff)
+  local sSors = ""
+  if(GetOpVar("LOG_DEBUGEN")) then
+    local sInfo = debugGetinfo(3) or {}
+    sSors = sSors..(sInfo.linedefined and "["..sInfo.linedefined.."]" or "[n/a]")
+    sSors = sSors..(sInfo.name and sInfo.name or "Main")
+    sSors = sSors..(sInfo.currentline and ("["..sInfo.currentline.."]") or "[n/a]")
+    sSors = sSors..(sInfo.nparams and (" #"..sInfo.nparams) or " #N")
+    sSors = sSors..(sInfo.source and (" "..sInfo.source) or " @N")
   end
+  local sInst   = ((SERVER and "SERVER" or nil) or (CLIENT and "CLIENT" or nil) or "NOINST")
+  local sModeDB = GetOpVar("MODE_DATABASE")
+  Log(sInst.." > "..sTrac..GetOpVar("TOOLNAME_NU").." ["..sModeDB.."] "..anyStuff)
 end
 
 function StatusPrint(anyStatus,sError)
@@ -337,22 +357,27 @@ function SetIndexes(sType,I1,I2,I3,I4)
   return StatusLog(true,"SetIndexes["..sType.."]: Success")
 end
 
-function InitAssembly(sName)
+function InitAssembly(sName,sPurpose)
   SetOpVar("TYPEMT_STRING",getmetatable("TYPEMT_STRING"))
   SetOpVar("TYPEMT_SCREEN",{})
   SetOpVar("TYPEMT_CONTAINER",{})
   if(not IsString(sName)) then
-    return StatusLog(false,"InitAssembly: Name {"..type(sName).."}<"..tostring(sName).."> not string") end
+    return StatusPrint(false,"InitAssembly: Name <"..tostring(sName).."> not string") end
+  if(not IsString(sPurpose)) then
+    return StatusPrint(false,"InitAssembly: Purpose <"..tostring(sPurpose).."> not string") end
   if(IsEmptyString(sName) or tonumber(stringSub(sName,1,1))) then
-    return StatusPrint(false,"InitAssembly: Name is empty string") end
-  SetOpVar("TIME_EPOCH",Time())
+    return StatusPrint(false,"InitAssembly: Name invalid") end
+  if(IsEmptyString(sPurpose) or tonumber(stringSub(sPurpose,1,1))) then
+    return StatusPrint(false,"InitAssembly: Purpose invalid") end
+  SetOpVar("TIME_INIT",Time())
   SetOpVar("MAX_MASS",50000)
   SetOpVar("MAX_LINEAR", 100)
   SetOpVar("MAX_ROTATION",360)
-  SetOpVar("MAX_FOCELIMIT",1000000)
+  SetOpVar("MAX_FORCE",100000)
   SetOpVar("LOG_MAXLOGS",0)
   SetOpVar("LOG_CURLOGS",0)
   SetOpVar("LOG_LOGFILE","")
+  SetOpVar("LOG_DEBUGEN",true)
   SetOpVar("ANG_ZERO",Angle())
   SetOpVar("VEC_ZERO",Vector())
   SetOpVar("OPSYM_DISABLE","#")
@@ -360,9 +385,10 @@ function InitAssembly(sName)
   SetOpVar("OPSYM_DIVIDER","_")
   SetOpVar("OPSYM_DIRECTORY","/")
   SetOpVar("OPSYM_SEPARATOR",",")
+  SetOpVar("DIAG_SQUARE", 2 * mathSqrt(2))
   SetOpVar("GOLDEN_RATIO",1.61803398875)
   SetOpVar("NAME_INIT",stringLower(sName))
-  SetOpVar("NAME_PERP","assembly")
+  SetOpVar("NAME_PERP",stringLower(sPurpose))
   SetOpVar("TOOLNAME_NL",stringLower(GetOpVar("NAME_INIT")..GetOpVar("NAME_PERP")))
   SetOpVar("TOOLNAME_NU",stringUpper(GetOpVar("NAME_INIT")..GetOpVar("NAME_PERP")))
   SetOpVar("TOOLNAME_PL",GetOpVar("TOOLNAME_NL").."_")
@@ -377,7 +403,10 @@ function InitAssembly(sName)
   SetOpVar("ARRAY_DECODEPOA",{0,0,0,1,1,1,false})
   SetOpVar("TABLE_FREQUENT_MODELS",{})
   SetOpVar("TABLE_BORDERS",{})
+  SetOpVar("TABLE_CATEGORIES",{})
   SetOpVar("FILE_MODEL","%.mdl")
+  SetOpVar("OOP_DEFAULTKEY","(!@<#_$|%^|&>*)DEFKEY(*>&|^%|$_#<@!)")
+  SetOpVar("CVAR_LIMITNAME","asm"..GetOpVar("NAME_INIT").."s")
   SetOpVar("MODE_DATABASE",GetOpVar("MISS_NOAV"))
   SetOpVar("HASH_USER_PANEL",GetOpVar("TOOLNAME_PU").."USER_PANEL")
   SetOpVar("HASH_QUERY_STORE",GetOpVar("TOOLNAME_PU").."QHASH_QUERY")
@@ -582,30 +611,24 @@ end
 ---------- OOP -----------------
 
 function MakeContainer(sInfo,sDefKey)
-  local Curs = 0
-  local Data = {}
+  local Curs, Data = 0, {}
   local sSel, sIns, sDel, sMet = "", "", "", ""
-  local Info = tostring(sInfo or "Store Container")
-  local Key  = sDefKey or "(!_+*#-$@DEFKEY@$-#*+_!)"
+  local Info = tostring(sInfo or "Storage container")
+  local Key  = sDefKey or GetOpVar("OOP_DEFAULTKEY")
   local self = {}
   function self:GetInfo() return Info end
   function self:GetSize() return Curs end
   function self:GetData() return Data end
   function self:Insert(nsKey,anyValue)
-    sIns = nsKey or Key
-    sMet = "I"
-    if(not IsExistent(Data[sIns])) then
-      Curs = Curs + 1
-    end
+    sIns = nsKey or Key; sMet = "I"
+    if(not IsExistent(Data[sIns])) then Curs = Curs + 1; end
     Data[sIns] = anyValue
   end
   function self:Select(nsKey)
-    sSel = nsKey or Key
-    return Data[sSel]
+    sSel = nsKey or Key; return Data[sSel]
   end
   function self:Delete(nsKey,fnDel)
-    sDel = nsKey or Key
-    sMet = "D"
+    sDel = nsKey or Key; sMet = "D"
     if(IsExistent(Data[sDel])) then
       if(IsExistent(fnDel)) then
         fnDel(Data[sDel])
@@ -624,101 +647,104 @@ function MakeContainer(sInfo,sDefKey)
   return self
 end
 
-function MakeScreen(sW,sH,eW,eH,conPalette)
+--[[
+ * Creates a screen object better user api fro drawing on the gmod screens
+ * The drawing methods are the following:
+ * SURF - Uses the surface library to draw directly
+ * SEGM - Uses the surface library to draw line segment interpolations
+ * CAM3 - Uses the render  library to draw shapes in 3D space
+ * Operation keys for storing initial arguments are the following:
+ * TXT - Drawing text
+ * LIN - Drawing lines
+ * REC - Drawing a rectangle
+ * CIR - Drawing a circle
+]]--
+function MakeScreen(sW,sH,eW,eH,conColors)
   if(SERVER) then return nil end
   local sW, sH = (tonumber(sW) or 0), (tonumber(sH) or 0)
   local eW, eH = (tonumber(eW) or 0), (tonumber(eH) or 0)
-  if(eW <= 0 or eH <= 0) then return nil end
-  if(type(conPalette) ~= "table") then return nil end
-  local White  = Color(255,255,255,255)
-  local Palette
-  local ColorKey
-  local Text = {}
-        Text.Font = "Trebuchet18"
-        Text.DrawX = 0
-        Text.DrawY = 0
-        Text.ScrW  = 0
-        Text.ScrH  = 0
-        Text.LastW = 0
-        Text.LastH = 0
-  if(getmetatable(conPalette) == GetOpVar("TYPEMT_CONTAINER")) then
-    Palette = conPalette
+  if(sW < 0 or sH < 0) then return StatusLog(nil,"MakeScreen: Start dimension invalid") end
+  if(eW < 0 or eH < 0) then return StatusLog(nil,"MakeScreen: End dimension invalid") end
+  local Colors = {List = conColors, Key = GetOpVar("OOP_DEFAULTKEY"), Default = Color(255,255,255,255)}
+  if(Colors.List) then -- Container check
+    if(getmetatable(Colors.List) ~= GetOpVar("TYPEMT_CONTAINER"))
+      then return StatusLog(nil,"MakeScreen: Color list not container") end
+  else -- Color list is not present then create one
+    Colors.List = MakeContainer("Colors")
   end
-  local Texture = {}
-        Texture.Path = "vgui/white"
-        Texture.ID   = surfaceGetTextureID(Texture.Path)
+  local DrawMeth, DrawArgs, Text = {}, {}, {}
+  Text.DrwX, Text.DrwY = 0, 0
+  Text.ScrW, Text.ScrH = 0, 0
+  Text.LstW, Text.LstH = 0, 0
   local self = {}
   function self:GetSize() return (eW-sW), (eH-sH) end
   function self:GetCenter(nX,nY)
     local nW, nH = self:GetSize()
-    nW = (nW / 2) + (tonumber(nX) or 0)
-    nH = (nH / 2) + (tonumber(nY) or 0)
-    return nW, nH
+    local nX = (nW / 2) + (tonumber(nX) or 0)
+    local nY = (nH / 2) + (tonumber(nY) or 0)
+    return nX, nY
   end
-  function self:SetColor(keyColor)
-    if(not keyColor) then return end
-    local keyColor = keyColor or ColorKey; ColorKey = keyColor
-    local rgbColor = (Palette and keyColor) and Palette:Select(keyColor) or White
-    surfaceSetDrawColor(rgbColor.r, rgbColor.g, rgbColor.b, rgbColor.a)
-    surfaceSetTextColor(rgbColor.r, rgbColor.g, rgbColor.b, rgbColor.a)
+  function self:SetColor(keyColor,sMeth)
+    if(not IsExistent(keyColor) and not IsExistent(sMeth)) then
+      Colors.Key = GetOpVar("OOP_DEFAULTKEY")
+      return StatusLog(nil,"MakeScreen.SetColor: Color reset") end
+    local keyColor = keyColor or Colors.Key
+    if(not IsExistent(keyColor)) then
+      return StatusLog(nil,"MakeScreen.SetColor: Indexing skipped") end
+    if(not IsString  (   sMeth)) then
+      return StatusLog(nil,"MakeScreen.SetColor: Method <"..tostring(method).."> invalid") end
+    local rgbColor = Colors.List:Select(keyColor)
+    if(not IsExistent(rgbColor)) then rgbColor = Colors.Default end
+    if(tostring(Colors.Key) ~= tostring(keyColor)) then -- Update the color only on change
+      surfaceSetDrawColor(rgbColor.r, rgbColor.g, rgbColor.b, rgbColor.a)
+      surfaceSetTextColor(rgbColor.r, rgbColor.g, rgbColor.b, rgbColor.a)
+      Colors.Key = keyColor;
+    end -- The drawing color for these two methods uses surface library
+    return rgbColor, keyColor
   end
-  function self:SetTexture(sTexture)
-    if(not IsString(sTexture)) then return end
-    if(IsEmptyString(sTexture)) then return end
-    Texture.Path = sTexture
-    Texture.ID   = surfaceGetTextureID(Texture.Path)
-  end
-  function self:GetTexture() return Texture.ID, Texture.Path end
-  function self:DrawBackGround(keyColor)
-    self:SetColor(keyColor)
-    surfaceSetTexture(Texture.ID)
-    surfaceDrawTexturedRect(sW,sH,eW-sW,eH-sH)
-  end
-  function self:DrawRect(nX,nY,nW,nH,keyColor)
-    self:SetColor(keyColor)
-    surfaceSetTexture(Texture.ID)
-    surfaceDrawTexturedRect(nX,nY,nW,nH)
+  function self:SetDrawParam(sMeth,tArgs,sKey)
+    sMeth = tostring(sMeth or DrawMeth[sKey])
+    tArgs =         (tArgs or DrawArgs[sKey])
+    if(sMeth == "SURF") then
+      if(sKey == "TXT" and tArgs ~= DrawArgs[sKey]) then
+        surfaceSetFont(tostring(tArgs[1] or "Default")) end -- Time to set the font again
+    end
+    DrawMeth[sKey] = sMeth; DrawArgs[sKey] = tArgs
+    return sMeth, tArgs
   end
   function self:SetTextEdge(nX,nY)
-    Text.DrawX = (tonumber(nX) or 0)
-    Text.DrawY = (tonumber(nY) or 0)
-    Text.ScrW  = 0
-    Text.ScrH  = 0
-    Text.LastW = 0
-    Text.LastH = 0
-  end
-  function self:SetFont(sFont)
-    if(not IsString(sFont)) then return end
-    Text.Font = sFont or "Trebuchet18"
-    surfaceSetFont(Text.Font)
+    Text.ScrW, Text.ScrH = 0, 0
+    Text.LstW, Text.LstH = 0, 0
+    Text.DrwX = (tonumber(nX) or 0)
+    Text.DrwY = (tonumber(nY) or 0)
   end
   function self:GetTextState(nX,nY,nW,nH)
-    return (Text.DrawX + (nX or 0)), (Text.DrawY + (nY or 0)),
+    return (Text.DrwX + (nX or 0)), (Text.DrwY + (nY or 0)),
            (Text.ScrW  + (nW or 0)), (Text.ScrH  + (nH or 0)),
-            Text.LastW, Text.LastH
+            Text.LstW, Text.LstH
   end
-  function self:DrawText(sText,keyColor)
-    surfaceSetTextPos(Text.DrawX,Text.DrawY)
-    self:SetColor(keyColor)
-    surfaceDrawText(sText)
-    Text.LastW, Text.LastH = surfaceGetTextSize(sText)
-    Text.DrawY = Text.DrawY + Text.LastH
-    if(Text.LastW > Text.ScrW) then
-      Text.ScrW = Text.LastW
-    end
-    Text.ScrH = Text.DrawY
+  function self:DrawText(sText,keyColor,sMeth,tArgs)
+    local sMeth, tArgs = self:SetDrawParam(sMeth,tArgs,"TXT")
+    self:SetColor(keyColor, sMeth)
+    if(sMeth == "SURF") then
+      surfaceSetTextPos(Text.DrwX,Text.DrwY); surfaceDrawText(sText)
+      Text.LstW, Text.LstH = surfaceGetTextSize(sText)
+      Text.DrwY = Text.DrwY + Text.LstH
+      if(Text.LstW > Text.ScrW) then Text.ScrW = Text.LstW end
+      Text.ScrH = Text.DrwY
+    else return StatusLog(nil,"MakeScreen.DrawText: Draw method <"..sMeth.."> invalid") end
   end
-  function self:DrawTextAdd(sText,keyColor)
-    surfaceSetTextPos(Text.DrawX + Text.LastW,Text.DrawY - Text.LastH)
-    self:SetColor(keyColor)
-    surfaceDrawText(sText)
-    local LastW, LastH = surfaceGetTextSize(sText)
-    Text.LastW = Text.LastW + LastW
-    Text.LastH = LastH
-    if(Text.LastW > Text.ScrW) then
-      Text.ScrW = Text.LastW
-    end
-    Text.ScrH = Text.DrawY
+  function self:DrawTextAdd(sText,keyColor,sMeth,tArgs)
+    local sMeth, tArgs = self:SetDrawParam(sMeth,tArgs,"TXT")
+    self:SetColor(keyColor, sMeth)
+    if(sMeth == "SURF") then
+      surfaceSetTextPos(Text.DrwX + Text.LstW,Text.DrwY - Text.LstH)
+      surfaceDrawText(sText)
+      local LstW, LstH = surfaceGetTextSize(sText)
+      Text.LstW, Text.LstH = (Text.LstW + LstW), LstH
+      if(Text.LstW > Text.ScrW) then Text.ScrW = Text.LstW end
+      Text.ScrH = Text.DrwY
+    else return StatusLog(nil,"MakeScreen.DrawTextAdd: Draw method <"..sMeth.."> invalid") end
   end
   function self:Enclose(xyPnt)
     if(xyPnt.x < sW) then return -1 end
@@ -727,54 +753,74 @@ function MakeScreen(sW,sH,eW,eH,conPalette)
     if(xyPnt.y > eH) then return -1 end
     return 1
   end
-  function self:DrawLine(xyS,xyE,keyColor,sMeth,tArg)
-    self:SetColor(keyColor)
-    if(not (xyS and xyE)) then return end
-    if(not (xyS.x and xyS.y and xyE.x and xyE.y)) then return end
-    if(self:Enclose(xyS) == -1 or self:Enclose(xyE) == -1) then return end
-    local sdrwMeth = tostring(sMeth or "API")
-    if(sdrwMeth == "API") then
-      surfaceDrawLine(xyS.x,xyS.y,xyE.x,xyE.y)
-    elseif(sdrwMeth == "LIN") then
-      local nIter = tonumber(tArg[1]) or 0
+  function self:DrawLine(pS,pE,keyColor,sMeth,tArgs)
+    if(not (pS and pE)) then return end
+    local sMeth, tArgs = self:SetDrawParam(sMeth,tArgs,"LIN")
+    local rgbCl, keyCl = self:SetColor(keyColor, sMeth)
+    if(sMeth == "SURF") then
+      if(self:Enclose(pS) == -1) then
+        return StatusLog(nil,"MakeScreen.DrawLine: Start out of border") end
+      if(self:Enclose(pE) == -1) then
+        return StatusLog(nil,"MakeScreen.DrawLine: End out of border") end
+      surfaceDrawLine(pS.x,pS.y,pE.x,pE.y)
+    elseif(sMeth == "SEGM") then
+      if(self:Enclose(pS) == -1) then
+        return StatusLog(nil,"MakeScreen.DrawLine: Start out of border") end
+      if(self:Enclose(pE) == -1) then
+        return StatusLog(nil,"MakeScreen.DrawLine: End out of border") end
+      local nIter = mathClamp((tonumber(tArgs[1]) or 1),1,200)
       if(nIter <= 0) then return end
-      local nLx, nLy = (xyE.x - xyS.x), (xyE.y - xyS.y)
+      local nLx, nLy = (pE.x - pS.x), (pE.y - pS.y)
       local xyD = {x = (nLx / nIter), y = (nLy / nIter)}
-      local xyOld, xyNew = {x = xyS.x, y = xyS.y}, {x = 0,y = 0}
+      local xyOld, xyNew = {x = pS.x, y = pS.y}, {x = 0,y = 0}
       while(nIter > 0) do
         xyNew.x = xyOld.x + xyD.x
         xyNew.y = xyOld.y + xyD.y
-        self:DrawLine(xyOld,xyNew,keyColor)
-        surfaceDrawCircle(xyNew.x, xyNew.y, 10, Color(255,0,0))
+        surfaceDrawLine(xyOld.x,xyOld.y,xyNew.x,xyNew.y)
         xyOld.x, xyOld.y = xyNew.x, xyNew.y
         nIter = nIter - 1;
       end
-    end
+    elseif(sMeth == "CAM3") then
+      renderDrawLine(pS,pE,rgbCl,(tArgs[1] and true or false))
+    else return StatusLog(nil,"MakeScreen.DrawLine: Draw method <"..sMeth.."> invalid") end
   end
-  function self:DrawCircle(xyPos,nRad,keyColor,sMeth,tArg)
-    local sdrwMeth = tostring(sMeth or "API")
-    local keyColor = keyColor or ColorKey; ColorKey = keyColor
-    local rgbColor = (Palette and keyColor) and Palette:Select(keyColor) or White
-    if(sdrwMeth == "API") then surfaceDrawCircle(xyPos.x, xyPos.y, nRad, rgbColor)
-    elseif(sdrwMeth == "LIN") then
-      local nIter = tonumber(tArg[1]) or 0
-      if(nIter <= 0) then return end
-      local nCurAng = 0
-      local nMaxRot = (GetOpVar("MAX_ROTATION") * mathPi / 180)
-      local nStpRot = nMaxRot / nIter
+  function self:DrawRect(pS,pE,keyColor,sMeth,tArgs)
+    local sMeth, tArgs = self:SetDrawParam(sMeth,tArgs,"REC")
+    self:SetColor(keyColor,sMeth)
+    if(sMeth == "SURF") then
+      if(self:Enclose(pS) == -1) then
+        return StatusLog(nil,"MakeScreen.DrawRect: Start out of border") end
+      if(self:Enclose(pE) == -1) then
+        return StatusLog(nil,"MakeScreen.DrawRect: End out of border") end
+      surfaceSetTexture(surfaceGetTextureID(tostring(tArgs[1])))
+      surfaceDrawTexturedRect(pS.x,pS.y,pE.x-pS.x,pE.y-pS.y)
+    else return StatusLog(nil,"MakeScreen.DrawRect: Draw method <"..sMeth.."> invalid") end
+  end
+  function self:DrawCircle(pC,nRad,keyColor,sMeth,tArgs)
+    local sMeth, tArgs = self:SetDrawParam(sMeth,tArgs,"CIR")
+    local rgbCl, keyCl = self:SetColor(keyColor,sMeth)
+    if(sMeth == "SURF") then surfaceDrawCircle(pC.x, pC.y, nRad, rgbCl)
+    elseif(sMeth == "SEGM") then
+      local nItr = mathClamp((tonumber(tArgs[1]) or 1),1,200)
+      local nMax = (GetOpVar("MAX_ROTATION") * mathPi / 180)
+      local nStp, nAng = (nMax / nItr), 0
       local xyOld, xyNew, xyRad = {x=0,y=0}, {x=0,y=0}, {x=nRad,y=0}
-            xyOld.x = xyPos.x + xyRad.x
-            xyOld.y = xyPos.y + xyRad.y
-      while(nIter > 0) do
-        nCurAng = nCurAng + nStpRot
-        local nSin, nCos = mathSin(nCurAng), mathCos(nCurAng)
-        xyNew.x = xyPos.x + (xyRad.x * nCos - xyRad.y * nSin)
-        xyNew.y = xyPos.y + (xyRad.x * nSin + xyRad.y * nCos)
-        self:DrawLine(xyOld,xyNew,keyColor)
+            xyOld.x = pC.x + xyRad.x
+            xyOld.y = pC.y + xyRad.y
+      while(nItr > 0) do
+        nAng = nAng + nStp
+        local nSin, nCos = mathSin(nAng), mathCos(nAng)
+        xyNew.x = pC.x + (xyRad.x * nCos - xyRad.y * nSin)
+        xyNew.y = pC.y + (xyRad.x * nSin + xyRad.y * nCos)
+        surfaceDrawLine(xyOld.x,xyOld.y,xyNew.x,xyNew.y)
         xyOld.x, xyOld.y = xyNew.x, xyNew.y
-        nIter = nIter - 1;
+        nItr = nItr - 1;
       end
-    end
+    elseif(sMeth == "CAM3") then -- It is a projection of a sphere
+      renderSetMaterial(Material(tostring(tArgs[1] or "color")))
+      renderDrawSphere (pC,nRad,mathClamp(tArgs[2] or 1,1,200),
+                                mathClamp(tArgs[3] or 1,1,200),rgbCl)
+    else return StatusLog(nil,"MakeScreen.DrawCircle: Draw method <"..sMeth.."> invalid") end
   end
   setmetatable(self,GetOpVar("TYPEMT_SCREEN"))
   return self
@@ -809,18 +855,6 @@ function CallAction(sKey,A1,A2,A3,A4)
   return libAction[sKey].Act(A1,A2,A3,A4,libAction[sKey].Dat)
 end
 
-function IsOther(oEnt)
-  if(not oEnt)           then return true end
-  if(not oEnt:IsValid()) then return true end
-  if(oEnt:IsPlayer())    then return true end
-  if(oEnt:IsVehicle())   then return true end
-  if(oEnt:IsNPC())       then return true end
-  if(oEnt:IsRagdoll())   then return true end
-  if(oEnt:IsWeapon())    then return true end
-  if(oEnt:IsWidget())    then return true end
-  return false
-end
-
 local function AddLineListView(pnListView,frUsed,ivNdex)
   if(not IsExistent(pnListView)) then
     return StatusLog(nil,"LineAddListView: Missing panel") end
@@ -839,9 +873,9 @@ local function AddLineListView(pnListView,frUsed,ivNdex)
     return StatusLog(nil,"LineAddListView: Missing table definition") end
   local sModel = tValue.Table[defTable[1][1]]
   local sType  = tValue.Table[defTable[2][1]]
-  local nAct   = tValue.Table[defTable[4][1]]
+  local nMesh  = tValue.Table[defTable[4][1]]
   local nUsed  = RoundValue(tValue.Value,0.001)
-  local pnRec  = pnListView:AddLine(nUsed,nAct,sType,sModel)
+  local pnRec  = pnListView:AddLine(nUsed,nMesh,sType,sModel)
   if(not IsExistent(pnRec)) then
     return StatusLog(nil,"LineAddListView: Failed to create a ListView line for <"..sModel.."> #"..tostring(iNdex)) end
   return pnRec, tValue
@@ -996,54 +1030,56 @@ local function BorderValue(nsVal,sName)
   local Border = GetOpVar("TABLE_BORDERS")
         Border = Border[sName]
   if(IsExistent(Border)) then
-    if    (nsVal < Border[1]) then return Border[1]
-    elseif(nsVal > Border[2]) then return Border[2] end
+    if(Border[1] and nsVal < Border[1]) then return Border[1] end
+    if(Border[2] and nsVal > Border[2]) then return Border[2] end
   end
   return nsVal
 end
 
-function ModelToName(sModel)
+function ModelToName(sModel,bNoSettings)
   if(not IsString(sModel)) then
     return StatusLog("","ModelToName: Argument {"..type(sModel).."}<"..tostring(sModel)..">") end
   if(IsEmptyString(sModel)) then return StatusLog("","ModelToName: Empty string") end
   local fCh, bCh, Cnt = "", "", 1
-  local sSymDiv = GetOpVar("OPSYM_DIVIDER")
-  local sSymDir = GetOpVar("OPSYM_DIRECTORY")
-  local sModel  = stringGsub(stringToFileName(sModel),GetOpVar("FILE_MODEL"),"")
-  local gModel  = stringSub(sModel,1,-1) -- Create a copy so we can select cut-off parts later on
-  local tCut, tSub, tApp = SettingsModelToName("GET")
-  if(tCut and tCut[1]) then
-    while(tCut[Cnt] and tCut[Cnt+1]) do
-      fCh = tonumber(tCut[Cnt])
-      bCh = tonumber(tCut[Cnt+1])
-      if(not (IsExistent(fCh) and IsExistent(bCh))) then
-        return StatusLog("","ModelToName: Cannot cut the model in {"
-                 ..tostring(tCut[Cnt])..","..tostring(tCut[Cnt+1]).."} for "..sModel)
+  local sSymDiv, sSymDir = GetOpVar("OPSYM_DIVIDER"), GetOpVar("OPSYM_DIRECTORY")
+  local sModel = (stringSub(sModel,1, 1) ~= sSymDir) and (sSymDir..sModel) or sModel
+        sModel =  stringGsub(stringToFileName(sModel),GetOpVar("FILE_MODEL"),"")
+  local gModel =  stringSub(sModel,1,-1) -- Create a copy so we can select cut-off parts later on
+  if(not bNoSettings) then
+    local tCut, tSub, tApp = SettingsModelToName("GET")
+    if(tCut and tCut[1]) then
+      while(tCut[Cnt] and tCut[Cnt+1]) do
+        fCh = tonumber(tCut[Cnt])
+        bCh = tonumber(tCut[Cnt+1])
+        if(not (IsExistent(fCh) and IsExistent(bCh))) then
+          return StatusLog("","ModelToName: Cannot cut the model in {"
+                   ..tostring(tCut[Cnt])..","..tostring(tCut[Cnt+1]).."} for "..sModel)
+        end
+        LogInstance("ModelToName[CUT]: {"..tostring(tCut[Cnt])..", "..tostring(tCut[Cnt+1]).."} << "..gModel)
+        gModel = stringGsub(gModel,stringSub(sModel,fCh,bCh),"")
+        LogInstance("ModelToName[CUT]: {"..tostring(tCut[Cnt])..", "..tostring(tCut[Cnt+1]).."} >> "..gModel)
+        Cnt = Cnt + 2
       end
-      LogInstance("ModelToName[CUT]: {"..tostring(tCut[Cnt])..", "..tostring(tCut[Cnt+1]).."} << "..gModel)
-      gModel = stringGsub(gModel,stringSub(sModel,fCh,bCh),"")
-      LogInstance("ModelToName[CUT]: {"..tostring(tCut[Cnt])..", "..tostring(tCut[Cnt+1]).."} >> "..gModel)
-      Cnt = Cnt + 2
+      Cnt = 1
     end
-    Cnt = 1
-  end
-  -- Replace the unneeded parts by finding an in-string gModel
-  if(tSub and tSub[1]) then
-    while(tSub[Cnt]) do
-      fCh = tostring(tSub[Cnt]   or "")
-      bCh = tostring(tSub[Cnt+1] or "")
-      LogInstance("ModelToName[SUB]: {"..tostring(tSub[Cnt])..", "..tostring(tSub[Cnt+1]).."} << "..gModel)
-      gModel = stringGsub(gModel,fCh,bCh)
-      LogInstance("ModelToName[SUB]: {"..tostring(tSub[Cnt])..", "..tostring(tSub[Cnt+1]).."} >> "..gModel)
-      Cnt = Cnt + 2
+    -- Replace the unneeded parts by finding an in-string gModel
+    if(tSub and tSub[1]) then
+      while(tSub[Cnt]) do
+        fCh = tostring(tSub[Cnt]   or "")
+        bCh = tostring(tSub[Cnt+1] or "")
+        LogInstance("ModelToName[SUB]: {"..tostring(tSub[Cnt])..", "..tostring(tSub[Cnt+1]).."} << "..gModel)
+        gModel = stringGsub(gModel,fCh,bCh)
+        LogInstance("ModelToName[SUB]: {"..tostring(tSub[Cnt])..", "..tostring(tSub[Cnt+1]).."} >> "..gModel)
+        Cnt = Cnt + 2
+      end
+      Cnt = 1
     end
-    Cnt = 1
-  end
-  -- Append something if needed
-  if(tApp and tApp[1]) then
-    LogInstance("ModelToName[APP]: {"..tostring(tApp[Cnt])..", "..tostring(tApp[Cnt+1]).."} << "..gModel)
-    gModel = tostring(tApp[1] or "")..gModel..tostring(tApp[2] or "")
-    LogInstance("ModelToName[APP]: {"..tostring(tSub[Cnt])..", "..tostring(tSub[Cnt+1]).."} >> "..gModel)
+    -- Append something if needed
+    if(tApp and tApp[1]) then
+      LogInstance("ModelToName[APP]: {"..tostring(tApp[Cnt])..", "..tostring(tApp[Cnt+1]).."} << "..gModel)
+      gModel = tostring(tApp[1] or "")..gModel..tostring(tApp[2] or "")
+      LogInstance("ModelToName[APP]: {"..tostring(tSub[Cnt])..", "..tostring(tSub[Cnt+1]).."} >> "..gModel)
+    end
   end
   -- Trigger the capital-space using the divider
   if(stringSub(gModel,1,1) ~= sSymDiv) then gModel = sSymDiv..gModel end
@@ -1053,9 +1089,7 @@ function ModelToName(sModel)
     if(fCh > bCh) then
       sModel = sModel..stringSub(gModel,bCh+2,fCh-1)
     end
-    if(not IsEmptyString(sModel)) then
-      sModel = sModel.." "
-    end
+    if(not IsEmptyString(sModel)) then sModel = sModel.." " end
     sModel = sModel..stringUpper(stringSub(gModel,fCh+1,fCh+1))
     bCh = fCh
     fCh = stringFind(gModel,sSymDiv,fCh+1)
@@ -1326,16 +1360,20 @@ function SettingsModelToName(sMode, gCut, gSub, gApp)
   end
 end
 
-function DefaultType(anyType)
+function DefaultType(anyType,fooCateg)
   if(not IsExistent(anyType)) then
-    return GetOpVar("DEFAULT_TYPE") or "" end
-  SetOpVar("DEFAULT_TYPE",tostring(anyType))
+    return (GetOpVar("DEFAULT_TYPE") or "") end
   SettingsModelToName("CLR")
+  if(type(fooCateg) == "function") then
+    local Categ = GetOpVar("TABLE_CATEGORIES")
+          Categ[anyType] = fooCateg
+  end
+  SetOpVar("DEFAULT_TYPE",tostring(anyType))
 end
 
 function DefaultTable(anyTable)
   if(not IsExistent(anyTable)) then
-    return GetOpVar("DEFAULT_TABLE") or "" end
+    return (GetOpVar("DEFAULT_TABLE") or "") end
   SetOpVar("DEFAULT_TABLE",anyTable)
   SettingsModelToName("CLR")
 end
@@ -1343,16 +1381,16 @@ end
 ------------------------- PLAYER -----------------------------------
 
 function ConCommandPly(pPly,sCvar,snValue)
-  if(not pPly) then return StatusLog("","ConCommandPly: Player invalid") end
-  if(not IsString(sCvar)) then
+  if(not IsPlayer(pPly)) then return StatusLog("","ConCommandPly: Player <"..type(pPly)"> invalid") end
+  if(not IsString(sCvar)) then -- Make it like so the space will not be forgotten
     return StatusLog("","ConCommandPly: Convar {"..type(sCvar).."}<"..tostring(sCvar).."> not string") end
   return pPly:ConCommand(GetOpVar("TOOLNAME_PL")..sCvar.." "..tostring(snValue).."\n")
 end
 
 function PrintNotifyPly(pPly,sText,sNotifType)
-  if(not pPly) then
-    return StatusLog(false,"PrintNotifyPly: Player invalid") end
-  if(SERVER) then
+  if(not IsPlayer(pPly)) then
+    return StatusLog(false,"PrintNotifyPly: Player <"..type(pPly)"> invalid") end
+  if(SERVER) then -- Send notification to client that something happened
     pPly:SendLua("GAMEMODE:AddNotify(\""..sText.."\", NOTIFY_"..sNotifType..", 6)")
     pPly:SendLua("surface.PlaySound(\"ambient/water/drip"..mathRandom(1, 4)..".wav\")")
   end
@@ -1373,7 +1411,7 @@ function UndoAddEntityPly(oEnt)
 end
 
 function UndoFinishPly(pPly,anyMessage)
-  if(not pPly) then return StatusLog(false,"UndoFinishPly: Player invalid") end
+  if(not IsPlayer(pPly)) then return StatusLog(false,"UndoFinishPly: Player <"..type(pPly)"> invalid") end
   pPly:EmitSound("physics/metal/metal_canister_impact_hard"..mathFloor(mathRandom(3))..".wav")
   undoSetCustomUndoText(GetOpVar("LABEL_UNDO")..tostring(anyMessage or ""))
   undoSetPlayer(pPly)
@@ -1382,18 +1420,16 @@ function UndoFinishPly(pPly,anyMessage)
 end
 
 function LoadKeyPly(pPly, sKey)
-  local keyPly   = GetOpVar("HASH_PLAYER_KEYDOWN")
+  local keyPly   = GetOpVar("HASH_PLAYER_INFO")
   local plyCache = libCache[keyPly]
   if(not IsExistent(plyCache)) then
-    libCache[keyPly] = {}
-    plyCache = libCache[keyPly]
-  end
-  if(not pPly) then
-    return StatusLog(false,"LoadKeyPly: Player not available") end
-  local spName   = pPly:GetName()
-  local plyPlace = plyCache[spName]
+    libCache[keyPly] = {}; plyCache = libCache[keyPly] end
+  if(not IsPlayer(pPly)) then
+    return StatusLog(false,"LoadKeyPly: Player <"..type(pPly)"> not available") end
+  local plyNick  = pPly:Nick()
+  local plyPlace = plyCache[plyNick]
   if(not IsExistent(plyPlace)) then
-    plyCache[spName] = {
+    plyCache[plyNick] = {
       ["ALTLFT"]  = false,
       ["ALTRGH"]  = false,
       ["ATTLFT"]  = false,
@@ -1413,14 +1449,12 @@ function LoadKeyPly(pPly, sKey)
       ["RIGHT"]   = false,
       ["WALK"]    = false
     }
-    plyPlace = plyCache[spName]
+    plyPlace = plyCache[plyNick]
   end
   if(IsExistent(sKey)) then
     if(not IsString(sKey)) then
       return StatusLog(false,"LoadKeyPly: Key hash {"..type(sKey).."}<"..tostring(sKey).."> not string") end
-    if(sKey == "DEBUG") then
-      return plyPlace
-    end
+    if(sKey == "DEBUG") then return plyPlace end
     LogInstance("LoadKeyPly: NamePK <"..sKey.."> = "..tostring(plyPlace[sKey]))
     return plyPlace[sKey]
   end
@@ -1442,7 +1476,7 @@ function LoadKeyPly(pPly, sKey)
   plyPlace["LEFT"]    = pPly:KeyDown(IN_LEFT      )
   plyPlace["RIGHT"]   = pPly:KeyDown(IN_RIGHT     )
   plyPlace["WALK"]    = pPly:KeyDown(IN_WALK      )
-  return StatusLog(true,"LoadKeyPly: Player <"..spName.."> keys loaded")
+  return StatusLog(true,"LoadKeyPly: Player <"..plyNick.."> keys loaded")
 end
 
 -------------------------- BUILDSQL ------------------------------
@@ -1978,11 +2012,9 @@ local function TimerAttach(oLocation,tKeys,defTable,anyMessage)
   local sModeDB = GetOpVar("MODE_DATABASE")
   LogInstance("TimerAttach: Called by <"..tostring(anyMessage).."> for Place["..tostring(Key).."]")
   if(sModeDB == "SQL") then
-    local nNowTM = Time() -- When is "now" ?
     -- Get the proper line count to avoid doing in every caching function"
     if(IsExistent(Place[Key].Kept)) then Place[Key].Kept = Place[Key].Kept - 1 end
-    -- If we have a timer, and it does speak, we advise you send your regards..
-    local tTimer = defTable.Timer
+    local nNowTM, tTimer = Time(), defTable.Timer -- See that there is a timer and get "now"
     if(not IsExistent(tTimer)) then
       return StatusLog(Place[Key],"TimerAttach: Missing timer settings") end
     Place[Key].Used = nNowTM -- Make the first selected deletable to avoid phantom records
@@ -2157,8 +2189,9 @@ end
 
 
 ----------------------- PANEL QUERY -------------------------------
-
---- Used to Populate the CPanel Tree
+--[[
+ * Caches the date needed to populate the CPanel tree
+]]--
 function CacheQueryPanel()
   local defTable = GetOpVar("DEFTABLE_PIECES")
   if(not defTable) then
@@ -2280,7 +2313,7 @@ function ImportDSV(sTable,sDelim,bCommit,sPrefix)
         end
         if(bCommit) then InsertRecord(sTable,Data) end
       end; sLine = ""
-    else; sLine = sLine..sChar end
+    else sLine = sLine..sChar end
   end; F:Close()
 end
 
@@ -2295,9 +2328,11 @@ function DeleteExternalDatabase(sTable,sMethod,sPrefix)
   local fName = GetOpVar("DIRPATH_BAS")
   if(not GetOpVar("DIRPATH_"..sMethod)) then
     return StatusLog(false,"DeleteExternalDatabase: Directory index <"..sMethod.."> missing") end
-  fName = fName..GetOpVar("DIRPATH_"..sMethod) 
+  fName = fName..GetOpVar("DIRPATH_"..sMethod)
   fName = fName..tostring(sPrefix or GetInstPref())..defTable.Name..".txt"
-  if(fileExists(fName,"DATA")) then fileDelete(fName) end
+  if(not fileExists(fName,"DATA")) then
+    return StatusLog(true,"DeleteExternalDatabase: File <"..fName.."> missing") end
+  fileDelete(fName)
   return StatusLog(true,"DeleteExternalDatabase: Success")
 end
 
@@ -2421,18 +2456,16 @@ end
 
 function GetCustomAngBBZ(oEnt,oRec,nMode)
   if(not (oEnt and oEnt:IsValid())) then return 0 end
-  local Mode = nMode or 0
+  local Mode = tonumber(nMode) or 0
   if(oRec and Mode ~= 0) then
     local aAngDB = Angle(oRec.A[caP],oRec.A[caY],oRec.A[caR])
     local vOBB = oEnt:OBBMins()
           SubVector(vOBB,oRec.M)
           vOBB:Rotate(aAngDB)
           DecomposeByAngle(vOBB,Angle(0,0,0))
-    return math.abs(vOBB[cvZ])
-  else
-    return (oEnt:OBBMaxs() - oEnt:OBBMins()):Length() / 2.828 -- 2 * sqrt(2)
+    return mathAbs(vOBB[cvZ])
   end
-  return 0
+  return (oEnt:OBBMaxs() - oEnt:OBBMins()):Length() / GetOpVar("DIAG_SQUARE")
 end
 
 ----------------------------- SNAPPING ------------------------------
@@ -2565,17 +2598,17 @@ end
 
 local function GetEntityOrTrace(oEnt)
   if(oEnt and oEnt:IsValid()) then return oEnt end
-  local Ply = LocalPlayer()
-  if(not IsExistent(Ply)) then
-    return StatusLog(nil,"GetEntityOrTrace: Player missing") end
-  local Trace = Ply:GetEyeTrace()
-  if(not IsExistent(Trace)) then
+  local pPly = LocalPlayer()
+  if(not IsPlayer(pPly)) then
+    return StatusLog(nil,"GetEntityOrTrace: Player <"..type(pPly)"> missing") end
+  local stTrace = pPly:GetEyeTrace()
+  if(not IsExistent(stTrace)) then
     return StatusLog(nil,"GetEntityOrTrace: Trace missing") end
-  if(not Trace.Hit) then -- Boolean
+  if(not stTrace.Hit) then -- Boolean
     return StatusLog(nil,"GetEntityOrTrace: Trace not hit") end
-  if(Trace.HitWorld) then -- Boolean
+  if(stTrace.HitWorld) then -- Boolean
     return StatusLog(nil,"GetEntityOrTrace: Trace hit world") end
-  local trEnt = Trace.Entity
+  local trEnt = stTrace.Entity
   if(not (trEnt and trEnt:IsValid())) then
     return StatusLog(nil,"GetEntityOrTrace: Trace entity invalid") end
   return StatusLog(trEnt,"GetEntityOrTrace: Success "..tostring(trEnt))
@@ -2631,20 +2664,49 @@ function AttachBodyGroups(ePiece,sBgrpIDs)
   return StatusLog(true,"AttachBodyGroups: Success")
 end
 
-function MakePiece(sModel,vPos,aAng,nMass,sBgSkIDs,clColor)
+local function SetPosBound(ePiece,vPos,oPly,sMode)
+  if(not (ePiece and ePiece:IsValid())) then
+    return StatusLog(false,"SetPosBound: Entity invalid") end
+  if(not IsExistent(vPos)) then
+    return StatusLog(false,"SetPosBound: Position missing") end
+  if(not IsPlayer(oPly)) then
+    return StatusLog(false,"SetPosBound: Player <"..tostring(oPly)"> invalid") end
+  local sMode = tostring(sMode or "LOG") -- Error mode is "LOG" by default
+  if(sMode == "OFF") then
+    ePiece:SetPos(vPos)
+    return StatusLog(true,"SetPosBound("..sMode..") Tuned off")
+  end
+  if(utilIsInWorld(vPos)) then ePiece:SetPos(vPos) else
+    ePiece:Remove()
+    if(sMode == "HINT" or sMode == "GENERIC" or sMode == "ERROR") then
+      PrintNotifyPly(oPly,"Position out of map bounds!",sMode) end
+    return StatusLog(false,"SetPosBound("..sMode.."): Position ["..tostring(vPos).."] out of map bounds")
+  end
+  return StatusLog(true,"SetPosBound("..sMode.."): Success")
+end
+
+function MakePiece(pPly,sModel,vPos,aAng,nMass,sBgSkIDs,clColor,sMode)
   if(CLIENT) then return StatusLog(nil,"MakePiece: Working on client") end
+  if(not IsPlayer(pPly)) then -- If not player we cannot register limit
+    return StatusLog(nil,"MakePiece: Player missing <"..tostring(pPly)..">") end
+  local sLimit = GetOpVar("CVAR_LIMITNAME") -- Get limit name
+  if(not pPly:CheckLimit(sLimit)) then -- Check TA interanl limit
+    return StatusLog(nil,"MakePiece: Track limit reached") end
+  if(not pPly:CheckLimit("props")) then -- Check the props limit
+    return StatusLog(nil,"MakePiece: Prop limit reached") end
   local stPiece = CacheQueryPiece(sModel)
-  if(not IsExistent(stPiece)) then
-    return StatusLog(nil,"MakePiece: Record missing <"..sModel..">") end
+  if(not IsExistent(stPiece)) then -- Not present in the database
+    return StatusLog(nil,"MakePiece: Record missing for <"..sModel..">") end
   local ePiece = entsCreate("prop_physics")
   if(not (ePiece and ePiece:IsValid())) then
-    return StatusLog(nil,"MakePiece: Entity invalid") end
+    return StatusLog(nil,"MakePiece: Piece <"..tostring(ePiece).."> invalid") end
   ePiece:SetCollisionGroup(COLLISION_GROUP_NONE)
   ePiece:SetSolid(SOLID_VPHYSICS)
   ePiece:SetMoveType(MOVETYPE_VPHYSICS)
   ePiece:SetNotSolid(false)
   ePiece:SetModel(sModel)
-  ePiece:SetPos(vPos or GetOpVar("VEC_ZERO"))
+  if(not SetPosBound(ePiece,vPos or GetOpVar("VEC_ZERO"),pPly)) then
+    return StatusLog(nil,"MakePiece: "..pPly:Nick().." spawned <"..sModel.."> outside of bounds") end
   ePiece:SetAngles(aAng or GetOpVar("ANG_ZERO"))
   ePiece:Spawn()
   ePiece:Activate()
@@ -2661,180 +2723,136 @@ function MakePiece(sModel,vPos,aAng,nMass,sBgSkIDs,clColor)
   ePiece:SetSkin(mathClamp(tonumber(BgSk[2]) or 0,0,ePiece:SkinCount()-1))
   if(not AttachBodyGroups(ePiece,BgSk[1] or "")) then ePiece:Remove()
     return StatusLog(nil,"MakePiece: Failed to attach bodygroups") end
-  if(not AttachAdditions(ePiece)) then ePiece:Remove()
-    return StatusLog(nil,"MakePiece: Failed to attach additions") end
-  return StatusLog(ePiece,"MakePiece: Success "..tostring(ePiece))
+  pPly:AddCount(sLimit , ePiece); pPly:AddCleanup(sLimit , ePiece) -- This sets the ownership
+  pPly:AddCount("props", ePiece); pPly:AddCleanup("props", ePiece) -- To be deleted with clearing props
+  return StatusLog(ePiece,"MakePiece: "..tostring(ePiece)..sModel)
 end
 
 function HookOnRemove(oBas,oEnt,arCTable,nMax)
-  if(not (oBas and oBas:IsValid())) then return end
-  if(not (oEnt and oEnt:IsValid())) then return end
-  if(not (arCTable and nMax)) then return end
+  if(not (oBas and oBas:IsValid())) then return StatusLog(nil,"HookOnRemove: Base invalid") end
+  if(not (oEnt and oEnt:IsValid())) then return StatusLog(nil,"HookOnRemove: Prop invalid") end
+  if(not (arCTable and nMax)) then return StatusLog(nil,"HookOnRemove: Constraint list empty") end
   if(nMax < 1) then return end
   local Ind = 1
   while(Ind <= nMax) do
     if(not arCTable[Ind]) then
-      StatusLog(nil,"HookOnRemove > Nil value on index "..Ind..", ignored !")
-    end
-    oEnt:DeleteOnRemove(arCTable[Ind])
-    oBas:DeleteOnRemove(arCTable[Ind])
-    Ind = Ind + 1
-  end
-  LogInstance("HookOnRemove > Done "..(Ind-1).." of "..nMax..".")
+      StatusLog(nil,"HookOnRemove: Empty value on index "..tostring(Ind)..", ignored !")
+    else oEnt:DeleteOnRemove(arCTable[Ind]); oBas:DeleteOnRemove(arCTable[Ind]); Ind = Ind + 1 end
+  end; LogInstance("HookOnRemove: Done "..(Ind-1).." of "..nMax..".")
 end
 
 function ApplyPhysicalAnchor(ePiece,eBase,vPos,vNorm,nID,nNoCollid,nForceLim,nFreeze,nGrav,nNoPhyGun)
   local ConstrDB = GetOpVar("CONTAIN_CONSTRAINT_TYPE")
-  local ConID    = tonumber(nID      ) or 1
-  local Freeze   = tonumber(nFreeze  ) or 0
-  local Gravity  = tonumber(nGrav    ) or 0
-  local NoCollid = tonumber(nNoCollid) or 0
-  local ForceLim = tonumber(nForceLim) or 0
-  local NoPhyGun = tonumber(nNoPhyGun) or 0
+  local CID = tonumber(nID) or 1
+  local Frz = tonumber(nFreeze) or 0
+  local Grv = tonumber(nGrav) or 0
+  local NoC = tonumber(nNoCollid) or 0
+  local FrL = tonumber(nForceLim) or 0
+  local NoP = tonumber(nNoPhyGun) or 0
   local IsIn
-  local ConstrInfo = ConstrDB:Select(ConID)
+  local ConstrInfo = ConstrDB:Select(CID)
+
   if(not IsExistent(ConstrInfo)) then
-    return StatusLog(false,"Piece:Anchor() Constraint not available")
-  end
-  LogInstance("Piece:Anchor() Creating "..ConstrInfo.Name)
+    return StatusLog(false,"ApplyPhysicalAnchor: Constraint not available") end
+  LogInstance("ApplyPhysicalAnchor: Creating "..ConstrInfo.Name.."{"..CID..","..Frz..","..Grv..","..NoC..","..FrL..","..NoP.."}")
   if(not (ePiece and ePiece:IsValid())) then
-    return StatusLog(false,"Piece:Anchor() Piece not valid")
-  end
+    return StatusLog(false,"ApplyPhysicalAnchor: Piece not valid") end
   if(IsOther(ePiece)) then
-    return StatusLog(false,"Piece:Anchor() Piece is other object")
-  end
+    return StatusLog(false,"ApplyPhysicalAnchor: Piece is other object") end
   if(not constraintCanConstrain(ePiece,0)) then
-    return StatusLog(false,"Piece:Anchor() Cannot constrain Piece")
-  end
+    return StatusLog(false,"ApplyPhysicalAnchor: Cannot constrain Piece") end
   local pyPiece = ePiece:GetPhysicsObject()
   if(not (pyPiece and pyPiece:IsValid())) then
-    return StatusLog(false,"Piece:Anchor() Phys Piece not valid")
-  end
+    return StatusLog(false,"ApplyPhysicalAnchor: Phys Piece not valid") end
   constructSetPhysProp(nil,ePiece,0,pyPiece,{Material = "gmod_ice"})
-  if(Freeze == 0) then
-    pyPiece:EnableMotion(true)
-  end
-  if(Gravity == 0) then
-    constructSetPhysProp(nil,ePiece,0,pyPiece,{GravityToggle = false})
-  end
-  if(NoPhyGun ~= 0) then --  is my custom child ...
-    ePiece:SetUnFreezable(true)
-    ePiece.PhysgunDisabled = true
-    duplicatorStoreEntityModifier(ePiece,GetToolPrefL().."nophysgun",{[1] = true})
-  end
-  if(not IsIn and ConID == 1) then
-      IsIn = ConID
-  end
+  if(Frz == 0) then pyPiece:EnableMotion(true) end
+  if(Grv == 0) then constructSetPhysProp(nil,ePiece,0,pyPiece,{GravityToggle = false}) end
+  if(NoP ~= 0) then ePiece:SetUnFreezable(true); ePiece.PhysgunDisabled = true
+    duplicatorStoreEntityModifier(ePiece,GetToolPrefL().."nophysgun",{[1] = true}) end
+  if(not IsIn and CID == 1) then IsIn = CID end
   if(not (eBase and eBase:IsValid())) then
-    return StatusLog(0,"Piece:Anchor() Base not valid")
-  end
+    return StatusLog(0,"ApplyPhysicalAnchor: Base not valid") end
   if(not constraintCanConstrain(eBase,0)) then
-    return StatusLog(false,"Piece:Anchor() Cannot constrain Base")
-  end
+    return StatusLog(false,"ApplyPhysicalAnchor: Cannot constrain Base") end
   if(IsOther(eBase)) then
-    return StatusLog(false,"Piece:Anchor() Base is other object")
-  end
-  if(not IsIn and ConID == 2) then
+    return StatusLog(false,"ApplyPhysicalAnchor: Base is other object") end
+  if(not IsIn and CID == 2) then
     -- http://wiki.garrysmod.com/page/Entity/SetParent
     ePiece:SetParent(eBase)
-    IsIn = ConID
-  elseif(not IsIn and ConID == 3) then
+    IsIn = CID
+  elseif(not IsIn and CID == 3) then
     -- http://wiki.garrysmod.com/page/constraint/Weld
-    local C = ConstrInfo.Make(ePiece,eBase,0,0,ForceLim,(NoCollid ~= 0),false)
+    local C = ConstrInfo.Make(ePiece,eBase,0,0,FrL,(NoC ~= 0),false)
     HookOnRemove(eBase,ePiece,{C},1)
-    IsIn = ConID
+    IsIn = CID
   end
-  if(not IsIn and ConID == 4 and vNorm) then
+  if(not IsIn and CID == 4 and vNorm) then
     -- http://wiki.garrysmod.com/page/constraint/Axis
     local LPos1 = pyPiece:GetMassCenter()
     local LPos2 = ePiece:LocalToWorld(LPos1)
           LPos2:Add(vNorm)
           LPos2:Set(eBase:WorldToLocal(LPos2))
     local C = ConstrInfo.Make(ePiece,eBase,0,0,
-                LPos1,LPos2,ForceLim,0,0,NoCollid)
+                LPos1,LPos2,FrL,0,0,NoC)
      HookOnRemove(eBase,ePiece,{C},1)
-     IsIn = ConID
-  elseif(not IsIn and ConID == 5) then
+     IsIn = CID
+  elseif(not IsIn and CID == 5) then
     -- http://wiki.garrysmod.com/page/constraint/Ballsocket ( HD )
-    local C = ConstrInfo.Make(eBase,ePiece,0,0,pyPiece:GetMassCenter(),ForceLim,0,NoCollid)
+    local C = ConstrInfo.Make(eBase,ePiece,0,0,pyPiece:GetMassCenter(),FrL,0,NoC)
     HookOnRemove(eBase,ePiece,{C},1)
-    IsIn = ConID
-  elseif(not IsIn and ConID == 6 and vPos) then
+    IsIn = CID
+  elseif(not IsIn and CID == 6 and vPos) then
     -- http://wiki.garrysmod.com/page/constraint/Ballsocket ( TR )
     local vLPos2 = eBase:WorldToLocal(vPos)
-    local C = ConstrInfo.Make(ePiece,eBase,0,0,vLPos2,ForceLim,0,NoCollid)
+    local C = ConstrInfo.Make(ePiece,eBase,0,0,vLPos2,FrL,0,NoC)
     HookOnRemove(eBase,ePiece,{C},1)
-    IsIn = ConID
+    IsIn = CID
   end
   -- http://wiki.garrysmod.com/page/constraint/AdvBallsocket
   local pyBase = eBase:GetPhysicsObject()
   if(not (pyBase and pyBase:IsValid())) then
-    return StatusLog(false,"Piece:Anchor() Phys Base not valid")
-  end
+    return StatusLog(false,"ApplyPhysicalAnchor: Phys Base not valid") end
   local Min,Max = 0.01,180
   local LPos1 = pyBase:GetMassCenter()
   local LPos2 = pyPiece:GetMassCenter()
-  if(not IsIn and ConID == 7) then -- Lock X
-    local C = ConstrInfo.Make(ePiece,eBase,0,0,LPos1,LPos2,ForceLim,0,-Min,-Max,-Max,Min,Max,Max,0,0,0,1,NoCollid)
+  if(not IsIn and CID == 7) then -- Lock X
+    local C = ConstrInfo.Make(ePiece,eBase,0,0,LPos1,LPos2,FrL,0,-Min,-Max,-Max,Min,Max,Max,0,0,0,1,NoC)
     HookOnRemove(eBase,ePiece,{C},1)
-    IsIn = ConID
-  elseif(not IsIn and ConID == 8) then -- Lock Y
-    local C = ConstrInfo.Make(ePiece,eBase,0,0,LPos1,LPos2,ForceLim,0,-Max,-Min,-Max,Max,Min,Max,0,0,0,1,NoCollid)
+    IsIn = CID
+  elseif(not IsIn and CID == 8) then -- Lock Y
+    local C = ConstrInfo.Make(ePiece,eBase,0,0,LPos1,LPos2,FrL,0,-Max,-Min,-Max,Max,Min,Max,0,0,0,1,NoC)
     HookOnRemove(eBase,ePiece,{C},1)
-    IsIn = ConID
-  elseif(not IsIn and ConID == 9) then -- Lock Z
-    local C = ConstrInfo.Make(ePiece,eBase,0,0,LPos1,LPos2,ForceLim,0,-Max,-Max,-Min,Max,Max,Min,0,0,0,1,NoCollid)
+    IsIn = CID
+  elseif(not IsIn and CID == 9) then -- Lock Z
+    local C = ConstrInfo.Make(ePiece,eBase,0,0,LPos1,LPos2,FrL,0,-Max,-Max,-Min,Max,Max,Min,0,0,0,1,NoC)
     HookOnRemove(eBase,ePiece,{C},1)
-    IsIn = ConID
-  elseif(not IsIn and ConID == 10) then -- Spin X
-    local C1 = ConstrInfo.Make(ePiece,eBase,0,0,LPos1,LPos2,ForceLim,0,-Max,-Min,-Min,Max, Min, Min,0,0,0,1,NoCollid)
-    local C2 = ConstrInfo.Make(ePiece,eBase,0,0,LPos1,LPos2,ForceLim,0,-Max, Min, Min,Max,-Min,-Min,0,0,0,1,NoCollid)
+    IsIn = CID
+  elseif(not IsIn and CID == 10) then -- Spin X
+    local C1 = ConstrInfo.Make(ePiece,eBase,0,0,LPos1,LPos2,FrL,0,-Max,-Min,-Min,Max, Min, Min,0,0,0,1,NoC)
+    local C2 = ConstrInfo.Make(ePiece,eBase,0,0,LPos1,LPos2,FrL,0,-Max, Min, Min,Max,-Min,-Min,0,0,0,1,NoC)
     HookOnRemove(eBase,ePiece,{C1,C2},2)
-    IsIn = ConID
-  elseif(not IsIn and ConID == 11) then -- Spin Y
-    local C1 = ConstrInfo.Make(ePiece,eBase,0,0,LPos1,LPos2,ForceLim,0,-Min,-Max,-Min, Min,Max, Min,0,0,0,1,NoCollid)
-    local C2 = ConstrInfo.Make(ePiece,eBase,0,0,LPos1,LPos2,ForceLim,0, Min,-Max, Min,-Min,Max,-Min,0,0,0,1,NoCollid)
+    IsIn = CID
+  elseif(not IsIn and CID == 11) then -- Spin Y
+    local C1 = ConstrInfo.Make(ePiece,eBase,0,0,LPos1,LPos2,FrL,0,-Min,-Max,-Min, Min,Max, Min,0,0,0,1,NoC)
+    local C2 = ConstrInfo.Make(ePiece,eBase,0,0,LPos1,LPos2,FrL,0, Min,-Max, Min,-Min,Max,-Min,0,0,0,1,NoC)
     HookOnRemove(eBase,ePiece,{C1,C2},2)
-    IsIn = ConID
-  elseif(not IsIn and ConID == 12) then -- Spin Z
-    local C1 = ConstrInfo.Make(ePiece,eBase,0,0,LPos1,LPos2,ForceLim,0,-Min,-Min,-Max, Min, Min,Max,0,0,0,1,NoCollid)
-    local C2 = ConstrInfo.Make(ePiece,eBase,0,0,LPos1,LPos2,ForceLim,0, Min, Min,-Max,-Min,-Min,Max,0,0,0,1,NoCollid)
+    IsIn = CID
+  elseif(not IsIn and CID == 12) then -- Spin Z
+    local C1 = ConstrInfo.Make(ePiece,eBase,0,0,LPos1,LPos2,FrL,0,-Min,-Min,-Max, Min, Min,Max,0,0,0,1,NoC)
+    local C2 = ConstrInfo.Make(ePiece,eBase,0,0,LPos1,LPos2,FrL,0, Min, Min,-Max,-Min,-Min,Max,0,0,0,1,NoC)
     HookOnRemove(eBase,ePiece,{C1,C2},2)
-    IsIn = ConID
+    IsIn = CID
   end
-  return StatusLog(IsIn,"Piece:Anchor() status is <"..tostring(IsIn)..">")
+  return StatusLog(IsIn,"ApplyPhysicalAnchor: status is <"..tostring(IsIn)..">")
 end
 
-function SetBoundPos(ePiece,vPos,oPly,sMode)
-  if(not (ePiece and ePiece:IsValid())) then
-    return StatusLog(false,"Piece:SetBoundPos: Entity invalid") end
-  if(not vPos) then
-    return StatusLog(false,"Piece:SetBoundPos: Position invalid") end
-  if(not oPly) then
-    return StatusLog(false,"Piece:SetBoundPos: Player invalid") end
-  local sMode = tostring(sMode or "LOG")
-  if(sMode == "OFF") then
-    ePiece:SetPos(vPos)
-    return StatusLog(true,"Piece:SetBoundPos("..sMode..") Tuned off")
-  end
-  if(utilIsInWorld(vPos)) then -- Error mode is "LOG" by default
-    ePiece:SetPos(vPos)
-  else
-    ePiece:Remove()
-    if(sMode == "HINT" or sMode == "GENERIC" or sMode == "ERROR") then
-      PrintNotifyPly(oPly,"Position out of map bounds!",sMode) end
-    return StatusLog(false,"Piece:SetBoundPos("..sMode.."): Position out of map bounds")
-  end
-  return StatusLog(true,"Piece:SetBoundPos("..sMode.."): Success")
-end
-
-function MakeCoVar(sShortName, sValue, tBorder, nFlags, sInfo)
+function MakeAsmVar(sShortName, sValue, tBorder, nFlags, sInfo)
   if(not IsString(sShortName)) then
-    return StatusLog(nil,"MakeCvar: CVar name {"..type(sShortName).."}<"..tostring(sShortName).."> not string") end
+    return StatusLog(nil,"MakeAsmVar: CVar name {"..type(sShortName).."}<"..tostring(sShortName).."> not string") end
   if(not IsExistent(sValue)) then
-    return StatusLog(nil,"MakeCvar: Wrong default value <"..tostring(sValue)..">") end
+    return StatusLog(nil,"MakeAsmVar: Wrong default value <"..tostring(sValue)..">") end
   if(not IsString(sInfo)) then
-    return StatusLog(nil,"MakeCvar: CVar info {"..type(sInfo).."}<"..tostring(sInfo).."> not string") end
+    return StatusLog(nil,"MakeAsmVar: CVar info {"..type(sInfo).."}<"..tostring(sInfo).."> not string") end
   local sVar = GetOpVar("TOOLNAME_PL")..stringLower(sShortName)
   if(tBorder and (type(tBorder) == "table") and tBorder[1] and tBorder[2]) then
     local Border = GetOpVar("TABLE_BORDERS")
@@ -2843,29 +2861,21 @@ function MakeCoVar(sShortName, sValue, tBorder, nFlags, sInfo)
   return CreateConVar(sVar, sValue, nFlags, sInfo)
 end
 
-function GetCoVar(sShortName, sMode)
+function GetAsmVar(sShortName, sMode)
   if(not IsString(sShortName)) then
-    return StatusLog(nil,"GetCoVar: CVar name {"..type(sShortName).."}<"..tostring(sShortName).."> not string") end
+    return StatusLog(nil,"GetAsmVar: CVar name {"..type(sShortName).."}<"..tostring(sShortName).."> not string") end
   if(not IsString(sMode)) then
-    return StatusLog(nil,"GetCoVar: CVar mode {"..type(sMode).."}<"..tostring(sMode).."> not string") end
+    return StatusLog(nil,"GetAsmVar: CVar mode {"..type(sMode).."}<"..tostring(sMode).."> not string") end
   local sVar = GetOpVar("TOOLNAME_PL")..stringLower(sShortName)
   local CVar = GetConVar(sVar)
   if(not IsExistent(CVar)) then
-    return StatusLog(nil,"GetCoVar("..sShortName..", "..sMode.."): Missing CVar object") end
-  if    (sMode == "INT") then
-    return (tonumber(BorderValue(CVar:GetInt(),"cvar_"..sVar)) or 0)
-  elseif(sMode == "FLT") then
-    return (tonumber(BorderValue(CVar:GetFloat(),"cvar_"..sVar)) or 0)
-  elseif(sMode == "STR") then
-    return tostring(CVar:GetString() or "")
-  elseif(sMode == "BUL") then
-    return (CVar:GetBool() or false)
-  elseif(sMode == "DEF") then
-    return CVar:GetDefault()
-  elseif(sMode == "INF") then
-    return CVar:GetHelpText()
-  elseif(sMode == "NAM") then
-    return CVar:GetName()
-  end
-  return StatusLog(nil,"GetCoVar("..sShortName..", "..sMode.."): Missed mode")
+    return StatusLog(nil,"GetAsmVar("..sShortName..", "..sMode.."): Missing CVar object") end
+  if    (sMode == "INT") then return (tonumber(BorderValue(CVar:GetInt()  ,"cvar_"..sVar)) or 0)
+  elseif(sMode == "FLT") then return (tonumber(BorderValue(CVar:GetFloat(),"cvar_"..sVar)) or 0)
+  elseif(sMode == "STR") then return  tostring(CVar:GetString() or "")
+  elseif(sMode == "BUL") then return (CVar:GetBool() or false)
+  elseif(sMode == "DEF") then return  CVar:GetDefault()
+  elseif(sMode == "INF") then return  CVar:GetHelpText()
+  elseif(sMode == "NAM") then return  CVar:GetName()
+  end; return StatusLog(nil,"GetAsmVar("..sShortName..", "..sMode.."): Missed mode")
 end
