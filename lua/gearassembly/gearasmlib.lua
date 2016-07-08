@@ -357,7 +357,7 @@ function SetIndexes(sType,I1,I2,I3,I4)
   return StatusLog(true,"SetIndexes["..sType.."]: Success")
 end
 
-function InitAssembly(sName,sPurpose)
+function Init(sName,sPurpose)
   SetOpVar("TYPEMT_STRING",getmetatable("TYPEMT_STRING"))
   SetOpVar("TYPEMT_SCREEN",{})
   SetOpVar("TYPEMT_CONTAINER",{})
@@ -370,14 +370,10 @@ function InitAssembly(sName,sPurpose)
   if(IsEmptyString(sPurpose) or tonumber(stringSub(sPurpose,1,1))) then
     return StatusPrint(false,"InitAssembly: Purpose invalid") end
   SetOpVar("TIME_INIT",Time())
-  SetOpVar("MAX_MASS",50000)
-  SetOpVar("MAX_LINEAR", 100)
-  SetOpVar("MAX_ROTATION",360)
-  SetOpVar("MAX_FORCE",100000)
   SetOpVar("LOG_MAXLOGS",0)
   SetOpVar("LOG_CURLOGS",0)
   SetOpVar("LOG_LOGFILE","")
-  SetOpVar("LOG_DEBUGEN",true)
+  SetOpVar("MAX_ROTATION",360)
   SetOpVar("ANG_ZERO",Angle())
   SetOpVar("VEC_ZERO",Vector())
   SetOpVar("OPSYM_DISABLE","#")
@@ -2187,7 +2183,6 @@ function CacheQueryPiece(sModel)
   end
 end
 
-
 ----------------------- PANEL QUERY -------------------------------
 --[[
  * Caches the date needed to populate the CPanel tree
@@ -2479,8 +2474,7 @@ end
  * ucsAng(P,Y,R) = Offset angle
 ]]--
 
-function GetNormalSpawn(stTrace, hModel, ucsPosX, ucsPosY, ucsPosZ,
-                        ucsAngP, ucsAngY, ucsAngR)
+function GetNormalSpawn(ucsPos,ucsAng,hModel,ucsPosX,ucsPosY,ucsPosZ,ucsAngP,ucsAngY,ucsAngR)
   if(not stTrace) then return nil end
   if(not stTrace.Hit) then return nil end
   local hdRec = CacheQueryPiece(hModel)
@@ -2741,20 +2735,34 @@ function HookOnRemove(oBas,oEnt,arCTable,nMax)
   end; LogInstance("HookOnRemove: Done "..(Ind-1).." of "..nMax..".")
 end
 
-function ApplyPhysicalAnchor(ePiece,eBase,vPos,vNorm,nID,nNoCollid,nForceLim,nFreeze,nGrav,nNoPhyGun)
+function ApplyPhysicalSettings(ePiece,nFrZ,nGrV,nNoP)
+  if(not (ePiece and ePiece:IsValid())) then
+    return StatusLog(false,"ApplyPhysicalSettings: Piece not valid") end
+  local Grv = tonumber(nGrV) or 0
+  local Frz = tonumber(nFrZ) or 0
+  local NoP = tonumber(nNoP) or 0
+  LogInstance("ApplyPhysicalSettings: {"..Grv..","..Frz..","..NoP.."}")
+  ePiece:SetUnFreezable(NoP ~= 0)
+  ePiece.PhysgunDisabled = (NoP ~= 0)
+  duplicatorStoreEntityModifier(ePiece,GetToolPrefL().."nophysgun",{[1] = (NoP ~= 0)}) end
+  local pyPiece = ePiece:GetPhysicsObject()
+  if(not (pyPiece and pyPiece:IsValid())) then
+    return StatusLog(false,"ApplyPhysicalSettings: Phys Piece not valid") end
+  pyPiece:EnableMotion(Frz == 0)
+  constructSetPhysProp(nil,ePiece,0,pyPiece,{GravityToggle = (Grv ~= 0), Material = "gmod_ice"}) end
+  return StatusLog(true,"ApplyPhysicalSettings: Success")
+end
+
+function ApplyPhysicalAnchor(ePiece,eBase,vPos,vNorm,nCID,nNoC,nFoL)
   local ConstrDB = GetOpVar("CONTAIN_CONSTRAINT_TYPE")
-  local CID = tonumber(nID) or 1
-  local Frz = tonumber(nFreeze) or 0
-  local Grv = tonumber(nGrav) or 0
-  local NoC = tonumber(nNoCollid) or 0
-  local FrL = tonumber(nForceLim) or 0
-  local NoP = tonumber(nNoPhyGun) or 0
+  local CID = tonumber(nCID) or 1
+  local NoC = tonumber(nNoC) or 0
+  local FrL = tonumber(nFoL) or 0
   local IsIn
   local ConstrInfo = ConstrDB:Select(CID)
-
   if(not IsExistent(ConstrInfo)) then
     return StatusLog(false,"ApplyPhysicalAnchor: Constraint not available") end
-  LogInstance("ApplyPhysicalAnchor: Creating "..ConstrInfo.Name.."{"..CID..","..Frz..","..Grv..","..NoC..","..FrL..","..NoP.."}")
+  LogInstance("ApplyPhysicalAnchor: ["..ConstrInfo.Name.."] {"..CID..","..NoC..","..FrL.."}")
   if(not (ePiece and ePiece:IsValid())) then
     return StatusLog(false,"ApplyPhysicalAnchor: Piece not valid") end
   if(IsOther(ePiece)) then
@@ -2764,11 +2772,6 @@ function ApplyPhysicalAnchor(ePiece,eBase,vPos,vNorm,nID,nNoCollid,nForceLim,nFr
   local pyPiece = ePiece:GetPhysicsObject()
   if(not (pyPiece and pyPiece:IsValid())) then
     return StatusLog(false,"ApplyPhysicalAnchor: Phys Piece not valid") end
-  constructSetPhysProp(nil,ePiece,0,pyPiece,{Material = "gmod_ice"})
-  if(Frz == 0) then pyPiece:EnableMotion(true) end
-  if(Grv == 0) then constructSetPhysProp(nil,ePiece,0,pyPiece,{GravityToggle = false}) end
-  if(NoP ~= 0) then ePiece:SetUnFreezable(true); ePiece.PhysgunDisabled = true
-    duplicatorStoreEntityModifier(ePiece,GetToolPrefL().."nophysgun",{[1] = true}) end
   if(not IsIn and CID == 1) then IsIn = CID end
   if(not (eBase and eBase:IsValid())) then
     return StatusLog(0,"ApplyPhysicalAnchor: Base not valid") end

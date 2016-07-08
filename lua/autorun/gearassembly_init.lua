@@ -22,7 +22,7 @@ local duplicatorStoreEntityModifier = duplicator and duplicator.StoreEntityModif
 local asmlib = gearasmlib
 
 ------ CONFIGURE ASMLIB ------
-asmlib.InitAssembly("gear","assembly")
+asmlib.Init("gear","assembly")
 asmlib.SetOpVar("TOOL_VERSION","4.92")
 asmlib.SetIndexes("V",1,2,3)
 asmlib.SetIndexes("A",1,2,3)
@@ -31,26 +31,30 @@ asmlib.SetOpVar("CONTAIN_STACK_MODE",asmlib.MakeContainer("Stack Mode"))
 asmlib.SetOpVar("CONTAIN_CONSTRAINT_TYPE",asmlib.MakeContainer("Constraint Type"))
 
 ------ CONFIGURE LOGGING ------
+asmlib.SetOpVar("LOG_DEBUGEN",true)
 asmlib.MakeAsmVar("logsmax"  , "0" , {0}, bitBor(FCVAR_ARCHIVE, FCVAR_ARCHIVE_XBOX, FCVAR_NOTIFY, FCVAR_PRINTABLEONLY), "Maximum logging lines to be printed")
-asmlib.MakeAsmVar("logfile"  , ""  , nil , bitBor(FCVAR_ARCHIVE, FCVAR_ARCHIVE_XBOX, FCVAR_NOTIFY, FCVAR_PRINTABLEONLY), "File to store the logs ( if any )")
+asmlib.MakeAsmVar("logfile"  , ""  , nil, bitBor(FCVAR_ARCHIVE, FCVAR_ARCHIVE_XBOX, FCVAR_NOTIFY, FCVAR_PRINTABLEONLY), "File to store the logs ( if any )")
 asmlib.SetLogControl(asmlib.GetAsmVar("logsmax","INT"),asmlib.GetAsmVar("logfile","STR"))
 
-
------- CONFIGURE CVARS -----
-asmlib.MakeAsmVar("enwiremod", "1"  , {0,1  } ,bitbor(FCVAR_ARCHIVE, FCVAR_ARCHIVE_XBOX, FCVAR_NOTIFY, FCVAR_REPLICATED, FCVAR_PRINTABLEONLY), "Maximum active radius to search for a point ID")
-asmlib.MakeAsmVar("devmode"  , "0"  , {0, 1 } ,bitBor(FCVAR_ARCHIVE, FCVAR_ARCHIVE_XBOX, FCVAR_NOTIFY, FCVAR_REPLICATED, FCVAR_PRINTABLEONLY), "Toggle the wire extension on/off server side")
-asmlib.MakeAsmVar("maxstcnt" , "200", {1,200} ,bitbor(FCVAR_ARCHIVE, FCVAR_ARCHIVE_XBOX, FCVAR_NOTIFY, FCVAR_REPLICATED, FCVAR_PRINTABLEONLY), "Maximum pieces to spawn in stack mode")
-if(SERVER) then
-  CreateConVar("sbox_max"..asmlib.GetOpVar("CVAR_LIMITNAME"), "1500", bitBor(FCVAR_ARCHIVE, FCVAR_ARCHIVE_XBOX, FCVAR_NOTIFY, FCVAR_REPLICATED, FCVAR_PRINTABLEONLY), "Maximum number of gears to be spawned")
-  asmlib.MakeAsmVar("bnderrmod", "1" , {0,4}   ,bitbor(FCVAR_ARCHIVE, FCVAR_ARCHIVE_XBOX, FCVAR_NOTIFY, FCVAR_REPLICATED, FCVAR_PRINTABLEONLY), "Unreasonable position error handling mode")
-  asmlib.MakeAsmVar("maxfruse" , "50", {1,100} ,bitbor(FCVAR_ARCHIVE, FCVAR_ARCHIVE_XBOX, FCVAR_NOTIFY, FCVAR_REPLICATED, FCVAR_PRINTABLEONLY), "Maximum frequent pieces to be listed")
-end
 ------ CONFIGURE NON-REPLICATED CVARS ----- Client's got a mind of its own
 asmlib.MakeAsmVar("modedb"   , "SQL", nil, bitbor(FCVAR_ARCHIVE, FCVAR_ARCHIVE_XBOX, FCVAR_NOTIFY, FCVAR_PRINTABLEONLY), "Database operating mode")
 asmlib.MakeAsmVar("enqstore" ,   1  , nil, bitbor(FCVAR_ARCHIVE, FCVAR_ARCHIVE_XBOX, FCVAR_NOTIFY, FCVAR_PRINTABLEONLY), "Enable cache for built queries")
 asmlib.MakeAsmVar("timermode", "CQT@3600@1@1", nil, bitbor(FCVAR_ARCHIVE, FCVAR_ARCHIVE_XBOX, FCVAR_NOTIFY, FCVAR_PRINTABLEONLY), "Cache management setting when DB mode is SQL")
 
------- CONFIGURE MODES -----
+------ CONFIGURE REPLICATED CVARS ----- Server tells the client what value to use
+asmlib.MakeAsmVar("enwiremod", "1"  , {0, 1 } ,bitbor(FCVAR_ARCHIVE, FCVAR_ARCHIVE_XBOX, FCVAR_NOTIFY, FCVAR_REPLICATED, FCVAR_PRINTABLEONLY), "Maximum active radius to search for a point ID")
+asmlib.MakeAsmVar("devmode"  , "0"  , {0, 1 } ,bitBor(FCVAR_ARCHIVE, FCVAR_ARCHIVE_XBOX, FCVAR_NOTIFY, FCVAR_REPLICATED, FCVAR_PRINTABLEONLY), "Toggle the wire extension on/off server side")
+asmlib.MakeAsmVar("maxmass"  , "50000" ,  {1}, bitBor(FCVAR_ARCHIVE, FCVAR_ARCHIVE_XBOX, FCVAR_NOTIFY, FCVAR_REPLICATED, FCVAR_PRINTABLEONLY), "Maximum mass to be applied on a piece")
+asmlib.MakeAsmVar("maxlinear", "250"   ,  {1}, bitBor(FCVAR_ARCHIVE, FCVAR_ARCHIVE_XBOX, FCVAR_NOTIFY, FCVAR_REPLICATED, FCVAR_PRINTABLEONLY), "Maximum linear offset available")
+asmlib.MakeAsmVar("maxforce" , "100000",  {0}, bitBor(FCVAR_ARCHIVE, FCVAR_ARCHIVE_XBOX, FCVAR_NOTIFY, FCVAR_REPLICATED, FCVAR_PRINTABLEONLY), "Maximum force limit when creating constraints")
+asmlib.MakeAsmVar("maxstcnt" , "200", {1,200} ,bitbor(FCVAR_ARCHIVE, FCVAR_ARCHIVE_XBOX, FCVAR_NOTIFY, FCVAR_REPLICATED, FCVAR_PRINTABLEONLY), "Maximum pieces to spawn in stack mode")
+if(SERVER) then
+  CreateConVar("sbox_max"..asmlib.GetOpVar("CVAR_LIMITNAME"), "1500", bitBor(FCVAR_ARCHIVE, FCVAR_ARCHIVE_XBOX, FCVAR_NOTIFY, FCVAR_REPLICATED, FCVAR_PRINTABLEONLY), "Maximum number of gears to be spawned")
+  asmlib.MakeAsmVar("bnderrmod", "1" , {0, 4 } ,bitbor(FCVAR_ARCHIVE, FCVAR_ARCHIVE_XBOX, FCVAR_NOTIFY, FCVAR_REPLICATED, FCVAR_PRINTABLEONLY), "Unreasonable position error handling mode")
+  asmlib.MakeAsmVar("maxfruse" , "50", {1,100} ,bitbor(FCVAR_ARCHIVE, FCVAR_ARCHIVE_XBOX, FCVAR_NOTIFY, FCVAR_REPLICATED, FCVAR_PRINTABLEONLY), "Maximum frequent pieces to be listed")
+end
+
+------ CONFIGURE INTERNALS -----
 asmlib.SetOpVar("MODE_DATABASE" , asmlib.GetAsmVar("modedb","STR"))
 asmlib.SetOpVar("EN_QUERY_STORE",(asmlib.GetAsmVar("enqstore","INT") ~= 0) and true or false)
 
@@ -120,19 +124,7 @@ if(CLIENT) then
         CType:Insert(11,{Name = "AdvBS Spin Y"})
         CType:Insert(12,{Name = "AdvBS Spin Z"})
 
-  asmlib.SetAction("RESET_OFFSETS",
-    function(oPly,oCom,oArgs)
-      -- Reset all of the offset options to zero
-      oPly:ConCommand(gsToolPrefL.."nextx 0\n")
-      oPly:ConCommand(gsToolPrefL.."nexty 0\n")
-      oPly:ConCommand(gsToolPrefL.."nextz 0\n")
-      oPly:ConCommand(gsToolPrefL.."rotpiv 0\n")
-      oPly:ConCommand(gsToolPrefL.."nextpic 0\n")
-      oPly:ConCommand(gsToolPrefL.."nextyaw 0\n")
-      oPly:ConCommand(gsToolPrefL.."nextrol 0\n")
-    end)
-
- asmlib.SetAction("RESET_VARIABLES",
+  asmlib.SetAction("RESET_VARIABLES",
     function(oPly,oCom,oArgs)
       local devmode = asmlib.GetAsmVar("devmode" ,"INT")
       local bgskids = asmlib.GetAsmVar("bgskids", "STR")
@@ -151,48 +143,36 @@ if(CLIENT) then
         local anchor = asmlib.GetOpVar("MISS_NOID")..
                        asmlib.GetOpVar("OPSYM_REVSIGN")..
                        asmlib.GetOpVar("MISS_NOMD")
-        asmlib.ConCommandPly(oPly, "weld"     , "1")
-        asmlib.ConCommandPly(oPly, "mass"     , "25000")
-        asmlib.ConCommandPly(oPly, "model"    , "models/props_phx/trains/tracks/track_1x.mdl")
-        asmlib.ConCommandPly(oPly, "count"    , "5")
-        asmlib.ConCommandPly(oPly, "freeze"   , "1")
+        asmlib.ConCommandPly(oPly, "mass"     , "250")
+        asmlib.ConCommandPly(oPly, "model"    , "models/props_phx/gears/spur9.mdl")
+        asmlib.ConCommandPly(oPly, "nextx"    , "0")
+        asmlib.ConCommandPly(oPly, "nexty"    , "0")
+        asmlib.ConCommandPly(oPly, "nextz"    , "0")
+        asmlib.ConCommandPly(oPly, "count"    , "1")
         asmlib.ConCommandPly(oPly, "anchor"   , anchor)
-        asmlib.ConCommandPly(oPly, "igntype"  , "0")
-        asmlib.ConCommandPly(oPly, "spnflat"  , "0")
-        asmlib.ConCommandPly(oPly, "ydegsnp"  , "45")
-        asmlib.ConCommandPly(oPly, "pointid"  , "1")
-        asmlib.ConCommandPly(oPly, "pnextid"  , "2")
-        asmlib.ConCommandPly(oPly, "logsmax"  , "0")
-        asmlib.ConCommandPly(oPly, "logfile"  , "")
-        asmlib.ConCommandPly(oPly, "mcspawn"  , "0")
-        asmlib.ConCommandPly(oPly, "bgskids"  , "0/0")
-        asmlib.ConCommandPly(oPly, "gravity"  , "1")
+        asmlib.ConCommandPly(oPly, "contyp"   , "1")
+        asmlib.ConCommandPly(oPly, "stmode"   , "1")
+        asmlib.ConCommandPly(oPly, "freeze"   , "0")
         asmlib.ConCommandPly(oPly, "adviser"  , "1")
-        asmlib.ConCommandPly(oPly, "activrad" , "45")
-        asmlib.ConCommandPly(oPly, "pntasist" , "1")
-        asmlib.ConCommandPly(oPly, "surfsnap" , "0")
+        asmlib.ConCommandPly(oPly, "igntyp"   , "0")
+        asmlib.ConCommandPly(oPly, "rotpiv"   , "0")
+        asmlib.ConCommandPly(oPly, "gravity"  , "1")
+        asmlib.ConCommandPly(oPly, "nextpic"  , "0")
+        asmlib.ConCommandPly(oPly, "nextyaw"  , "0")
+        asmlib.ConCommandPly(oPly, "nextrol"  , "0")
+        asmlib.ConCommandPly(oPly, "trorang"  , "0")
+        asmlib.ConCommandPly(oPly, "bgskids"  , "")
+        asmlib.ConCommandPly(oPly, "spnflat"  , "0")
         asmlib.ConCommandPly(oPly, "exportdb" , "0")
-        asmlib.ConCommandPly(oPly, "offsetup" , "0")
         asmlib.ConCommandPly(oPly, "forcelim" , "0")
-        asmlib.ConCommandPly(oPly, "ignphysgn", "0")
-        asmlib.ConCommandPly(oPly, "ghosthold", "1")
+        asmlib.ConCommandPly(oPly, "deltarot" , "360")
         asmlib.ConCommandPly(oPly, "maxstatts", "3")
-        asmlib.ConCommandPly(oPly, "nocollide", "1")
-        asmlib.ConCommandPly(oPly, "physmater", "metal")
-        asmlib.ConCommandPly(oPly, "maxactrad", "150")
-        asmlib.ConCommandPly(oPly, "enwiremod", "1")
-        asmlib.ConCommandPly(oPly, "devmode"  , "0")
-        asmlib.ConCommandPly(oPly, "maxstcnt" , "200")
-        asmlib.ConCommandPly(oPly, "bnderrmod", "LOG")
-        asmlib.ConCommandPly(oPly, "maxfruse" , "50")
-        asmlib.ConCommandPly(oPly, "modedb"   , "LUA")
-        asmlib.ConCommandPly(oPly, "enqstore" , "1")
-        asmlib.ConCommandPly(oPly, "timermode", "CQT@1800@1@1/CQT@900@1@1/CQT@600@1@1")
+        asmlib.ConCommandPly(oPly, "nocollide", "0")
+        asmlib.ConCommandPly(oPly, "nophysgun", "0")
+        asmlib.ConCommandPly(oPly, "ghosthold", "0")
         asmlib.PrintInstance("RESET_VARIABLES: Variables reset complete")
-      elseif(stringFind(bgskids,"delete ") == 1) then
-        local indWord = 1
-        local insPref = stringGsub(bgskids,"delete ","")
-        local expWord = stringExplode(" ",insPref)
+      elseif(stringSub(bgskids,1,7) == "delete ") then
+        local indWord, expWord = 1, stringExplode(" ",stringSub(bgskids,8,-1))
         while(expWord[indWord]) do
          local sWord = expWord[indWord]
          asmlib.DeleteExternalDatabase("PIECES","DSV",sWord.."_")
@@ -293,17 +273,13 @@ if(CLIENT) then
       pnButton:SetVisible(true)
       pnButton.DoClick = function()
         asmlib.LogInstance("OPEN_FRAME: Button.DoClick: <"..pnButton:GetText().."> clicked")
-        asmlib.SetLogControl(asmlib.GetAsmVar("logsmax", "INT"),
-                             asmlib.GetAsmVar("logfile", "STR"))
-        local ExportDB     = asmlib.GetAsmVar("exportdb","INT")
+        asmlib.SetLogControl(asmlib.GetAsmVar("logsmax" , "INT"),
+                             asmlib.GetAsmVar("logfile" , "STR"))
+        local ExportDB     = asmlib.GetAsmVar("exportdb", "INT")
         if(ExportDB ~= 0) then
           asmlib.LogInstance("OPEN_FRAME: Button Exporting DB")
           asmlib.StoreExternalDatabase("PIECES",",","INS")
-          asmlib.StoreExternalDatabase("ADDITIONS",",","INS")
-          asmlib.StoreExternalDatabase("PHYSPROPERTIES",",","INS")
           asmlib.StoreExternalDatabase("PIECES","\t","DSV")
-          asmlib.StoreExternalDatabase("ADDITIONS","\t","DSV")
-          asmlib.StoreExternalDatabase("PHYSPROPERTIES","\t","DSV")
         end
       end
       ------------- ComboBox ---------------
