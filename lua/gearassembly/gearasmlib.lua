@@ -419,7 +419,8 @@ function Init(sName,sPurpose)
     OAng = Angle (),
     SPos = Vector(),
     SAng = Angle (),
-    MPos = Vector(),
+    MPnt = Vector(),
+    MOrg = Vector(),
     MAng = Angle (),
     CPos = Vector(),
     CAng = Angle (),
@@ -2474,30 +2475,38 @@ end
  * ucsAng(P,Y,R) = Offset angle
 ]]--
 
-function GetNormalSpawn(ucsPos,ucsAng,hModel,ucsPosX,ucsPosY,ucsPosZ,ucsAngP,ucsAngY,ucsAngR)
-  if(not stTrace) then return nil end
-  if(not stTrace.Hit) then return nil end
-  local hdRec = CacheQueryPiece(hModel)
-  if(not hdRec) then return nil end
+function GetNormalSpawn(ucsPos,ucsAng,hdModel,ucsPosX,ucsPosY,ucsPosZ,ucsAngP,ucsAngY,ucsAngR)
+  local hdRec = CacheQueryPiece(hdModel)
+  if(not IsExistent(hdRec)) then return StatusLog(nil,"GetEntitySpawn: Holder is not a piece <"..hdModel..">") end
   local stSpawn = GetOpVar("STRUCT_SPAWN")
-  stSpawn.HRec = hdRec
+        stSpawn.HRec = hdRec
+  if(ucsPos) then SetVector(stSpawn.DPos,ucsPos) end
+  if(ucsAng) then SetVector(stSpawn.DAng,ucsAng) end
+  SetAngle (stSpawn.MAng, hdRec.A)
+  SetVector(stSpawn.MPos, hdRec.P)
+  -- Calculate spawns
+
+
+
+
+
   stSpawn.CAng:Set(stTrace.HitNormal:Angle())
   stSpawn.CAng[caP] = stSpawn.CAng[caP] + 90
   stSpawn.DAng:Set(stSpawn.CAng)
-  stSpawn.DAng:RotateAroundAxis(stSpawn.CAng:Right()  ,(ucsAngP or 0))
-  stSpawn.DAng:RotateAroundAxis(stSpawn.CAng:Forward(),(ucsAngR or 0))
-  stSpawn.DAng:RotateAroundAxis(stSpawn.DAng:Up()     ,(ucsAngY or 0))
+  stSpawn.DAng:RotateAroundAxis(stSpawn.DAng:Up()     ,(tonumber(ucsAngY) or 0))
+  stSpawn.DAng:RotateAroundAxis(stSpawn.CAng:Right()  ,(tonumber(ucsAngP) or 0))
+  stSpawn.DAng:RotateAroundAxis(stSpawn.CAng:Forward(),(tonumber(ucsAngR) or 0))
   stSpawn.F:Set(stSpawn.DAng:Forward())
   stSpawn.R:Set(stSpawn.DAng:Right())
   stSpawn.U:Set(stSpawn.DAng:Up())
   stSpawn.SAng:Set(stSpawn.DAng)
-  RotateAngleDir(stSpawn.SAng,"RUF", hdRec.A[caP] * hdRec.A[csX],
-                                     hdRec.A[caY] * hdRec.A[csY],
-                                     hdRec.A[caR] * hdRec.A[csZ])
+  RotateAngleDir(stSpawn.SAng,"RUF", hdRec.A[caP] * hdRec.A[csA],
+                                     hdRec.A[caY] * hdRec.A[csB],
+                                     hdRec.A[caR] * hdRec.A[csC])
   stSpawn.SPos:Set(stTrace.HitPos)
-  stSpawn.SPos:Add((ucsPosX or 0) * stSpawn.F)
-  stSpawn.SPos:Add((ucsPosY or 0) * stSpawn.R)
-  stSpawn.SPos:Add((ucsPosZ or 0) * stSpawn.U)
+  stSpawn.SPos:Add((tonumber(ucsPosX) or 0) * stSpawn.F)
+  stSpawn.SPos:Add((tonumber(ucsPosY) or 0) * stSpawn.R)
+  stSpawn.SPos:Add((tonumber(ucsPosZ) or 0) * stSpawn.U)
   return stSpawn
 end
 
@@ -2512,82 +2521,46 @@ end
  * ucsPos(X,Y,Z) = Offset position
  * ucsAng(P,Y,R) = Offset angle
 ]]--
-function GetEntitySpawn(trEnt,nRotPivot,hdModel,enIgnTyp,
+function GetEntitySpawn(trEnt,nvRotPivot,hdModel,enIgnTyp,
                         enOrAngTr,ucsPosX,ucsPosY,ucsPosZ,
                         ucsAngP,ucsAngY,ucsAngR)
-  if(not ( trEnt      and
-           nRotPivot  and
-           hdModel    and
-           enIgnTyp   and
-           enOrAngTr )
-  ) then return nil end
-
-  local trRec = CacheQueryPiece(trEnt:GetModel())
-  local hdRec = CacheQueryPiece(hdModel)
-
-  if(not ( trRec and hdRec )) then return nil end
-
-  if(enIgnTyp   == 0 and
-     trRec.Type ~= hdRec.Type ) then return nil end
-
+  if(not (trEnt and trEnt:IsValid())) then return StatusLog(nil,"GetEntitySpawn: Entity origin invalid") end
+  local nRotPivot = tonumber(nvRotPivot)
+  if(not IsExistent(nRotPivot)) then return StatusLog(nil,"GetEntitySpawn: Rotate pivot <"..tostring(nvRotPivot).."> nan") end
+  local hdModel, enIgnTyp, enOrAngTr = tostring(hdModel or ""), (tonumber(enIgnTyp) or 0), (tonumber(enOrAngTr) or 0)
+  local trRec, hdRec = CacheQueryPiece(trEnt:GetModel()), CacheQueryPiece(hdModel)
+  if(not IsExistent(trRec)) then return StatusLog(nil,"GetEntitySpawn: Trace is not a piece <"..trEnt:GetModel())..">") end
+  if(not IsExistent(hdRec)) then return StatusLog(nil,"GetEntitySpawn: Holder is not a piece <"..hdModel..">") end
+  if(not (IsExistent(trRec.Type) and IsString(trRec.Type))) then
+    return StatusLog(nil,"GetEntitySpawn: Trace not graded <"..tostring(trRec.Type)..">") end
+  if(not (IsExistent(hdRec.Type) and IsString(hdRec.Type))) then
+    return StatusLog(nil,"GetEntitySpawn: Holder not graded <"..tostring(hdRec.Type)..">") end
+  if(enIgnTyp == 0 and trRec.Type ~= hdRec.Type ) then return nil end
+  -- Save our records
+  stSpawn.HRec, stSpawn.TRec = hdRec, trRec
   -- We have the next Piece Offset
   local stSpawn = GetOpVar("STRUCT_SPAWN")
-
-  stSpawn.CPos:Set(vGetMCWorld(trEnt,trRec.M))
+  -- Calculate the center using the masscenter
+  stSpawn.CPos:Set(vGetMCWorld(trEnt,trRec.O))
   SetAngle(stSpawn.CAng,trRec.A)
   stSpawn.CAng:Set(trEnt:LocalToWorldAngles(stSpawn.CAng))
   stSpawn.CAng:RotateAroundAxis(stSpawn.CAng:Up(),-nRotPivot)
-  -- Do origin !
-  SetVector(stSpawn.OPos,trRec.O)
+  -- Calculate the origin based on the center
+  SetVector(stSpawn.OPos,trRec.P)
   stSpawn.OPos:Rotate(stSpawn.CAng)
   stSpawn.OPos:Add(stSpawn.CPos)
-  -- Do Origin UCS World angle
-  stSpawn.SAng:Set(stSpawn.CAng)
-  -- Do Origin F,R,U
-  RotateAngleDir(stSpawn.SAng,"RF",trRec.Mesh + (ucsAngP or 0),(ucsAngR or 0))
-  stSpawn.F:Set(stSpawn.SAng:Forward())
-  stSpawn.R:Set(stSpawn.SAng:Right())
-  stSpawn.U:Set(stSpawn.SAng:Up())
-  -- Save our records
-  stSpawn.HRec = hdRec
-  stSpawn.TRec = trRec
-  -- Get the new Domain
-  stSpawn.DAng:Set(stSpawn.SAng)
-  RotateAngleDir(stSpawn.DAng,"RU",hdRec.Mesh,(ucsAngY or 0) + 180)
-
-  -- Get Hold model stuff
-
-  SetAngle(stSpawn.MAng, hdRec.A)
-  SetVector(stSpawn.MPos, hdRec.O)
-  NegAngle(stSpawn.MAng)
-  stSpawn.MPos:Rotate(stSpawn.MAng)
-  RotateAngleDir(stSpawn.MAng,"UR",180,-hdRec.Mesh)
-
-  NegVector(stSpawn.MPos)
-  DecomposeByAngle(stSpawn.MPos,stSpawn.MAng)
-
-  SetAngle(stSpawn.MAng,hdRec.A)
-  NegAngle(stSpawn.MAng)
-
-  stSpawn.SAng:Set(stSpawn.DAng)
-
-  RotateAngleDir(stSpawn.SAng,"RUF",stSpawn.MAng[caP] * hdRec.A[csX],
-                                    stSpawn.MAng[caY] * hdRec.A[csY],
-                                    stSpawn.MAng[caR] * hdRec.A[csZ])
-  -- Do Spawn Position
-  stSpawn.SPos:Set(stSpawn.OPos)
-  stSpawn.SPos:Add((hdRec.O[csX] * stSpawn.MPos[cvX]) * stSpawn.F)
-  stSpawn.SPos:Add((hdRec.O[csY] * stSpawn.MPos[cvY]) * stSpawn.R)
-  stSpawn.SPos:Add((hdRec.O[csZ] * stSpawn.MPos[cvZ]) * stSpawn.U)
-  if(enOrAngTr ~= 0) then
-    stSpawn.F:Set(stSpawn.CAng:Forward())
-    stSpawn.R:Set(stSpawn.CAng:Right())
-    stSpawn.U:Set(stSpawn.CAng:Up())
-  end
-  stSpawn.SPos:Add(ucsPosX * stSpawn.F)
-  stSpawn.SPos:Add(ucsPosY * stSpawn.R)
-  stSpawn.SPos:Add(ucsPosZ * stSpawn.U)
-  return stSpawn
+  stSpawn.OAng:Set(stSpawn.CAng)
+  stSpawn.OAng:RotateAroundAxis(stSpawn.CAng:Right(),trRec.Mesh + (tonumber(ucsAngP) or 0))
+  stSpawn.OAng:RotateAroundAxis(stSpawn.OAng:Forward(),(tonumber(ucsAngR) or 0))
+  -- Calcolate domains
+  stSpawn.DAng:Set(stSpawn.OAng)
+  stSpawn.DAng:RotateAroundAxis(stSpawn.DAng:Right(),hdRec.Mesh)
+  stSpawn.DAng:RotateAroundAxis(stSpawn.DAng:Up(),(tonumber(ucsAngY) or 0) + 180)
+  stSpawn.DPos:Set(stSpawn.OPos); SetVector(stSpawn.MPnt, hdRec.P)
+  stSpawn.DPos:Add(stSpawn.MPnt[cvX] * stSpawn.DAng:Forward())
+  stSpawn.DPos:Add(stSpawn.MPnt[cvY] * stSpawn.DAng:Right())
+  stSpawn.DPos:Add(stSpawn.MPnt[cvZ] * stSpawn.DAng:Up())
+  return GetNormalSpawn(nil,nil,hdModel,ucsPosX,ucsPosY,ucsPosZ)
 end
 
 local function GetEntityOrTrace(oEnt)

@@ -41,10 +41,7 @@ local ANG_ZERO = asmlib.GetOpVar("ANG_ZERO")
 local goToolScr
 local goMonitor
 local gnRatio     = asmlib.GetOpVar("GOLDEN_RATIO")
-local gnMaxMass   = asmlib.GetOpVar("MAX_MASS")
-local gnMaxOffLin = asmlib.GetOpVar("MAX_LINEAR")
 local gnMaxOffRot = asmlib.GetOpVar("MAX_ROTATION")
-local gnMaxForLim = asmlib.GetOpVar("MAX_FOCELIMIT")
 local gnMaxErMode = asmlib.GetAsmVar("bnderrmod","STR")
 local gsToolPrefL = asmlib.GetOpVar("TOOLNAME_PL")
 local gsToolNameL = asmlib.GetOpVar("TOOLNAME_NL")
@@ -171,11 +168,11 @@ function TOOL:GetModel()
 end
 
 function TOOL:GetCount()
-  return math.Clamp(self:GetClientNumber("count"),1,asmlib.GetAsmVar("maxstcnt"):GetInt())
+  return math.Clamp(self:GetClientNumber("count"),1,asmlib.GetAsmVar("maxstcnt","INT"))
 end
 
 function TOOL:GetMass()
-  return math.Clamp(self:GetClientNumber("mass"),1,gnMaxMass)
+  return math.Clamp(self:GetClientNumber("mass"),1,asmlib.GetAsmVar("maxmass","FLT"))
 end
 
 function TOOL:GetDeveloperMode()
@@ -183,9 +180,10 @@ function TOOL:GetDeveloperMode()
 end
 
 function TOOL:GetPosOffsets()
-  return (math.Clamp(self:GetClientNumber("nextx") or 0,-gnMaxOffLin,gnMaxOffLin)),
-         (math.Clamp(self:GetClientNumber("nexty") or 0,-gnMaxOffLin,gnMaxOffLin)),
-         (math.Clamp(self:GetClientNumber("nextz") or 0,-gnMaxOffLin,gnMaxOffLin))
+  local nMaxOffLin = asmlib.GetAsmVar("maxlinear","FLT")
+  return (math.Clamp(self:GetClientNumber("nextx") or 0,-nMaxOffLin,nMaxOffLin)),
+         (math.Clamp(self:GetClientNumber("nexty") or 0,-nMaxOffLin,nMaxOffLin)),
+         (math.Clamp(self:GetClientNumber("nextz") or 0,-nMaxOffLin,nMaxOffLin))
 end
 
 function TOOL:GetAngOffsets()
@@ -255,7 +253,7 @@ function TOOL:GetDeltaRotation()
 end
 
 function TOOL:GetForceLimit()
-  return math.Clamp(self:GetClientNumber("forcelim") or 0,0,gnMaxForLim)
+  return math.Clamp(self:GetClientNumber("forcelim") or 0,0,asmlib.GetAsmVar("maxforce","FLT"))
 end
 
 function TOOL:GetStackMode()
@@ -271,7 +269,7 @@ function TOOL:GetIgnorePhysgun()
 end
 
 function TOOL:GetBoundErrorMode()
-  return mathFloor(math.Clamp(asmlib.GetAsmVar("bnderrmod"):GetInt() or 0),0,gnMaxErMode))
+  return asmlib.GetAsmVar("bnderrmod","STR")
 end
 
 function TOOL:SetAnchor(stTrace)
@@ -335,8 +333,8 @@ function TOOL:GetStatus(stTrace,anyMessage,hdEnt)
         sDu = sDu..sSpace.."  LogsMax:        <"..tostring(iMaxlog)..">"..sDelim
         sDu = sDu..sSpace.."  LogsCur:        <"..tostring(iCurLog)..">"..sDelim
         sDu = sDu..sSpace.."  LogFile:        <"..tostring(sFleLog)..">"..sDelim
-        sDu = sDu..sSpace.."  MaxProps:       <"..tostring(GetConVar("sbox_maxprops"):GetInt())..">"..sDelim
-        sDu = sDu..sSpace.."  MaxTrack:       <"..tostring(GetConVar("sbox_max"..gsLimitName):GetInt())..">"..sDelim
+        sDu = sDu..sSpace.."  MaxProps:       <"..tostring(GetConVar("sbox_maxprops","INT"))..">"..sDelim
+        sDu = sDu..sSpace.."  MaxTrack:       <"..tostring(GetConVar("sbox_max"..gsLimitName,"INT"))..">"..sDelim
         sDu = sDu..sSpace.."Dumping player keys:"..sDelim
         sDu = sDu..sSpace.."  Player:         "..stringGsub(tostring(ply),"Player%s","")..sDelim
         sDu = sDu..sSpace.."  IN.USE:         <"..tostring(plyKeys["USE"])..">"..sDelim
@@ -612,84 +610,82 @@ function TOOL:DrawHUD()
     end
   end
   goMonitor:SetColor()
-  local adv   = self:GetAdviser()
   local ply   = LocalPlayer()
   local Trace = ply:GetEyeTrace()
-  if(adv ~= 0) then
-    if(not Trace) then return end
-    local trEnt  = Trace.Entity
-    local model  = self:GetModel()
-    local ratioc = (gnRatio - 1) * 100
-    local ratiom = (gnRatio * 1000)
-    local plyd   = (stTrace.HitPos - ply:GetPos()):Length()
-    local plyrad = mathClamp((ratiom / plyd) * (stSpawn.RLen / actrad),1,ratioc)
-    local nextx, nexty, nextz = self:GetPosOffsets()
-    local nextpic, nextyaw, nextrol = self:GetAngOffsets()
-    asmlib.PlyLoadKey(ply)
-    if(trEnt and trEnt:IsValid() and asmlib.PlyLoadKey(ply,"SPEED")) then
-      if(asmlib.IsOther(trEnt)) then return end
-      local igntyp  = self:GetIgnoreType()
-      local trorang = self:GetTraceOriginAngle()
-      local rotpiv  = self:GetRotatePivot()
-      local stSpawn = asmlib.GetEntitySpawn(trEnt,rotpiv,model,igntyp,
-                        trorang,nextx,nexty,nextz,nextpic,nextyaw,nextrol)
-      if(not stSpawn) then return end
-      local Op =  stSpawn.OPos:ToScreen()
-      local Xs = (stSpawn.OPos + 15 * stSpawn.F):ToScreen()
-      local Ys = (stSpawn.OPos + 15 * stSpawn.R):ToScreen()
-      local Zs = (stSpawn.OPos + 15 * stSpawn.U):ToScreen()
-      local Sp =  stSpawn.SPos:ToScreen()
-      local Df = (stSpawn.SPos + 15 * stSpawn.DAng:Forward()):ToScreen()
-      local Du = (stSpawn.SPos + 15 * stSpawn.DAng:Up()):ToScreen()
-      local Cp =  stSpawn.CPos:ToScreen()
-      local Cu = (stSpawn.CPos + 15 * stSpawn.CAng:Up()):ToScreen()
-      -- Draw UCS
-      goMonitor:DrawLine(Op,Xs,"r","SURF")-- Base X
-      goMonitor:DrawLine(Sp,Df)           -- Next
-      goMonitor:DrawLine(Op,Zs,"b")       -- Base Z
-      goMonitor:DrawLine(Cp,Cu,"y")       -- Base Z
-      goMonitor:DrawCircle(Op,plyrad)     -- Base O
-      goMonitor:DrawLine(Op,Ys,"g")
-      goMonitor:DrawLine(Cp,Op)
-      goMonitor:DrawCircle(Cp,plyrad)
-      goMonitor:DrawLine(Op,Sp,"m")
-      goMonitor:DrawCircle(Sp,Sp,plyrad)
-      goMonitor:DrawLine(Sp,Du,"c")
-      if(self:GetDeveloperMode() ~= 0) then DrawAdditionalInfo(goMonitor,stSpawn) end
-    else
-      local stSpawn  = asmlib.GetNormalSpawn(Trace,model,
-                         nextx,nexty,nextz,nextpic,nextyaw,nextrol)
-      if(not stSpawn) then return false end
-      local Os = stSpawn.SPos:ToScreen()
-      local Xs = (stSpawn.SPos + 15 * stSpawn.F):ToScreen()
-      local Ys = (stSpawn.SPos + 15 * stSpawn.R):ToScreen()
-      local Zs = (stSpawn.SPos + 15 * stSpawn.U):ToScreen()
-      goMonitor:DrawLine(Os,Xs,"r")
-      goMonitor:DrawLine(Os,Ys,"g")
-      goMonitor:DrawLine(Os,Zs,"b")
-      goMonitor:DrawCircle(Os,plyrad,"y")
-      if(self:GetDeveloperMode() ~= 0) then DrawAdditionalInfo(goMonitor,stSpawn) end
-    end
+  if(not Trace) then return end
+  if(self:GetAdviser() == 0) then return end
+  local trEnt  = Trace.Entity
+  local model  = self:GetModel()
+  local ratioc = (gnRatio - 1) * 100
+  local ratiom = (gnRatio * 1000)
+  local plyd   = (stTrace.HitPos - ply:GetPos()):Length()
+  local plyrad = mathClamp((ratiom / plyd) * (stSpawn.RLen / actrad),1,ratioc)
+  local nextx, nexty, nextz = self:GetPosOffsets()
+  local nextpic, nextyaw, nextrol = self:GetAngOffsets()
+  asmlib.PlyLoadKey(ply)
+  if(trEnt and trEnt:IsValid() and asmlib.PlyLoadKey(ply,"SPEED")) then
+    if(asmlib.IsOther(trEnt)) then return end
+    local igntyp  = self:GetIgnoreType()
+    local trorang = self:GetTraceOriginAngle()
+    local rotpiv  = self:GetRotatePivot()
+    local stSpawn = asmlib.GetEntitySpawn(trEnt,rotpiv,model,igntyp,
+                      trorang,nextx,nexty,nextz,nextpic,nextyaw,nextrol)
+    if(not stSpawn) then return end
+    local Op =  stSpawn.OPos:ToScreen()
+    local Xs = (stSpawn.OPos + 15 * stSpawn.F):ToScreen()
+    local Ys = (stSpawn.OPos + 15 * stSpawn.R):ToScreen()
+    local Zs = (stSpawn.OPos + 15 * stSpawn.U):ToScreen()
+    local Sp =  stSpawn.SPos:ToScreen()
+    local Df = (stSpawn.SPos + 15 * stSpawn.DAng:Forward()):ToScreen()
+    local Du = (stSpawn.SPos + 15 * stSpawn.DAng:Up()):ToScreen()
+    local Cp =  stSpawn.CPos:ToScreen()
+    local Cu = (stSpawn.CPos + 15 * stSpawn.CAng:Up()):ToScreen()
+    -- Draw UCS
+    goMonitor:DrawLine(Op,Xs,"r","SURF")-- Base X
+    goMonitor:DrawLine(Sp,Df)           -- Next
+    goMonitor:DrawLine(Op,Zs,"b")       -- Base Z
+    goMonitor:DrawLine(Cp,Cu,"y")       -- Base Z
+    goMonitor:DrawCircle(Op,plyrad)     -- Base O
+    goMonitor:DrawLine(Op,Ys,"g")
+    goMonitor:DrawLine(Cp,Op)
+    goMonitor:DrawCircle(Cp,plyrad)
+    goMonitor:DrawLine(Op,Sp,"m")
+    goMonitor:DrawCircle(Sp,Sp,plyrad)
+    goMonitor:DrawLine(Sp,Du,"c")
+    if(self:GetDeveloperMode() ~= 0) then DrawAdditionalInfo(goMonitor,stSpawn) end
+  else
+    local stSpawn  = asmlib.GetNormalSpawn(Trace,model,
+                       nextx,nexty,nextz,nextpic,nextyaw,nextrol)
+    if(not stSpawn) then return false end
+    local Os = stSpawn.SPos:ToScreen()
+    local Xs = (stSpawn.SPos + 15 * stSpawn.F):ToScreen()
+    local Ys = (stSpawn.SPos + 15 * stSpawn.R):ToScreen()
+    local Zs = (stSpawn.SPos + 15 * stSpawn.U):ToScreen()
+    goMonitor:DrawLine(Os,Xs,"r")
+    goMonitor:DrawLine(Os,Ys,"g")
+    goMonitor:DrawLine(Os,Zs,"b")
+    goMonitor:DrawCircle(Os,plyrad,"y")
+    if(self:GetDeveloperMode() ~= 0) then DrawAdditionalInfo(goMonitor,stSpawn) end
   end
 end
 
 local function DrawRatioVisual(oScreen,nTrR,nHdR,nDeep)
   if(not oScreen) then return end
-  local D2 = mathFloor((nDeep or 0) / 2)
-  if(D2 <= 2) then return end
+  local hDeep = mathFloor((nDeep or 0) / 2)
+  if(hDeep <= 2) then return end
   local nW, nH = oScreen:GetSize()
   local dx, dy, dw, dh = oScreen:GetTextState(0,0,0,2)
   if(nTrR) then
     local Cent = mathFloor((nTrR / ( nTrR + nHdR )) * nW)
-    oScreen:DrawRect(0,dh,nDeep,nH-dy,"y")          -- Trace Teeth
-    oScreen:DrawRect(nDeep,dh,Cent-D2,nH-dy,"g")    -- Trace Gear
-    oScreen:DrawRect(Cent-D2,dh,Cent+D2,nH-dy,"y")  -- Meshing
-    oScreen:DrawRect(Cent+D2,dh,nW-nDeep,nH-dy,"m") -- Holds Gear
-    oScreen:DrawRect(nW-nDeep,dh,nW,nH-dy,"y")      -- Holds Teeth
+    oScreen:DrawRect(0,dh,nDeep,nH-dy,"y")               -- Trace Teeth
+    oScreen:DrawRect(nDeep,dh,Cent-hDeep,nH-dy,"g")      -- Trace Gear
+    oScreen:DrawRect(Cent-hDeep,dh,Cent+hDeep,nH-dy,"y") -- Meshing
+    oScreen:DrawRect(Cent+hDeep,dh,nW-nDeep,nH-dy,"m")   -- Holds Gear
+    oScreen:DrawRect(nW-nDeep,dh,nW,nH-dy,"y")           -- Holds Teeth
   else
-    oScreen:DrawRect(0,dh,nDeep,nH-dy,"y")          -- Holds Teeth
-    oScreen:DrawRect(nDeep,dh,nW-nDeep,nH-dy,"g")   -- Holds
-    oScreen:DrawRect(nW-nDeep,dh,nW,nH-dy,"y")      -- Holds Teeth
+    oScreen:DrawRect(0,dh,nDeep,nH-dy,"y")               -- Holds Teeth
+    oScreen:DrawRect(nDeep,dh,nW-nDeep,nH-dy,"g")        -- Holds
+    oScreen:DrawRect(nW-nDeep,dh,nW,nH-dy,"y")           -- Holds Teeth
   end
 end
 
@@ -702,22 +698,26 @@ function TOOL:DrawToolScreen(w, h)
       return
     end
   end
+  goToolScr:SetColor()
   goToolScr:DrawBackGround("k")
-  goToolScr:SetFont("Trebuchet24")
   goToolScr:SetTextEdge(0,0)
   local Trace = LocalPlayer():GetEyeTrace()
   if(not Trace) then
-    goToolScr:DrawText("Trace status: Invalid","r")
+    goToolScr:DrawText("Trace status: Invalid","r","SURF",{"Trebuchet24"})
+    goToolScr:DrawTextAdd("  ["..(tInfo[1] or gsNoID).."]","an")
     return
   end
-  goToolScr:DrawText("Trace status: Valid","g")
+  goToolScr:DrawText("Trace status: Valid","g","SURF",{"Trebuchet24"})
+  goToolScr:DrawTextAdd("  ["..(tInfo[1] or gsNoID).."]","an")
   local model = self:GetModel()
   local hdRec = asmlib.CacheQueryPiece(model)
   if(not hdRec) then
     goToolScr:DrawText("Holds Model: Invalid","r")
+    goToolScr:DrawTextAdd("  ["..gsModeDataB.."]","db")
     return
   end
   goToolScr:DrawText("Holds Model: Valid","g")
+  goToolScr:DrawTextAdd("  ["..gsModeDataB.."]","db")
   local NoAV  = "N/A"
   local trEnt = Trace.Entity
   local trOrig, trModel, trMesh, trRad
@@ -736,7 +736,7 @@ function TOOL:DrawToolScreen(w, h)
   local Ratio = asmlib.RoundValue((trRad or 0) / hdRad,0.01)
   goToolScr:DrawText("TM: "..(trModel or NoAV),"g")
   goToolScr:DrawText("HM: "..(asmlib.GetModelFileName(model) or NoAV),"m")
-  goToolScr:DrawText("Anc: "..self:GetClientInfo("anchor"),"an")
+  goToolScr:DrawText("Anc: "..self:GetAnchor("anchor"),"an")
   goToolScr:DrawText("Mesh: "..tostring(trMesh or NoAV).." > "..tostring(asmlib.RoundValue(hdRec.Mesh,0.01) or NoAV),"y")
   goToolScr:DrawText("Ratio: "..tostring(Ratio).." > "..tostring(trRad or NoAV).."/"..tostring(hdRad))
   goToolScr:DrawText("StackMod: "..SMode:Select(stmode),"r")
@@ -795,7 +795,7 @@ function TOOL.BuildCPanel(CPanel)
   asmlib.PrintInstance(gsToolNameU.." Found #"..tostring(iCnt-1).." piece items.")
 
   -- http://wiki.garrysmod.com/page/Category:DComboBox
-  local ConID = asmlib.GetCorrectID(GetConVar(gsToolPrefL.."contyp"):GetString(),CType)
+  local ConID = asmlib.GetCorrectID(asmlib.GetAsmVar("contyp","STR"),CType)
   local pConsType = vguiCreate("DComboBox")
         pConsType:SetPos(2, CurY)
         pConsType:SetTall(18)
@@ -818,7 +818,7 @@ function TOOL.BuildCPanel(CPanel)
   local pText = vguiCreate("DTextEntry")
         pText:SetPos(2, 300)
         pText:SetTall(18)
-        pText:SetText(asmlib.GetDefaultString(GetConVar(gsToolPrefL.."bgskids"):GetString(),
+        pText:SetText(asmlib.GetDefaultString(asmlib.GetAsmVar("bgskids","STR"),
                  "Comma delimited Body/Skin IDs > ENTER ( TAB to Auto-fill from Trace )"))
         pText.OnKeyCodeTyped = function(pnSelf, nKeyEnum)
           if(nKeyEnum == KEY_TAB) then
@@ -834,117 +834,51 @@ function TOOL.BuildCPanel(CPanel)
         CurY = CurY + pText:GetTall() + 2
   CPanel:AddItem(pText)
 
-  pItem = CPanel:NumSlider("Piece mass:", gsToolPrefL.."mass", 1, gnMaxMass  , 0)
+  pItem = CPanel:NumSlider("Piece mass:", gsToolPrefL.."mass", 1, asmlib.GetAsmVar("maxmass","FLT")  , 0)
            pItem:SetTooltip(languageGetPhrase("tool."..gsToolNameL..".mass"))
-  pItem = CPanel:NumSlider("Pieces count:", gsToolPrefL.."count"    , 1, asmlib.GetAsmVar("maxstcnt" , "INT"), 0)
+  pItem = CPanel:NumSlider("Pieces count:", gsToolPrefL.."count", 1, asmlib.GetAsmVar("maxstcnt" , "INT"), 0)
            pItem:SetTooltip(languageGetPhrase("tool."..gsToolNameL..".count"))
   pItem = CPanel:Button("V Reset variables V", gsToolPrefL.."resetvars")
            pItem:SetTooltip(languageGetPhrase("tool."..gsToolNameL..".resetvars"))
-
-
-           CPanel:AddControl("Button", {
-            Label   = "V Reset Offset Values V",
-            Command = gsToolPrefL.."resetvars",
-            Text    = "Reset All Offsets" })
-
-  CPanel:AddControl("Slider", {
-            Label   = "Pivot rotation: ",
-            Type    = "Float",
-            Min     = -gnMaxOffRot,
-            Max     =  gnMaxOffRot,
-            Command = gsToolPrefL.."rotpiv"})
-
-  CPanel:AddControl("Slider", {
-            Label   = "End angle pivot: ",
-            Type    = "Float",
-            Min     = -gnMaxOffRot,
-            Max     =  gnMaxOffRot,
-            Command = gsToolPrefL.."deltarot"})
-
-  CPanel:AddControl("Slider", {
-            Label   = "Piece rotation: ",
-            Type    = "Float",
-            Min     = -gnMaxOffRot,
-            Max     =  gnMaxOffRot,
-            Command = gsToolPrefL.."nextyaw"})
-
-  CPanel:AddControl("Slider", {
-            Label   = "UCS pitch: ",
-            Type    = "Float",
-            Min     = -gnMaxOffRot,
-            Max     =  gnMaxOffRot,
-            Command = gsToolPrefL.."nextpic"})
-
-  CPanel:AddControl("Slider", {
-            Label   = "UCS roll: ",
-            Type    = "Float",
-            Min     = -gnMaxOffRot,
-            Max     =  gnMaxOffRot,
-            Command = gsToolPrefL.."nextrol"})
-
-  CPanel:AddControl("Slider", {
-            Label   = "Offset X: ",
-            Type    = "Float",
-            Min     = -gnMaxOffLin,
-            Max     =  gnMaxOffLin,
-            Command = gsToolPrefL.."nextx"})
-
-  CPanel:AddControl("Slider", {
-            Label   = "Offset Y: ",
-            Type    = "Float",
-            Min     = -gnMaxOffLin,
-            Max     =  gnMaxOffLin,
-            Command = gsToolPrefL.."nexty"})
-
-  CPanel:AddControl("Slider", {
-            Label   = "Offset Z: ",
-            Type    = "Float",
-            Min     = -gnMaxOffLin,
-            Max     =  gnMaxOffLin,
-            Command = gsToolPrefL.."nextz"})
-
-  CPanel:AddControl("Slider", {
-            Label   = "Force Limit: ",
-            Type    = "Float",
-            Min     = 0,
-            Max     = gnMaxForLim,
-            Command = gsToolPrefL.."forcelim"})
-
-  CPanel:AddControl("Checkbox", {
-            Label   = "NoCollide new pieces to the anchor",
-            Command = gsToolPrefL.."nocollide"})
-
-  CPanel:AddControl("Checkbox", {
-            Label   = "Freeze pieces",
-            Command = gsToolPrefL.."freeze"})
-
-  CPanel:AddControl("Checkbox", {
-            Label   = "Turn off physgun",
-            Command = gsToolPrefL.."ignphysgn"})
-
-  CPanel:AddControl("Checkbox", {
-            Label   = "Enable pieces gravity",
-            Command = gsToolPrefL.."gravity"})
-
-  CPanel:AddControl("Checkbox", {
-            Label   = "Use origin angle from trace",
-            Command = gsToolPrefL.."trorang"})
-
-  CPanel:AddControl("Checkbox", {
-            Label   = "Ignore gear type",
-            Command = gsToolPrefL.."igntyp"})
-
-  CPanel:AddControl("Checkbox", {
-            Label   = "Enable flat gear spawn",
-            Command = gsToolPrefL.."spnflat"})
-
-  CPanel:AddControl("Checkbox", {
-            Label   = "Enable advisor",
-            Command = gsToolPrefL.."adviser"})
-
-  CPanel:AddControl("Checkbox", {
-            Label   = "Enable ghosting",
-            Command = gsToolPrefL.."ghosthold"})
+  pItem = CPanel:NumSlider("Pivot rotation:", gsToolPrefL.."rotpiv", -gnMaxOffRot, gnMaxOffRot, 3)
+           pItem:SetTooltip(languageGetPhrase("tool."..gsToolNameL..".rotpiv"))
+  pItem = CPanel:NumSlider("End angle pivot:", gsToolPrefL.."deltarot", -gnMaxOffRot, gnMaxOffRot, 3)
+           pItem:SetTooltip(languageGetPhrase("tool."..gsToolNameL..".deltarot"))
+  pItem = CPanel:NumSlider("Origin yaw:"  , gsToolPrefL.."nextyaw", -gnMaxOffRot, gnMaxOffRot, 3)
+           pItem:SetTooltip(languageGetPhrase("tool."..gsToolNameL..".nextyaw"))
+  pItem = CPanel:NumSlider("Origin pitch:", gsToolPrefL.."nextpic", -gnMaxOffRot, gnMaxOffRot, 3)
+           pItem:SetTooltip(languageGetPhrase("tool."..gsToolNameL..".nextpic"))
+  pItem = CPanel:NumSlider("Origin roll:" , gsToolPrefL.."nextrol", -gnMaxOffRot, gnMaxOffRot, 3)
+           pItem:SetTooltip(languageGetPhrase("tool."..gsToolNameL..".nextrol"))
+  local nMaxOffLin = asmlib.GetAsmVar("maxlinear","FLT")
+  pItem = CPanel:NumSlider("Offset X:", gsToolPrefL.."nextx", -nMaxOffLin, nMaxOffLin, 3)
+           pItem:SetTooltip(languageGetPhrase("tool."..gsToolNameL..".nextx"))
+  pItem = CPanel:NumSlider("Offset Y:", gsToolPrefL.."nexty", -nMaxOffLin, nMaxOffLin, 3)
+           pItem:SetTooltip(languageGetPhrase("tool."..gsToolNameL..".nexty"))
+  pItem = CPanel:NumSlider("Offset Z:", gsToolPrefL.."nextz", -nMaxOffLin, nMaxOffLin, 3)
+           pItem:SetTooltip(languageGetPhrase("tool."..gsToolNameL..".nextz"))
+  pItem = CPanel:NumSlider("Force Limit:", gsToolPrefL.."forcelim", 0, asmlib.GetAsmVar("maxforce","FLT"), 3)
+           pItem:SetTooltip(languageGetPhrase("tool."..gsToolNameL..".forcelim"))
+  pItem = CPanel:CheckBox("NoCollide new pieces to the anchor", gsToolPrefL.."nocollide")
+           pItem:SetTooltip(languageGetPhrase("tool."..gsToolNameL..".nocollide"))
+  pItem = CPanel:CheckBox("Freeze pieces", gsToolPrefL.."freeze")
+           pItem:SetTooltip(languageGetPhrase("tool."..gsToolNameL..".freeze"))
+  pItem = CPanel:CheckBox("Ignore physgun", gsToolPrefL.."ignphysgn")
+           pItem:SetTooltip(languageGetPhrase("tool."..gsToolNameL..".ignphysgn"))
+  pItem = CPanel:CheckBox("Apply pieces gravity", gsToolPrefL.."gravity")
+           pItem:SetTooltip(languageGetPhrase("tool."..gsToolNameL..".gravity"))
+  pItem = CPanel:CheckBox("Use origin angle from trace", gsToolPrefL.."trorang")
+           pItem:SetTooltip(languageGetPhrase("tool."..gsToolNameL..".trorang"))
+  pItem = CPanel:CheckBox("Ignore gearbox type", gsToolPrefL.."igntyp")
+           pItem:SetTooltip(languageGetPhrase("tool."..gsToolNameL..".igntyp"))
+  pItem = CPanel:CheckBox("Spawn horizontally", gsToolPrefL.."spnflat")
+           pItem:SetTooltip(languageGetPhrase("tool."..gsToolNameL..".spnflat"))
+  pItem = CPanel:CheckBox("Enable adviser", gsToolPrefL.."adviser")
+           pItem:SetTooltip(languageGetPhrase("tool."..gsToolNameL..".adviser"))
+  pItem = CPanel:CheckBox("Draw adviser", gsToolPrefL.."adviser")
+           pItem:SetTooltip(languageGetPhrase("tool."..gsToolNameL..".adviser"))
+  pItem = CPanel:CheckBox("Draw holder ghost", gsToolPrefL.."ghosthold")
+           pItem:SetTooltip(languageGetPhrase("tool."..gsToolNameL..".ghosthold"))
 end
 
 function TOOL:UpdateGhost(oEnt, oPly)
