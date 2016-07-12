@@ -101,7 +101,8 @@ if(CLIENT) then
   languageAdd("tool."..gsToolNameL..".freeze"    , "Makes the piece spawn in a frozen state")
   languageAdd("tool."..gsToolNameL..".adviser"   , "Controls rendering the tool position/angle adviser")
   languageAdd("tool."..gsToolNameL..".igntyp"    , "Makes the tool ignore the different piece types on snapping/stacking")
-  languageAdd("tool."..gsToolNameL..".rotpiv"    , "Sontrols starting angle offset when stacking")
+  languageAdd("tool."..gsToolNameL..".rotpivt"   , "Controls pivot angle offset when stacking/snapping")
+  languageAdd("tool."..gsToolNameL..".rotpivh"   , "Rotate the piece local axis to precisely mesh the teeth")
   languageAdd("tool."..gsToolNameL..".nextpic"   , "Additional origin angular pitch offset")
   languageAdd("tool."..gsToolNameL..".nextyaw"   , "Additional origin angular yaw offset")
   languageAdd("tool."..gsToolNameL..".nextrol"   , "Additional origin angular roll offset")
@@ -146,7 +147,8 @@ TOOL.ClientConVar = {
   [ "freeze"    ] = "0",
   [ "adviser"   ] = "1",
   [ "igntyp"    ] = "0",
-  [ "rotpiv"    ] = "0",
+  [ "rotpivt"   ] = "0",
+  [ "rotpivh"   ] = "0",
   [ "gravity"   ] = "1",
   [ "nextpic"   ] = "0",
   [ "nextyaw"   ] = "0",
@@ -245,7 +247,8 @@ function TOOL:GetStackAttempts()
 end
 
 function TOOL:GetRotatePivot()
-  return math.Clamp(self:GetClientNumber("rotpiv") or 0,-gnMaxOffRot,gnMaxOffRot)
+  return math.Clamp(self:GetClientNumber("rotpivt") or 0,-gnMaxOffRot,gnMaxOffRot),
+         math.Clamp(self:GetClientNumber("rotpivh") or 0,-gnMaxOffRot,gnMaxOffRot)
 end
 
 function TOOL:GetDeltaRotation()
@@ -318,6 +321,7 @@ function TOOL:GetStatus(stTrace,anyMessage,hdEnt)
   local sFleLog = asmlib.GetOpVar("LOG_LOGFILE")
   local sSpace  = stringRep(" ",6 + stringLen(tostring(iMaxlog)))
   local plyKeys = asmlib.LoadKeyPly(ply,"DEBUG")
+  local rotpivt, rotpivh = self:GetRotatePivot()
   local aninfo , anEnt   = self:GetAnchor()
   local nextx  , nexty  , nextz   = self:GetPosOffsets()
   local nextpic, nextyaw, nextrol = self:GetAngOffsets()
@@ -357,11 +361,11 @@ function TOOL:GetStatus(stTrace,anyMessage,hdEnt)
         sDu = sDu..sSpace.."  HD.StackCNT:    <"..tostring(self:GetCount())..">"..sDelim
         sDu = sDu..sSpace.."  HD.Gravity:     <"..tostring(self:GetGravity())..">"..sDelim
         sDu = sDu..sSpace.."  HD.Adviser:     <"..tostring(self:GetAdviser())..">"..sDelim
-        sDu = sDu..sSpace.."  HD.ForceLimit:  <"..tostring(self:GetForceLimit())..">"..sDelim
         sDu = sDu..sSpace.."  HD.ExportDB:    <"..tostring(self:GetExportDB())..">"..sDelim
         sDu = sDu..sSpace.."  HD.NoCollide:   <"..tostring(self:GetNoCollide())..">"..sDelim
         sDu = sDu..sSpace.."  HD.SpawnFlat:   <"..tostring(self:GetSpawnFlat())..">"..sDelim
         sDu = sDu..sSpace.."  HD.IgnoreType:  <"..tostring(self:GetIgnoreType())..">"..sDelim
+        sDu = sDu..sSpace.."  HD.ForceLimit:  <"..tostring(self:GetForceLimit())..">"..sDelim
         sDu = sDu..sSpace.."  HD.GhostHold:   <"..tostring(self:GetGhostHolder())..">"..sDelim
         sDu = sDu..sSpace.."  HD.SkinBG:      <"..tostring(self:GetBodyGroupSkin())..">"..sDelim
         sDu = sDu..sSpace.."  HD.StackAtempt: <"..tostring(self:GetStackAttempts())..">"..sDelim
@@ -377,6 +381,7 @@ function TOOL:GetStatus(stTrace,anyMessage,hdEnt)
         sDu = sDu..sSpace.."  HD.MaxStackCnt: <"..tostring(asmlib.GetAsmVar("maxstcnt" ,"INT"))..">"..sDelim
         sDu = sDu..sSpace.."  HD.BoundErrMod: <"..tostring(asmlib.GetAsmVar("bnderrmod","STR"))..">"..sDelim
         sDu = sDu..sSpace.."  HD.MaxFrequent: <"..tostring(asmlib.GetAsmVar("maxfruse" ,"INT"))..">"..sDelim
+        sDu = sDu..sSpace.."  HD.RotatePivot: {"..tostring(rotpivt)..", "..tostring(rotpivh).."}"..sDelim
         sDu = sDu..sSpace.."  HD.Anchor:      {"..tostring(anEnt or gsNoAV).."}<"..tostring(aninfo)..">"..sDelim
         sDu = sDu..sSpace.."  HD.AngOffsets:  ["..tostring(nextx)..","..tostring(nexty)..","..tostring(nextz).."]"..sDelim
         sDu = sDu..sSpace.."  HD.PosOffsets:  ["..tostring(nextpic)..","..tostring(nextyaw)..","..tostring(nextrol).."]"..sDelim
@@ -404,7 +409,6 @@ function TOOL:LeftClick(stTrace)
   local count     = self:GetCount()
   local mass      = self:GetMass()
   local staatts   = self:GetStackAttempts()
-  local rotpiv    = self:GetRotatePivot()
   local deltarot  = self:GetDeltaRotation()
   local forcelim  = self:GetForceLimit()
   local ignphysgn = self:GetIgnorePhysgun()
@@ -413,12 +417,13 @@ function TOOL:LeftClick(stTrace)
   local stmode    = asmlib.GetCorrectID(self:GetStackMode(),SMode)
   local contyp    = asmlib.GetCorrectID(self:GetContrType(),CType)
   local aninfo , eBase   = self:GetAnchor()
+  local rotpivt, rotpivh = self:GetRotatePivot()
   local nextx  , nexty  , nextz   = self:GetPosOffsets()
   local nextpic, nextyaw, nextrol = self:GetAngOffsets()
   asmlib.PlyLoadKey(ply)
   if(not asmlib.PlyLoadKey(ply,"SPEED") and not asmlib.PlyLoadKey(ply,"DUCK")) then
     if(not (eBase and eBase:IsValid()) and (trEnt and trEnt:IsValid())) then eBase = trEnt end
-    local stSpawn = asmlib.GetNormalSpawn(stTrace,model,nextx,nexty,nextz,
+    local stSpawn = asmlib.GetNormalSpawn(stTrace,model,rotpivh,nextx,nexty,nextz,
                                               nextpic,nextyaw,nextrol)
     if(not stSpawn) then return asmlib.StatusLog(false,self:GetStatus(stTrace,"TOOL:LeftClick(World): Normal spawn failed")) end
     local ePiece = asmlib.MakePiece(ply,model,stTrace.HitPos,ANG_ZERO,mass,bgskids,conPalette:Select("w"),bnderrmod)
@@ -627,7 +632,7 @@ function TOOL:DrawHUD()
     if(asmlib.IsOther(trEnt)) then return end
     local igntyp  = self:GetIgnoreType()
     local trorang = self:GetTraceOriginAngle()
-    local rotpiv  = self:GetRotatePivot()
+    local rotpivt, rotpivh = self:GetRotatePivot()
     local stSpawn = asmlib.GetEntitySpawn(trEnt,rotpiv,model,igntyp,
                       trorang,nextx,nexty,nextz,nextpic,nextyaw,nextrol)
     if(not stSpawn) then return end
@@ -840,8 +845,10 @@ function TOOL.BuildCPanel(CPanel)
            pItem:SetTooltip(languageGetPhrase("tool."..gsToolNameL..".count"))
   pItem = CPanel:Button("V Reset variables V", gsToolPrefL.."resetvars")
            pItem:SetTooltip(languageGetPhrase("tool."..gsToolNameL..".resetvars"))
-  pItem = CPanel:NumSlider("Pivot rotation:", gsToolPrefL.."rotpiv", -gnMaxOffRot, gnMaxOffRot, 3)
-           pItem:SetTooltip(languageGetPhrase("tool."..gsToolNameL..".rotpiv"))
+  pItem = CPanel:NumSlider("Pivot rotation:", gsToolPrefL.."rotpivt", -gnMaxOffRot, gnMaxOffRot, 3)
+           pItem:SetTooltip(languageGetPhrase("tool."..gsToolNameL..".rotpivt"))
+  pItem = CPanel:NumSlider("Pivot rotation:", gsToolPrefL.."rotpivh", -gnMaxOffRot, gnMaxOffRot, 3)
+           pItem:SetTooltip(languageGetPhrase("tool."..gsToolNameL..".rotpivh"))
   pItem = CPanel:NumSlider("End angle pivot:", gsToolPrefL.."deltarot", -gnMaxOffRot, gnMaxOffRot, 3)
            pItem:SetTooltip(languageGetPhrase("tool."..gsToolNameL..".deltarot"))
   pItem = CPanel:NumSlider("Origin yaw:"  , gsToolPrefL.."nextyaw", -gnMaxOffRot, gnMaxOffRot, 3)
@@ -891,6 +898,7 @@ function TOOL:UpdateGhost(oEnt, oPly)
   oEnt:DrawShadow(false)
   oEnt:SetColor(conPalette:Select("gh"))
   asmlib.PlyLoadKey(oPly)
+  local rotpivt, rotpivh = self:GetRotatePivot()
   if(trEnt and trEnt:IsValid() and asmlib.PlyLoadKey(oPly,"SPEED")) then
     if(asmlib.IsOther(trEnt)) then return end
     local trRec = asmlib.CacheQueryPiece(trEnt:GetModel())
@@ -899,27 +907,24 @@ function TOOL:UpdateGhost(oEnt, oPly)
       local nextx, nexty, nextz = self:GetPosOffsets()
       local igntyp  = self:GetIgnoreType()
       local trorang = self:GetTraceOriginAngle()
-      local rotpiv  = self:GetRotatePivot()
       local nextpic, nextyaw, nextrol = self:GetAngOffsets()
-      local stSpawn = asmlib.GetEntitySpawn(trEnt,rotpiv,model,igntyp,
-                        trorang,nextx,nexty,nextz,nextpic,nextyaw,nextrol)
+      local stSpawn = asmlib.GetEntitySpawn(trEnt,rotpivt,rotpivh,model,igntyp,nextx,nexty,nextz,nextpic,nextyaw,nextrol)
       if(not stSpawn) then return end
       oEnt:SetNoDraw(false)
       oEnt:SetAngles(stSpawn.SAng)
-      asmlib.SetMCWorld(oEnt,stSpawn.HRec.M,stSpawn.SPos)
+      asmlib.SetMCWorld(oEnt,stSpawn.HRec.O,stSpawn.SPos)
     end
   else
     local model = self:GetModel()
     local nextx, nexty, nextz = self:GetPosOffsets()
     local nextpic, nextyaw, nextrol = self:GetAngOffsets()
-    local stSpawn = asmlib.GetNormalSpawn(Trace,model,
-                      nextx,nexty,nextz,nextpic,nextyaw,nextrol)
+    local stSpawn = asmlib.GetNormalSpawn(Trace,model,nextx,nexty,nextz,nextpic,nextyaw,nextrol)
     if(not stSpawn) then return end
     local spnflat = self:GetSpawnFlat()
     oEnt:SetNoDraw(false)
     oEnt:SetAngles(stSpawn.SAng)
     stSpawn.SPos:Add(asmlib.GetCustomAngBBZ(oEnt,stSpawn.HRec,spnflat) * Trace.HitNormal)
-    asmlib.SetMCWorld(oEnt,stSpawn.HRec.M,stSpawn.SPos)
+    asmlib.SetMCWorld(oEnt,stSpawn.HRec.O,stSpawn.SPos)
     return
   end
 end

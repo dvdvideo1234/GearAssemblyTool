@@ -407,8 +407,6 @@ function Init(sName,sPurpose)
   SetOpVar("HASH_USER_PANEL",GetOpVar("TOOLNAME_PU").."USER_PANEL")
   SetOpVar("HASH_QUERY_STORE",GetOpVar("TOOLNAME_PU").."QHASH_QUERY")
   SetOpVar("HASH_PLAYER_KEYDOWN","PLAYER_KEYDOWN")
-  SetOpVar("HASH_PROPERTY_NAMES","PROPERTY_NAMES")
-  SetOpVar("HASH_PROPERTY_TYPES","PROPERTY_TYPES")
   SetOpVar("NAV_PIECE",{})
   SetOpVar("NAV_PANEL",{})
   SetOpVar("STRUCT_SPAWN",{
@@ -419,15 +417,16 @@ function Init(sName,sPurpose)
     OAng = Angle (),
     SPos = Vector(),
     SAng = Angle (),
-    MPnt = Vector(),
-    MOrg = Vector(),
-    MAng = Angle (),
-    CPos = Vector(),
-    CAng = Angle (),
-    DPos = Vector(),
-    DAng = Angle (),
+    -- Holder
     HRec = 0,
-    TRec = 0
+    HPnt = Vector(), -- P
+    HPos = Vector(), -- O
+    HAng = Angle (), -- A
+    -- Traced
+    TRec = 0,
+    TPnt = Vector(), -- P
+    TPos = Vector(), -- O
+    TAng = Angle ()  -- A
   })
   return StatusPrint(true,"InitAssembly: Success")
 end
@@ -1204,12 +1203,11 @@ local function DecodePOA(sStr)
   return arPOA
 end
 
-local function RegisterPOA(stPiece, ivID, sP, sO, sA)
+local function RegisterPOA(stPiece, sMod, sP, sO, sA)
   if(not stPiece) then
     return StatusLog(nil,"RegisterPOA: Cache record invalid") end
-  local iID = tonumber(ivID)
-  if(not IsExistent(iID)) then
-    return StatusLog(nil,"RegisterPOA: OffsetID NAN {"..type(ivID).."}<"..tostring(ivID)..">") end
+  if(not IsString(sMod)) then
+    return StatusLog(nil,"RegisterPOA: Hash <"..tostring(sMod).."> invalid") end
   local sP = sP or "NULL"
   local sO = sO or "NULL"
   local sA = sA or "NULL"
@@ -1219,36 +1217,19 @@ local function RegisterPOA(stPiece, ivID, sP, sO, sA)
     return StatusLog(nil,"RegisterPOA: Origin {"..type(sO).."}<"..tostring(sO)..">") end
   if(not IsString(sA)) then
     return StatusLog(nil,"RegisterPOA: Angle  {"..type(sA).."}<"..tostring(sA)..">") end
-  if(not stPiece.Offs) then
-    if(iID > 1) then return StatusLog(nil,"RegisterPOA: First ID cannot be #"..tostring(iID)) end
-    stPiece.Offs = {}
-  end
-  local tOffs = stPiece.Offs
-  if(tOffs[iID]) then
-    return StatusLog(nil,"RegisterPOA: Exists ID #"..tostring(iID))
-  else
-    if((iID > 1) and (not tOffs[iID - 1])) then
-      return StatusLog(nil,"RegisterPOA: No sequential ID #"..tostring(iID - 1))
-    end
-    tOffs[iID]   = {}
-    tOffs[iID].P = {}
-    tOffs[iID].O = {}
-    tOffs[iID].A = {}
-    tOffs        = tOffs[iID]
-  end
+  local stPOA = stPiece.Offs
+  if(not stPOA) then
+    stPiece.Offs = {}; stPOA = stPiece.Offs
+    stPOA.P = {}; stPOA.O = {}; stPOA.A = {}
+  else return StatusLog(nil,"RegisterPOA: Hash <"..tostring(sMod).."> exists") end
   ---------------- Origin ----------------
   if((sO ~= "NULL") and not IsEmptyString(sO)) then DecodePOA(sO) else ReloadPOA() end
   if(not IsExistent(TransferPOA(tOffs.O,"V"))) then
     return StatusLog(nil,"RegisterPOA: Cannot transfer origin") end
   ---------------- Point ----------------
-  local sD = stringGsub(sP,GetOpVar("OPSYM_DISABLE"),"")
   if((sP ~= "NULL") and not IsEmptyString(sP)) then DecodePOA(sP) else ReloadPOA() end
   if(not IsExistent(TransferPOA(tOffs.P,"V"))) then
     return StatusLog(nil,"RegisterPOA: Cannot transfer point") end
-  if((sD == "NULL") or IsEmptyString(sD)) then -- If empty use origin
-    tOffs.P[cvX] = tOffs.O[cvX]; tOffs.P[cvY] = tOffs.O[cvY]; tOffs.P[cvZ] = tOffs.O[cvZ];
-    tOffs.P[csA] = tOffs.O[csA]; tOffs.P[csB] = tOffs.O[csB]; tOffs.P[csC] = tOffs.O[csC];
-  end
   ---------------- Angle ----------------
   if((sA ~= "NULL") and not IsEmptyString(sA)) then DecodePOA(sA) else ReloadPOA() end
   if(not IsExistent(TransferPOA(tOffs.A,"A"))) then
@@ -1954,7 +1935,7 @@ function InsertRecord(sTable,tData)
                             ..sTable.." <"..tostring(tData[4]).."> to "
                             ..defTable[4][1].." for "..tostring(snPrimaryKey))
       end
-      local stRezul = RegisterPOA(tLine,tLine.Kept,tData[5],tData[6],tData[7])
+      local stRezul = RegisterPOA(tLine,snPrimaryKey,tData[5],tData[6],tData[7])
       if(not IsExistent(stRezul)) then
         return StatusLog(nil,"InsertRecord: Cannot process offset for "..tostring(snPrimaryKey)) end
     else
@@ -2168,13 +2149,12 @@ function CacheQueryPiece(sModel)
       local qRec, qRez
       while(qData[stPiece.Kept]) do
         qRec = qData[stPiece.Kept]
-        qRez = RegisterPOA(stPiece,
-                           stPiece.Kept,
+        qRez = RegisterPOA(stPiece, sModel,
                            qRec[defTable[5][1]],
                            qRec[defTable[6][1]],
                            qRec[defTable[7][1]])
         if(not IsExistent(qRez)) then
-          return StatusLog(nil,"CacheQueryPiece: Cannot process offset #"..tostring(stPiece.Kept).." for <"..sModel..">")
+          return StatusLog(nil,"CacheQueryPiece: Cannot process hash <"..sModel..">")
         end
         stPiece.Kept = stPiece.Kept + 1
       end
@@ -2469,41 +2449,52 @@ end
 --[[
  * This function is the backbone of the tool for Trace.Normal
  * Calculates SPos, SAng based on the DB inserts and input parameters
- * stTrace       = Trace result
- * hModel        = Piece holds model
+ * ucsPos,ucsAng = Origin position and angle of the snapping
+ * hdModel       = Holder's piece model
+ * enOrAng       = Position offset comes from origin angle F,R,U
  * ucsPos(X,Y,Z) = Offset position
  * ucsAng(P,Y,R) = Offset angle
 ]]--
-
-function GetNormalSpawn(ucsPos,ucsAng,hdModel,ucsPosX,ucsPosY,ucsPosZ,ucsAngP,ucsAngY,ucsAngR)
+function GetNormalSpawn(ucsPos,ucsAng,hdModel,hdPivot,ucsPosX,ucsPosY,ucsPosZ,ucsAngP,ucsAngY,ucsAngR)
   local hdRec = CacheQueryPiece(hdModel)
-  if(not IsExistent(hdRec)) then return StatusLog(nil,"GetEntitySpawn: Holder is not a piece <"..hdModel..">") end
+  if(not IsExistent(hdRec)) then return StatusLog(nil,"GetNormalSpawn: Holder is not a piece <"..hdModel..">") end
+  if(not IsExistent(hdRec.Kept) and (hdRec.Kept < 1 or hdRec.Kept > 1)) then
+    return StatusLog(nil,"GetNormalSpawn: Line count <"..tostring(ID).."> mismatch for <"..hdModel..">") end
+  local hdModel, enOrAngTr = tostring(hdModel or ""), (tonumber(enOrAngTr) or 0)
   local stSpawn = GetOpVar("STRUCT_SPAWN")
         stSpawn.HRec = hdRec
-  if(ucsPos) then SetVector(stSpawn.DPos,ucsPos) end
-  if(ucsAng) then SetVector(stSpawn.DAng,ucsAng) end
-  SetAngle (stSpawn.MAng, hdRec.A)
-  SetVector(stSpawn.MPos, hdRec.P)
-  -- Calculate spawns
-
-
-
-
-
-  stSpawn.CAng:Set(stTrace.HitNormal:Angle())
-  stSpawn.CAng[caP] = stSpawn.CAng[caP] + 90
-  stSpawn.DAng:Set(stSpawn.CAng)
-  stSpawn.DAng:RotateAroundAxis(stSpawn.DAng:Up()     ,(tonumber(ucsAngY) or 0))
-  stSpawn.DAng:RotateAroundAxis(stSpawn.CAng:Right()  ,(tonumber(ucsAngP) or 0))
-  stSpawn.DAng:RotateAroundAxis(stSpawn.CAng:Forward(),(tonumber(ucsAngR) or 0))
-  stSpawn.F:Set(stSpawn.DAng:Forward())
-  stSpawn.R:Set(stSpawn.DAng:Right())
-  stSpawn.U:Set(stSpawn.DAng:Up())
-  stSpawn.SAng:Set(stSpawn.DAng)
-  RotateAngleDir(stSpawn.SAng,"RUF", hdRec.A[caP] * hdRec.A[csA],
-                                     hdRec.A[caY] * hdRec.A[csB],
-                                     hdRec.A[caR] * hdRec.A[csC])
-  stSpawn.SPos:Set(stTrace.HitPos)
+  if(ucsPos) then SetVector(stSpawn.OPos,ucsPos) end
+  if(ucsAng) then SetVector(stSpawn.OAng,ucsAng) end
+  -- Calculate directions
+  stSpawn.U:Set(stSpawn.OAng:Up()     )
+  stSpawn.R:Set(stSpawn.OAng:Right()  )
+  stSpawn.F:Set(stSpawn.OAng:Forward())
+  -- Rotate origin
+  stSpawn.OAng:RotateAroundAxis(stSpawn.U,(tonumber(ucsAngY) or 0))
+  stSpawn.OAng:RotateAroundAxis(stSpawn.R,(tonumber(ucsAngP) or 0))
+  stSpawn.OAng:RotateAroundAxis(stSpawn.F,(tonumber(ucsAngR) or 0))
+  stSpawn.U:Set(stSpawn.OAng:Up()     )
+  stSpawn.R:Set(stSpawn.OAng:Right()  )
+  stSpawn.F:Set(stSpawn.OAng:Forward())
+  -- Read holder's data
+  SetVector(stSpawn.HPnt, hdRec.P)
+  SetVector(stSpawn.HPos, hdRec.O)
+  SetAngle (stSpawn.HAng, hdRec.A)
+  -- Calcolate domain ( Angle )
+  stSpawn.HPnt:Mul(-1)
+  stSpawn.HAng:RotateAroundAxis(stSpawn.HAng:Up(),180)
+  stSpawn.HAng:RotateAroundAxis(stSpawn.HAng:Right(),hdRec.Mesh)
+  DecomposeByAngle(stSpawn.HPnt,stSpawn.HAng)
+  stSpawn.HAng:RotateAroundAxis(stSpawn.HAng:Up(),(tonumber(hdPivot) or 0))
+  -- Calcolate spawns
+  stSpawn.SAng:Set(stSpawn.OAng)
+  stSpawn.SAng:RotateAroundAxis(stSpawn.U,stSpawn.HAng[caY] * hdRec.A[csB])
+  stSpawn.SAng:RotateAroundAxis(stSpawn.R,stSpawn.HAng[caP] * hdRec.A[csA])
+  stSpawn.SAng:RotateAroundAxis(stSpawn.F,stSpawn.HAng[caR] * hdRec.A[csC])
+  stSpawn.SPos:Add(stSpawn.HPos)
+  stSpawn.SPos:Mul(-1)
+  stSpawn.SPos:Rotate(stSpawn.SAng)
+  stSpawn.SPos:Add(stSpawn.HPnt)
   stSpawn.SPos:Add((tonumber(ucsPosX) or 0) * stSpawn.F)
   stSpawn.SPos:Add((tonumber(ucsPosY) or 0) * stSpawn.R)
   stSpawn.SPos:Add((tonumber(ucsPosZ) or 0) * stSpawn.U)
@@ -2517,50 +2508,42 @@ end
  * nRotPivot     = Start angle to rotate trAng to
  * hdModel       = Node:Model()
  * enIgnTyp      = Ignore Gear Type
- * enOrAngTr     = F,R,U Come from trace's angles
+ * enOrAng       = F,R,U Come from trace's angles
  * ucsPos(X,Y,Z) = Offset position
  * ucsAng(P,Y,R) = Offset angle
 ]]--
-function GetEntitySpawn(trEnt,nvRotPivot,hdModel,enIgnTyp,
-                        enOrAngTr,ucsPosX,ucsPosY,ucsPosZ,
+function GetEntitySpawn(trEnt,trPivot,hdPivot,hdModel,enIgnTyp,
+                        enOrAng,ucsPosX,ucsPosY,ucsPosZ,
                         ucsAngP,ucsAngY,ucsAngR)
   if(not (trEnt and trEnt:IsValid())) then return StatusLog(nil,"GetEntitySpawn: Entity origin invalid") end
-  local nRotPivot = tonumber(nvRotPivot)
-  if(not IsExistent(nRotPivot)) then return StatusLog(nil,"GetEntitySpawn: Rotate pivot <"..tostring(nvRotPivot).."> nan") end
-  local hdModel, enIgnTyp, enOrAngTr = tostring(hdModel or ""), (tonumber(enIgnTyp) or 0), (tonumber(enOrAngTr) or 0)
-  local trRec, hdRec = CacheQueryPiece(trEnt:GetModel()), CacheQueryPiece(hdModel)
+  local trPivot, hdPivot  = (tonumber(trPivot) or  0), (tonumber(hdPivot ) or 0)
+  local hdModel, enIgnTyp =  tostring(hdModel  or ""), (tonumber(enIgnTyp) or 0)
+  local trRec  ,   hdRec  = CacheQueryPiece(trEnt:GetModel()), CacheQueryPiece(hdModel)
   if(not IsExistent(trRec)) then return StatusLog(nil,"GetEntitySpawn: Trace is not a piece <"..trEnt:GetModel())..">") end
   if(not IsExistent(hdRec)) then return StatusLog(nil,"GetEntitySpawn: Holder is not a piece <"..hdModel..">") end
   if(not (IsExistent(trRec.Type) and IsString(trRec.Type))) then
-    return StatusLog(nil,"GetEntitySpawn: Trace not graded <"..tostring(trRec.Type)..">") end
+    return StatusLog(nil,"GetEntitySpawn: Trace not grouped <"..tostring(trRec.Type)..">") end
   if(not (IsExistent(hdRec.Type) and IsString(hdRec.Type))) then
-    return StatusLog(nil,"GetEntitySpawn: Holder not graded <"..tostring(hdRec.Type)..">") end
+    return StatusLog(nil,"GetEntitySpawn: Holder not grouped <"..tostring(hdRec.Type)..">") end
   if(enIgnTyp == 0 and trRec.Type ~= hdRec.Type ) then return nil end
-  -- Save our records
-  stSpawn.HRec, stSpawn.TRec = hdRec, trRec
   -- We have the next Piece Offset
   local stSpawn = GetOpVar("STRUCT_SPAWN")
+  -- Save our records
+  stSpawn.HRec, stSpawn.TRec = hdRec, trRec
   -- Calculate the center using the masscenter
-  stSpawn.CPos:Set(vGetMCWorld(trEnt,trRec.O))
-  SetAngle(stSpawn.CAng,trRec.A)
-  stSpawn.CAng:Set(trEnt:LocalToWorldAngles(stSpawn.CAng))
-  stSpawn.CAng:RotateAroundAxis(stSpawn.CAng:Up(),-nRotPivot)
+  SetVector(stSpawn.TPnt,trRec.P)
+  SetVector(stSpawn.TPos,trRec.O)
+  SetAngle (stSpawn.TAng,trRec.A)
+  stSpawn.TPos:Set(vGetMCWorld(trEnt,stSpawn.TPos))
+  stSpawn.TAng:Set(trEnt:LocalToWorldAngles(stSpawn.TAng))
+  stSpawn.TAng:RotateAroundAxis(stSpawn.TAng:Up(),-trPivot)
   -- Calculate the origin based on the center
-  SetVector(stSpawn.OPos,trRec.P)
-  stSpawn.OPos:Rotate(stSpawn.CAng)
-  stSpawn.OPos:Add(stSpawn.CPos)
-  stSpawn.OAng:Set(stSpawn.CAng)
-  stSpawn.OAng:RotateAroundAxis(stSpawn.CAng:Right(),trRec.Mesh + (tonumber(ucsAngP) or 0))
-  stSpawn.OAng:RotateAroundAxis(stSpawn.OAng:Forward(),(tonumber(ucsAngR) or 0))
-  -- Calcolate domains
-  stSpawn.DAng:Set(stSpawn.OAng)
-  stSpawn.DAng:RotateAroundAxis(stSpawn.DAng:Right(),hdRec.Mesh)
-  stSpawn.DAng:RotateAroundAxis(stSpawn.DAng:Up(),(tonumber(ucsAngY) or 0) + 180)
-  stSpawn.DPos:Set(stSpawn.OPos); SetVector(stSpawn.MPnt, hdRec.P)
-  stSpawn.DPos:Add(stSpawn.MPnt[cvX] * stSpawn.DAng:Forward())
-  stSpawn.DPos:Add(stSpawn.MPnt[cvY] * stSpawn.DAng:Right())
-  stSpawn.DPos:Add(stSpawn.MPnt[cvZ] * stSpawn.DAng:Up())
-  return GetNormalSpawn(nil,nil,hdModel,ucsPosX,ucsPosY,ucsPosZ)
+  stSpawn.OPos:Set(stSpawn.TPnt)
+  stSpawn.OPos:Rotate(stSpawn.TAng)
+  stSpawn.OPos:Add(stSpawn.TPos)
+  stSpawn.OAng:Set(stSpawn.TAng)
+  stSpawn.OAng:RotateAroundAxis(stSpawn.TAng:Right(),trRec.Mesh)
+  return GetNormalSpawn(nil,nil,hdModel,hdPivot,ucsPosX,ucsPosY,ucsPosZ,ucsAngP,ucsAngY,ucsAngR)
 end
 
 local function GetEntityOrTrace(oEnt)
