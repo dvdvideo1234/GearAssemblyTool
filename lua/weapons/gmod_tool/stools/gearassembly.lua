@@ -125,7 +125,7 @@ end
 
 if(SERVER) then
   cleanupRegister(gsLimitName)
-  duplicatorRegisterEntityModifier(gsToolPrefL.."ignphysgn",asmlib.GetActionCode("NO_PHYSGUN"))
+  duplicatorRegisterEntityModifier(gsToolPrefL.."dupe_phys_set",asmlib.GetActionCode("DUPE_PHYS_SETTINGS"))
 end
 
 TOOL.Category   = "Construction"            -- Name of the category
@@ -429,7 +429,7 @@ function TOOL:LeftClick(stTrace)
     local ePiece = asmlib.MakePiece(ply,model,stTrace.HitPos,ANG_ZERO,mass,bgskids,conPalette:Select("w"),bnderrmod)
     if(not ePiece) then return asmlib.StatusLog(false,self:GetStatus(stTrace,"TOOL:LeftClick(World): Making piece failed")) end
     stSpawn.SPos:Add(asmlib.GetCustomAngBBZ(ePiece,stSpawn.HRec,spnflat) * stTrace.HitNormal)
-    ePiece:SetAngles(stSpawn.SAng); ePiece:SetPos   (stSpawn.SPos)
+    ePiece:SetAngles(stSpawn.SAng); ePiece:SetPos(stSpawn.SPos)
     asmlib.UndoCratePly(gsUndoPrefN..fnmodel.." ( World spawn )")
     if(not asmlib.ApplyPhysicalSettings(ePiece,freeze,gravity,ignphysgn)) then
       return asmlib.StatusLog(false,self:GetStatus(stTrace,"TOOL:LeftClick(World): Failed to apply physical settings",ePiece)) end
@@ -437,7 +437,7 @@ function TOOL:LeftClick(stTrace)
       return asmlib.StatusLog(false,self:GetStatus(stTrace,"TOOL:LeftClick(World): Failed to apply physical anchor",ePiece)) end
     asmlib.UndoAddEntityPly(ePiece)
     asmlib.UndoFinishPly(ply)
-    return asmlib.StatusLog(true,"TOOL:LeftClick(World): Success hit world")
+    return asmlib.StatusLog(true,"TOOL:LeftClick(World): Success")
   end
 
   if(not (trEnt and trEnt:IsValid())) then
@@ -509,7 +509,7 @@ function TOOL:LeftClick(stTrace)
     end
     trEnt:SetAngles(aStart)
     asmlib.UndoFinishPly(ply)
-    return asmlib.StatusLog(true,"TOOL:LeftClick(Stack): Success stacking")
+    return asmlib.StatusLog(true,"TOOL:LeftClick(Stack): Success")
   end
 
   local stSpawn = asmlib.GetEntitySpawn(trEnt,rotpiv,model,igntyp,
@@ -570,14 +570,14 @@ function TOOL:Reload(Trace)
     if(self:GetExportDB() ~= 0) then
       asmlib.StoreExternalDatabase("PIECES", ",","INS")
       asmlib.StoreExternalDatabase("PIECES","\t","DSV")
-      return asmlib.StatusLog(true,"TOOL:Reload(Trace) > DB Exported")
+      return asmlib.StatusLog(true,"TOOL:Reload(Trace): Database exported")
     end
   end
   if(not asmlib.IsPhysTrace(Trace)) then
     return asmlib.StatusLog(false,self:GetStaus(stTrace,"TOOL:Reload(): Trace not physics") end
   local trEnt = Trace.Entity
   if(asmlib.IsOther(trEnt)) then
-    return asmlib.StatusLog(false,self:GetStaus(stTrace,"TOOL:Reload(): Entity is other",trEnt) end
+    return asmlib.StatusLog(false,self:GetStaus(stTrace,"TOOL:Reload(): Other entity",trEnt) end
   local trRec = asmlib.CacheQueryPiece(trEnt:GetModel())
   if(trRec) then trEnt:Remove(); return asmlib.StatusLog(true,"TOOL:Reload(Prop): Removed a piece") end
   return asmlib.StatusLog(false,"TOOL:Reload(): Nothing removed")
@@ -624,8 +624,8 @@ function TOOL:DrawHUD()
   local ratioc = (gnRatio - 1) * 100
   local ratiom = (gnRatio * 1000)
   local plyd   = (stTrace.HitPos - ply:GetPos()):Length()
-  local plyrad = mathClamp((ratiom / plyd) * (stSpawn.RLen / actrad),1,ratioc)
-  local nextx, nexty, nextz = self:GetPosOffsets()
+  local plyrad = mathClamp(ratiom / plyd,1,ratioc)
+  local nextx  , nexty  , nextz   = self:GetPosOffsets()
   local nextpic, nextyaw, nextrol = self:GetAngOffsets()
   asmlib.PlyLoadKey(ply)
   if(trEnt and trEnt:IsValid() and asmlib.PlyLoadKey(ply,"SPEED")) then
@@ -633,8 +633,8 @@ function TOOL:DrawHUD()
     local igntyp  = self:GetIgnoreType()
     local trorang = self:GetTraceOriginAngle()
     local rotpivt, rotpivh = self:GetRotatePivot()
-    local stSpawn = asmlib.GetEntitySpawn(trEnt,rotpiv,model,igntyp,
-                      trorang,nextx,nexty,nextz,nextpic,nextyaw,nextrol)
+    local stSpawn = asmlib.GetEntitySpawn(trEnt,rotpivt,rotpivh,model,igntyp,
+                                          nextx,nexty,nextz,nextpic,nextyaw,nextrol)
     if(not stSpawn) then return end
     local Op =  stSpawn.OPos:ToScreen()
     local Xs = (stSpawn.OPos + 15 * stSpawn.F):ToScreen()
@@ -904,15 +904,15 @@ function TOOL:UpdateGhost(oEnt, oPly)
     local trRec = asmlib.CacheQueryPiece(trEnt:GetModel())
     if(trRec) then
       local model   = self:GetModel()
-      local nextx, nexty, nextz = self:GetPosOffsets()
       local igntyp  = self:GetIgnoreType()
       local trorang = self:GetTraceOriginAngle()
+      local nextx  , nexty  , nextz   = self:GetPosOffsets()
       local nextpic, nextyaw, nextrol = self:GetAngOffsets()
       local stSpawn = asmlib.GetEntitySpawn(trEnt,rotpivt,rotpivh,model,igntyp,nextx,nexty,nextz,nextpic,nextyaw,nextrol)
       if(not stSpawn) then return end
       oEnt:SetNoDraw(false)
       oEnt:SetAngles(stSpawn.SAng)
-      asmlib.SetMCWorld(oEnt,stSpawn.HRec.O,stSpawn.SPos)
+      oEnt:SetPos(stSpawn.SPos)
     end
   else
     local model = self:GetModel()
@@ -924,7 +924,7 @@ function TOOL:UpdateGhost(oEnt, oPly)
     oEnt:SetNoDraw(false)
     oEnt:SetAngles(stSpawn.SAng)
     stSpawn.SPos:Add(asmlib.GetCustomAngBBZ(oEnt,stSpawn.HRec,spnflat) * Trace.HitNormal)
-    asmlib.SetMCWorld(oEnt,stSpawn.HRec.O,stSpawn.SPos)
+    oEnt:SetPos(stSpawn.SPos)
     return
   end
 end

@@ -1960,10 +1960,8 @@ local function NavigateTable(oLocation,tKeys)
       oPlace = oPlace[kKey]
       if(not IsExistent(oPlace)) then
         return StatusLog(nil,"NavigateTable: Key #"..tostring(kKey).." irrelevant to location") end
-    end
-    iCnt = iCnt + 1
-  end
-  return oPlace, kKey
+    end; iCnt = iCnt + 1
+  end; return oPlace, kKey
 end
 
 function TimerSetting(sTimerSet) -- Generates a timer settings table and keeps the defaults
@@ -2413,15 +2411,6 @@ function SetMCWorld(oEnt,vdbMCL,vMCW)
         oEnt:SetPos(vPos)
 end
 
-function GetMCWorld(oEnt,vdbMCL)
-  if(not vdbMCL) then return end
-  if(not (oEnt and oEnt:IsValid())) then return end
-  local vMCW = Vector(vdbMCL[cvX],vdbMCL[cvY],vdbMCL[cvZ])
-        vMCW:Rotate(oEnt:GetAngles())
-        vMCW:Add(oEnt:GetPos())
-  return vMCW
-end
-
 function GetMCWorldPosAng(vPos,vAng,vdbMCL)
   if(not (vdbMCL and vPos and vAng)) then return end
   local vMCW = Vector(vdbMCL[cvX],vdbMCL[cvY],vdbMCL[cvZ])
@@ -2504,39 +2493,39 @@ end
 --[[
  * This function is the backbone of the tool for Trace.Entity
  * Calculates SPos, SAng based on the DB inserts and input parameters
+ * From the position and angle of the entity, the masscenter is calculated
+ * and used as an origin to build the spawn parameters,
  * trEnt         = Trace.Entity
- * nRotPivot     = Start angle to rotate trAng to
- * hdModel       = Node:Model()
+ * nRotPivot     = Trace  pivot rotation
+ * nRotPivot     = Holder pivot rotation
+ * hdModel       = The holder model
  * enIgnTyp      = Ignore Gear Type
- * enOrAng       = F,R,U Come from trace's angles
  * ucsPos(X,Y,Z) = Offset position
  * ucsAng(P,Y,R) = Offset angle
 ]]--
 function GetEntitySpawn(trEnt,trPivot,hdPivot,hdModel,enIgnTyp,
-                        enOrAng,ucsPosX,ucsPosY,ucsPosZ,
-                        ucsAngP,ucsAngY,ucsAngR)
+                        ucsPosX,ucsPosY,ucsPosZ,ucsAngP,ucsAngY,ucsAngR)
   if(not (trEnt and trEnt:IsValid())) then return StatusLog(nil,"GetEntitySpawn: Entity origin invalid") end
-  local trPivot, hdPivot  = (tonumber(trPivot) or  0), (tonumber(hdPivot ) or 0)
-  local hdModel, enIgnTyp =  tostring(hdModel  or ""), (tonumber(enIgnTyp) or 0)
-  local trRec  ,   hdRec  = CacheQueryPiece(trEnt:GetModel()), CacheQueryPiece(hdModel)
-  if(not IsExistent(trRec)) then return StatusLog(nil,"GetEntitySpawn: Trace is not a piece <"..trEnt:GetModel())..">") end
-  if(not IsExistent(hdRec)) then return StatusLog(nil,"GetEntitySpawn: Holder is not a piece <"..hdModel..">") end
+  local trRec, hdRec = CacheQueryPiece(trEnt:GetModel()), CacheQueryPiece(hdModel)
+  if(not IsExistent(trRec)) then return StatusLog(nil,"GetEntitySpawn: Trace not a piece <"..trEnt:GetModel())..">") end
+  if(not IsExistent(hdRec)) then return StatusLog(nil,"GetEntitySpawn: Holder not a piece <"..hdModel..">") end
   if(not (IsExistent(trRec.Type) and IsString(trRec.Type))) then
     return StatusLog(nil,"GetEntitySpawn: Trace not grouped <"..tostring(trRec.Type)..">") end
   if(not (IsExistent(hdRec.Type) and IsString(hdRec.Type))) then
     return StatusLog(nil,"GetEntitySpawn: Holder not grouped <"..tostring(hdRec.Type)..">") end
-  if(enIgnTyp == 0 and trRec.Type ~= hdRec.Type ) then return nil end
-  -- We have the next Piece Offset
-  local stSpawn = GetOpVar("STRUCT_SPAWN")
-  -- Save our records
-  stSpawn.HRec, stSpawn.TRec = hdRec, trRec
-  -- Calculate the center using the masscenter
-  SetVector(stSpawn.TPnt,trRec.P)
+  if(enIgnTyp == 0 and trRec.Type ~= hdRec.Type ) then
+    return StatusLog(nil,"GetEntitySpawn: Type mismatch <"..tostring(trRec.Type)..","..tostring(hdRec.Type)..">") end
+  local trPos  , trAng    = trEnt:GetPos(), trEnt:GetAngles()
+  local trPivot, hdPivot  = (tonumber(trPivot) or  0), (tonumber(hdPivot ) or 0)
+  local hdModel, enIgnTyp =  tostring(hdModel  or ""), (tonumber(enIgnTyp) or 0)
+  local stSpawn = GetOpVar("STRUCT_SPAWN")   -- Get cached spaw
+  stSpawn.HRec, stSpawn.TRec = hdRec, trRec  -- Save records
+  SetVector(stSpawn.TPnt,trRec.P)            -- Store data in objects
   SetVector(stSpawn.TPos,trRec.O)
   SetAngle (stSpawn.TAng,trRec.A)
-  stSpawn.TPos:Set(vGetMCWorld(trEnt,stSpawn.TPos))
-  stSpawn.TAng:Set(trEnt:LocalToWorldAngles(stSpawn.TAng))
-  stSpawn.TAng:RotateAroundAxis(stSpawn.TAng:Up(),-trPivot)
+  stSpawn.TPos:Rotate(trAng); stSpawn.TPos:Add(trPos)       -- Trace mass-center world
+  stSpawn.TAng:Set(trEnt:LocalToWorldAngles(stSpawn.TAng))  -- Initial coordinate system
+  stSpawn.TAng:RotateAroundAxis(stSpawn.TAng:Up(),-trPivot) -- Apply the pivot rotation for trace
   -- Calculate the origin based on the center
   stSpawn.OPos:Set(stSpawn.TPnt)
   stSpawn.OPos:Rotate(stSpawn.TAng)
@@ -2698,14 +2687,15 @@ function ApplyPhysicalSettings(ePiece,nFrZ,nGrV,nNoP)
   local Frz = tonumber(nFrZ) or 0
   local NoP = tonumber(nNoP) or 0
   LogInstance("ApplyPhysicalSettings: {"..Grv..","..Frz..","..NoP.."}")
+  dataSettings = {Grv,Frz,NoP}
   ePiece:SetUnFreezable(NoP ~= 0)
   ePiece.PhysgunDisabled = (NoP ~= 0)
-  duplicatorStoreEntityModifier(ePiece,GetToolPrefL().."nophysgun",{[1] = (NoP ~= 0)}) end
   local pyPiece = ePiece:GetPhysicsObject()
   if(not (pyPiece and pyPiece:IsValid())) then
     return StatusLog(false,"ApplyPhysicalSettings: Phys Piece not valid") end
   pyPiece:EnableMotion(Frz == 0)
   constructSetPhysProp(nil,ePiece,0,pyPiece,{GravityToggle = (Grv ~= 0), Material = "gmod_ice"}) end
+  duplicatorStoreEntityModifier(ePiece,GetOpVar("TOOLNAME_PL").."dupe_phys_set",dataSettings) end
   return StatusLog(true,"ApplyPhysicalSettings: Success")
 end
 

@@ -42,8 +42,8 @@ asmlib.MakeAsmVar("enqstore" ,   1  , nil, bitbor(FCVAR_ARCHIVE, FCVAR_ARCHIVE_X
 asmlib.MakeAsmVar("timermode", "CQT@3600@1@1", nil, bitbor(FCVAR_ARCHIVE, FCVAR_ARCHIVE_XBOX, FCVAR_NOTIFY, FCVAR_PRINTABLEONLY), "Cache management setting when DB mode is SQL")
 
 ------ CONFIGURE REPLICATED CVARS ----- Server tells the client what value to use
-asmlib.MakeAsmVar("enwiremod", "1"  , {0, 1 } ,bitbor(FCVAR_ARCHIVE, FCVAR_ARCHIVE_XBOX, FCVAR_NOTIFY, FCVAR_REPLICATED, FCVAR_PRINTABLEONLY), "Maximum active radius to search for a point ID")
-asmlib.MakeAsmVar("devmode"  , "0"  , {0, 1 } ,bitBor(FCVAR_ARCHIVE, FCVAR_ARCHIVE_XBOX, FCVAR_NOTIFY, FCVAR_REPLICATED, FCVAR_PRINTABLEONLY), "Toggle the wire extension on/off server side")
+asmlib.MakeAsmVar("enwiremod", "1"  , {0, 1 } ,bitbor(FCVAR_ARCHIVE, FCVAR_ARCHIVE_XBOX, FCVAR_NOTIFY, FCVAR_REPLICATED, FCVAR_PRINTABLEONLY), "Toggle the wire extension on/off server side")
+asmlib.MakeAsmVar("devmode"  , "0"  , {0, 1 } ,bitBor(FCVAR_ARCHIVE, FCVAR_ARCHIVE_XBOX, FCVAR_NOTIFY, FCVAR_REPLICATED, FCVAR_PRINTABLEONLY), "Toggle developer mode on/off server side")
 asmlib.MakeAsmVar("maxmass"  , "50000" ,  {1}, bitBor(FCVAR_ARCHIVE, FCVAR_ARCHIVE_XBOX, FCVAR_NOTIFY, FCVAR_REPLICATED, FCVAR_PRINTABLEONLY), "Maximum mass to be applied on a piece")
 asmlib.MakeAsmVar("maxlinear", "250"   ,  {1}, bitBor(FCVAR_ARCHIVE, FCVAR_ARCHIVE_XBOX, FCVAR_NOTIFY, FCVAR_REPLICATED, FCVAR_PRINTABLEONLY), "Maximum linear offset available")
 asmlib.MakeAsmVar("maxforce" , "100000",  {0}, bitBor(FCVAR_ARCHIVE, FCVAR_ARCHIVE_XBOX, FCVAR_NOTIFY, FCVAR_REPLICATED, FCVAR_PRINTABLEONLY), "Maximum force limit when creating constraints")
@@ -71,59 +71,34 @@ local gaTimerSet  = asmlib.StringExplode(asmlib.GetAsmVar("timermode","STR"),asm
 
 ------ CONFIGURE TOOL -----
 
+local SMode = asmlib.GetOpVar("CONTAIN_STACK_MODE")
+      SMode:Insert(1,"Forward based")
+      SMode:Insert(2,"Around pivot")
+
+local CType = asmlib.GetOpVar("CONTAIN_CONSTRAINT_TYPE")
+      CType:Insert(1 ,{Name = "Free Spawn"  , Make = nil                                    })
+      CType:Insert(2 ,{Name = "Parent Piece", Make = nil                                    })
+      CType:Insert(3 ,{Name = "Weld Piece"  , Make = constraint and constraint.Weld         })
+      CType:Insert(4 ,{Name = "Axis Piece"  , Make = constraint and constraint.Axis         })
+      CType:Insert(5 ,{Name = "Ball-Sock HM", Make = constraint and constraint.Ballsocket   })
+      CType:Insert(6 ,{Name = "Ball-Sock TM", Make = constraint and constraint.Ballsocket   })
+      CType:Insert(7 ,{Name = "AdvBS Lock X", Make = constraint and constraint.AdvBallsocket})
+      CType:Insert(8 ,{Name = "AdvBS Lock Y", Make = constraint and constraint.AdvBallsocket})
+      CType:Insert(9 ,{Name = "AdvBS Lock Z", Make = constraint and constraint.AdvBallsocket})
+      CType:Insert(10,{Name = "AdvBS Spin X", Make = constraint and constraint.AdvBallsocket})
+      CType:Insert(11,{Name = "AdvBS Spin Y", Make = constraint and constraint.AdvBallsocket})
+      CType:Insert(12,{Name = "AdvBS Spin Z", Make = constraint and constraint.AdvBallsocket})
+
 if(SERVER) then
-
-  local SMode = asmlib.GetOpVar("CONTAIN_STACK_MODE")
-        SMode:Insert(1,"Forward based")
-        SMode:Insert(2,"Around pivot")
-
-  local CType = asmlib.GetOpVar("CONTAIN_CONSTRAINT_TYPE")
-        CType:Insert(1 ,{Name = "Free Spawn"  , Make = nil}                     )
-        CType:Insert(2 ,{Name = "Parent Piece", Make = nil}                     )
-        CType:Insert(3 ,{Name = "Weld Piece"  , Make = constraint.Weld}         )
-        CType:Insert(4 ,{Name = "Axis Piece"  , Make = constraint.Axis}         )
-        CType:Insert(5 ,{Name = "Ball-Sock HM", Make = constraint.Ballsocket}   )
-        CType:Insert(6 ,{Name = "Ball-Sock TM", Make = constraint.Ballsocket}   )
-        CType:Insert(7 ,{Name = "AdvBS Lock X", Make = constraint.AdvBallsocket})
-        CType:Insert(8 ,{Name = "AdvBS Lock Y", Make = constraint.AdvBallsocket})
-        CType:Insert(9 ,{Name = "AdvBS Lock Z", Make = constraint.AdvBallsocket})
-        CType:Insert(10,{Name = "AdvBS Spin X", Make = constraint.AdvBallsocket})
-        CType:Insert(11,{Name = "AdvBS Spin Y", Make = constraint.AdvBallsocket})
-        CType:Insert(12,{Name = "AdvBS Spin Z", Make = constraint.AdvBallsocket})
-
-  asmlib.SetAction("NO_PHYSGUN",
-    function(oPly,oEnt,tData)
-      if(tData[1]) then
-        if(not (oEnt and oEnt:IsValid())) then return end
-        oEnt:SetMoveType(MOVETYPE_NONE)
-        oEnt:SetUnFreezable(true)
-        oEnt.PhysgunDisabled = true
-        duplicatorStoreEntityModifier(oEnt,gsToolPrefL.."nophysgun",{[1] = true})
-      end
+  asmlib.SetAction("DUPE_PHYS_SETTINGS",
+    function(oPly,oEnt,tData) -- Duplicator wrapper
+      if(not asmlib.ApplyPhysicalSettings(oEnt,tData[1],tData[2],tData[3])) then
+        return asmlib.StatusLog(false,"DUPE_PHYS_SETTINGS: Failed to apply physical settings on "..tostring(oEnt)) end
+      return asmlib.StatusLog(true,"DUPE_PHYS_SETTINGS: Success")
     end)
-
 end
 
 if(CLIENT) then
-
-  local SMode = asmlib.GetOpVar("CONTAIN_STACK_MODE")
-        SMode:Insert(1,"Forward based")
-        SMode:Insert(2,"Around pivot")
-
-  local CType = asmlib.GetOpVar("CONTAIN_CONSTRAINT_TYPE")
-        CType:Insert(1 ,{Name = "Free Spawn"  })
-        CType:Insert(2 ,{Name = "Parent Piece"})
-        CType:Insert(3 ,{Name = "Weld Piece"  })
-        CType:Insert(4 ,{Name = "Axis Piece"  })
-        CType:Insert(5 ,{Name = "Ball-Sock HM"})
-        CType:Insert(6 ,{Name = "Ball-Sock TM"})
-        CType:Insert(7 ,{Name = "AdvBS Lock X"})
-        CType:Insert(8 ,{Name = "AdvBS Lock Y"})
-        CType:Insert(9 ,{Name = "AdvBS Lock Z"})
-        CType:Insert(10,{Name = "AdvBS Spin X"})
-        CType:Insert(11,{Name = "AdvBS Spin Y"})
-        CType:Insert(12,{Name = "AdvBS Spin Z"})
-
   asmlib.SetAction("RESET_VARIABLES",
     function(oPly,oCom,oArgs)
       local devmode = asmlib.GetAsmVar("devmode" ,"INT")
@@ -399,7 +374,7 @@ end
 
 ------ INITIALIZE DB ------
 asmlib.CreateTable("PIECES",{
-    Timer = asmlib.TimerSettingMode(gaTimerSet[1]),
+    Timer = asmlib.TimerSetting(gaTimerSet[1]),
     Index = {{1},{2},{3},{1,4},{1,2},{2,4},{1,2,3}},
     [1] = {"MODEL" , "TEXT", "LOW", "QMK"},
     [2] = {"TYPE"  , "TEXT",  nil , "QMK"},
