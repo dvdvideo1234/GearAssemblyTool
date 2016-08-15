@@ -417,6 +417,7 @@ function Init(sName,sPurpose)
     OAng = Angle (),
     SPos = Vector(),
     SAng = Angle (),
+    DAng = Angle (),
     -- Holder
     HRec = 0,
     HPnt = Vector(), -- P
@@ -492,25 +493,6 @@ function SetAnglePYR(aBase, nP, nY, nR)
   aBase[caP] = (tonumber(nP) or 0)
   aBase[caY] = (tonumber(nY) or 0)
   aBase[caR] = (tonumber(nR) or 0)
-end
-
-function RotateAngleDir(aBase, sOrder, nC1, nC2, nC3)
-  if(not (aBase and sOrder)) then return end
-  if(not IsString(sOrder)) then return end
-  local Ind = 1
-  local Val = {nC1, nC2, nC3}
-  local C   = string.sub(sOrder,Ind,Ind)
-  while(C ~= "" and Ind <= 3) do
-    if    (C == "F") then
-      aBase:RotateAroundAxis(aBase:Forward(),tonumber(Val[Ind]) or 0)
-    elseif(C == "R") then
-      aBase:RotateAroundAxis(aBase:Right(),tonumber(Val[Ind]) or 0)
-    elseif(C == "U") then
-      aBase:RotateAroundAxis(aBase:Up(),tonumber(Val[Ind]) or 0)
-    end
-    Ind = Ind + 1
-    C = string.sub(sOrder,Ind,Ind)
-  end
 end
 
 ------------- VECTOR ---------------
@@ -1091,19 +1073,6 @@ function ModelToName(sModel,bNoSettings)
     fCh = stringFind(gModel,sSymDiv,fCh+1)
   end
   return sModel..stringSub(gModel,bCh+2,-1)
-end
-
-function LocatePOA(oRec, ivPointID)
-  if(not oRec) then
-    return StatusLog(nil,"LocatePOA: Missing record") end
-  if(not oRec.Offs) then
-    return StatusLog(nil,"LocatePOA: Missing offsets for <"..tostring(oRec.Slot)..">") end
-  local iPointID = mathFloor(tonumber(ivPointID) or 0)
-  local stPOA = oRec.Offs[iPointID]
-  if(not IsExistent(stPOA)) then
-    return StatusLog(nil,"LocatePOA: Missing ID #"..tostring(iPointID).." <"
-             ..tostring(ivPointID).."> for <"..tostring(oRec.Slot)..">") end
-  return stPOA
 end
 
 local function ReloadPOA(nXP,nYY,nZR,nSX,nSY,nSZ,nSD)
@@ -1869,9 +1838,8 @@ function CreateTable(sTable,defTable,bDelete,bReload)
         return StatusLog(false,"CreateTable: Table "..sTable..
           " failed to create because of "..sqlLastError().." Query ran > "..tQ.Create) end
     end
-  elseif(sModeDB == "LUA") then sModeDB = "LUA" else -- Just to do something here.
-    return StatusLog(false,"CreateTable: Wrong database mode <"..sModeDB..">")
-  end
+  elseif(sModeDB == "LUA") then return StatusLog(true,"CreateTable: Datatabase mode <"..sModeDB..">")
+  else return StatusLog(false,"CreateTable: Wrong database mode <"..sModeDB..">") end
 end
 
 function InsertRecord(sTable,tData)
@@ -2448,8 +2416,7 @@ function GetNormalSpawn(ucsPos,ucsAng,hdModel,hdPivot,ucsPosX,ucsPosY,ucsPosZ,uc
   local hdRec = CacheQueryPiece(hdModel)
   if(not IsExistent(hdRec)) then return StatusLog(nil,"GetNormalSpawn: Holder is not a piece <"..hdModel..">") end
   if(not IsExistent(hdRec.Kept) and (hdRec.Kept < 1 or hdRec.Kept > 1)) then
-    return StatusLog(nil,"GetNormalSpawn: Line count <"..tostring(ID).."> mismatch for <"..hdModel..">") end
-  local hdModel, enOrAngTr = tostring(hdModel or ""), (tonumber(enOrAngTr) or 0)
+    return StatusLog(nil,"GetNormalSpawn: Line count <"..tostring(hdRec.Kept).."> mismatch for <"..hdModel..">") end
   local stSpawn = GetOpVar("STRUCT_SPAWN")
         stSpawn.HRec = hdRec
   if(ucsPos) then SetVector(stSpawn.OPos,ucsPos) end
@@ -2470,13 +2437,14 @@ function GetNormalSpawn(ucsPos,ucsAng,hdModel,hdPivot,ucsPosX,ucsPosY,ucsPosZ,uc
   SetVector(stSpawn.HPos, hdRec.O)
   SetAngle (stSpawn.HAng, hdRec.A)
   -- Calcolate domain ( Angle )
+  stSpawn.DAng:Set(stSpawn.OAng)
+  stSpawn.DAng:RotateAroundAxis(stSpawn.R,hdRec.Mesh)
+  stSpawn.DAng:RotateAroundAxis(stSpawn.DAng:Up(),(tonumber(hdPivot) or 0) + 180)
   stSpawn.HPnt:Mul(-1)
   stSpawn.HAng:RotateAroundAxis(stSpawn.HAng:Up(),180)
-  stSpawn.HAng:RotateAroundAxis(stSpawn.HAng:Right(),hdRec.Mesh)
   DecomposeByAngle(stSpawn.HPnt,stSpawn.HAng)
-  stSpawn.HAng:RotateAroundAxis(stSpawn.HAng:Up(),(tonumber(hdPivot) or 0))
   -- Calcolate spawns
-  stSpawn.SAng:Set(stSpawn.OAng)
+  stSpawn.SAng:Set(stSpawn.DAng)
   stSpawn.SAng:RotateAroundAxis(stSpawn.U,stSpawn.HAng[caY] * hdRec.A[csB])
   stSpawn.SAng:RotateAroundAxis(stSpawn.R,stSpawn.HAng[caP] * hdRec.A[csA])
   stSpawn.SAng:RotateAroundAxis(stSpawn.F,stSpawn.HAng[caR] * hdRec.A[csC])
@@ -2518,7 +2486,7 @@ function GetEntitySpawn(trEnt,trPivot,hdPivot,hdModel,enIgnTyp,
   local trPos  , trAng    = trEnt:GetPos(), trEnt:GetAngles()
   local trPivot, hdPivot  = (tonumber(trPivot) or  0), (tonumber(hdPivot ) or 0)
   local hdModel, enIgnTyp =  tostring(hdModel  or ""), (tonumber(enIgnTyp) or 0)
-  local stSpawn = GetOpVar("STRUCT_SPAWN")   -- Get cached spaw
+  local stSpawn = GetOpVar("STRUCT_SPAWN")   -- Get cached spawn
   stSpawn.HRec, stSpawn.TRec = hdRec, trRec  -- Save records
   SetVector(stSpawn.TPnt,trRec.P)            -- Store data in objects
   SetVector(stSpawn.TPos,trRec.O)
