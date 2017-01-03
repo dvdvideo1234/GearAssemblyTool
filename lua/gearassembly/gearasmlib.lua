@@ -1800,7 +1800,6 @@ function CreateTable(sTable,defTable,bDelete,bReload)
   end
   libCache[defTable.Name] = {}
   if(sModeDB == "SQL") then
-    defTable.Life = tonumber(defTable.Life) or 0
     local tQ = SQLBuildCreate(defTable)
     if(not IsExistent(tQ)) then return StatusLog(false,"CreateTable: "..SQLBuildError()) end
     if(bDelete and sqlTableExists(defTable.Name)) then
@@ -1865,8 +1864,8 @@ function InsertRecord(sTable,tData)
     return StatusLog(false,"InsertRecord: Missing data table is empty for "..sTable) end
 
   if(sTable == "PIECES") then
-    tData[2] = GetDisableString(tData[2],GetOpVar("DEFAULT_TYPE"),"TYPE")
-    tData[3] = GetDisableString(tData[3],ModelToName(tData[1]),"MODEL")
+    tData[2] = DisableString(tData[2],GetOpVar("DEFAULT_TYPE"),"TYPE")
+    tData[3] = DisableString(tData[3],ModelToName(tData[1]),"MODEL")
   end
 
   local sModeDB = GetOpVar("MODE_DATABASE")
@@ -2473,10 +2472,13 @@ end
 ]]--
 function GetEntitySpawn(trEnt,trPivot,hdPivot,hdModel,enIgnTyp,
                         ucsPosX,ucsPosY,ucsPosZ,ucsAngP,ucsAngY,ucsAngR)
-  if(not (trEnt and trEnt:IsValid())) then return StatusLog(nil,"GetEntitySpawn: Entity origin invalid") end
+  if(not (trEnt and trEnt:IsValid())) then
+    return StatusLog(nil,"GetEntitySpawn: Entity origin invalid") end
   local trRec, hdRec = CacheQueryPiece(trEnt:GetModel()), CacheQueryPiece(hdModel)
-  if(not IsExistent(trRec)) then return StatusLog(nil,"GetEntitySpawn: Trace not a piece <"..trEnt:GetModel())..">") end
-  if(not IsExistent(hdRec)) then return StatusLog(nil,"GetEntitySpawn: Holder not a piece <"..hdModel..">") end
+  if(not IsExistent(trRec)) then
+    return StatusLog(nil,"GetEntitySpawn: Trace not a piece <"..trEnt:GetModel()..">") end
+  if(not IsExistent(hdRec)) then
+    return StatusLog(nil,"GetEntitySpawn: Holder not a piece <"..hdModel..">") end
   if(not (IsExistent(trRec.Type) and IsString(trRec.Type))) then
     return StatusLog(nil,"GetEntitySpawn: Trace not grouped <"..tostring(trRec.Type)..">") end
   if(not (IsExistent(hdRec.Type) and IsString(hdRec.Type))) then
@@ -2648,22 +2650,22 @@ function HookOnRemove(oBas,oEnt,arCTable,nMax)
   end; LogInstance("HookOnRemove: Done "..(Ind-1).." of "..nMax..".")
 end
 
-function ApplyPhysicalSettings(ePiece,nFrZ,nGrV,nNoP)
+function ApplyPhysicalSettings(ePiece,bFr,bGr,nNo)
   if(not (ePiece and ePiece:IsValid())) then
     return StatusLog(false,"ApplyPhysicalSettings: Piece not valid") end
-  local Grv = tonumber(nGrV) or 0
-  local Frz = tonumber(nFrZ) or 0
-  local NoP = tonumber(nNoP) or 0
-  LogInstance("ApplyPhysicalSettings: {"..Grv..","..Frz..","..NoP.."}")
-  dataSettings = {Grv,Frz,NoP}
-  ePiece:SetUnFreezable(NoP ~= 0)
-  ePiece.PhysgunDisabled = (NoP ~= 0)
+  local bGr = tobool(bGr) or false
+  local Frz = tobool(bFr) or false
+  local bNo = tobool(bNo) or false
+  LogInstance("ApplyPhysicalSettings: {"..tostring(bGr)..","..tostring(bFr)..","..tostring(bNo).."}")
+  dataSettings = {bGr,bFr,bNo}
+  ePiece:SetUnFreezable(bNo)
+  ePiece.PhysgunDisabled = bNo
   local pyPiece = ePiece:GetPhysicsObject()
   if(not (pyPiece and pyPiece:IsValid())) then
     return StatusLog(false,"ApplyPhysicalSettings: Phys Piece not valid") end
-  pyPiece:EnableMotion(Frz == 0)
-  constructSetPhysProp(nil,ePiece,0,pyPiece,{GravityToggle = (Grv ~= 0), Material = "gmod_ice"}) end
-  duplicatorStoreEntityModifier(ePiece,GetOpVar("TOOLNAME_PL").."dupe_phys_set",dataSettings) end
+  pyPiece:EnableMotion(not bFr)
+  constructSetPhysProp(nil,ePiece,0,pyPiece,{GravityToggle = bGr, Material = "gmod_ice"})
+  duplicatorStoreEntityModifier(ePiece,GetOpVar("TOOLNAME_PL").."dupe_phys_set",dataSettings)
   return StatusLog(true,"ApplyPhysicalSettings: Success")
 end
 
@@ -2760,7 +2762,7 @@ function ApplyPhysicalAnchor(ePiece,eBase,vPos,vNorm,nCID,nNoC,nFoL)
     HookOnRemove(eBase,ePiece,{C1,C2},2)
     IsIn = CID
   end
-  return StatusLog(IsIn,"ApplyPhysicalAnchor: status is <"..tostring(IsIn)..">")
+  return StatusLog(IsIn,"ApplyPhysicalAnchor: Status <"..tostring(IsIn)..">")
 end
 
 function MakeAsmVar(sShortName, sValue, tBorder, nFlags, sInfo)

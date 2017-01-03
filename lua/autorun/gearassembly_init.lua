@@ -37,26 +37,24 @@ asmlib.MakeAsmVar("logfile"  , ""  , nil, bitBor(FCVAR_ARCHIVE, FCVAR_ARCHIVE_XB
 asmlib.SetLogControl(asmlib.GetAsmVar("logsmax","INT"),asmlib.GetAsmVar("logfile","STR"))
 
 ------ CONFIGURE NON-REPLICATED CVARS ----- Client's got a mind of its own
-asmlib.MakeAsmVar("modedb"   , "SQL", nil, bitbor(FCVAR_ARCHIVE, FCVAR_ARCHIVE_XBOX, FCVAR_NOTIFY, FCVAR_PRINTABLEONLY), "Database operating mode")
-asmlib.MakeAsmVar("enqstore" ,   1  , nil, bitbor(FCVAR_ARCHIVE, FCVAR_ARCHIVE_XBOX, FCVAR_NOTIFY, FCVAR_PRINTABLEONLY), "Enable cache for built queries")
-asmlib.MakeAsmVar("timermode", "CQT@3600@1@1", nil, bitbor(FCVAR_ARCHIVE, FCVAR_ARCHIVE_XBOX, FCVAR_NOTIFY, FCVAR_PRINTABLEONLY), "Cache management setting when DB mode is SQL")
+asmlib.MakeAsmVar("modedb"   , "SQL", nil, bitBor(FCVAR_ARCHIVE, FCVAR_ARCHIVE_XBOX, FCVAR_NOTIFY, FCVAR_PRINTABLEONLY), "Database operating mode")
+asmlib.MakeAsmVar("timermode", "CQT@3600@1@1", nil, bitBor(FCVAR_ARCHIVE, FCVAR_ARCHIVE_XBOX, FCVAR_NOTIFY, FCVAR_PRINTABLEONLY), "Cache management setting when DB mode is SQL")
 
 ------ CONFIGURE REPLICATED CVARS ----- Server tells the client what value to use
-asmlib.MakeAsmVar("enwiremod", "1"  , {0, 1 } ,bitbor(FCVAR_ARCHIVE, FCVAR_ARCHIVE_XBOX, FCVAR_NOTIFY, FCVAR_REPLICATED, FCVAR_PRINTABLEONLY), "Toggle the wire extension on/off server side")
+asmlib.MakeAsmVar("enwiremod", "1"  , {0, 1 } ,bitBor(FCVAR_ARCHIVE, FCVAR_ARCHIVE_XBOX, FCVAR_NOTIFY, FCVAR_REPLICATED, FCVAR_PRINTABLEONLY), "Toggle the wire extension on/off server side")
 asmlib.MakeAsmVar("devmode"  , "0"  , {0, 1 } ,bitBor(FCVAR_ARCHIVE, FCVAR_ARCHIVE_XBOX, FCVAR_NOTIFY, FCVAR_REPLICATED, FCVAR_PRINTABLEONLY), "Toggle developer mode on/off server side")
 asmlib.MakeAsmVar("maxmass"  , "50000" ,  {1}, bitBor(FCVAR_ARCHIVE, FCVAR_ARCHIVE_XBOX, FCVAR_NOTIFY, FCVAR_REPLICATED, FCVAR_PRINTABLEONLY), "Maximum mass to be applied on a piece")
 asmlib.MakeAsmVar("maxlinear", "250"   ,  {1}, bitBor(FCVAR_ARCHIVE, FCVAR_ARCHIVE_XBOX, FCVAR_NOTIFY, FCVAR_REPLICATED, FCVAR_PRINTABLEONLY), "Maximum linear offset available")
 asmlib.MakeAsmVar("maxforce" , "100000",  {0}, bitBor(FCVAR_ARCHIVE, FCVAR_ARCHIVE_XBOX, FCVAR_NOTIFY, FCVAR_REPLICATED, FCVAR_PRINTABLEONLY), "Maximum force limit when creating constraints")
-asmlib.MakeAsmVar("maxstcnt" , "200", {1,200} ,bitbor(FCVAR_ARCHIVE, FCVAR_ARCHIVE_XBOX, FCVAR_NOTIFY, FCVAR_REPLICATED, FCVAR_PRINTABLEONLY), "Maximum pieces to spawn in stack mode")
+asmlib.MakeAsmVar("maxstcnt" , "200", {1,200} ,bitBor(FCVAR_ARCHIVE, FCVAR_ARCHIVE_XBOX, FCVAR_NOTIFY, FCVAR_REPLICATED, FCVAR_PRINTABLEONLY), "Maximum pieces to spawn in stack mode")
 if(SERVER) then
   CreateConVar("sbox_max"..asmlib.GetOpVar("CVAR_LIMITNAME"), "1500", bitBor(FCVAR_ARCHIVE, FCVAR_ARCHIVE_XBOX, FCVAR_NOTIFY, FCVAR_REPLICATED, FCVAR_PRINTABLEONLY), "Maximum number of gears to be spawned")
-  asmlib.MakeAsmVar("bnderrmod", "1" , {0, 4 } ,bitbor(FCVAR_ARCHIVE, FCVAR_ARCHIVE_XBOX, FCVAR_NOTIFY, FCVAR_REPLICATED, FCVAR_PRINTABLEONLY), "Unreasonable position error handling mode")
-  asmlib.MakeAsmVar("maxfruse" , "50", {1,100} ,bitbor(FCVAR_ARCHIVE, FCVAR_ARCHIVE_XBOX, FCVAR_NOTIFY, FCVAR_REPLICATED, FCVAR_PRINTABLEONLY), "Maximum frequent pieces to be listed")
+  asmlib.MakeAsmVar("bnderrmod", "1" , {0, 4 } ,bitBor(FCVAR_ARCHIVE, FCVAR_ARCHIVE_XBOX, FCVAR_NOTIFY, FCVAR_REPLICATED, FCVAR_PRINTABLEONLY), "Unreasonable position error handling mode")
+  asmlib.MakeAsmVar("maxfruse" , "50", {1,100} ,bitBor(FCVAR_ARCHIVE, FCVAR_ARCHIVE_XBOX, FCVAR_NOTIFY, FCVAR_REPLICATED, FCVAR_PRINTABLEONLY), "Maximum frequent pieces to be listed")
 end
 
 ------ CONFIGURE INTERNALS -----
 asmlib.SetOpVar("MODE_DATABASE" , asmlib.GetAsmVar("modedb","STR"))
-asmlib.SetOpVar("EN_QUERY_STORE",(asmlib.GetAsmVar("enqstore","INT") ~= 0) and true or false)
 
 ------ GLOBAL VARIABLES -------
 local gsToolPrefL = asmlib.GetOpVar("TOOLNAME_PL")
@@ -67,8 +65,20 @@ local gsInstPrefx = asmlib.GetInstPref()
 local gsPathBAS   = asmlib.GetOpVar("DIRPATH_BAS")
 local gsPathDSV   = asmlib.GetOpVar("DIRPATH_DSV")
 local gsFullDSV   = gsPathBAS..gsPathDSV..gsInstPrefx..gsToolPrefU
-local gaTimerSet  = asmlib.StringExplode(asmlib.GetAsmVar("timermode","STR"),asmlib.GetOpVar("OPSYM_DIRECTORY"))
-
+local gaTimerSet  = stringExplode(asmlib.GetOpVar("OPSYM_DIRECTORY"),asmlib.GetAsmVar("timermode","STR"))
+local conPalette  = asmlib.MakeContainer("Colours"); asmlib.SetOpVar("CONTAIN_PALETTE", conPalette)
+      conPalette:Insert("r" ,Color(255, 0 , 0 ,255))
+      conPalette:Insert("g" ,Color( 0 ,255, 0 ,255))
+      conPalette:Insert("b" ,Color( 0 , 0 ,255,255))
+      conPalette:Insert("c" ,Color( 0 ,255,255,255))
+      conPalette:Insert("m" ,Color(255, 0 ,255,255))
+      conPalette:Insert("y" ,Color(255,255, 0 ,255))
+      conPalette:Insert("w" ,Color(255,255,255,255))
+      conPalette:Insert("k" ,Color( 0 , 0 , 0 ,255))
+      conPalette:Insert("gh",Color(255,255,255,150))
+      conPalette:Insert("an",Color(180,255,150,255))
+      conPalette:Insert("tx",Color(161,161,161,255))
+    
 ------ CONFIGURE TOOL -----
 
 local SMode = asmlib.GetOpVar("CONTAIN_STACK_MODE")
@@ -99,6 +109,7 @@ if(SERVER) then
 end
 
 if(CLIENT) then
+
   asmlib.SetAction("RESET_VARIABLES",
     function(oPly,oCom,oArgs)
       local devmode = asmlib.GetAsmVar("devmode" ,"INT")
@@ -147,7 +158,6 @@ if(CLIENT) then
         asmlib.ConCommandPly(oPly, "nophysgun", "0")
         asmlib.ConCommandPly(oPly, "ghosthold", "0")
         asmlib.ConCommandPly(oPly, "modedb"   , "LUA")
-        asmlib.ConCommandPly(oPly, "enqstore" , "1")
         asmlib.ConCommandPly(oPly, "timermode", "CQT@1800@1@1")
         asmlib.PrintInstance("RESET_VARIABLES: Variables reset complete")
       elseif(stringSub(bgskids,1,7) == "delete ") then
@@ -518,7 +528,7 @@ else
     local s = stringFind(r,"/"); r = (s and stringSub(r,1,s-1) or "other"); s = stringSub(m,-5,-5);
     if(s == "s"     ) then s = "_small" elseif(s == "l"     ) then s = "_large" else s = "" end
     if(r == "sgears") then r = "spur"   elseif(r == "bgears") then r = "bevel"  end
-    return asmlib.ModelToName(r..s,true); end
+    return asmlib.ModelToName(r..s,true); end)
   asmlib.InsertRecord({"models/sprops/mechanics/sgears/spur_10t_s.mdl", "#", "#", 0, " 2.820, 0, 0", " 0.004917243029922200, -0.004917799960821900, -1.5156917498871e-008", ""})
   asmlib.InsertRecord({"models/sprops/mechanics/sgears/spur_12t_s.mdl", "#", "#", 0, " 3.100, 0, 0", "-0.001883051590994000,  0.000501719361636790, -0.000593971111811700", ""})
   asmlib.InsertRecord({"models/sprops/mechanics/sgears/spur_14t_s.mdl", "#", "#", 0, " 3.784, 0, 0", " 0.002141302684322000, -0.002729385625571000,  0.013979037292302000", ""})

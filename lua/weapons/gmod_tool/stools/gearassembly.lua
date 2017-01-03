@@ -19,6 +19,8 @@ local fileExists            = file and file.Exists
 local utilIsValidModel      = util and util.IsValidModel
 local utilIsTraceLine       = util and util.TraceLine
 local utilIsGetPlayerTrace  = util and util.GetPlayerTrace
+local stringSub             = string and string.sub
+local stringUpper           = string and string.upper
 local stringToFileName      = string and string.GetFileFromFilename
 local cleanupRegister       = cleanup and cleanup.Register
 local languageAdd           = language and language.Add
@@ -40,6 +42,11 @@ local ANG_ZERO = asmlib.GetOpVar("ANG_ZERO")
 
 local goToolScr
 local goMonitor
+local gsNoID      = asmlib.GetOpVar("MISS_NOID")
+local gsNoMD      = asmlib.GetOpVar("MISS_NOMD")
+local SMode       = asmlib.GetOpVar("CONTAIN_STACK_MODE")
+local CType       = asmlib.GetOpVar("CONTAIN_CONSTRAINT_TYPE")
+local gsSymRev    = asmlib.GetOpVar("OPSYM_REVSIGN")
 local gnRatio     = asmlib.GetOpVar("GOLDEN_RATIO")
 local gnMaxOffRot = asmlib.GetOpVar("MAX_ROTATION")
 local gnMaxErMode = asmlib.GetAsmVar("bnderrmod","STR")
@@ -53,23 +60,9 @@ local gsNamePerpF = asmlib.GetOpVar("NAME_PERP")
       gsNamePerpF = stringUpper(stringSub(gsNamePerpF,1,1))..stringSub(gsNamePerpF,2,-1)
 local gsLimitName = asmlib.GetOpVar("CVAR_LIMITNAME")
 local gsNoAnchor  = gsNoID..gsSymRev..gsNoMD
+local conPalette  = asmlib.GetOpVar("CONTAIN_PALETTE")
 
---- Render Base Colours
-local conPalette = asmlib.MakeContainer("Colours")
-      conPalette:Insert("r" ,Color(255, 0 , 0 ,255))
-      conPalette:Insert("g" ,Color( 0 ,255, 0 ,255))
-      conPalette:Insert("b" ,Color( 0 , 0 ,255,255))
-      conPalette:Insert("c" ,Color( 0 ,255,255,255))
-      conPalette:Insert("m" ,Color(255, 0 ,255,255))
-      conPalette:Insert("y" ,Color(255,255, 0 ,255))
-      conPalette:Insert("w" ,Color(255,255,255,255))
-      conPalette:Insert("k" ,Color( 0 , 0 , 0 ,255))
-      conPalette:Insert("gh",Color(255,255,255,150))
-      conPalette:Insert("an",Color(180,255,150,255))
-      conPalette:Insert("tx",Color(161,161,161,255))
 
-local SMode = asmlib.GetOpVar("CONTAIN_STACK_MODE")
-local CType = asmlib.GetOpVar("CONTAIN_CONSTRAINT_TYPE")
 
 ------------- LOCAL FUNCTIONS AND STUFF ----------------
 
@@ -161,8 +154,8 @@ TOOL.ClientConVar = {
   [ "deltarot"  ] = "360",
   [ "maxstatts" ] = "3",
   [ "nocollide" ] = "0",
-  [ "ignphysgn" ] = "0"
-  [ "ghosthold" ] = "0",
+  [ "ignphysgn" ] = "0",
+  [ "ghosthold" ] = "0"
 }
 
 function TOOL:GetModel()
@@ -371,7 +364,6 @@ function TOOL:GetStatus(stTrace,anyMessage,hdEnt)
         sDu = sDu..sSpace.."  HD.StackAtempt: <"..tostring(self:GetStackAttempts())..">"..sDelim
         sDu = sDu..sSpace.."  HD.IgnorePG:    <"..tostring(self:GetIgnorePhysgun())..">"..sDelim
         sDu = sDu..sSpace.."  HD.ModDataBase: <"..gsModeDataB..","..tostring(asmlib.GetAsmVar("modedb" ,"STR"))..">"..sDelim
-        sDu = sDu..sSpace.."  HD.EnableStore: <"..tostring(gsQueryStr)..","..tostring(asmlib.GetAsmVar("enqstore","INT"))..">"..sDelim
         sDu = sDu..sSpace.."  HD.TimerMode:   <"..tostring(asmlib.GetAsmVar("timermode","STR"))..">"..sDelim
         sDu = sDu..sSpace.."  HD.EnableWire:  <"..tostring(asmlib.GetAsmVar("enwiremod","INT"))..">"..sDelim
         sDu = sDu..sSpace.."  HD.DevelopMode: <"..tostring(asmlib.GetAsmVar("devmode"  ,"INT"))..">"..sDelim
@@ -537,20 +529,20 @@ function TOOL:RightClick(stTrace)
     return asmlib.StatusLog(false,"TOOL:RightClick(): Trace missing") end
   if(not stTrace.Hit) then
     return asmlib.StatusLog(false,"TOOL:RightClick(): Trace not hit") end
-  local trEnt = Trace.Entity
+  local trEnt = stTrace.Entity
   local ply   = self:GetOwner()
   asmlib.PlyLoadKey(ply)
-  if(Trace.HitWorld and asmlib.PlyLoadKey(ply,"USE")) then
+  if(stTrace.HitWorld and asmlib.PlyLoadKey(ply,"USE")) then
     asmlib.ConCommandPly(ply,"openframe",asmlib.GetAsmVar("maxfruse" ,"INT"))
     return asmlib.StatusLog(true,"TOOL:RightClick(World): Success open frame")
   elseif(asmlib.PlyLoadKey(ply,"SPEED")) then
-    if(Trace.HitWorld) then
+    if(stTrace.HitWorld) then
       self:ClearAnchor(); return asmlib.StatusLog(true,"TOOL:RightClick(Prop): Anchor cleared")
     elseif(trEnt and trEnt:IsValid()) then
       if(not asmlib.IsPhysTrace(stTrace)) then return false end
       if(asmlib.IsOther(trEnt)) then return false end
-      self:SetAnchor(Trace); return asmlib.StatusLog(true,"TOOL:RightClick(Prop): Anchor set")
-    else return asmlib.StatusLog(true,self:GetStaus(stTrace,"TOOL:RightClick(Prop): Invalid action",trEnt) end
+      self:SetAnchor(stTrace); return asmlib.StatusLog(true,"TOOL:RightClick(Prop): Anchor set")
+    else return asmlib.StatusLog(true,self:GetStaus(stTrace,"TOOL:RightClick(Prop): Invalid action",trEnt)) end
   else
     local stmode = asmlib.GetCorrectID(self:GetStackMode(),SMode)
           stmode = asmlib.GetCorrectID(stmode + 1,SMode)
@@ -574,10 +566,10 @@ function TOOL:Reload(Trace)
     end
   end
   if(not asmlib.IsPhysTrace(Trace)) then
-    return asmlib.StatusLog(false,self:GetStaus(stTrace,"TOOL:Reload(): Trace not physics") end
+    return asmlib.StatusLog(false,self:GetStaus(stTrace,"TOOL:Reload(): Trace not physics")) end
   local trEnt = Trace.Entity
   if(asmlib.IsOther(trEnt)) then
-    return asmlib.StatusLog(false,self:GetStaus(stTrace,"TOOL:Reload(): Other entity",trEnt) end
+    return asmlib.StatusLog(false,self:GetStaus(stTrace,"TOOL:Reload(): Other entity",trEnt)) end
   local trRec = asmlib.CacheQueryPiece(trEnt:GetModel())
   if(trRec) then trEnt:Remove(); return asmlib.StatusLog(true,"TOOL:Reload(Prop): Removed a piece") end
   return asmlib.StatusLog(false,"TOOL:Reload(): Nothing removed")
