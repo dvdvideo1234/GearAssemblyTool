@@ -14,6 +14,7 @@ local GetConVar             = GetConVar
 local RunConsoleCommand     = RunConsoleCommand
 local osDate                = os and os.date
 local mathFloor             = math and math.floor
+local mathClamp             = math and math.Clamp
 local vguiCreate            = vgui and vgui.Create
 local fileExists            = file and file.Exists
 local utilIsValidModel      = util and util.IsValidModel
@@ -22,9 +23,12 @@ local utilIsGetPlayerTrace  = util and util.GetPlayerTrace
 local stringSub             = string and string.sub
 local stringUpper           = string and string.upper
 local stringToFileName      = string and string.GetFileFromFilename
+local stringExplode         = string and string.Explode
 local cleanupRegister       = cleanup and cleanup.Register
-local languageAdd           = language and language.Add
 local concommandAdd         = concommand and concommand.Add
+local surfaceScreenWidth    = surface and surface.ScreenWidth
+local surfaceScreenHeight   = surface and surface.ScreenHeight
+local languageAdd           = language and language.Add
 local duplicatorRegisterEntityModifier = duplicator and duplicator.RegisterEntityModifier
 
 ----------------- TOOL Global Parameters ----------------
@@ -40,8 +44,7 @@ local caP, caY, caR = asmlib.GetIndexes("A")
 local VEC_ZERO = asmlib.GetOpVar("VEC_ZERO")
 local ANG_ZERO = asmlib.GetOpVar("ANG_ZERO")
 
-local goToolScr
-local goMonitor
+local gsModeDataB = asmlib.GetOpVar("MODE_DATABASE")
 local gsNoID      = asmlib.GetOpVar("MISS_NOID")
 local gsNoMD      = asmlib.GetOpVar("MISS_NOMD")
 local SMode       = asmlib.GetOpVar("CONTAIN_STACK_MODE")
@@ -54,20 +57,13 @@ local gsToolPrefL = asmlib.GetOpVar("TOOLNAME_PL")
 local gsToolNameL = asmlib.GetOpVar("TOOLNAME_NL")
 local gsToolPrefU = asmlib.GetOpVar("TOOLNAME_PU")
 local gsToolNameU = asmlib.GetOpVar("TOOLNAME_NU")
-local gsNameInitF = asmlib.GetOpVar("NAME_INIT")
-      gsNameInitF = stringUpper(stringSub(gsNameInitF,1,1))..stringSub(gsNameInitF,2,-1)
-local gsNamePerpF = asmlib.GetOpVar("NAME_PERP")
-      gsNamePerpF = stringUpper(stringSub(gsNamePerpF,1,1))..stringSub(gsNamePerpF,2,-1)
 local gsLimitName = asmlib.GetOpVar("CVAR_LIMITNAME")
 local gsNoAnchor  = gsNoID..gsSymRev..gsNoMD
 local conPalette  = asmlib.GetOpVar("CONTAIN_PALETTE")
 
-
-
 ------------- LOCAL FUNCTIONS AND STUFF ----------------
 
 if(CLIENT) then
-
   TOOL.Information = {
     { name = "info",  stage = 1   },
     { name = "left"         },
@@ -75,43 +71,8 @@ if(CLIENT) then
     { name = "right_use",   icon2 = "gui/e.png" },
     { name = "reload"       }
   }
-
-  languageAdd("tool."..gsToolNameL..".name"      , gsNameInitF.." "..gsNamePerpF)
-  languageAdd("tool."..gsToolNameL..".desc"      , "Assembles gears to mesh together")
-  languageAdd("tool."..gsToolNameL..".0"         , "Left click to spawn/stack, Right to change mode, Reload to remove a piece")
-  languageAdd("tool."..gsToolNameL..".left"      , "Spawn/snap a gear. Hold shift to stack")
-  languageAdd("tool."..gsToolNameL..".right"     , "Switch stack mode. Hold shift for anchor selection")
-  languageAdd("tool."..gsToolNameL..".right_use" , "Open frequently used pieces menu")
-  languageAdd("tool."..gsToolNameL..".reload"    , "Remove a gear. Hold shift to select an anchor")
-  languageAdd("tool."..gsToolNameL..".mass"      , "How heavy the piece spawned will be")
-  languageAdd("tool."..gsToolNameL..".model"     , "Select the piece model to be used")
-  languageAdd("tool."..gsToolNameL..".nextx"     , "Additional origin linear X offset")
-  languageAdd("tool."..gsToolNameL..".nexty"     , "Additional origin linear Y offset")
-  languageAdd("tool."..gsToolNameL..".nextz"     , "Additional origin linear Z offset")
-  languageAdd("tool."..gsToolNameL..".count"     , "Maximum number of pieces to create while stacking")
-  languageAdd("tool."..gsToolNameL..".contyp"    , "Select constraint type for the spawned piece")
-  languageAdd("tool."..gsToolNameL..".stmode"    , "Select stack mode forward/pivot via right click")
-  languageAdd("tool."..gsToolNameL..".freeze"    , "Makes the piece spawn in a frozen state")
-  languageAdd("tool."..gsToolNameL..".adviser"   , "Controls rendering the tool position/angle adviser")
-  languageAdd("tool."..gsToolNameL..".igntyp"    , "Makes the tool ignore the different piece types on snapping/stacking")
-  languageAdd("tool."..gsToolNameL..".rotpivt"   , "Controls pivot angle offset when stacking/snapping")
-  languageAdd("tool."..gsToolNameL..".rotpivh"   , "Rotate the piece local axis to precisely mesh the teeth")
-  languageAdd("tool."..gsToolNameL..".nextpic"   , "Additional origin angular pitch offset")
-  languageAdd("tool."..gsToolNameL..".nextyaw"   , "Additional origin angular yaw offset")
-  languageAdd("tool."..gsToolNameL..".nextrol"   , "Additional origin angular roll offset")
-  languageAdd("tool."..gsToolNameL..".trorang"   , "Use origin angle from trace")
-  languageAdd("tool."..gsToolNameL..".bgskids"   , "Selection code of comma delimited Bodygroup/Skin IDs > ENTER to accept, TAB to auto-fill from trace")
-  languageAdd("tool."..gsToolNameL..".spnflat"   , "Spawn the piece flat on the ground")
-  languageAdd("tool."..gsToolNameL..".exportdb"  , "Controls the flag to export the database")
-  languageAdd("tool."..gsToolNameL..".forcelim"  , "Controls how much force is needed to break the weld")
-  languageAdd("tool."..gsToolNameL..".deltarot"  , "Controls the end-pivot angle when stacking")
-  languageAdd("tool."..gsToolNameL..".gravity"   , "Controls the gravity on the piece spawned")
-  languageAdd("tool."..gsToolNameL..".nocollide" , "Puts a no-collide between pieces and anchor/base")
-  languageAdd("tool."..gsToolNameL..".ignphysgn" , "Ignores physics gun grab on the piece spawned/snapped/stacked")
-  languageAdd("tool."..gsToolNameL..".ghosthold" ,"Controls rendering the tool ghosted holder piece")
-  languageAdd("Cleanup_"..gsLimitName, gsNameInitF.." "..asmlib.GetOpVar("NAME_PERP").." pieces")
-  languageAdd("Cleaned_"..gsLimitName, "Cleaned up all gear pieces")
-  languageAdd("SBoxLimit_"..gsLimitName, "You've hit the Spawned gears limit!")
+  asmlib.InitLocalify(GetConVar("gmod_language"):GetString())
+  languageAdd("tool."..gsToolNameL..".category", "Construction")
   concommandAdd(gsToolPrefL.."resetvars", asmlib.GetActionCode("RESET_VARIABLES"))
   concommandAdd(gsToolPrefL.."openframe", asmlib.GetActionCode("OPEN_FRAME"))
 end
@@ -597,30 +558,30 @@ end
 
 function TOOL:DrawHUD()
   if(SERVER) then return end
-  if(not goMonitor) then
-    goMonitor = asmlib.MakeScreen(0,0,
-                  surface.ScreenWidth(),
-                  surface.ScreenHeight(),conPalette,false)
-    if(not goMonitor) then
-      asmlib.PrintInstance(gsToolNameU..": DrawHUD: Invalid screen")
-      return
-    end
-  end
-  goMonitor:SetColor()
-  local ply   = LocalPlayer()
-  local Trace = ply:GetEyeTrace()
-  if(not Trace) then return end
+  local hudMonitor = asmlib.GetOpVar("MONITOR_GAME")
+  if(not hudMonitor) then
+    local scrW = surfaceScreenWidth()
+    local scrH = surfaceScreenHeight()
+    hudMonitor = asmlib.MakeScreen(0,0,scrW,scrH,conPalette)
+    if(not hudMonitor) then
+      return asmlib.StatusLog(nil,"DrawHUD: Invalid screen") end
+    asmlib.SetOpVar("MONITOR_GAME", hudMonitor)
+    asmlib.LogInstance("DrawHUD: Create screen")
+  end; hudMonitor:SetColor()
+  local oPly   = LocalPlayer()
+  local stTrace = oPly:GetEyeTrace()
+  if(not stTrace) then return end
   if(self:GetAdviser() == 0) then return end
-  local trEnt  = Trace.Entity
+  local trEnt  = stTrace.Entity
   local model  = self:GetModel()
   local ratioc = (gnRatio - 1) * 100
   local ratiom = (gnRatio * 1000)
-  local plyd   = (stTrace.HitPos - ply:GetPos()):Length()
+  local plyd   = (stTrace.HitPos - oPly:GetPos()):Length()
   local plyrad = mathClamp(ratiom / plyd,1,ratioc)
   local nextx  , nexty  , nextz   = self:GetPosOffsets()
   local nextpic, nextyaw, nextrol = self:GetAngOffsets()
-  asmlib.PlyLoadKey(ply)
-  if(trEnt and trEnt:IsValid() and asmlib.PlyLoadKey(ply,"SPEED")) then
+  asmlib.ReadKeyPly(oPly)
+  if(trEnt and trEnt:IsValid() and asmlib.CheckButtonPly(oPly,IN_SPEED)) then
     if(asmlib.IsOther(trEnt)) then return end
     local igntyp  = self:GetIgnoreType()
     local trorang = self:GetTraceOriginAngle()
@@ -638,18 +599,18 @@ function TOOL:DrawHUD()
     local Cp =  stSpawn.CPos:ToScreen()
     local Cu = (stSpawn.CPos + 15 * stSpawn.CAng:Up()):ToScreen()
     -- Draw UCS
-    goMonitor:DrawLine(Op,Xs,"r","SURF")-- Base X
-    goMonitor:DrawLine(Sp,Df)           -- Next
-    goMonitor:DrawLine(Op,Zs,"b")       -- Base Z
-    goMonitor:DrawLine(Cp,Cu,"y")       -- Base Z
-    goMonitor:DrawCircle(Op,plyrad)     -- Base O
-    goMonitor:DrawLine(Op,Ys,"g")
-    goMonitor:DrawLine(Cp,Op)
-    goMonitor:DrawCircle(Cp,plyrad)
-    goMonitor:DrawLine(Op,Sp,"m")
-    goMonitor:DrawCircle(Sp,Sp,plyrad)
-    goMonitor:DrawLine(Sp,Du,"c")
-    if(self:GetDeveloperMode() ~= 0) then DrawAdditionalInfo(goMonitor,stSpawn) end
+    hudMonitor:DrawLine(Op,Xs,"r","SURF")-- Base X
+    hudMonitor:DrawLine(Sp,Df)           -- Next
+    hudMonitor:DrawLine(Op,Zs,"b")       -- Base Z
+    hudMonitor:DrawLine(Cp,Cu,"y")       -- Base Z
+    hudMonitor:DrawCircle(Op,plyrad)     -- Base O
+    hudMonitor:DrawLine(Op,Ys,"g")
+    hudMonitor:DrawLine(Cp,Op)
+    hudMonitor:DrawCircle(Cp,plyrad)
+    hudMonitor:DrawLine(Op,Sp,"m")
+    hudMonitor:DrawCircle(Sp,Sp,plyrad)
+    hudMonitor:DrawLine(Sp,Du,"c")
+    if(self:GetDeveloperMode() ~= 0) then DrawAdditionalInfo(hudMonitor,stSpawn) end
   else
     local stSpawn  = asmlib.GetNormalSpawn(Trace,model,
                        nextx,nexty,nextz,nextpic,nextyaw,nextrol)
@@ -658,63 +619,66 @@ function TOOL:DrawHUD()
     local Xs = (stSpawn.SPos + 15 * stSpawn.F):ToScreen()
     local Ys = (stSpawn.SPos + 15 * stSpawn.R):ToScreen()
     local Zs = (stSpawn.SPos + 15 * stSpawn.U):ToScreen()
-    goMonitor:DrawLine(Os,Xs,"r")
-    goMonitor:DrawLine(Os,Ys,"g")
-    goMonitor:DrawLine(Os,Zs,"b")
-    goMonitor:DrawCircle(Os,plyrad,"y")
-    if(self:GetDeveloperMode() ~= 0) then DrawAdditionalInfo(goMonitor,stSpawn) end
+    hudMonitor:DrawLine(Os,Xs,"r")
+    hudMonitor:DrawLine(Os,Ys,"g")
+    hudMonitor:DrawLine(Os,Zs,"b")
+    hudMonitor:DrawCircle(Os,plyrad,"y")
+    if(self:GetDeveloperMode() ~= 0) then DrawAdditionalInfo(hudMonitor,stSpawn) end
   end
 end
 
-local function DrawRatioVisual(oScreen,nTrR,nHdR,nDeep)
-  if(not oScreen) then return end
+local function DrawRatioVisual(oScr,nTrR,nHdR,nDeep)
+  if(not oScr) then return end
   local hDeep = mathFloor((nDeep or 0) / 2)
   if(hDeep <= 2) then return end
-  local nW, nH = oScreen:GetSize()
-  local dx, dy, dw, dh = oScreen:GetTextState(0,0,0,2)
+  local nW, nH = oScr:GetSize()
+  local dx, dy, dw, dh = oScr:GetTextState(0,0,0,2)
   if(nTrR) then
     local Cent = mathFloor((nTrR / ( nTrR + nHdR )) * nW)
-    oScreen:DrawRect(0,dh,nDeep,nH-dy,"y")               -- Trace Teeth
-    oScreen:DrawRect(nDeep,dh,Cent-hDeep,nH-dy,"g")      -- Trace Gear
-    oScreen:DrawRect(Cent-hDeep,dh,Cent+hDeep,nH-dy,"y") -- Meshing
-    oScreen:DrawRect(Cent+hDeep,dh,nW-nDeep,nH-dy,"m")   -- Holds Gear
-    oScreen:DrawRect(nW-nDeep,dh,nW,nH-dy,"y")           -- Holds Teeth
+    oScr:DrawRect(0,dh,nDeep,nH-dy,"y")               -- Trace Teeth
+    oScr:DrawRect(nDeep,dh,Cent-hDeep,nH-dy,"g")      -- Trace Gear
+    oScr:DrawRect(Cent-hDeep,dh,Cent+hDeep,nH-dy,"y") -- Meshing
+    oScr:DrawRect(Cent+hDeep,dh,nW-nDeep,nH-dy,"m")   -- Holds Gear
+    oScr:DrawRect(nW-nDeep,dh,nW,nH-dy,"y")           -- Holds Teeth
   else
-    oScreen:DrawRect(0,dh,nDeep,nH-dy,"y")               -- Holds Teeth
-    oScreen:DrawRect(nDeep,dh,nW-nDeep,nH-dy,"g")        -- Holds
-    oScreen:DrawRect(nW-nDeep,dh,nW,nH-dy,"y")           -- Holds Teeth
+    oScr:DrawRect(0,dh,nDeep,nH-dy,"y")               -- Holds Teeth
+    oScr:DrawRect(nDeep,dh,nW-nDeep,nH-dy,"g")        -- Holds
+    oScr:DrawRect(nW-nDeep,dh,nW,nH-dy,"y")           -- Holds Teeth
   end
 end
 
 function TOOL:DrawToolScreen(w, h)
   if(SERVER) then return end
-  if(not goToolScr) then
-    goToolScr = asmlib.MakeScreen(0,0,w,h,conPalette,false)
-    if(not goToolScr) then
-      asmlib.PrintInstance(gsToolNameU..": DrawToolScreen: Invalid screen")
-      return
-    end
+  local scrTool = asmlib.GetOpVar("MONITOR_TOOL")
+  if(not scrTool) then
+    scrTool = asmlib.MakeScreen(0,0,w,h,conPalette)
+    if(not scrTool) then
+      return asmlib.StatusLog(nil,"DrawToolScreen: Invalid screen") end
+    asmlib.SetOpVar("MONITOR_TOOL", scrTool)
+    asmlib.LogInstance("DrawToolScreen: Create screen")
   end
-  goToolScr:SetColor()
-  goToolScr:DrawBackGround("k")
-  goToolScr:SetTextEdge(0,0)
+  scrTool:SetColor()
+  scrTool:DrawRect({x=0,y=0},{x=w,y=h},"k","SURF",{"vgui/white"})
+  scrTool:SetTextEdge(0,0)
   local Trace = LocalPlayer():GetEyeTrace()
+  local anInfo, anEnt = self:GetAnchor()
+  local tInfo = stringExplode(gsSymRev,anInfo)
   if(not Trace) then
-    goToolScr:DrawText("Trace status: Invalid","r","SURF",{"Trebuchet24"})
-    goToolScr:DrawTextAdd("  ["..(tInfo[1] or gsNoID).."]","an")
+    scrTool:DrawText("Trace status: Invalid","r","SURF",{"Trebuchet24"})
+    scrTool:DrawTextAdd("  ["..(tInfo[1] or gsNoID).."]","an")
     return
   end
-  goToolScr:DrawText("Trace status: Valid","g","SURF",{"Trebuchet24"})
-  goToolScr:DrawTextAdd("  ["..(tInfo[1] or gsNoID).."]","an")
+  scrTool:DrawText("Trace status: Valid","g","SURF",{"Trebuchet24"})
+  scrTool:DrawTextAdd("  ["..(tInfo[1] or gsNoID).."]","an")
   local model = self:GetModel()
   local hdRec = asmlib.CacheQueryPiece(model)
   if(not hdRec) then
-    goToolScr:DrawText("Holds Model: Invalid","r")
-    goToolScr:DrawTextAdd("  ["..gsModeDataB.."]","db")
+    scrTool:DrawText("Holds Model: Invalid","r")
+    scrTool:DrawTextAdd("  ["..gsModeDataB.."]","db")
     return
   end
-  goToolScr:DrawText("Holds Model: Valid","g")
-  goToolScr:DrawTextAdd("  ["..gsModeDataB.."]","db")
+  scrTool:DrawText("Holds Model: Valid","g")
+  scrTool:DrawTextAdd("  ["..gsModeDataB.."]","db")
   local NoAV  = "N/A"
   local trEnt = Trace.Entity
   local trOrig, trModel, trMesh, trRad
@@ -731,14 +695,14 @@ function TOOL:DrawToolScreen(w, h)
   end
   local hdRad = asmlib.RoundValue(asmlib.GetLengthVector(hdRec.O),0.01)
   local Ratio = asmlib.RoundValue((trRad or 0) / hdRad,0.01)
-  goToolScr:DrawText("TM: "..(trModel or NoAV),"g")
-  goToolScr:DrawText("HM: "..(asmlib.GetModelFileName(model) or NoAV),"m")
-  goToolScr:DrawText("Anc: "..self:GetAnchor("anchor"),"an")
-  goToolScr:DrawText("Mesh: "..tostring(trMesh or NoAV).." > "..tostring(asmlib.RoundValue(hdRec.Mesh,0.01) or NoAV),"y")
-  goToolScr:DrawText("Ratio: "..tostring(Ratio).." > "..tostring(trRad or NoAV).."/"..tostring(hdRad))
-  goToolScr:DrawText("StackMod: "..SMode:Select(stmode),"r")
-  goToolScr:DrawText(tostring(osDate()),"w")
-  DrawRatioVisual(goToolScr,trRad,hdRad,10)
+  scrTool:DrawText("TM: "..(trModel or NoAV),"g")
+  scrTool:DrawText("HM: "..(asmlib.GetModelFileName(model) or NoAV),"m")
+  scrTool:DrawText("Anc: "..self:GetAnchor("anchor"),"an")
+  scrTool:DrawText("Mesh: "..tostring(trMesh or NoAV).." > "..tostring(asmlib.RoundValue(hdRec.Mesh,0.01) or NoAV),"y")
+  scrTool:DrawText("Ratio: "..tostring(Ratio).." > "..tostring(trRad or NoAV).."/"..tostring(hdRad))
+  scrTool:DrawText("StackMod: "..SMode:Select(stmode),"r")
+  scrTool:DrawText(tostring(osDate()),"w")
+  DrawRatioVisual(scrTool,trRad,hdRad,10)
 end
 
 local ConVarList = TOOL:BuildConVarList()

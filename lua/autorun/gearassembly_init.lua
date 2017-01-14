@@ -22,7 +22,7 @@ local duplicatorStoreEntityModifier = duplicator and duplicator.StoreEntityModif
 local asmlib = gearasmlib
 
 ------ CONFIGURE ASMLIB ------
-asmlib.Init("gear","assembly")
+asmlib.InitBase("gear","assembly")
 asmlib.SetOpVar("TOOL_VERSION","4.92")
 asmlib.SetIndexes("V",1,2,3)
 asmlib.SetIndexes("A",1,2,3)
@@ -78,7 +78,7 @@ local conPalette  = asmlib.MakeContainer("Colours"); asmlib.SetOpVar("CONTAIN_PA
       conPalette:Insert("gh",Color(255,255,255,150))
       conPalette:Insert("an",Color(180,255,150,255))
       conPalette:Insert("tx",Color(161,161,161,255))
-    
+
 ------ CONFIGURE TOOL -----
 
 local SMode = asmlib.GetOpVar("CONTAIN_STACK_MODE")
@@ -611,6 +611,45 @@ else
   asmlib.InsertRecord({"models/gears/gear_12.mdl"  , "#", "#", 0  , " 5.234, 0, 0", " 2.1442920328241e-008,  2.5950571469480e-008, 4.0000009536743" , ""})
   asmlib.InsertRecord({"models/gears/gear_24.mdl"  , "#", "#", 0  , " 9.470, 0, 0", "-2.3349744537882e-007, -1.7496104192105e-006, 3.9999997615814" , ""})
   asmlib.InsertRecord({"models/gears/planet_16.mdl", "#", "#", 180, " 9.523, 0, 0", " 2.1667046894436e-006, -1.2715023558485e-006, 5.6510457992554" , ""})
+end
+
+if(CLIENT) then
+  asmlib.SetLocalify("en","tool."..gsToolNameL..".name"      , gsNameInitF.." "..gsNamePerpF)
+  asmlib.SetLocalify("en","tool."..gsToolNameL..".desc"      , "Assembles gears to mesh together")
+  asmlib.SetLocalify("en","tool."..gsToolNameL..".0"         , "Left click to spawn/stack, Right to change mode, Reload to remove a piece")
+  asmlib.SetLocalify("en","tool."..gsToolNameL..".left"      , "Spawn/snap a gear. Hold shift to stack")
+  asmlib.SetLocalify("en","tool."..gsToolNameL..".right"     , "Switch stack mode. Hold shift for anchor selection")
+  asmlib.SetLocalify("en","tool."..gsToolNameL..".right_use" , "Open frequently used pieces menu")
+  asmlib.SetLocalify("en","tool."..gsToolNameL..".reload"    , "Remove a gear. Hold shift to select an anchor")
+  asmlib.SetLocalify("en","tool."..gsToolNameL..".mass"      , "How heavy the piece spawned will be")
+  asmlib.SetLocalify("en","tool."..gsToolNameL..".model"     , "Select the piece model to be used")
+  asmlib.SetLocalify("en","tool."..gsToolNameL..".nextx"     , "Additional origin linear X offset")
+  asmlib.SetLocalify("en","tool."..gsToolNameL..".nexty"     , "Additional origin linear Y offset")
+  asmlib.SetLocalify("en","tool."..gsToolNameL..".nextz"     , "Additional origin linear Z offset")
+  asmlib.SetLocalify("en","tool."..gsToolNameL..".count"     , "Maximum number of pieces to create while stacking")
+  asmlib.SetLocalify("en","tool."..gsToolNameL..".contyp"    , "Select constraint type for the spawned piece")
+  asmlib.SetLocalify("en","tool."..gsToolNameL..".stmode"    , "Select stack mode forward/pivot via right click")
+  asmlib.SetLocalify("en","tool."..gsToolNameL..".freeze"    , "Makes the piece spawn in a frozen state")
+  asmlib.SetLocalify("en","tool."..gsToolNameL..".adviser"   , "Controls rendering the tool position/angle adviser")
+  asmlib.SetLocalify("en","tool."..gsToolNameL..".igntyp"    , "Makes the tool ignore the different piece types on snapping/stacking")
+  asmlib.SetLocalify("en","tool."..gsToolNameL..".rotpivt"   , "Controls pivot angle offset when stacking/snapping")
+  asmlib.SetLocalify("en","tool."..gsToolNameL..".rotpivh"   , "Rotate the piece local axis to precisely mesh the teeth")
+  asmlib.SetLocalify("en","tool."..gsToolNameL..".nextpic"   , "Additional origin angular pitch offset")
+  asmlib.SetLocalify("en","tool."..gsToolNameL..".nextyaw"   , "Additional origin angular yaw offset")
+  asmlib.SetLocalify("en","tool."..gsToolNameL..".nextrol"   , "Additional origin angular roll offset")
+  asmlib.SetLocalify("en","tool."..gsToolNameL..".trorang"   , "Use origin angle from trace")
+  asmlib.SetLocalify("en","tool."..gsToolNameL..".bgskids"   , "Selection code of comma delimited Bodygroup/Skin IDs > ENTER to accept, TAB to auto-fill from trace")
+  asmlib.SetLocalify("en","tool."..gsToolNameL..".spnflat"   , "Spawn the piece flat on the ground")
+  asmlib.SetLocalify("en","tool."..gsToolNameL..".exportdb"  , "Controls the flag to export the database")
+  asmlib.SetLocalify("en","tool."..gsToolNameL..".forcelim"  , "Controls how much force is needed to break the weld")
+  asmlib.SetLocalify("en","tool."..gsToolNameL..".deltarot"  , "Controls the end-pivot angle when stacking")
+  asmlib.SetLocalify("en","tool."..gsToolNameL..".gravity"   , "Controls the gravity on the piece spawned")
+  asmlib.SetLocalify("en","tool."..gsToolNameL..".nocollide" , "Puts a no-collide between pieces and anchor/base")
+  asmlib.SetLocalify("en","tool."..gsToolNameL..".ignphysgn" , "Ignores physics gun grab on the piece spawned/snapped/stacked")
+  asmlib.SetLocalify("en","tool."..gsToolNameL..".ghosthold" ,"Controls rendering the tool ghosted holder piece")
+  asmlib.SetLocalify("en","Cleanup_"..gsLimitName, gsNameInitF.." "..asmlib.GetOpVar("NAME_PERP").." pieces")
+  asmlib.SetLocalify("en","Cleaned_"..gsLimitName, "Cleaned up all gear pieces")
+  asmlib.SetLocalify("en","SBoxLimit_"..gsLimitName, "You've hit the Spawned gears limit!")
 end
 
 -------- CACHE PANEL STUFF ---------

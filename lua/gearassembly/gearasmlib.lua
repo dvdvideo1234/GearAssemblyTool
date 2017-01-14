@@ -41,90 +41,103 @@ local IN_WALK      = IN_WALK
 local IN_ZOOM      = IN_ZOOM
 
 ---------------- Localizing ENT Properties ----------------
+local MASK_SOLID            = MASK_SOLID
 local SOLID_VPHYSICS        = SOLID_VPHYSICS
 local MOVETYPE_VPHYSICS     = MOVETYPE_VPHYSICS
 local COLLISION_GROUP_NONE  = COLLISION_GROUP_NONE
 local RENDERMODE_TRANSALPHA = RENDERMODE_TRANSALPHA
 
 ---------------- Localizing needed functions ----------------
-local next                  = next
-local type                  = type
-local Angle                 = Angle
-local Color                 = Color
-local pairs                 = pairs
-local print                 = print
-local tobool                = tobool
-local Vector                = Vector
-local include               = include
-local IsValid               = IsValid
-local require               = require
-local Time                  = SysTime
-local tonumber              = tonumber
-local tostring              = tostring
-local GetConVar             = GetConVar
-local LocalPlayer           = LocalPlayer
-local CreateConVar          = CreateConVar
-local getmetatable          = getmetatable
-local setmetatable          = setmetatable
-local collectgarbage        = collectgarbage
-local osClock               = os and os.clock
-local osDate                = os and os.date
-local sqlQuery              = sql and sql.Query
-local sqlLastError          = sql and sql.LastError
-local sqlTableExists        = sql and sql.TableExists
-local utilTraceLine         = util and util.TraceLine
-local utilIsInWorld         = util and util.IsInWorld
-local utilIsValidModel      = util and util.IsValidModel
-local utilGetPlayerTrace    = util and util.GetPlayerTrace
-local entsCreate            = ents and ents.Create
-local fileOpen              = file and file.Open
-local fileExists            = file and file.Exists
-local fileAppend            = file and file.Append
-local fileDelete            = file and file.Delete
-local fileCreateDir         = file and file.CreateDir
-local mathAbs               = math and math.abs
-local mathCeil              = math and math.ceil
-local mathModf              = math and math.modf
-local mathSqrt              = math and math.sqrt
-local mathFloor             = math and math.floor
-local mathClamp             = math and math.Clamp
-local mathRandom            = math and math.random
-local undoCreate            = undo and undo.Create
-local undoFinish            = undo and undo.Finish
-local undoAddEntity         = undo and undo.AddEntity
-local undoSetPlayer         = undo and undo.SetPlayer
-local undoSetCustomUndoText = undo and undo.SetCustomUndoText
-local timerStop             = timer and timer.Stop
-local timerStart            = timer and timer.Start
-local timerExists           = timer and timer.Exists
-local timerCreate           = timer and timer.Create
-local timerDestroy          = timer and timer.Destroy
-local tableEmpty            = table and table.Empty
-local tableMaxn             = table and table.maxn
-local stringLen             = string and string.len
-local stringSub             = string and string.sub
-local stringFind            = string and string.find
-local stringGsub            = string and string.gsub
-local stringUpper           = string and string.upper
-local stringLower           = string and string.lower
-local stringFormat          = string and string.format
-local stringExplode         = string and string.Explode
-local stringImplode         = string and string.Implode
-local stringToFileName      = string and string.GetFileFromFilename
-local surfaceSetFont        = surface and surface.SetFont
-local surfaceDrawLine       = surface and surface.DrawLine
-local surfaceDrawText       = surface and surface.DrawText
-local surfaceDrawCircle     = surface and surface.DrawCircle
-local surfaceSetTexture     = surface and surface.SetTexture
-local surfaceSetTextPos     = surface and surface.SetTextPos
-local surfaceGetTextSize    = surface and surface.GetTextSize
-local surfaceGetTextureID   = surface and surface.GetTextureID
-local surfaceSetDrawColor   = surface and surface.SetDrawColor
-local surfaceSetTextColor   = surface and surface.SetTextColor
-local constructSetPhysProp  = construct and construct.SetPhysProp
-local constraintWeld        = constraint and constraint.Weld
-local constraintNoCollide   = constraint and constraint.NoCollide
+local next                    = next
+local type                    = type
+local Angle                   = Angle
+local Color                   = Color
+local pairs                   = pairs
+local print                   = print
+local tobool                  = tobool
+local Vector                  = Vector
+local unpack                  = unpack
+local include                 = include
+local IsValid                 = IsValid
+local Material                = Material
+local require                 = require
+local Time                    = SysTime
+local tonumber                = tonumber
+local tostring                = tostring
+local GetConVar               = GetConVar
+local LocalPlayer             = LocalPlayer
+local CreateConVar            = CreateConVar
+local getmetatable            = getmetatable
+local setmetatable            = setmetatable
+local collectgarbage          = collectgarbage
+local osClock                 = os and os.clock
+local osDate                  = os and os.date
+local bitBand                 = bit and bit.band
+local sqlQuery                = sql and sql.Query
+local sqlLastError            = sql and sql.LastError
+local sqlTableExists          = sql and sql.TableExists
+local utilTraceLine           = util and util.TraceLine
+local utilIsInWorld           = util and util.IsInWorld
+local utilIsValidModel        = util and util.IsValidModel
+local utilGetPlayerTrace      = util and util.GetPlayerTrace
+local entsCreate              = ents and ents.Create
+local fileOpen                = file and file.Open
+local fileExists              = file and file.Exists
+local fileAppend              = file and file.Append
+local fileDelete              = file and file.Delete
+local fileCreateDir           = file and file.CreateDir
+local mathPi                  = math and math.pi
+local mathAbs                 = math and math.abs
+local mathSin                 = math and math.sin
+local mathCos                 = math and math.cos
+local mathCeil                = math and math.ceil
+local mathModf                = math and math.modf
+local mathSqrt                = math and math.sqrt
+local mathFloor               = math and math.floor
+local mathClamp               = math and math.Clamp
+local mathRandom              = math and math.random
+local undoCreate              = undo and undo.Create
+local undoFinish              = undo and undo.Finish
+local undoAddEntity           = undo and undo.AddEntity
+local undoSetPlayer           = undo and undo.SetPlayer
+local undoSetCustomUndoText   = undo and undo.SetCustomUndoText
+local timerStop               = timer and timer.Stop
+local timerStart              = timer and timer.Start
+local timerSimple             = timer and timer.Simple
+local timerExists             = timer and timer.Exists
+local timerCreate             = timer and timer.Create
+local timerDestroy            = timer and timer.Destroy
+local tableEmpty              = table and table.Empty
+local tableMaxn               = table and table.maxn
+local debugGetinfo            = debug and debug.getinfo
+local stringLen               = string and string.len
+local stringSub               = string and string.sub
+local stringFind              = string and string.find
+local stringGsub              = string and string.gsub
+local stringUpper             = string and string.upper
+local stringLower             = string and string.lower
+local stringFormat            = string and string.format
+local stringExplode           = string and string.Explode
+local stringImplode           = string and string.Implode
+local stringToFileName        = string and string.GetFileFromFilename
+local renderDrawLine          = render and render.DrawLine
+local renderDrawSphere        = render and render.DrawSphere
+local renderSetMaterial       = render and render.SetMaterial
+local surfaceSetFont          = surface and surface.SetFont
+local surfaceDrawLine         = surface and surface.DrawLine
+local surfaceDrawText         = surface and surface.DrawText
+local surfaceDrawCircle       = surface and surface.DrawCircle
+local surfaceSetTexture       = surface and surface.SetTexture
+local surfaceSetTextPos       = surface and surface.SetTextPos
+local surfaceGetTextSize      = surface and surface.GetTextSize
+local surfaceGetTextureID     = surface and surface.GetTextureID
+local surfaceSetDrawColor     = surface and surface.SetDrawColor
+local surfaceSetTextColor     = surface and surface.SetTextColor
 local surfaceDrawTexturedRect = surface and surface.DrawTexturedRect
+local languageAdd             = language and language.Add
+local constructSetPhysProp    = construct and construct.SetPhysProp
+local constraintWeld          = constraint and constraint.Weld
+local constraintNoCollide     = constraint and constraint.NoCollide
 local duplicatorStoreEntityModifier = duplicator and duplicator.StoreEntityModifier
 
 ---------------- CASHES SPACE --------------------
@@ -200,6 +213,7 @@ function IsOther(oEnt)
 end
 
 ------------------ LOGS ------------------------
+
 local function FormatNumberMax(nNum,nMax)
   local nNum = tonumber(nNum)
   local nMax = tonumber(nMax)
@@ -207,72 +221,50 @@ local function FormatNumberMax(nNum,nMax)
   return stringFormat("%"..stringLen(tostring(mathFloor(nMax))).."d",nNum)
 end
 
-function SetLogControl(nLines,sFile)
-  SetOpVar("LOG_CURLOGS",0)
-  SetOpVar("LOG_LOGFILE",tostring(sFile or ""))
-  SetOpVar("LOG_MAXLOGS",mathFloor(tonumber(nLines) or 0))
-  if(not fileExists(GetOpVar("DIRPATH_BAS"),"DATA") and
-     not IsEmptyString(GetOpVar("LOG_LOGFILE"))) then
-    fileCreateDir(GetOpVar("DIRPATH_BAS"))
-  end
-end
-
 local function Log(anyStuff)
   local nMaxLogs = GetOpVar("LOG_MAXLOGS")
   if(nMaxLogs <= 0) then return end
-  local sLogFile = GetOpVar("LOG_LOGFILE")
-  local nCurLogs = GetOpVar("LOG_CURLOGS")
-  if(sLogFile ~= "") then
-    local fName = GetOpVar("DIRPATH_BAS")..GetOpVar("DIRPATH_LOG")..sLogFile..".txt"
-    fileAppend(fName,FormatNumberMax(nCurLogs,nMaxLogs).." >> "..tostring(anyStuff).."\n")
-    nCurLogs = nCurLogs + 1
-    if(nCurLogs > nMaxLogs) then
-      fileDelete(fName)
-      nCurLogs = 0
-    end
-    SetOpVar("LOG_CURLOGS",nCurLogs)
-  else
-    print(FormatNumberMax(nCurLogs,nMaxLogs).." >> "..tostring(anyStuff))
-    nCurLogs = nCurLogs + 1
-    if(nCurLogs > nMaxLogs) then
-      nCurLogs = 0
-    end
-    SetOpVar("LOG_CURLOGS",nCurLogs)
-  end
+  local logLast  = GetOpVar("LOG_LOGLAST")
+  local logData  = tostring(anyStuff)
+  local nCurLogs = GetOpVar("LOG_CURLOGS") + 1
+  if(logLast == logData) then SetOpVar("LOG_CURLOGS",nCurLogs); return end
+  SetOpVar("LOG_LOGLAST",logData)
+  if(GetOpVar("LOG_LOGFILE")) then
+    local fName = GetOpVar("DIRPATH_BAS").."trackasmlib_log.txt"
+    if(nCurLogs > nMaxLogs) then nCurLogs = 0; fileDelete(fName) end
+    fileAppend(fName,FormatNumberMax(nCurLogs,nMaxLogs).." ["..osDate().."] "..logData.."\n")
+  else -- The current has values 1..nMaxLogs(0)
+    if(nCurLogs > nMaxLogs) then nCurLogs = 0 end
+    print(FormatNumberMax(nCurLogs,nMaxLogs).." >> "..logData)
+  end; SetOpVar("LOG_CURLOGS",nCurLogs)
 end
 
 function PrintInstance(anyStuff)
   local sModeDB = GetOpVar("MODE_DATABASE")
   if(SERVER) then
-    print("SERVER > "..GetOpVar("TOOLNAME_NU").." ["..sModeDB.."] "..tostring(anyStuff))
+    print("["..osDate().."] SERVER > "..GetOpVar("TOOLNAME_NU").." ["..sModeDB.."] "..tostring(anyStuff))
   elseif(CLIENT) then
-    print("CLIENT > "..GetOpVar("TOOLNAME_NU").." ["..sModeDB.."] "..tostring(anyStuff))
+    print("["..osDate().."] CLIENT > "..GetOpVar("TOOLNAME_NU").." ["..sModeDB.."] "..tostring(anyStuff))
   else
-    print("NOINST > "..GetOpVar("TOOLNAME_NU").." ["..sModeDB.."] "..tostring(anyStuff))
+    print("["..osDate().."] NOINST > "..GetOpVar("TOOLNAME_NU").." ["..sModeDB.."] "..tostring(anyStuff))
   end
 end
 
 function LogInstance(anyStuff)
-  if(GetOpVar("LOG_MAXLOGS") <= 0) then return end
+  local logMax = (tonumber(GetOpVar("LOG_MAXLOGS")) or 0)
+  if(logMax and (logMax <= 0)) then return end
   local anyStuff = tostring(anyStuff)
   local logStats = GetOpVar("LOG_SKIP")
   if(logStats and logStats[1]) then
     local iNdex = 1
     while(logStats[iNdex]) do
-      if(stringFind(anyStuff,tostring(logStats[iNdex]))) then return end
-      iNdex = iNdex + 1
-    end
+      if(stringFind(anyStuff,tostring(logStats[iNdex]))) then return end; iNdex = iNdex + 1 end
   end -- Should the current log being skipped
   logStats = GetOpVar("LOG_ONLY")
   if(logStats and logStats[1]) then
-    local iNdex = 1
-    local logMe = false
+    local iNdex, logMe = 1, false
     while(logStats[iNdex]) do
-      if(stringFind(anyStuff,tostring(logStats[iNdex]))) then
-        logMe = true
-      end
-      iNdex = iNdex + 1
-    end
+      if(stringFind(anyStuff,tostring(logStats[iNdex]))) then logMe = true end; iNdex = iNdex + 1 end
     if(not logMe) then return end
   end -- Only the chosen messages are processed
   local sSors = ""
@@ -286,7 +278,7 @@ function LogInstance(anyStuff)
   end
   local sInst   = ((SERVER and "SERVER" or nil) or (CLIENT and "CLIENT" or nil) or "NOINST")
   local sModeDB = GetOpVar("MODE_DATABASE")
-  Log(sInst.." > "..sTrac..GetOpVar("TOOLNAME_NU").." ["..sModeDB.."] "..anyStuff)
+  Log(sInst.." > "..sSors..GetOpVar("TOOLNAME_NU").." ["..sModeDB.."] "..anyStuff)
 end
 
 function StatusPrint(anyStatus,sError)
@@ -302,38 +294,37 @@ end
 function Print(tT,sS)
   if(not IsExistent(tT)) then
     return StatusLog(nil,"Print: {nil, name="..tostring(sS or "\"Data\"").."}") end
-  local S = type(sS)
-  local T = type(tT)
-  local Key = ""
+  local S, T, Key = type(sS), type(tT), ""
   if    (S == "string") then S = sS
   elseif(S == "number") then S = tostring(sS)
   else                       S = "Data" end
   if(T ~= "table") then
-    LogInstance("{"..T.."}["..tostring(sS or "N/A").."] = "..tostring(tT))
-    return
-  end
+    LogInstance("{"..T.."}["..tostring(sS or "N/A").."] = "..tostring(tT)); return end
   T = tT
   if(next(T) == nil) then
-    LogInstance(S.." = {}")
-    return
-  end
+    LogInstance(S.." = {}"); return end
   LogInstance(S)
   for k,v in pairs(T) do
     if(type(k) == "string") then
       Key = S.."[\""..k.."\"]"
-    else
-      Key = S.."["..tostring(k).."]"
-    end
+    else Key = S.."["..tostring(k).."]" end
     if(type(v) ~= "table") then
       if(type(v) == "string") then
         LogInstance(Key.." = \""..v.."\"")
-      else
-        LogInstance(Key.." = "..tostring(v))
-      end
-    else
-      Print(v,Key)
-    end
+      else LogInstance(Key.." = "..tostring(v)) end
+    else Print(v,Key) end
   end
+end
+
+function SetLogControl(nLines,bFile)
+  SetOpVar("LOG_CURLOGS",0)
+  SetOpVar("LOG_LOGFILE",tobool(bFile))
+  SetOpVar("LOG_MAXLOGS",mathFloor(tonumber(nLines) or 0))
+  if(not fileExists(GetOpVar("DIRPATH_BAS"),"DATA") and
+     not IsEmptyString(GetOpVar("LOG_LOGFILE"))) then
+    fileCreateDir(GetOpVar("DIRPATH_BAS"))
+  end
+  PrintInstance("SetLogControl("..tostring(GetOpVar("LOG_MAXLOGS"))..","..tostring(GetOpVar("LOG_LOGFILE"))..")")
 end
 
 ----------------- INITAIALIZATION -----------------
@@ -357,22 +348,23 @@ function SetIndexes(sType,I1,I2,I3,I4)
   return StatusLog(true,"SetIndexes["..sType.."]: Success")
 end
 
-function Init(sName,sPurpose)
+function InitBase(sName,sPurpose)
   SetOpVar("TYPEMT_STRING",getmetatable("TYPEMT_STRING"))
   SetOpVar("TYPEMT_SCREEN",{})
   SetOpVar("TYPEMT_CONTAINER",{})
   if(not IsString(sName)) then
-    return StatusPrint(false,"InitAssembly: Name <"..tostring(sName).."> not string") end
+    return StatusPrint(false,"InitBase: Name <"..tostring(sName).."> not string") end
   if(not IsString(sPurpose)) then
-    return StatusPrint(false,"InitAssembly: Purpose <"..tostring(sPurpose).."> not string") end
+    return StatusPrint(false,"InitBase: Purpose <"..tostring(sPurpose).."> not string") end
   if(IsEmptyString(sName) or tonumber(stringSub(sName,1,1))) then
-    return StatusPrint(false,"InitAssembly: Name invalid") end
+    return StatusPrint(false,"InitBase: Name invalid <"..sName..">") end
   if(IsEmptyString(sPurpose) or tonumber(stringSub(sPurpose,1,1))) then
-    return StatusPrint(false,"InitAssembly: Purpose invalid") end
+    return StatusPrint(false,"InitBase: Purpose invalid <"..sPurpose..">") end
   SetOpVar("TIME_INIT",Time())
   SetOpVar("LOG_MAXLOGS",0)
   SetOpVar("LOG_CURLOGS",0)
   SetOpVar("LOG_LOGFILE","")
+  SetOpVar("LOG_LOGLAST","")
   SetOpVar("MAX_ROTATION",360)
   SetOpVar("ANG_ZERO",Angle())
   SetOpVar("VEC_ZERO",Vector())
@@ -392,21 +384,23 @@ function Init(sName,sPurpose)
   SetOpVar("DIRPATH_BAS",GetOpVar("TOOLNAME_NL")..GetOpVar("OPSYM_DIRECTORY"))
   SetOpVar("DIRPATH_INS","exp"..GetOpVar("OPSYM_DIRECTORY"))
   SetOpVar("DIRPATH_DSV","dsv"..GetOpVar("OPSYM_DIRECTORY"))
-  SetOpVar("DIRPATH_LOG","")
   SetOpVar("MISS_NOID","N")    -- No ID selected
   SetOpVar("MISS_NOAV","N/A")  -- Not Available
   SetOpVar("MISS_NOMD","X")    -- No model
   SetOpVar("ARRAY_DECODEPOA",{0,0,0,1,1,1,false})
-  SetOpVar("TABLE_FREQUENT_MODELS",{})
+  SetOpVar("LOCALIFY_TABLE",{})
+  SetOpVar("LOCALIFY_AUTO","en")
+  SetOpVar("FILE_MODEL","%.mdl")
+  SetOpVar("QUERY_STORE", {})
   SetOpVar("TABLE_BORDERS",{})
   SetOpVar("TABLE_CATEGORIES",{})
-  SetOpVar("FILE_MODEL","%.mdl")
+  SetOpVar("TABLE_PLAYER_KEYS",{})
+  SetOpVar("TABLE_FREQUENT_MODELS",{})
   SetOpVar("OOP_DEFAULTKEY","(!@<#_$|%^|&>*)DEFKEY(*>&|^%|$_#<@!)")
   SetOpVar("CVAR_LIMITNAME","asm"..GetOpVar("NAME_INIT").."s")
   SetOpVar("MODE_DATABASE",GetOpVar("MISS_NOAV"))
   SetOpVar("HASH_USER_PANEL",GetOpVar("TOOLNAME_PU").."USER_PANEL")
   SetOpVar("HASH_QUERY_STORE",GetOpVar("TOOLNAME_PU").."QHASH_QUERY")
-  SetOpVar("HASH_PLAYER_KEYDOWN","PLAYER_KEYDOWN")
   SetOpVar("NAV_PIECE",{})
   SetOpVar("NAV_PANEL",{})
   SetOpVar("STRUCT_SPAWN",{
@@ -429,7 +423,7 @@ function Init(sName,sPurpose)
     TPos = Vector(), -- O
     TAng = Angle ()  -- A
   })
-  return StatusPrint(true,"InitAssembly: Success")
+  return StatusPrint(true,"InitBase: Success")
 end
 
 ------------- ANGLE ---------------
@@ -578,11 +572,11 @@ function SetVectorXYZ(vBase, nX, nY, nZ)
 end
 
 function DecomposeByAngle(vBase,aUnit)
-  if(not vBase) then return StatusLog(Vector(),"DecomposeByAngle: Base invalid") end
-  if(not aUnit) then return StatusLog(Vector(),"DecomposeByAngle: Unit invalid") end
-  local X = vBase:DotProduct(aUnit:Forward())
-  local Y = vBase:DotProduct(aUnit:Right())
-  local Z = vBase:DotProduct(aUnit:Up())
+  if(not vBase) then return StatusLog(nil,"DecomposeByAngle: Base invalid") end
+  if(not aUnit) then return StatusLog(nil,"DecomposeByAngle: Unit invalid") end
+  local X = vBase:Dot(aUnit:Forward())
+  local Y = vBase:Dot(aUnit:Right())
+  local Z = vBase:Dot(aUnit:Up())
   SetVectorXYZ(vBase,X,Y,Z)
 end
 
@@ -805,32 +799,38 @@ function MakeScreen(sW,sH,eW,eH,conColors)
 end
 
 function SetAction(sKey,fAct,tDat)
-  if(not (sKey and IsString(sKey))) then return false end
-  if(not (fAct and type(fAct) == "function")) then return false end
-  if(not libAction[sKey]) then
-    libAction[sKey] = {}
-  end
+  if(not (sKey and IsString(sKey))) then
+    return StatusLog(nil,"SetAction: Key {"..type(sKey).."}<"..tostring(sKey).."> not string") end
+  if(not (fAct and type(fAct) == "function")) then
+    return StatusLog(nil,"SetAction: Act {"..type(fAct).."}<"..tostring(fAct).."> not function") end
+  if(not libAction[sKey]) then libAction[sKey] = {} end
   libAction[sKey].Act = fAct
   libAction[sKey].Dat = tDat
   return true
 end
 
 function GetActionCode(sKey)
-  if(not (sKey and IsString(sKey))) then return StatusLog(nil,"GetActionCode: ") end
-  if(not (libAction and libAction[sKey])) then return nil end
+  if(not (sKey and IsString(sKey))) then
+    return StatusLog(nil,"GetActionCode: Key {"..type(sKey).."}<"..tostring(sKey).."> not string") end
+  if(not (libAction and libAction[sKey])) then
+    return StatusLog(nil,"GetActionCode: Key not located") end
   return libAction[sKey].Act
 end
 
 function GetActionData(sKey)
-  if(not (sKey and IsString(sKey))) then return nil end
-  if(not (libAction and libAction[sKey])) then return nil end
+  if(not (sKey and IsString(sKey))) then
+    return StatusLog(nil,"GetActionData: Key {"..type(sKey).."}<"..tostring(sKey).."> not string") end
+  if(not (libAction and libAction[sKey])) then
+    return StatusLog(nil,"GetActionData: Key not located") end
   return libAction[sKey].Dat
 end
 
-function CallAction(sKey,A1,A2,A3,A4)
-  if(not (sKey and IsString(sKey))) then return false end
-  if(not (libAction and libAction[sKey])) then return false end
-  return libAction[sKey].Act(A1,A2,A3,A4,libAction[sKey].Dat)
+function CallAction(sKey,...)
+  if(not (sKey and IsString(sKey))) then
+    return StatusLog(nil,"CallAction: Key {"..type(sKey).."}<"..tostring(sKey).."> not string") end
+  if(not (libAction and libAction[sKey])) then
+    return StatusLog(nil,"CallAction: Key not located") end
+  return libAction[sKey].Act(libAction[sKey].Dat,...)
 end
 
 local function AddLineListView(pnListView,frUsed,ivNdex)
@@ -1083,7 +1083,7 @@ local function ReloadPOA(nXP,nYY,nZR,nSX,nSY,nSZ,nSD)
         arPOA[4] = tonumber(nSX) or 1
         arPOA[5] = tonumber(nSY) or 1
         arPOA[6] = tonumber(nSZ) or 1
-        arPOA[7] = (tonumber(nSD) and (nSD ~= 0)) and true or false
+        arPOA[7] = tobool(nSD) or false
   return arPOA
 end
 
@@ -1282,13 +1282,6 @@ end
 
 ------------- VARIABLE INTERFACES --------------
 
-local function SQLBuildError(anyError)
-  if(not IsExistent(anyError)) then
-    return GetOpVar("SQL_BUILD_ERR") or "" end
-  SetOpVar("SQL_BUILD_ERR", tostring(anyError))
-  return nil -- Nothing assembled
-end
-
 function SettingsModelToName(sMode, gCut, gSub, gApp)
   if(not IsString(sMode)) then
     return StatusLog(false,"SettingsModelToName: Mode {"..type(sMode).."}<"..tostring(sMode).."> not string") end
@@ -1302,9 +1295,7 @@ function SettingsModelToName(sMode, gCut, gSub, gApp)
     SetOpVar("TABLE_GCUT_MODEL",{})
     SetOpVar("TABLE_GSUB_MODEL",{})
     SetOpVar("TABLE_GAPP_MODEL",{})
-  else
-    return StatusLog(false,"SettingsModelToName: Wrong mode name "..sMode)
-  end
+  else return StatusLog(false,"SettingsModelToName: Wrong mode name "..sMode) end
 end
 
 function DefaultType(anyType,fooCateg)
@@ -1314,8 +1305,7 @@ function DefaultType(anyType,fooCateg)
   if(type(fooCateg) == "function") then
     local Categ = GetOpVar("TABLE_CATEGORIES")
           Categ[anyType] = fooCateg
-  end
-  SetOpVar("DEFAULT_TYPE",tostring(anyType))
+  end; SetOpVar("DEFAULT_TYPE",tostring(anyType))
 end
 
 function DefaultTable(anyTable)
@@ -1328,9 +1318,9 @@ end
 ------------------------- PLAYER -----------------------------------
 
 function ConCommandPly(pPly,sCvar,snValue)
-  if(not IsPlayer(pPly)) then return StatusLog("","ConCommandPly: Player <"..type(pPly)"> invalid") end
+  if(not IsPlayer(pPly)) then return StatusLog(nil,"ConCommandPly: Player <"..type(pPly).."> invalid") end
   if(not IsString(sCvar)) then -- Make it like so the space will not be forgotten
-    return StatusLog("","ConCommandPly: Convar {"..type(sCvar).."}<"..tostring(sCvar).."> not string") end
+    return StatusLog(nil,"ConCommandPly: Convar {"..type(sCvar).."}<"..tostring(sCvar).."> not string") end
   return pPly:ConCommand(GetOpVar("TOOLNAME_PL")..sCvar.." "..tostring(snValue).."\n")
 end
 
@@ -1340,8 +1330,7 @@ function PrintNotifyPly(pPly,sText,sNotifType)
   if(SERVER) then -- Send notification to client that something happened
     pPly:SendLua("GAMEMODE:AddNotify(\""..sText.."\", NOTIFY_"..sNotifType..", 6)")
     pPly:SendLua("surface.PlaySound(\"ambient/water/drip"..mathRandom(1, 4)..".wav\")")
-  end
-  return StatusLog(true,"PrintNotifyPly: Success")
+  end; return StatusLog(true,"PrintNotifyPly: Success")
 end
 
 function UndoCratePly(anyMessage)
@@ -1353,8 +1342,7 @@ end
 function UndoAddEntityPly(oEnt)
   if(not (oEnt and oEnt:IsValid())) then
     return StatusLog(false,"UndoAddEntityPly: Entity invalid") end
-  undoAddEntity(oEnt)
-  return true
+  undoAddEntity(oEnt); return true
 end
 
 function UndoFinishPly(pPly,anyMessage)
@@ -1366,64 +1354,57 @@ function UndoFinishPly(pPly,anyMessage)
   return true
 end
 
-function LoadKeyPly(pPly, sKey)
-  local keyPly   = GetOpVar("HASH_PLAYER_INFO")
-  local plyCache = libCache[keyPly]
-  if(not IsExistent(plyCache)) then
-    libCache[keyPly] = {}; plyCache = libCache[keyPly] end
+function ReadKeyPly(pPly)
+  local plyKeys  = GetOpVar("TABLE_PLAYER_KEYS")
   if(not IsPlayer(pPly)) then
-    return StatusLog(false,"LoadKeyPly: Player <"..type(pPly)"> not available") end
+    return StatusLog(false,"ReadKeyPly: Player <"..type(pPly)"> not available") end
   local plyNick  = pPly:Nick()
-  local plyPlace = plyCache[plyNick]
+  local plyPlace = plyKeys[plyNick]
+  if(not IsExistent(plyPlace)) then plyKeys[plyNick] = {}; plyPlace = plyKeys[plyNick] end
+  local ucmdPressed = pPly:GetCurrentCommand()
+  if(not IsExistent(ucmdPressed)) then
+    return StatusLog(false,"ReadKeyPly: Command not obtained correctly") end
+  plyPlace["M_DX"]   = ucmdPressed:GetMouseX()
+  plyPlace["M_DY"]   = ucmdPressed:GetMouseY()
+  plyPlace["K_BTN"]  = ucmdPressed:GetButtons()
+  plyPlace["M_DSCR"] = ucmdPressed:GetMouseWheel()
+  return StatusLog(true,"ReadKeyPly: Player <"..plyNick.."> keys loaded")
+end
+
+function GetMouseWheelPly(pPly)
+  if(not IsPlayer(pPly)) then --- https://wiki.garrysmod.com/page/CUserCmd/GetMouseWheel
+    return StatusLog(false,"DeltaMousePly: Player <"..type(pPly)"> not available") end
+  local plyKeys  = GetOpVar("TABLE_PLAYER_KEYS")
+  local plyNick  = pPly:Nick()
+  local plyPlace = plyKeys[plyNick]
   if(not IsExistent(plyPlace)) then
-    plyCache[plyNick] = {
-      ["ALTLFT"]  = false,
-      ["ALTRGH"]  = false,
-      ["ATTLFT"]  = false,
-      ["ATTRGH"]  = false,
-      ["FORWARD"] = false,
-      ["BACK"]    = false,
-      ["MOVELFT"] = false,
-      ["MOVERGH"] = false,
-      ["RELOAD"]  = false,
-      ["USE"]     = false,
-      ["DUCK"]    = false,
-      ["JUMP"]    = false,
-      ["SPEED"]   = false,
-      ["SCORE"]   = false,
-      ["ZOOM"]    = false,
-      ["LEFT"]    = false,
-      ["RIGHT"]   = false,
-      ["WALK"]    = false
-    }
-    plyPlace = plyCache[plyNick]
-  end
-  if(IsExistent(sKey)) then
-    if(not IsString(sKey)) then
-      return StatusLog(false,"LoadKeyPly: Key hash {"..type(sKey).."}<"..tostring(sKey).."> not string") end
-    if(sKey == "DEBUG") then return plyPlace end
-    LogInstance("LoadKeyPly: NamePK <"..sKey.."> = "..tostring(plyPlace[sKey]))
-    return plyPlace[sKey]
-  end
-  plyPlace["ALTLFT"]  = pPly:KeyDown(IN_ALT1      )
-  plyPlace["ALTRGH"]  = pPly:KeyDown(IN_ALT2      )
-  plyPlace["ATTLFT"]  = pPly:KeyDown(IN_ATTACK    )
-  plyPlace["ATTRGH"]  = pPly:KeyDown(IN_ATTACK2   )
-  plyPlace["FORWARD"] = pPly:KeyDown(IN_FORWARD   )
-  plyPlace["BACK"]    = pPly:KeyDown(IN_BACK      )
-  plyPlace["MOVELFT"] = pPly:KeyDown(IN_MOVELEFT  )
-  plyPlace["MOVERGH"] = pPly:KeyDown(IN_MOVERIGHT )
-  plyPlace["RELOAD"]  = pPly:KeyDown(IN_RELOAD    )
-  plyPlace["USE"]     = pPly:KeyDown(IN_USE       )
-  plyPlace["DUCK"]    = pPly:KeyDown(IN_DUCK      )
-  plyPlace["JUMP"]    = pPly:KeyDown(IN_JUMP      )
-  plyPlace["SPEED"]   = pPly:KeyDown(IN_SPEED     )
-  plyPlace["SCORE"]   = pPly:KeyDown(IN_SCORE     )
-  plyPlace["ZOOM"]    = pPly:KeyDown(IN_ZOOM      )
-  plyPlace["LEFT"]    = pPly:KeyDown(IN_LEFT      )
-  plyPlace["RIGHT"]   = pPly:KeyDown(IN_RIGHT     )
-  plyPlace["WALK"]    = pPly:KeyDown(IN_WALK      )
-  return StatusLog(true,"LoadKeyPly: Player <"..plyNick.."> keys loaded")
+    return StatusLog(false,"DeltaMousePly: <"..plyNick.."> nomands not loaded") end
+  return plyPlace["M_DSCR"]
+end
+
+function GetMouseDeltaPly(pPly)
+  if(not IsPlayer(pPly)) then --- https://wiki.garrysmod.com/page/CUserCmd/GetMouse(XY)
+    return StatusLog(false,"GetMouseDeltaPly: Player <"..type(pPly)"> not available") end
+  local plyKeys  = GetOpVar("TABLE_PLAYER_KEYS")
+  local plyNick  = pPly:Nick()
+  local plyPlace = plyKeys[plyNick]
+  if(not IsExistent(plyPlace)) then
+    return StatusLog(false,"GetMouseDeltaPly: <"..plyNick.."> nomands not loaded") end
+  return plyPlace["M_DX"], plyPlace["M_DY"]
+end
+
+function CheckButtonPly(pPly, ivInKey)
+  if(not IsPlayer(pPly)) then --- https://wiki.garrysmod.com/page/Enums/IN
+    return StatusLog(false,"CheckButtonPly: Player <"..type(pPly)"> not available") end
+  local iInKey = tonumber(ivInKey)
+  if(not IsExistent(iInKey)) then
+    return StatusLog(false,"CheckButtonPly: Input key {"..type(ivInKey)"}<"..tostring(ivInKey).."> invalid") end
+  local plyKeys  = GetOpVar("TABLE_PLAYER_KEYS")
+  local plyNick  = pPly:Nick()
+  local plyPlace = plyKeys[plyNick]
+  if(not IsExistent(plyPlace)) then
+    return StatusLog(false,"CheckButtonPly: Player <"..plyNick.."> commands not loaded") end
+  return (bitBand(plyPlace["K_BTN"],iInKey) ~= 0)
 end
 
 -------------------------- BUILDSQL ------------------------------
@@ -1466,16 +1447,18 @@ local function MatchType(defTable,snValue,ivIndex,bQuoted,sQuote,bStopRevise,bSt
     end
   elseif(tipField == "REAL" or tipField == "INTEGER") then
     snOut = tonumber(snValue)
-    if(not IsExistent(snOut)) then
+    if(IsExistent(snOut)) then
+      if(tipField == "INTEGER") then
+        if(defField[3] == "FLR") then
+          snOut = mathFloor(snOut)
+        elseif(defField[3] == "CEL") then
+          snOut = mathCeil(snOut)
+        end
+      end
+    else
       return StatusLog(nil,"MatchType: Failed converting {"
                ..type(snValue).."}<"..tostring(snValue).."> to NUMBER for table "
-               ..defTable.Name.." field #"..nIndex) end
-    if(tipField == "INTEGER") then
-      if(defField[3] == "FLR") then
-        snOut = mathFloor(snOut)
-      elseif(defField[3] == "CEL") then
-        snOut = mathCeil(snOut)
-      end
+               ..defTable.Name.." field #"..nIndex)
     end
   else
     return StatusLog(nil,"MatchType: Invalid field type <"
@@ -1485,12 +1468,12 @@ end
 
 local function SQLBuildCreate(defTable)
   if(not defTable) then
-    return SQLBuildError("SQLBuildCreate: Missing table definition") end
+    return StatusLog(nil, "SQLBuildCreate: Missing table definition") end
   local indTable = defTable.Index
   if(not defTable[1]) then
-    return SQLBuildError("SQLBuildCreate: Missing table definition is empty for "..defTable.Name) end
+    return StatusLog(nil, "SQLBuildCreate: Missing table definition is empty for "..defTable.Name) end
   if(not (defTable[1][1] and defTable[1][2])) then
-    return SQLBuildError("SQLBuildCreate: Missing table "..defTable.Name.." field definitions") end
+    return StatusLog(nil, "SQLBuildCreate: Missing table "..defTable.Name.." field definitions") end
   local Command, iInd = {}, 1
   Command.Drop   = "DROP TABLE "..defTable.Name..";"
   Command.Delete = "DELETE FROM "..defTable.Name..";"
@@ -1498,10 +1481,10 @@ local function SQLBuildCreate(defTable)
   while(defTable[iInd]) do
     local v = defTable[iInd]
     if(not v[1]) then
-      return SQLBuildError("SQLBuildCreate: Missing Table "..defTable.Name
+      return StatusLog(nil, "SQLBuildCreate: Missing Table "..defTable.Name
                           .."'s field #"..tostring(iInd)) end
     if(not v[2]) then
-      return SQLBuildError("SQLBuildCreate: Missing Table "..defTable.Name
+      return StatusLog(nil, "SQLBuildCreate: Missing Table "..defTable.Name
                                   .."'s field type #"..tostring(iInd)) end
     Command.Create = Command.Create..stringUpper(v[1]).." "..stringUpper(v[2])
     if(defTable[iInd+1]) then Command.Create = Command.Create ..", " end
@@ -1519,7 +1502,7 @@ local function SQLBuildCreate(defTable)
     while(indTable[iInd]) do
       local vI = indTable[iInd]
       if(type(vI) ~= "table") then
-        return SQLBuildError("SQLBuildCreate: Index creator mismatch on "
+        return StatusLog(nil, "SQLBuildCreate: Index creator mismatch on "
           ..defTable.Name.." value "..vI.." is not a table for index ["..tostring(iInd).."]") end
       local FieldsU = ""
       local FieldsC = ""
@@ -1528,11 +1511,11 @@ local function SQLBuildCreate(defTable)
       while(vI[iCnt]) do
         local vF = vI[iCnt]
         if(type(vF) ~= "number") then
-          return SQLBuildError("SQLBuildCreate: Index creator mismatch on "
+          return StatusLog(nil, "SQLBuildCreate: Index creator mismatch on "
             ..defTable.Name.." value "..vF.." is not a number for index ["
             ..tostring(iInd).."]["..tostring(iCnt).."]") end
         if(not defTable[vF]) then
-          return SQLBuildError("SQLBuildCreate: Index creator mismatch on "
+          return StatusLog(nil, "SQLBuildCreate: Index creator mismatch on "
             ..defTable.Name..". The table does not have field index #"
             ..vF..", max is #"..Table.Size) end
         FieldsU = FieldsU.."_" ..stringUpper(defTable[vF][1])
@@ -1543,136 +1526,45 @@ local function SQLBuildCreate(defTable)
       Command.Index[iInd] = Command.Index[iInd]..FieldsU.." ON "..defTable.Name.." ( "..FieldsC.." );"
       iInd = iInd + 1
     end
-  end
-  SQLBuildError("")
-  return Command
+  end; return Command
 end
 
-local function SQLStoreQuery(defTable,tFields,tWhere,tOrderBy,sQuery)
-  if(not GetOpVar("EN_QUERY_STORE")) then return sQuery end
-  local Val, Base
-  if(not defTable) then
-    return StatusLog(nil,"SQLStoreQuery: Missing table definition") end
-  local tTimer = defTable.Timer
-  if(not (tTimer and ((tonumber(tTimer[2]) or 0) > 0))) then
-    return StatusLog(sQuery,"SQLStoreQuery: Skipped. Cache persistent forever") end
-  local Field, Where, Order = 1, 1, 1
-  local keyStr = GetOpVar("HASH_QUERY_STORE")
-  local tCache = libCache[keyStr]
-  if(not IsExistent(tCache)) then
-    libCache[keyStr] = {}; tCache = libCache[keyStr] end
-  local Place = tCache[defTable.Name]
-  if(not IsExistent(Place)) then
-    tCache[defTable.Name] = {}; Place = tCache[defTable.Name] end
-  if(tFields) then
-    while(tFields[Field]) do
-      Val = defTable[tFields[Field]][1]
-      if(not IsExistent(Val)) then
-        return StatusLog(nil,"SQLStoreQuery: Missing field key for #"..tostring(Field)) end
-      if(Place[Val]) then
-        Place = Place[Val]
-      elseif(sQuery) then
-        Base = Place
-        Place[Val] = {}
-        Place = Place[Val]
-      else
-        return nil
-      end
-      if(not Place) then return nil end
-      Field = Field + 1
-    end
-  else
-    Val = "ALL_FIELDS"
-    if(Place[Val]) then
-      Place = Place[Val]
-    elseif(sQuery) then
-      Base = Place
-      Place[Val] = {}
-      Place = Place[Val]
-    else
-      return nil
-    end
-  end
-  if(tOrderBy) then
-    while(tOrderBy[Order]) do
-      Val = tOrderBy[Order]
-      if(Place[Val]) then
-        Base = Place
-        Place = Place[Val]
-      elseif(sQuery) then
-        Base = Place
-        Place[Val] = {}
-        Place = Place[Val]
-      else return StatusLog(nil,"SQLStoreQuery: Missing order field key for #"..tostring(Order)) end
-      Order = Order + 1
-    end
-  end
-  if(tWhere) then
-    while(tWhere[Where]) do
-      Val = defTable[tWhere[Where][1]][1]
-      if(not IsExistent(Val)) then
-        return StatusLog(nil,"SQLStoreQuery: Missing where field key for #"..tostring(Where)) end
-      if(Place[Val]) then
-        Base = Place
-        Place = Place[Val]
-      elseif(sQuery) then
-        Base = Place
-        Place[Val] = {}
-        Place = Place[Val]
-      else
-        return nil
-      end
-      Val = tWhere[Where][2]
-      if(not IsExistent(Val)) then
-        return StatusLog(nil,"SQLStoreQuery: Missing where value key for #"..tostring(Where)) end
-      if(Place[Val]) then
-        Base = Place
-        Place = Place[Val]
-      elseif(sQuery) then
-        Base = Place
-        Place[Val] = {}
-        Place = Place[Val]
-      end
-      Where = Where + 1
-    end
-  end
-  if(sQuery) then Base[Val] = sQuery end
-  return Base[Val]
+local function SQLCacheStmt(sHash,sStmt,...)
+  if(not IsExistent(sHash)) then
+    return StatusLog(nil, "SQLCacheStmt: Store hash missing") end
+  local sHash, tStore = tostring(sHash), GetOpVar("QUERY_STORE")
+  if(not IsExistent(tStore)) then
+    return StatusLog(nil, "SQLCacheStmt: Store place missing") end
+  if(IsExistent(sStmt)) then
+    tStore[sHash] = tostring(sStmt); Print(tStore,"SQLCacheStmt: stmt") end
+  local sStmt = tStore[sHash]
+  if(not sStmt) then return StatusLog(nil, "SQLCacheStmt: Store stmt <"..sHash.."> missing") end
+  return stringFormat(sStmt,...)
 end
 
 local function SQLBuildSelect(defTable,tFields,tWhere,tOrderBy)
   if(not defTable) then
-    return SQLBuildError("SQLBuildSelect: Missing table definition") end
+    return StatusLog(nil, "SQLBuildSelect: Missing table definition") end
   if(not (defTable[1][1] and defTable[1][2])) then
-    return SQLBuildError("SQLBuildSelect: Missing table "..defTable.Name.." field definitions") end
-  local Command = SQLStoreQuery(defTable,tFields,tWhere,tOrderBy)
-  if(IsString(Command)) then
-    SQLBuildError("")
-    return Command
-  else Command = "SELECT " end
-  local Cnt = 1
+    return StatusLog(nil, "SQLBuildSelect: Missing table "..defTable.Name.." field definitions") end
+  local Command, Cnt = "SELECT ", 1
   if(tFields) then
     while(tFields[Cnt]) do
       local v = tonumber(tFields[Cnt])
       if(not IsExistent(v)) then
-        return SQLBuildError("SQLBuildSelect: Select index NAN {"
+        return StatusLog(nil, "SQLBuildSelect: Index NAN {"
              ..type(tFields[Cnt]).."}<"..tostring(tFields[Cnt])
              .."> type mismatch in "..defTable.Name) end
-      if(defTable[v]) then
-        if(defTable[v][1]) then
-          Command = Command..defTable[v][1]
-        else
-          return SQLBuildError("SQLBuildSelect: Select no such field name by index #"
-            ..v.." in the table "..defTable.Name) end
-      end
-      if(tFields[Cnt+1]) then
-        Command = Command ..", "
-      end
+      if(not defTable[v]) then
+        return StatusLog(nil, "SQLBuildSelect: Missing field by index #"
+          ..v.." in the table "..defTable.Name) end
+      if(defTable[v][1]) then Command = Command..defTable[v][1]
+      else return StatusLog(nil, "SQLBuildSelect: Mising field name by index #"
+        ..v.." in the table "..defTable.Name) end
+      if(tFields[Cnt+1]) then Command = Command ..", " end
       Cnt = Cnt + 1
     end
-  else
-    Command = Command.."*"
-  end
+  else Command = Command.."*" end
   Command = Command .." FROM "..defTable.Name
   if(tWhere and
      type(tWhere == "table") and
@@ -1684,96 +1576,63 @@ local function SQLBuildSelect(defTable,tFields,tWhere,tOrderBy)
   ) then
     Cnt = 1
     while(tWhere[Cnt]) do
-      k = tonumber(tWhere[Cnt][1])
-      v = tWhere[Cnt][2]
-      t = defTable[k][2]
+      local k = tonumber(tWhere[Cnt][1])
+      local v = tWhere[Cnt][2]
+      local t = defTable[k][2]
       if(not (k and v and t) ) then
-        return SQLBuildError("SQLBuildSelect: Where clause inconsistent on "
+        return StatusLog(nil, "SQLBuildSelect: Where clause inconsistent on "
           ..defTable.Name.." field index, {"..tostring(k)..","..tostring(v)..","..tostring(t)
           .."} value or type in the table definition") end
-      v = MatchType(defTable,v,k,true)
       if(not IsExistent(v)) then
-        return SQLBuildError("SQLBuildSelect: Data matching failed on "
+        return StatusLog(nil, "SQLBuildSelect: Data matching failed on "
           ..defTable.Name.." field index #"..Cnt.." value <"..tostring(v)..">") end
-      if(Cnt == 1) then
-        Command = Command.." WHERE "..defTable[k][1].." = "..v
-      else
-        Command = Command.." AND "..defTable[k][1].." = "..v
-      end
+      if(Cnt == 1) then Command = Command.." WHERE "..defTable[k][1].." = "..tostring(v)
+      else              Command = Command.." AND "  ..defTable[k][1].." = "..tostring(v) end
       Cnt = Cnt + 1
     end
   end
   if(tOrderBy and (type(tOrderBy) == "table")) then
     local Dire = ""
-    Command = Command.." ORDER BY "
-    Cnt = 1
+    Command, Cnt = Command.." ORDER BY ", 1
     while(tOrderBy[Cnt]) do
       local v = tOrderBy[Cnt]
       if(v ~= 0) then
-        if(v > 0) then
-          Dire = " ASC"
-        else
-          Dire = " DESC"
-          v = -v
-        end
-      else
-        return SQLBuildError("SQLBuildSelect: Order wrong for "
-                           ..defTable.Name .." field index #"..Cnt) end
-        Command = Command..defTable[v][1]..Dire
-        if(tOrderBy[Cnt+1]) then
-          Command = Command..", "
-        end
+        if(v > 0) then Dire = " ASC"
+        else Dire, tOrderBy[Cnt] = " DESC", -v end
+      else return StatusLog(nil, "SQLBuildSelect: Order wrong for "
+        ..defTable.Name .." field index #"..Cnt) end
+      Command = Command..defTable[v][1]..Dire
+      if(tOrderBy[Cnt+1]) then Command = Command..", " end
       Cnt = Cnt + 1
     end
-  end
-  SQLBuildError("")
-  return SQLStoreQuery(defTable,tFields,tWhere,tOrderBy,Command..";")
+  end; return Command..";"
 end
 
 local function SQLBuildInsert(defTable,tInsert,tValues)
   if(not defTable) then
-    return SQLBuildError("SQLBuildInsert: Missing Table definition") end
+    return StatusLog(nil, "SQLBuildInsert: Missing Table definition") end
   if(not tValues) then
-    return SQLBuildError("SQLBuildInsert: Missing Table value fields") end
+    return StatusLog(nil, "SQLBuildInsert: Missing Table value fields") end
   if(not defTable[1]) then
-    return SQLBuildError("SQLBuildInsert: The table and the chosen fields must not be empty") end
+    return StatusLog(nil, "SQLBuildInsert: The table and the chosen fields must not be empty") end
   if(not (defTable[1][1] and defTable[1][2])) then
-    return SQLBuildError("SQLBuildInsert: Missing table "..defTable.Name.." field definition") end
+    return StatusLog(nil, "SQLBuildInsert: Missing table "..defTable.Name.." field definition") end
   local tInsert = tInsert or {}
   if(not tInsert[1]) then
     local iCnt = 1
     while(defTable[iCnt]) do
-      tInsert[iCnt] = iCnt
-      iCnt = iCnt + 1
-    end
+      tInsert[iCnt] = iCnt; iCnt = iCnt + 1 end
   end
-  local iCnt = 1
-  local qVal = " VALUES ( "
+  local iCnt, qVal = 1, " VALUES ( "
   local qIns = "INSERT INTO "..defTable.Name.." ( "
-  local Val, iInd, dFld
   while(tInsert[iCnt]) do
-    iInd = tInsert[iCnt]
-    dFld = defTable[iInd]
-    if(not IsExistent(dFld)) then
-      return SQLBuildError("SQLBuildInsert: No such field #"..iInd.." on table "..defTable.Name)
-    end
-    Val = MatchType(defTable,tValues[iCnt],iInd,true)
-    if(not IsExistent(Val)) then
-      return SQLBuildError("SQLBuildInsert: Cannot match value <"..tostring(tValues[iCnt]).."> #"..iInd.." on table "..defTable.Name)
-    end
-    qIns = qIns..dFld[1]
-    qVal = qVal..Val
-    if(tInsert[iCnt+1]) then
-      qIns = qIns ..", "
-      qVal = qVal ..", "
-    else
-      qIns = qIns .." ) "
-      qVal = qVal .." );"
-    end
-    iCnt = iCnt + 1
-  end
-  SQLBuildError("")
-  return qIns..qVal
+    local iIns = tInsert[iCnt]; local tIns = defTable[iIns]
+    if(not IsExistent(tIns)) then
+      return StatusLog(nil, "SQLBuildInsert: No such field #"..iIns.." on table "..defTable.Name) end
+    qIns, qVal = qIns..tIns[1], qVal..tostring(tValues[iCnt])
+    if(tInsert[iCnt+1]) then qIns, qVal = qIns ..", " , qVal ..", "
+    else qIns, qVal = qIns .." ) ", qVal .." );" end; iCnt = iCnt + 1
+  end; return qIns..qVal
 end
 
 function CreateTable(sTable,defTable,bDelete,bReload)
@@ -1801,7 +1660,7 @@ function CreateTable(sTable,defTable,bDelete,bReload)
   libCache[defTable.Name] = {}
   if(sModeDB == "SQL") then
     local tQ = SQLBuildCreate(defTable)
-    if(not IsExistent(tQ)) then return StatusLog(false,"CreateTable: "..SQLBuildError()) end
+    if(not IsExistent(tQ)) then return StatusLog(false,"CreateTable: Build statement failed") end
     if(bDelete and sqlTableExists(defTable.Name)) then
       local qRez = sqlQuery(tQ.Delete)
       if(not qRez and IsBool(qRez)) then
@@ -1836,8 +1695,9 @@ function CreateTable(sTable,defTable,bDelete,bReload)
       else
         return StatusLog(false,"CreateTable: Table "..sTable..
           " failed to create because of "..sqlLastError().." Query ran > "..tQ.Create) end
-    end
-  elseif(sModeDB == "LUA") then return StatusLog(true,"CreateTable: Datatabase mode <"..sModeDB..">")
+    end; LogInstance("CreateTable: ["..sModeDB.."] Table "..defTable.Name)
+  elseif(sModeDB == "LUA") then
+    LogInstance("CreateTable: ["..sModeDB.."] Table "..defTable.Name)
   else return StatusLog(false,"CreateTable: Wrong database mode <"..sModeDB..">") end
 end
 
@@ -1967,21 +1827,16 @@ local function TimerAttach(oLocation,tKeys,defTable,anyMessage)
     local sModeTM, bKillRC, bCollGB = tTimer[1], tTimer[3], tTimer[4]
     LogInstance("TimerAttach: ["..sModeTM.."] ("..tostring(nLifeTM)..") "..tostring(bKillRC)..", "..tostring(bCollGB))
     if(sModeTM == "CQT") then
-      Place[Key].Load = nNowTM
       for k, v in pairs(Place) do
-        if(IsExistent(v.Load) and IsExistent(v.Used) and  ((nNowTM - v.Used) > nLifeTM)) then
+        if(IsExistent(v.Used) and ((nNowTM - v.Used) > nLifeTM)) then
           LogInstance("TimerAttach: ("..tostring(RoundValue(nNowTM - v.Used,0.01)).." > "..tostring(nLifeTM)..") > Dead")
-          if(bKillRC) then
-            LogInstance("TimerAttach: Killed <"..tostring(k)..">")
-            Place[k] = nil
-          end
+          if(bKillRC) then -- Look for others that are gonna meet their doom
+            Place[k] = nil; LogInstance("TimerAttach: Killed <"..tostring(k)..">") end
         end
       end
       if(bCollGB) then
-        collectgarbage()
-        LogInstance("TimerAttach: Garbage collected")
-      end
-      return StatusLog(Place[Key],"TimerAttach: Place["..tostring(Key).."].Load = "..tostring(RoundValue(nNowTM,0.01)))
+        collectgarbage(); LogInstance("TimerAttach: Garbage collected") end
+      return StatusLog(Place[Key],"TimerAttach: Place["..tostring(Key).."] @"..tostring(RoundValue(nNowTM,0.01)))
     elseif(sModeTM == "OBJ") then
       local TimerID = stringImplode(GetOpVar("OPSYM_DIVIDER"),tKeys)
       LogInstance("TimerAttach: TimID <"..TimerID..">")
@@ -1989,26 +1844,15 @@ local function TimerAttach(oLocation,tKeys,defTable,anyMessage)
       timerCreate(TimerID, nLifeTM, 1, function()
         LogInstance("TimerAttach["..TimerID.."]("..nLifeTM..") > Dead")
         if(bKillRC) then
-          LogInstance("TimerAttach: Killed <"..Key..">")
-          Place[Key] = nil
-        end
-        timerStop(TimerID)
-        timerDestroy(TimerID)
+          Place[Key] = nil; LogInstance("TimerAttach: Killed <"..Key..">") end
+        timerStop(TimerID); timerDestroy(TimerID)
         if(bCollGB) then
-          collectgarbage()
-          LogInstance("TimerAttach: Garbage collected")
-        end
-      end)
-      timerStart(TimerID)
-      return Place[Key]
-    else
-      return StatusLog(Place[Key],"TimerAttach: Timer mode not found <"..sModeTM..">")
-    end
+          collectgarbage(); LogInstance("TimerAttach: Garbage collected") end
+      end); timerStart(TimerID); return Place[Key]
+    else return StatusLog(Place[Key],"TimerAttach: Timer mode not found <"..sModeTM..">") end
   elseif(sModeDB == "LUA") then
     return StatusLog(Place[Key],"TimerAttach: Memory manager not available")
-  else
-    return StatusLog(nil,"TimerAttach: Wrong database mode")
-  end
+  else return StatusLog(nil,"TimerAttach: Wrong database mode") end
 end
 
 local function TimerRestart(oLocation,tKeys,defTable,anyMessage)
@@ -2064,8 +1908,7 @@ function CacheBoxLayout(oEnt,nRot,nCamX,nCamZ)
     Box.Cam = Vector(); Box.Cam:Set(Box.Eye)  -- Layout camera position
     AddVectorXYZ(Box.Cam,Box.Len*(tonumber(nCamX) or 0),0,Box.Len*(tonumber(nCamZ) or 0))
     LogInstance("CacheBoxLayout: "..tostring(Box.Cen).." # "..tostring(Box.Len))
-  end; Box.Ang[caY] = (tonumber(nRot) or 0) * Time()
-  return Box
+  end; Box.Ang[caY] = (tonumber(nRot) or 0) * Time(); return Box
 end
 
 --------------------------- PIECE QUERY -----------------------------
@@ -2096,11 +1939,16 @@ function CacheQueryPiece(sModel)
   else
     local sModeDB = GetOpVar("MODE_DATABASE")
     if(sModeDB == "SQL") then
+      local qModel = MatchType(defTable,sModel,1,true)
       LogInstance("CacheQueryPiece: Model >> Pool <"..stringToFileName(sModel)..">")
       tCache[sModel] = {}; stPiece = tCache[sModel]; stPiece.Kept = 0
-      local Q = SQLBuildSelect(defTable,nil,{{1,sModel}})
-      if(not IsExistent(Q)) then
-        return StatusLog(nil,"CacheQueryPiece: Build error <"..SQLBuildError()..">") end
+      local Q = SQLCacheStmt("stmtSelectPiece", nil, qModel)
+      if(not Q) then
+        local sStmt = SQLBuildSelect(defTable,nil,{{1,"%s"}},{4})
+        if(not IsExistent(sStmt)) then
+          return StatusLog(nil,"CacheQueryPiece: Build statement failed") end
+        Q = SQLCacheStmt("stmtSelectPiece", sStmt, qModel)
+      end
       local qData = sqlQuery(Q)
       if(not qData and IsBool(qData)) then
         return StatusLog(nil,"CacheQueryPiece: SQL exec error <"..sqlLastError()..">") end
@@ -2110,20 +1958,17 @@ function CacheQueryPiece(sModel)
       stPiece.Slot = sModel
       stPiece.Type = qData[1][defTable[2][1]]
       stPiece.Name = qData[1][defTable[3][1]]
-      stPiece.Mesh = tonumber(qRec[defTable[4][1]])
-      local qRec, qRez
+      stPiece.Unit = qData[1][defTable[8][1]]
       while(qData[stPiece.Kept]) do
-        qRec = qData[stPiece.Kept]
-        qRez = RegisterPOA(stPiece, sModel,
+        local qRec = qData[stPiece.Kept]
+        local qRez = RegisterPOA(stPiece, sModel,
                            qRec[defTable[5][1]],
                            qRec[defTable[6][1]],
                            qRec[defTable[7][1]])
         if(not IsExistent(qRez)) then
-          return StatusLog(nil,"CacheQueryPiece: Cannot process hash <"..sModel..">")
-        end
+          return StatusLog(nil,"CacheQueryPiece: Cannot process offset #"..tostring(stPiece.Kept).." for <"..sModel..">") end
         stPiece.Kept = stPiece.Kept + 1
-      end
-      return TimerAttach(libCache,caInd,defTable,"CacheQueryPiece")
+      end; return TimerAttach(libCache,caInd,defTable,"CacheQueryPiece")
     elseif(sModeDB == "LUA") then return StatusLog(nil,"CacheQueryPiece: Record not located")
     else return StatusLog(nil,"CacheQueryPiece: Wrong database mode <"..sModeDB..">") end
   end
@@ -2214,13 +2059,11 @@ local function GetFieldsName(defTable,sDelim)
 end
 
 --[[
- * Save/Load the DB Using Excel or
- * anything that supports delimiter
- * separated digital tables
- * sPrefix = Something that separates exported table from the rest ( e.g. db_ )
- * sTable  = Definition KEY to export to
- * sDelim  = Delimiter CHAR data separator
- * bCommit = true to insert the read values
+ * Import table data from DSV database created earlier
+ * sTable  = Definition KEY to import
+ * sDelim  = Delimiter separating the values
+ * bCommit = Calls InsertRecord() when set to true
+ * sPrefix = Prefix used on importing ( if any )
 ]]--
 function ImportDSV(sTable,sDelim,bCommit,sPrefix)
   if(not IsString(sTable)) then
@@ -2237,7 +2080,7 @@ function ImportDSV(sTable,sDelim,bCommit,sPrefix)
   local sLine, sChar, lenLine = "", "X", 0
   while(sChar) do
     sChar = F:Read(1)
-    if(not sChar) then return end
+    if(not sChar) then break end -- Exit the loop and close the file
     if(sChar == "\n") then
       lenLine = stringLen(sLine)
       if(stringSub(sLine,lenLine,lenLine) == "\r") then
@@ -2258,6 +2101,13 @@ function ImportDSV(sTable,sDelim,bCommit,sPrefix)
   end; F:Close()
 end
 
+--[[
+ * Save/Load the DB Using Excel or
+ * anything that supports delimiter separated digital tables
+ * sTable  = Definition KEY to export
+ * sMethod = Export method to be used ( either INS or DSV )
+ * sPrefix = Prefix used on exporting ( if any )
+]]--
 function DeleteExternalDatabase(sTable,sMethod,sPrefix)
   if(not IsString(sTable)) then
     return StatusLog(false,"DeleteExternalDatabase: Table {"..type(sTable).."}<"..tostring(sTable).."> not string") end
@@ -2569,11 +2419,10 @@ function AttachBodyGroups(ePiece,sBgrpIDs)
     LogInstance("ePiece:SetBodygroup("..tostring(itrBG.id)..","..tostring(itrID)..") ["..tostring(maxID).."]")
     ePiece:SetBodygroup(itrBG.id,itrID)
     iCnt = iCnt + 1
-  end
-  return StatusLog(true,"AttachBodyGroups: Success")
+  end; return StatusLog(true,"AttachBodyGroups: Success")
 end
 
-local function SetPosBound(ePiece,vPos,oPly,sMode)
+function SetPosBound(ePiece,vPos,oPly,sMode)
   if(not (ePiece and ePiece:IsValid())) then
     return StatusLog(false,"SetPosBound: Entity invalid") end
   if(not IsExistent(vPos)) then
@@ -2590,8 +2439,7 @@ local function SetPosBound(ePiece,vPos,oPly,sMode)
     if(sMode == "HINT" or sMode == "GENERIC" or sMode == "ERROR") then
       PrintNotifyPly(oPly,"Position out of map bounds!",sMode) end
     return StatusLog(false,"SetPosBound("..sMode.."): Position ["..tostring(vPos).."] out of map bounds")
-  end
-  return StatusLog(true,"SetPosBound("..sMode.."): Success")
+  end; return StatusLog(true,"SetPosBound("..sMode.."): Success")
 end
 
 function MakePiece(pPly,sModel,vPos,aAng,nMass,sBgSkIDs,clColor,sMode)
@@ -2606,7 +2454,10 @@ function MakePiece(pPly,sModel,vPos,aAng,nMass,sBgSkIDs,clColor,sMode)
   local stPiece = CacheQueryPiece(sModel)
   if(not IsExistent(stPiece)) then -- Not present in the database
     return StatusLog(nil,"MakePiece: Record missing for <"..sModel..">") end
-  local ePiece = entsCreate("prop_physics")
+  local bcUnit = (IsString(stPiece.Unit) and
+    (stPiece.Unit ~= "NULL") and not IsEmptyString(stPiece.Unit))
+  LogInstance("MakePiece: Unit("..tostring(bcUnit)..") <"..tostring(stPiece.Unit)..">")
+  local ePiece = bcUnit and entsCreate(stPiece.Unit) or entsCreate("prop_physics")
   if(not (ePiece and ePiece:IsValid())) then
     return StatusLog(nil,"MakePiece: Piece <"..tostring(ePiece).."> invalid") end
   ePiece:SetCollisionGroup(COLLISION_GROUP_NONE)
@@ -2614,8 +2465,8 @@ function MakePiece(pPly,sModel,vPos,aAng,nMass,sBgSkIDs,clColor,sMode)
   ePiece:SetMoveType(MOVETYPE_VPHYSICS)
   ePiece:SetNotSolid(false)
   ePiece:SetModel(sModel)
-  if(not SetPosBound(ePiece,vPos or GetOpVar("VEC_ZERO"),pPly)) then
-    return StatusLog(nil,"MakePiece: "..pPly:Nick().." spawned <"..sModel.."> outside of bounds") end
+  if(not SetPosBound(ePiece,vPos or GetOpVar("VEC_ZERO"),pPly,sMode)) then
+    return StatusLog(nil,"MakePiece: "..pPly:Nick().." spawned <"..sModel.."> outside bounds") end
   ePiece:SetAngles(aAng or GetOpVar("ANG_ZERO"))
   ePiece:Spawn()
   ePiece:Activate()
@@ -2626,8 +2477,8 @@ function MakePiece(pPly,sModel,vPos,aAng,nMass,sBgSkIDs,clColor,sMode)
   local phPiece = ePiece:GetPhysicsObject()
   if(not (phPiece and phPiece:IsValid())) then ePiece:Remove()
     return StatusLog(nil,"MakePiece: Entity phys object invalid") end
-  phPiece:EnableMotion(false)
-  phPiece:SetMass(mathClamp(tonumber(nMass) or 1,1,GetOpVar("MAX_MASS")))
+  phPiece:EnableMotion(false); ePiece.owner = pPly
+  local Mass = (tonumber(nMass) or 1); phPiece:SetMass((Mass >= 1) and Mass or 1)
   local BgSk = stringExplode(GetOpVar("OPSYM_DIRECTORY"),(sBgSkIDs or ""))
   ePiece:SetSkin(mathClamp(tonumber(BgSk[2]) or 0,0,ePiece:SkinCount()-1))
   if(not AttachBodyGroups(ePiece,BgSk[1] or "")) then ePiece:Remove()
@@ -2765,36 +2616,55 @@ function ApplyPhysicalAnchor(ePiece,eBase,vPos,vNorm,nCID,nNoC,nFoL)
   return StatusLog(IsIn,"ApplyPhysicalAnchor: Status <"..tostring(IsIn)..">")
 end
 
-function MakeAsmVar(sShortName, sValue, tBorder, nFlags, sInfo)
-  if(not IsString(sShortName)) then
-    return StatusLog(nil,"MakeAsmVar: CVar name {"..type(sShortName).."}<"..tostring(sShortName).."> not string") end
+function MakeAsmVar(sName, sValue, tBorder, nFlags, sInfo)
+  if(not IsString(sName)) then
+    return StatusLog(nil,"MakeAsmVar: CVar name {"..type(sName).."}<"..tostring(sName).."> not string") end
   if(not IsExistent(sValue)) then
     return StatusLog(nil,"MakeAsmVar: Wrong default value <"..tostring(sValue)..">") end
   if(not IsString(sInfo)) then
     return StatusLog(nil,"MakeAsmVar: CVar info {"..type(sInfo).."}<"..tostring(sInfo).."> not string") end
-  local sVar = GetOpVar("TOOLNAME_PL")..stringLower(sShortName)
+  local sLow = stringLower(sName)
   if(tBorder and (type(tBorder) == "table") and tBorder[1] and tBorder[2]) then
     local Border = GetOpVar("TABLE_BORDERS")
-    Border["cvar_"..sVar] = tBorder
-  end
-  return CreateConVar(sVar, sValue, nFlags, sInfo)
+    Border["cvar_"..sLow] = tBorder
+  end; return CreateConVar(GetOpVar("TOOLNAME_PL")..sLow, sValue, nFlags, sInfo)
 end
 
-function GetAsmVar(sShortName, sMode)
-  if(not IsString(sShortName)) then
-    return StatusLog(nil,"GetAsmVar: CVar name {"..type(sShortName).."}<"..tostring(sShortName).."> not string") end
+function GetAsmVar(sName, sMode)
+  if(not IsString(sName)) then
+    return StatusLog(nil,"GetAsmVar: CVar name {"..type(sName).."}<"..tostring(sName).."> not string") end
   if(not IsString(sMode)) then
     return StatusLog(nil,"GetAsmVar: CVar mode {"..type(sMode).."}<"..tostring(sMode).."> not string") end
-  local sVar = GetOpVar("TOOLNAME_PL")..stringLower(sShortName)
-  local CVar = GetConVar(sVar)
+  local sLow = stringLower(sName)
+  local CVar = GetConVar(GetOpVar("TOOLNAME_PL")..sLow)
   if(not IsExistent(CVar)) then
-    return StatusLog(nil,"GetAsmVar("..sShortName..", "..sMode.."): Missing CVar object") end
-  if    (sMode == "INT") then return (tonumber(BorderValue(CVar:GetInt()  ,"cvar_"..sVar)) or 0)
-  elseif(sMode == "FLT") then return (tonumber(BorderValue(CVar:GetFloat(),"cvar_"..sVar)) or 0)
+    return StatusLog(nil,"GetAsmVar("..sName..", "..sMode.."): Missing CVar object") end
+  if    (sMode == "INT") then return (tonumber(BorderValue(CVar:GetInt()  ,"cvar_"..sLow)) or 0)
+  elseif(sMode == "FLT") then return (tonumber(BorderValue(CVar:GetFloat(),"cvar_"..sLow)) or 0)
   elseif(sMode == "STR") then return  tostring(CVar:GetString() or "")
   elseif(sMode == "BUL") then return (CVar:GetBool() or false)
   elseif(sMode == "DEF") then return  CVar:GetDefault()
   elseif(sMode == "INF") then return  CVar:GetHelpText()
   elseif(sMode == "NAM") then return  CVar:GetName()
-  end; return StatusLog(nil,"GetAsmVar("..sShortName..", "..sMode.."): Missed mode")
+  end; return StatusLog(nil,"GetAsmVar("..sName..", "..sMode.."): Missed mode")
+end
+
+function SetLocalify(sCode, sPhrase, sDetail)
+  if(not IsString(sCode)) then
+    return StatusLog(nil,"SetLocalify: Language code <"..tostring(sCode).."> invalid") end
+  if(not IsString(sPhrase)) then
+    return StatusLog(nil,"SetLocalify: Phrase words <"..tostring(sPhrase).."> invalid") end
+  local tPool = GetOpVar("LOCALIFY_TABLE")
+  if(not IsExistent(tPool[sCode])) then tPool[sCode] = {}; end
+  tPool[sCode][sPhrase] = tostring(sDetail)
+end
+
+function InitLocalify(sCode) -- https://en.wikipedia.org/wiki/List_of_ISO_639-1_codes
+  local tPool = GetOpVar("LOCALIFY_TABLE") -- ( Column "ISO 639-1" )
+  local sCode = tostring(sCode or "") -- English is used when missing
+        sCode = tPool[sCode] and sCode or GetOpVar("LOCALIFY_AUTO")
+  if(not IsExistent(tPool[sCode])) then
+    return StatusLog(nil,"InitLocalify: Code <"..sCode.."> invalid") end
+  LogInstance("InitLocalify: Code <"..sCode.."> selected")
+  for phrase, detail in pairs(tPool[sCode]) do languageAdd(phrase, detail) end
 end
