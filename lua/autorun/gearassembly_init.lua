@@ -57,6 +57,7 @@ end
 asmlib.SetOpVar("MODE_DATABASE" , asmlib.GetAsmVar("modedb","STR"))
 
 ------ GLOBAL VARIABLES -------
+local gsLimitName = asmlib.GetOpVar("CVAR_LIMITNAME")
 local gsToolPrefL = asmlib.GetOpVar("TOOLNAME_PL")
 local gsToolPrefU = asmlib.GetOpVar("TOOLNAME_PU")
 local gsToolNameL = asmlib.GetOpVar("TOOLNAME_NL")
@@ -614,7 +615,7 @@ else
 end
 
 if(CLIENT) then
-  asmlib.SetLocalify("en","tool."..gsToolNameL..".name"      , gsNameInitF.." "..gsNamePerpF)
+  asmlib.SetLocalify("en","tool."..gsToolNameL..".name"      , "Gear assembly")
   asmlib.SetLocalify("en","tool."..gsToolNameL..".desc"      , "Assembles gears to mesh together")
   asmlib.SetLocalify("en","tool."..gsToolNameL..".0"         , "Left click to spawn/stack, Right to change mode, Reload to remove a piece")
   asmlib.SetLocalify("en","tool."..gsToolNameL..".left"      , "Spawn/snap a gear. Hold shift to stack")
@@ -647,7 +648,7 @@ if(CLIENT) then
   asmlib.SetLocalify("en","tool."..gsToolNameL..".nocollide" , "Puts a no-collide between pieces and anchor/base")
   asmlib.SetLocalify("en","tool."..gsToolNameL..".ignphysgn" , "Ignores physics gun grab on the piece spawned/snapped/stacked")
   asmlib.SetLocalify("en","tool."..gsToolNameL..".ghosthold" ,"Controls rendering the tool ghosted holder piece")
-  asmlib.SetLocalify("en","Cleanup_"..gsLimitName, gsNameInitF.." "..asmlib.GetOpVar("NAME_PERP").." pieces")
+  asmlib.SetLocalify("en","Cleanup_"..gsLimitName, "Gear assembly pieces")
   asmlib.SetLocalify("en","Cleaned_"..gsLimitName, "Cleaned up all gear pieces")
   asmlib.SetLocalify("en","SBoxLimit_"..gsLimitName, "You've hit the Spawned gears limit!")
 end

@@ -29,6 +29,7 @@ local concommandAdd         = concommand and concommand.Add
 local surfaceScreenWidth    = surface and surface.ScreenWidth
 local surfaceScreenHeight   = surface and surface.ScreenHeight
 local languageAdd           = language and language.Add
+local languageGetPhrase     = language and language.GetPhrase
 local duplicatorRegisterEntityModifier = duplicator and duplicator.RegisterEntityModifier
 
 ----------------- TOOL Global Parameters ----------------
