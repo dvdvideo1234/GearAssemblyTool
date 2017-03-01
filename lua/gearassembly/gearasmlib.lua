@@ -2501,23 +2501,22 @@ function HookOnRemove(oBas,oEnt,arCTable,nMax)
   end; LogInstance("HookOnRemove: Done "..(Ind-1).." of "..nMax..".")
 end
 
-function ApplyPhysicalSettings(ePiece,bFr,bGr,nNo)
+function ApplyPhysicalSettings(ePiece,bFr,bGr,bPh)
   if(not (ePiece and ePiece:IsValid())) then
     return StatusLog(false,"ApplyPhysicalSettings: Piece not valid") end
+  local bFr = tobool(bFr) or false
   local bGr = tobool(bGr) or false
-  local Frz = tobool(bFr) or false
-  local bNo = tobool(bNo) or false
-  LogInstance("ApplyPhysicalSettings: {"..tostring(bGr)..","..tostring(bFr)..","..tostring(bNo).."}")
-  dataSettings = {bGr,bFr,bNo}
-  ePiece:SetUnFreezable(bNo)
-  ePiece.PhysgunDisabled = bNo
+  local bPh = tobool(bPh) or false
+  LogInstance("ApplyPhysicalSettings: {"..tostring(bFr)..","..tostring(bGr)..","..tostring(bPh).."}")
+  arSettings = {bFr,bGr,bPh}
+  ePiece.PhysgunDisabled = bPh
+  ePiece:SetUnFreezable(bPh)
   local pyPiece = ePiece:GetPhysicsObject()
   if(not (pyPiece and pyPiece:IsValid())) then
-    return StatusLog(false,"ApplyPhysicalSettings: Phys Piece not valid") end
+    return StatusLog(false,"ApplyPhysicalSettings: Physics piece invalid") end
   pyPiece:EnableMotion(not bFr)
   constructSetPhysProp(nil,ePiece,0,pyPiece,{GravityToggle = bGr, Material = "gmod_ice"})
-  duplicatorStoreEntityModifier(ePiece,GetOpVar("TOOLNAME_PL").."dupe_phys_set",dataSettings)
-  return StatusLog(true,"ApplyPhysicalSettings: Success")
+  duplicatorStoreEntityModifier(ePiece,GetOpVar("TOOLNAME_PL").."dupe_phys_set",arSettings)
 end
 
 function ApplyPhysicalAnchor(ePiece,eBase,vPos,vNorm,nCID,nNoC,nFoL)
@@ -2647,6 +2646,26 @@ function GetAsmVar(sName, sMode)
   elseif(sMode == "INF") then return  CVar:GetHelpText()
   elseif(sMode == "NAM") then return  CVar:GetName()
   end; return StatusLog(nil,"GetAsmVar("..sName..", "..sMode.."): Missed mode")
+end
+
+function SetLocalify(sCode, sPhrase, sDetail)
+  if(not IsString(sCode)) then
+    return StatusLog(nil,"SetLocalify: Language code <"..tostring(sCode).."> invalid") end
+  if(not IsString(sPhrase)) then
+    return StatusLog(nil,"SetLocalify: Phrase words <"..tostring(sPhrase).."> invalid") end
+  local tPool = GetOpVar("LOCALIFY_TABLE")
+  if(not IsExistent(tPool[sCode])) then tPool[sCode] = {}; end
+  tPool[sCode][sPhrase] = tostring(sDetail)
+end
+
+function InitLocalify(sCode) -- https://en.wikipedia.org/wiki/List_of_ISO_639-1_codes
+  local tPool = GetOpVar("LOCALIFY_TABLE") -- ( Column "ISO 639-1" )
+  local sCode = tostring(sCode or "") -- English is used when missing
+        sCode = tPool[sCode] and sCode or GetOpVar("LOCALIFY_AUTO")
+  if(not IsExistent(tPool[sCode])) then
+    return StatusLog(nil,"InitLocalify: Code <"..sCode.."> invalid") end
+  LogInstance("InitLocalify: Code <"..sCode.."> selected")
+  for phrase, detail in pairs(tPool[sCode]) do languageAdd(phrase, detail) end
 end
 
 function SetLocalify(sCode, sPhrase, sDetail)
