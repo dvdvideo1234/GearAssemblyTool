@@ -522,8 +522,7 @@ function TOOL:Reload(Trace)
   if(asmlib.PlyLoadKey(ply,"SPEED") and Trace.HitWorld) then
     asmlib.SetLogControl(self:GetLogLines(),self:GetLogFile())
     if(self:GetExportDB() ~= 0) then
-      asmlib.StoreExternalDatabase("PIECES", ",","INS")
-      asmlib.StoreExternalDatabase("PIECES","\t","DSV")
+      asmlib.ExportDSV("PIECES")
       return asmlib.StatusLog(true,"TOOL:Reload(Trace): Database exported")
     end
   end
@@ -569,7 +568,7 @@ function TOOL:DrawHUD()
     asmlib.SetOpVar("MONITOR_GAME", hudMonitor)
     asmlib.LogInstance("DrawHUD: Create screen")
   end; hudMonitor:SetColor()
-  local oPly   = LocalPlayer()
+  local oPly    = LocalPlayer()
   local stTrace = oPly:GetEyeTrace()
   if(not stTrace) then return end
   if(self:GetAdviser() == 0) then return end
@@ -742,8 +741,31 @@ function TOOL.BuildCPanel(CPanel)
         pItem.Label.UpdateColours = function(pSelf)
           return pSelf:SetTextStyleColor(conPalette:Select("tx")) end
         pFolders[Typ] = pItem
-      end
+      end -- Reset the primary tree node pointer
       if(pFolders[Typ]) then pItem = pFolders[Typ] else pItem = pTree end
+      -- Register the category if definition functional is given
+      if(catTypes[Typ]) then -- There is a category definition
+        if(not pCateg[Typ]) then pCateg[Typ] = {} end
+        local bSuc, ptCat, psNam = pcall(catTypes[Typ].Cmp, Mod)
+        -- If the call is successful in protected mode and a folder table is present
+        if(bSuc) then
+          local pCurr = pCateg[Typ]
+          if(asmlib.IsEmptyString(ptCat)) then ptCat = nil end
+          if(ptCat and type(ptCat) ~= "table") then ptCat = {ptCat} end
+          if(ptCat and ptCat[1]) then
+            local iCnt = 1; while(ptCat[iCnt]) do
+              local sCat = tostring(ptCat[iCnt])
+              if(asmlib.IsEmptyString(sCat)) then sCat = "Other" end
+              if(pCurr[sCat]) then -- Jump next if already created
+                pCurr, pItem = asmlib.GetDirectoryObj(pCurr, sCat)
+              else -- Create the last needed node regarding pItem
+                pCurr, pItem = asmlib.SetDirectoryObj(pItem, pCurr, sCat,"icon16/folder.png",conPalette:Select("tx"))
+              end; iCnt = iCnt + 1;
+            end
+          end; if(psNam and not asmlib.IsEmptyString(psNam)) then Nam = tostring(psNam) end
+        end -- Custom name to override via category
+      end
+      -- Register the node asociated with the track piece
       pNode = pItem:AddNode(Nam)
       pNode:SetName(Nam)
       pNode:SetTooltip(languageGetPhrase("tool."..gsToolNameL..".model"))

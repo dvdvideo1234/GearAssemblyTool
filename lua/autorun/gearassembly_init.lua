@@ -125,6 +125,7 @@ if(CLIENT) then
       asmlib.ConCommandPly(oPly,"rotpiv" , 0)
       if(not devmode) then
         return asmlib.StatusLog(true,"RESET_VARIABLES: Developer mode disabled") end
+      asmlib.SetLogControl(asmlib.GetAsmVar("logsmax" , "INT"), asmlib.GetAsmVar("logfile" , "STR"))
       if(bgskids == "reset cvars") then -- Reset the limit also
         oPly:ConCommand("sbox_max"..asmlib.GetOpVar("CVAR_LIMITNAME").." 1500\n")
         local anchor = asmlib.GetOpVar("MISS_NOID")..
@@ -186,11 +187,11 @@ if(CLIENT) then
         return asmlib.StatusLog(false,"OPEN_FRAME: Failed to create base frame")
       end
       local pnElements = asmlib.MakeContainer("FREQ_VGUI")
-            pnElements:Insert(1,{Label = { "DButton"    ,"Export DB"     ,"Click to export the client database as a file"}})
-            pnElements:Insert(2,{Label = { "DListView"  ,"Routine Items" ,"The list of your frequently used track pieces"}})
-            pnElements:Insert(3,{Label = { "DModelPanel","Piece Display" ,"The model of your track piece is displayed here"}})
-            pnElements:Insert(4,{Label = { "DTextEntry" ,"Enter Pattern" ,"Enter a pattern here and hit enter to preform a search"}})
-            pnElements:Insert(5,{Label = { "DComboBox"  ,"Select Column" ,"Choose which list column you want to preform a search on"}})
+            pnElements:Insert(1,{Label = { "DButton"    ,languageGetPhrase("tool."..gsToolNameL..".pn_export_lb") , languageGetPhrase("tool."..gsToolNameL..".pn_export")}})
+            pnElements:Insert(2,{Label = { "DListView"  ,languageGetPhrase("tool."..gsToolNameL..".pn_routine_lb"), languageGetPhrase("tool."..gsToolNameL..".pn_routine")}})
+            pnElements:Insert(3,{Label = { "DModelPanel",languageGetPhrase("tool."..gsToolNameL..".pn_display_lb"), languageGetPhrase("tool."..gsToolNameL..".pn_display")}})
+            pnElements:Insert(4,{Label = { "DTextEntry" ,languageGetPhrase("tool."..gsToolNameL..".pn_pattern_lb"), languageGetPhrase("tool."..gsToolNameL..".pn_pattern")}})
+            pnElements:Insert(5,{Label = { "DComboBox"  ,languageGetPhrase("tool."..gsToolNameL..".pn_srchcol_lb"), languageGetPhrase("tool."..gsToolNameL..".pn_srchcol")}})
       ------------ Manage the invalid panels -------------------
       local iNdex, iSize, sItem, vItem = 1, pnElements:GetSize(), "", nil
       while(iNdex <= iSize) do
@@ -232,7 +233,7 @@ if(CLIENT) then
       xyPos.y = (scrH / 4)
       xySiz.x = 750
       xySiz.y = mathFloor(xySiz.x / (1 + nRatio))
-      pnFrame:SetTitle("Frequent pieces by "..oPly:GetName().." v."..asmlib.GetOpVar("TOOL_VERSION"))
+      pnFrame:SetTitle(languageGetPhrase("tool."..gsToolNameL..".pn_routine_hd")..oPly:GetName().." v."..asmlib.GetOpVar("TOOL_VERSION"))
       pnFrame:SetVisible(true)
       pnFrame:SetDraggable(true)
       pnFrame:SetDeleteOnClose(true)
@@ -262,13 +263,10 @@ if(CLIENT) then
       pnButton:SetVisible(true)
       pnButton.DoClick = function()
         asmlib.LogInstance("OPEN_FRAME: Button.DoClick: <"..pnButton:GetText().."> clicked")
-        asmlib.SetLogControl(asmlib.GetAsmVar("logsmax" , "INT"),
-                             asmlib.GetAsmVar("logfile" , "STR"))
-        local ExportDB     = asmlib.GetAsmVar("exportdb", "INT")
+        local ExportDB = asmlib.GetAsmVar("exportdb", "INT")
         if(ExportDB ~= 0) then
           asmlib.LogInstance("OPEN_FRAME: Button Exporting DB")
-          asmlib.StoreExternalDatabase("PIECES",",","INS")
-          asmlib.StoreExternalDatabase("PIECES","\t","DSV")
+          asmlib.ExportDSV("PIECES")
         end
       end
       ------------- ComboBox ---------------
@@ -282,10 +280,10 @@ if(CLIENT) then
       pnComboBox:SetSize(xySiz.x,xySiz.y)
       pnComboBox:SetVisible(true)
       pnComboBox:SetValue("<Search BY>")
-      pnComboBox:AddChoice("Model",defTable[1][1])
-      pnComboBox:AddChoice("Type" ,defTable[2][1])
-      pnComboBox:AddChoice("Name" ,defTable[3][1])
-      pnComboBox:AddChoice("Mesh" ,defTable[4][1])
+      pnComboBox:AddChoice(languageGetPhrase("tool."..gsToolNameL..".pn_srchcol_lb1"),defTable[1][1])
+      pnComboBox:AddChoice(languageGetPhrase("tool."..gsToolNameL..".pn_srchcol_lb2"),defTable[2][1])
+      pnComboBox:AddChoice(languageGetPhrase("tool."..gsToolNameL..".pn_srchcol_lb3"),defTable[3][1])
+      pnComboBox:AddChoice(languageGetPhrase("tool."..gsToolNameL..".pn_srchcol_lb4"),defTable[4][1])
       pnComboBox.OnSelect = function(pnSelf, nInd, sVal, anyData)
         asmlib.LogInstance("OPEN_FRAME: ComboBox.OnSelect: ID #"..nInd.."<"..sVal..">"..tostring(anyData))
         pnSelf:SetValue(sVal)
@@ -351,28 +349,28 @@ if(CLIENT) then
       local wUse = mathFloor(0.120377559 * xySiz.x)
       local wMec = mathFloor(0.047460893 * xySiz.x)
       local wTyp = mathFloor(0.214127559 * xySiz.x)
-      local wMod = xySiz.x - wUse - wMec - wTyp
+      local wNam = xySiz.x - wUse - wMec - wTyp
       pnListView:SetParent(pnFrame)
       pnListView:SetVisible(false)
       pnListView:SetSortable(true)
       pnListView:SetMultiSelect(false)
       pnListView:SetPos(xyPos.x,xyPos.y)
       pnListView:SetSize(xySiz.x,xySiz.y)
-      pnListView:AddColumn("Used" ):SetFixedWidth(wUse) -- (1)
-      pnListView:AddColumn("Mesh" ):SetFixedWidth(wMec) -- (2)
-      pnListView:AddColumn("Type" ):SetFixedWidth(wTyp) -- (3)
-      pnListView:AddColumn("Model"):SetFixedWidth(wMod) -- (4)
+      pnListView:AddColumn(languageGetPhrase("tool."..gsToolNameL..".pn_routine_lb1")):SetFixedWidth(wUse) -- (1)
+      pnListView:AddColumn(languageGetPhrase("tool."..gsToolNameL..".pn_routine_lb2")):SetFixedWidth(wMec) -- (2)
+      pnListView:AddColumn(languageGetPhrase("tool."..gsToolNameL..".pn_routine_lb3")):SetFixedWidth(wTyp) -- (3)
+      pnListView:AddColumn(languageGetPhrase("tool."..gsToolNameL..".pn_routine_lb4")):SetFixedWidth(wNam) -- (4)
       pnListView.OnRowSelected = function(pnSelf, nIndex, pnLine)
-        local uiMod = pnLine:GetColumnText(4) -- Forth index is actually the model in the table
+        local uiMod = pnLine:GetColumnText(5) -- Forth index is actually the model in the table
                       pnModelPanel:SetModel(uiMod)
         local uiEnt = pnModelPanel:GetEntity()
         local uiBox = asmlib.CacheBoxLayout(uiEnt,0,nRatio,nRatio-1)
         if(not asmlib.IsExistent(uiBox)) then
           return asmlib.StatusLog(false,"OPEN_FRAME: ListView.OnRowSelected: Box invalid for <"..uiMod..">") end
-        pnModelPanel:SetLookAt(uiBox.Eye)
-        pnModelPanel:SetCamPos(uiBox.Cam)
+        pnModelPanel:SetLookAt(uiBox.Eye); pnModelPanel:SetCamPos(uiBox.Cam)
         asmlib.ConCommandPly(oPly, "model" ,uiMod)
-      end
+      end -- Copy the line model to the clipboard so it can be pasted with Ctrl+V
+      pnListView.OnRowRightClick = function(pnSelf, nIndex, pnLine) SetClipboardText(pnLine:GetColumnText(5)) end
       if(not asmlib.UpdateListView(pnListView,frUsed,nCount)) then
         asmlib.StatusLog(false,"OPEN_FRAME: ListView.OnRowSelected: Populate the list view failed") end
       ------------ Show the completed panel --------------
@@ -644,8 +642,8 @@ if(CLIENT) then
   asmlib.SetLocalify("en","tool."..gsToolNameL..".igntyp_con"    , "Ignore gearbox type")
   asmlib.SetLocalify("en","tool."..gsToolNameL..".rotpivt"       , "Controls pivot angle offset when stacking/snapping")
   asmlib.SetLocalify("en","tool."..gsToolNameL..".rotpivt_con"   , "Pivot rotation: ")
-  asmlib.SetLocalify("en","tool."..gsToolNameL..".rotpivh"       , "Rotate the piece local axis to precisely mesh the teeth")
-  asmlib.SetLocalify("en","tool."..gsToolNameL..".rotpivh_con"   , "Pivot rotation: ")
+  asmlib.SetLocalify("en","tool."..gsToolNameL..".rotpivh"       , "Rotate the piece pivot to precisely mesh the teeth")
+  asmlib.SetLocalify("en","tool."..gsToolNameL..".rotpivh_con"   , "Piece rotation: ")
   asmlib.SetLocalify("en","tool."..gsToolNameL..".nextpic"       , "Additional origin angular pitch offset")
   asmlib.SetLocalify("en","tool."..gsToolNameL..".nextpic_con"   , "Origin pitch: ")
   asmlib.SetLocalify("en","tool."..gsToolNameL..".nextyaw"       , "Additional origin angular yaw offset")
@@ -669,6 +667,25 @@ if(CLIENT) then
   asmlib.SetLocalify("en","tool."..gsToolNameL..".ignphysgn_con" , "Ignore physgun")
   asmlib.SetLocalify("en","tool."..gsToolNameL..".ghosthold"     , "Controls rendering the tool ghosted holder piece")
   asmlib.SetLocalify("en","tool."..gsToolNameL..".ghosthold_con" , "Draw holder ghost")
+  asmlib.SetLocalify("en","tool."..gsToolNameL..".pn_export"     , "Click to export the client database as a file")
+  asmlib.SetLocalify("en","tool."..gsToolNameL..".pn_export_lb"  , "Export DB")
+  asmlib.SetLocalify("en","tool."..gsToolNameL..".pn_routine"    , "The list of your frequently used track pieces")
+  asmlib.SetLocalify("en","tool."..gsToolNameL..".pn_routine_hd" , "Frequent pieces by: ")
+  asmlib.SetLocalify("en","tool."..gsToolNameL..".pn_display"    , "The model of your track piece is displayed here")
+  asmlib.SetLocalify("en","tool."..gsToolNameL..".pn_pattern"    , "Enter a pattern here and hit enter to preform a search")
+  asmlib.SetLocalify("en","tool."..gsToolNameL..".pn_srchcol"    , "Choose which list column you want to preform a search on")
+  asmlib.SetLocalify("en","tool."..gsToolNameL..".pn_srchcol_lb" , "<Search by>")
+  asmlib.SetLocalify("en","tool."..gsToolNameL..".pn_srchcol_lb1", "Model")
+  asmlib.SetLocalify("en","tool."..gsToolNameL..".pn_srchcol_lb2", "Type")
+  asmlib.SetLocalify("en","tool."..gsToolNameL..".pn_srchcol_lb3", "Name")
+  asmlib.SetLocalify("en","tool."..gsToolNameL..".pn_srchcol_lb4", "Mesh")
+  asmlib.SetLocalify("en","tool."..gsToolNameL..".pn_routine_lb" , "Routine items")
+  asmlib.SetLocalify("en","tool."..gsToolNameL..".pn_routine_lb1", "Used")
+  asmlib.SetLocalify("en","tool."..gsToolNameL..".pn_routine_lb2", "Mesh")
+  asmlib.SetLocalify("en","tool."..gsToolNameL..".pn_routine_lb3", "Type")
+  asmlib.SetLocalify("en","tool."..gsToolNameL..".pn_routine_lb4", "Name")
+  asmlib.SetLocalify("en","tool."..gsToolNameL..".pn_display_lb" , "Piece Display")
+  asmlib.SetLocalify("en","tool."..gsToolNameL..".pn_pattern_lb" , "Enter pattern")
 end
 
 -------- CACHE PANEL STUFF ---------

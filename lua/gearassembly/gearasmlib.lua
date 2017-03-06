@@ -70,6 +70,7 @@ local CreateConVar            = CreateConVar
 local getmetatable            = getmetatable
 local setmetatable            = setmetatable
 local collectgarbage          = collectgarbage
+local SetClipboardText        = SetClipboardText
 local osClock                 = os and os.clock
 local osDate                  = os and os.date
 local bitBand                 = bit and bit.band
@@ -835,28 +836,28 @@ end
 
 local function AddLineListView(pnListView,frUsed,ivNdex)
   if(not IsExistent(pnListView)) then
-    return StatusLog(nil,"LineAddListView: Missing panel") end
+    return StatusLog(false,"LineAddListView: Missing panel") end
   if(not IsValid(pnListView)) then
-    return StatusLog(nil,"LineAddListView: Invalid panel") end
+    return StatusLog(false,"LineAddListView: Invalid panel") end
   if(not IsExistent(frUsed)) then
-    return StatusLog(nil,"LineAddListView: Missing data") end
+    return StatusLog(false,"LineAddListView: Missing data") end
   local iNdex = tonumber(ivNdex)
   if(not IsExistent(iNdex)) then
-    return StatusLog(nil,"LineAddListView: Index NAN {"..type(ivNdex).."}<"..tostring(ivNdex)..">") end
+    return StatusLog(false,"LineAddListView: Index NAN {"..type(ivNdex).."}<"..tostring(ivNdex)..">") end
   local tValue = frUsed[iNdex]
   if(not IsExistent(tValue)) then
-    return StatusLog(nil,"LineAddListView: Missing data on index #"..tostring(iNdex)) end
+    return StatusLog(false,"LineAddListView: Missing data on index #"..tostring(iNdex)) end
   local defTable = GetOpVar("DEFTABLE_PIECES")
   if(not IsExistent(defTable)) then
-    return StatusLog(nil,"LineAddListView: Missing table definition") end
+    return StatusLog(false,"LineAddListView: Missing table definition") end
   local sModel = tValue.Table[defTable[1][1]]
   local sType  = tValue.Table[defTable[2][1]]
+  local sName  = tValue.Table[defTable[3][1]]
   local nMesh  = tValue.Table[defTable[4][1]]
   local nUsed  = RoundValue(tValue.Value,0.001)
-  local pnRec  = pnListView:AddLine(nUsed,nMesh,sType,sModel)
-  if(not IsExistent(pnRec)) then
-    return StatusLog(nil,"LineAddListView: Failed to create a ListView line for <"..sModel.."> #"..tostring(iNdex)) end
-  return pnRec, tValue
+  local pnLine = pnListView:AddLine(nUsed,nAct,sType,sName,sModel)
+        pnLine:SetTooltip(sModel)
+  return true
 end
 
 --[[
@@ -877,30 +878,52 @@ function UpdateListView(pnListView,frUsed,nCount,sField,sPattern)
       return StatusLog(false,"UpdateListView: Invalid ListView") end
     pnListView:SetVisible(false)
     pnListView:Clear()
-  else
-    return StatusLog(false,"UpdateListView: Missing ListView")
-  end
+  else return StatusLog(false,"UpdateListView: Missing ListView") end
   local sField   = tostring(sField   or "")
   local sPattern = tostring(sPattern or "")
   local iNdex, pnRec, sData = 1, nil, nil
   while(frUsed[iNdex]) do
     if(IsEmptyString(sPattern)) then
-      pnRec = AddLineListView(pnListView,frUsed,iNdex)
-      if(not IsExistent(pnRec)) then
+      if(not AddLineListView(pnListView,frUsed,iNdex)) then
         return StatusLog(false,"UpdateListView: Failed to add line on #"..tostring(iNdex)) end
     else
       sData = tostring(frUsed[iNdex].Table[sField] or "")
       if(stringFind(sData,sPattern)) then
-        pnRec = AddLineListView(pnListView,frUsed,iNdex)
-        if(not IsExistent(pnRec)) then
+        if(not AddLineListView(pnListView,frUsed,iNdex)) then
           return StatusLog(false,"UpdateListView: Failed to add line <"
                    ..sData.."> pattern <"..sPattern.."> on <"..sField.."> #"..tostring(iNdex)) end
       end
-    end
-    iNdex = iNdex + 1
-  end
-  pnListView:SetVisible(true)
+    end; iNdex = iNdex + 1
+  end; pnListView:SetVisible(true)
   return StatusLog(true,"UpdateListView: Crated #"..tostring(iNdex-1))
+end
+
+function GetDirectoryObj(pCurr, vName)
+  if(not pCurr) then
+    return StatusLog(nil,"GetDirectoryObj: Location invalid") end
+  local sName = tostring(vName or "")
+        sName = IsEmptyString(sName) and "Other" or sName
+  if(not pCurr[sName]) then
+    return StatusLog(nil,"GetDirectoryObj: Name missing <"..sName..">") end
+  return pCurr[sName], pCurr[sName].__ObjPanel__
+end
+
+function SetDirectoryObj(pnBase, pCurr, vName, sImage, txCol)
+  if(not IsValid(pnBase)) then
+    return StatusLog(nil,"SetDirectoryObj: Base panel invalid") end
+  if(not pCurr) then
+    return StatusLog(nil,"SetDirectoryObj: Location invalid") end
+  local sName = tostring(vName or "")
+        sName = IsEmptyString(sName) and "Other" or sName
+  local pItem = pnBase:AddNode(sName)
+  pCurr[sName] = {}; pCurr[sName].__ObjPanel__ = pItem
+  pItem.Icon:SetImage(tostring(sImage or "icon16/folder.png"))
+  pItem.InternalDoClick = function() end
+  pItem.DoClick         = function() return false end
+  pItem.DoRightClick    = function() SetClipboardText(pItem:GetText()) end
+  pItem.Label.UpdateColours = function(pSelf)
+    return pSelf:SetTextStyleColor(txCol or Color(0,0,0,255)) end
+  return pCurr[sName], pItem
 end
 
 local function PushSortValues(tTable,snCnt,nsValue,tData)

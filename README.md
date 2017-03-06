@@ -9,7 +9,7 @@ GearAssemblyTool
 
  On the Steam WS: http://steamcommunity.com/sharedfiles/filedetails/?id=384782853
 
-This is a Gmod tool for assembling Gears 
+This is a Gmod tool for assembling Gears
 
 Genral FAQ:
 
@@ -24,7 +24,7 @@ A: Spawn gears by clicking anywhere.
 
 Q: That's nice, but want to mesh ( or stack ) gears for example, how should I do that ?
 A: Set the Stack count to one or more, point to one gear, then
-   hold IN_SPEED ( Def: Shift ) and click IN_ATTACK1 ( Def: Left mouse button ). 
+   hold IN_SPEED ( Def: Shift ) and click IN_ATTACK1 ( Def: Left mouse button ).
 
 Q: How can I adjust the stack mode of the tool and what is it for?
 A: The stack mode is used ( as the name suggests ) to support two
@@ -49,23 +49,23 @@ Q: How can I stack gears in one particular direction.
 A: Orient the first gear's forward to point in the desired direction. Freeze it.
    Adjust stack mode to "Forward based", set stack count to two or more
    You can also use the used manual offsets like the TA. Now mesh those things !
-   
+
 Q: How can chose the constraint type when I want to automatically constrain a gear?
 A: Below the gear selection tree, there is a drop-down menu. ( It shows "<Constraint Type>" at first )
    Click on it to select constraint type like Axis, BS, and so on ..
-   
+
 Q: How should I chose an anchor prop to constrain the gears to and how can I know what did I select?
-A: Easy, see the "Anc:" selection on the toolgun's screen. It indicates which prop is
-   selected for "Anchor" ( A prop that the gears will be automatically constrained to )
+A: Easy, see the "[ID]" selection on the toolgun's screen next to the trace status. It indicates
+   which prop is selected for "Anchor" ( A prop that the gears will be automatically constrained to )
    If it shows "N/A" ( Not Available ), then no anchor is selected.
-   If it shows for example "[Entity_ID] Some_model_from_gmod.mdl", then an anchor
-   is selected and all gears will be automatically constrained to it if enabled
+   If it shows for example "[Entity_ID]", then an anchor is selected
+   and all gears will be automatically constrained to it if enabled
    ( Constraint type different than "Free spawn" ). You can also clear it any time by pointing
-   to the world and using IN_SPEED ( Def: Shift ) + click IN_ATTACK2 ( Def: Right mouse button ). 
-   
+   to the world and using IN_SPEED ( Def: Shift ) + click IN_ATTACK2 ( Def: Right mouse button ).
+
 Q: You said this thing is pretty mush like the TA, which settings are the same?
 A: The handling of Bodygroup/Skin selection, Mass, Gear's physical properties,
-   Ghosting and stuff, Error logging, Screens and Data selection.
+   Ghosting and stuff, Error logging, Screens, Translations and Data export/selection.
 ```
 **Destribution ownership is like the Track Assembly Tool, so DO NOT UPLOAD THIS TO ANY OTHER SITES !**
 
