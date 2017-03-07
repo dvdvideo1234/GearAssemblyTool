@@ -133,7 +133,7 @@ function TOOL:GetMass()
 end
 
 function TOOL:GetDeveloperMode()
-  return (asmlib.GetAsmVar("devmode","INT") or 0)
+  return asmlib.GetAsmVar("devmode","BUL")
 end
 
 function TOOL:GetPosOffsets()
@@ -150,7 +150,7 @@ function TOOL:GetAngOffsets()
 end
 
 function TOOL:GetFreeze()
-  return (self:GetClientNumber("freeze") or 0)
+  return ((self:GetClientNumber("freeze") or 0) ~= 0)
 end
 
 function TOOL:GetIgnoreType()
@@ -162,11 +162,11 @@ function TOOL:GetBodyGroupSkin()
 end
 
 function TOOL:GetGravity()
-  return (self:GetClientNumber("gravity") or 0)
+  return ((self:GetClientNumber("gravity") or 0) ~= 0)
 end
 
 function TOOL:GetGhostHolder()
-  return (self:GetClientNumber("ghosthold") or 0)
+  return ((self:GetClientNumber("ghosthold") or 0) ~= 0)
 end
 
 function TOOL:GetNoCollide()
@@ -178,7 +178,7 @@ function TOOL:GetSpawnFlat()
 end
 
 function TOOL:GetExportDB()
-  return (self:GetClientNumber("exportdb") or 0)
+  return ((self:GetClientNumber("exportdb") or 0) ~= 0)
 end
 
 function TOOL:GetLogLines()
@@ -190,7 +190,7 @@ function TOOL:GetLogFile()
 end
 
 function TOOL:GetAdviser()
-  return (self:GetClientNumber("adviser") or 0)
+  return ((self:GetClientNumber("adviser") or 0) ~= 0)
 end
 
 function TOOL:GetTraceOriginAngle()
@@ -223,7 +223,7 @@ function TOOL:GetContrType()
 end
 
 function TOOL:GetIgnorePhysgun()
-  return (self:GetClientNumber("ignphysgn") or 0)
+  return ((self:GetClientNumber("ignphysgn") or 0) ~= 0)
 end
 
 function TOOL:GetBoundErrorMode()
@@ -374,8 +374,8 @@ function TOOL:LeftClick(stTrace)
   local rotpivt, rotpivh = self:GetRotatePivot()
   local nextx  , nexty  , nextz   = self:GetPosOffsets()
   local nextpic, nextyaw, nextrol = self:GetAngOffsets()
-  asmlib.PlyLoadKey(ply)
-  if(not asmlib.PlyLoadKey(ply,"SPEED") and not asmlib.PlyLoadKey(ply,"DUCK")) then
+  asmlib.ReadKeyPly(ply)
+  if(not asmlib.CheckButtonPly(ply,IN_SPEED) and not asmlib.CheckButtonPly(ply,IN_DUCK)) then
     if(not (eBase and eBase:IsValid()) and (trEnt and trEnt:IsValid())) then eBase = trEnt end
     local stSpawn = asmlib.GetNormalSpawn(stTrace,model,rotpivh,nextx,nexty,nextz,
                                               nextpic,nextyaw,nextrol)
@@ -411,8 +411,8 @@ function TOOL:LeftClick(stTrace)
 
   if(not trRec) then return asmlib.StatusLog(false,self:GetStatus(stTrace,"TOOL:LeftClick(Prop): Trace model not a piece")) end
 
-  if(asmlib.PlyLoadKey(ply,"DUCK")) then -- USE: Use the valid trace as a piece
-    if(asmlib.PlyLoadKey(ply,"USE")) then -- Physical
+  if(asmlib.CheckButtonPly(ply,IN_DUCK)) then -- USE: Use the valid trace as a piece
+    if(asmlib.CheckButtonPly(ply,IN_USE)) then -- Physical
       if(not asmlib.ApplyPhysicalSettings(trEnt,freeze,gravity,ignphysgn)) then
         return asmlib.StatusLog(false,self:GetStatus(stTrace,"TOOL:LeftClick(Physical): Failed to apply physical settings",trEnt)) end
       trEnt:GetPhysicsObject():SetMass(mass)
@@ -426,7 +426,7 @@ function TOOL:LeftClick(stTrace)
 
   if(not hdRec) then return asmlib.StatusLog(false,self:GetStatus(stTrace,"TOOL:LeftClick(Prop): Holder model not a piece")) end
 
-  if(asmlib.PlyLoadKey(ply,"SPEED") and count > 1 and stmode >= 1 and stmode <= SMode:GetSize()) then
+  if(asmlib.CheckButtonPly(ply,IN_SPEED) and count > 1 and stmode >= 1 and stmode <= SMode:GetSize()) then
     local stSpawn = asmlib.GetEntitySpawn(trEnt,rotpiv,model,igntyp,trorang,nextx,nexty,nextz,nextpic,nextyaw,nextrol)
     if(not stSpawn) then return asmlib.StatusLog(false,self:GetStatus(stTrace,"TOOL:LeftClick(Stack): Failed to retrieve spawn data")) end
     local ePieceO, ePieceN = trEnt, nil
@@ -493,11 +493,11 @@ function TOOL:RightClick(stTrace)
     return asmlib.StatusLog(false,"TOOL:RightClick(): Trace not hit") end
   local trEnt = stTrace.Entity
   local ply   = self:GetOwner()
-  asmlib.PlyLoadKey(ply)
-  if(stTrace.HitWorld and asmlib.PlyLoadKey(ply,"USE")) then
+  asmlib.ReadKeyPly(ply)
+  if(stTrace.HitWorld and asmlib.CheckButtonPly(ply,IN_USE)) then
     asmlib.ConCommandPly(ply,"openframe",asmlib.GetAsmVar("maxfruse" ,"INT"))
     return asmlib.StatusLog(true,"TOOL:RightClick(World): Success open frame")
-  elseif(asmlib.PlyLoadKey(ply,"SPEED")) then
+  elseif(asmlib.CheckButtonPly(ply,IN_SPEED)) then
     if(stTrace.HitWorld) then
       self:ClearAnchor(); return asmlib.StatusLog(true,"TOOL:RightClick(Prop): Anchor cleared")
     elseif(trEnt and trEnt:IsValid()) then
@@ -517,14 +517,15 @@ end
 function TOOL:Reload(Trace)
   if(CLIENT) then return true end
   if(not Trace) then return false end
-  local ply       = self:GetOwner()
-  asmlib.PlyLoadKey(ply)
-  if(asmlib.PlyLoadKey(ply,"SPEED") and Trace.HitWorld) then
+  local ply = self:GetOwner()
+  asmlib.ReadKeyPly(ply)
+  if(asmlib.CheckButtonPly(ply,IN_SPEED) and Trace.HitWorld) then
     asmlib.SetLogControl(self:GetLogLines(),self:GetLogFile())
-    if(self:GetExportDB() ~= 0) then
+    if(self:GetExportDB()) then
+      asmlib.LogInstance("TOOL:Reload(World): Exporting DB")
       asmlib.ExportDSV("PIECES")
-      return asmlib.StatusLog(true,"TOOL:Reload(Trace): Database exported")
-    end
+      asmlib.ConCommandPly(ply, "exportdb", 0)
+    end; return asmlib.StatusLog(true,"TOOL:Reload(World): Success")
   end
   if(not asmlib.IsPhysTrace(Trace)) then
     return asmlib.StatusLog(false,self:GetStaus(stTrace,"TOOL:Reload(): Trace not physics")) end
@@ -571,7 +572,7 @@ function TOOL:DrawHUD()
   local oPly    = LocalPlayer()
   local stTrace = oPly:GetEyeTrace()
   if(not stTrace) then return end
-  if(self:GetAdviser() == 0) then return end
+  if(not self:GetAdviser()) then return end
   local trEnt  = stTrace.Entity
   local model  = self:GetModel()
   local ratioc = (gnRatio - 1) * 100
@@ -610,10 +611,9 @@ function TOOL:DrawHUD()
     hudMonitor:DrawLine(Op,Sp,"m")
     hudMonitor:DrawCircle(Sp,Sp,plyrad)
     hudMonitor:DrawLine(Sp,Du,"c")
-    if(self:GetDeveloperMode() ~= 0) then DrawAdditionalInfo(hudMonitor,stSpawn) end
+    if(self:GetDeveloperMode()) then DrawAdditionalInfo(hudMonitor,stSpawn) end
   else
-    local stSpawn  = asmlib.GetNormalSpawn(Trace,model,
-                       nextx,nexty,nextz,nextpic,nextyaw,nextrol)
+    local stSpawn  = asmlib.GetNormalSpawn(Trace,model,nextx,nexty,nextz,nextpic,nextyaw,nextrol)
     if(not stSpawn) then return false end
     local Os = stSpawn.SPos:ToScreen()
     local Xs = (stSpawn.SPos + 15 * stSpawn.F):ToScreen()
@@ -623,7 +623,7 @@ function TOOL:DrawHUD()
     hudMonitor:DrawLine(Os,Ys,"g")
     hudMonitor:DrawLine(Os,Zs,"b")
     hudMonitor:DrawCircle(Os,plyrad,"y")
-    if(self:GetDeveloperMode() ~= 0) then DrawAdditionalInfo(hudMonitor,stSpawn) end
+    if(self:GetDeveloperMode()) then DrawAdditionalInfo(hudMonitor,stSpawn) end
   end
 end
 
@@ -908,7 +908,7 @@ end
 
 function TOOL:Think()
   local model = self:GetModel()
-  if(self:GetGhostHolder() ~= 0 and utilIsValidModel(model)) then
+  if(self:GetGhostHolder() and utilIsValidModel(model)) then
     if (not self.GhostEntity or
         not self.GhostEntity:IsValid() or
             self.GhostEntity:GetModel() ~= model
