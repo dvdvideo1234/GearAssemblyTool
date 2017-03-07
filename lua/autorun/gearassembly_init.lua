@@ -263,10 +263,11 @@ if(CLIENT) then
       pnButton:SetVisible(true)
       pnButton.DoClick = function()
         asmlib.LogInstance("OPEN_FRAME: Button.DoClick: <"..pnButton:GetText().."> clicked")
-        local ExportDB = asmlib.GetAsmVar("exportdb", "INT")
-        if(ExportDB ~= 0) then
+        if(asmlib.GetAsmVar("exportdb", "BUL")) then
           asmlib.LogInstance("OPEN_FRAME: Button Exporting DB")
+          asmlib.ExportCategory(3)
           asmlib.ExportDSV("PIECES")
+          asmlib.ConCommandPly(oPly, "exportdb", 0)
         end
       end
       ------------- ComboBox ---------------
@@ -279,7 +280,7 @@ if(CLIENT) then
       pnComboBox:SetPos(xyPos.x,xyPos.y)
       pnComboBox:SetSize(xySiz.x,xySiz.y)
       pnComboBox:SetVisible(true)
-      pnComboBox:SetValue("<Search BY>")
+      pnComboBox:SetValue(languageGetPhrase("tool."..gsToolNameL..".pn_srchcol_lb"))
       pnComboBox:AddChoice(languageGetPhrase("tool."..gsToolNameL..".pn_srchcol_lb1"),defTable[1][1])
       pnComboBox:AddChoice(languageGetPhrase("tool."..gsToolNameL..".pn_srchcol_lb2"),defTable[2][1])
       pnComboBox:AddChoice(languageGetPhrase("tool."..gsToolNameL..".pn_srchcol_lb3"),defTable[3][1])
@@ -380,7 +381,6 @@ if(CLIENT) then
     end)
 end
 
------- INITIALIZE DB ------
 asmlib.CreateTable("PIECES",{
     Timer = asmlib.TimerSetting(gaTimerSet[1]),
     Index = {{1},{2},{3},{1,4},{1,2},{2,4},{1,2,3}},
@@ -393,12 +393,20 @@ asmlib.CreateTable("PIECES",{
     [6] = {"ANGLE" , "TEXT"}
 },true,true)
 
+--[[ Categories are only needed client side ]]--
+if(CLIENT) then
+  if(fileExists(gsFullDSV.."CATEGORY.txt", "DATA")) then
+    asmlib.LogInstance("Init: DB CATEGORY from DSV")
+    asmlib.ImportCategory(3)
+  else asmlib.LogInstance("Init: DB CATEGORY from LUA") end
+end
+
 if(fileExists(gsFullDSV.."PIECES.txt", "DATA")) then
-  asmlib.PrintInstance(gsToolNameU..": DB PIECES from DSV")
-  asmlib.ImportFromDSV("PIECES","\t",true)
+  asmlib.LogInstance("Init: DB PIECES from DSV")
+  asmlib.ImportDSV("PIECES",true)
 else
-  asmlib.PrintInstance(gsToolNameU..": DB PIECES from LUA")
-  if(asmlib.GetAsmVar("devmode" ,"INT") ~= 0) then
+  asmlib.LogInstance("Init: DB PIECES from LUA")
+  if(asmlib.GetAsmVar("devmode" ,"BUL")) then
     asmlib.DefaultType("Develop random")
     asmlib.InsertRecord("PIECES",{"models/props_wasteland/wheel02b.mdl",   "Development", "Dev1", 45, "65, 0, 0", "0.29567885398865,0.3865530192852,-0.36239844560623", "-90, 90, 180"})
   end
@@ -520,13 +528,12 @@ else
   asmlib.InsertRecord({"models/gears/gear1_s3_24.mdl", "#", "#", 0, " 7.917, 0, 0", " 0.0073104859329760, -0.00477525778114800,  0.001730017247609800", ""})
   asmlib.InsertRecord({"models/gears/gear1_s3_30.mdl", "#", "#", 0, " 9.849, 0, 0", " 0.0016155475750566, -0.01016659941524300, -0.000659143610391770", ""})
   asmlib.InsertRecord({"models/gears/gear1_s3_36.mdl", "#", "#", 0, "11.848, 0, 0", " 0.0145232733339070,  0.01204503700137100,  0.000544754613656550", ""})
-  asmlib.DefaultType("SProps",function(m)
-    local d = asmlib.GetOpVar("OPSYM_DIVIDER")
-    local r = stringGsub(stringGsub(m,"models/sprops/mechanics/",""),"_","/")
-    local s = stringFind(r,"/"); r = (s and stringSub(r,1,s-1) or "other"); s = stringSub(m,-5,-5);
-    if(s == "s"     ) then s = "_small" elseif(s == "l"     ) then s = "_large" else s = "" end
-    if(r == "sgears") then r = "spur"   elseif(r == "bgears") then r = "bevel"  end
-    return asmlib.ModelToName(r..s,true); end)
+  asmlib.DefaultType("SProps",[[function(m)
+    local function conv(x) return " "..x:sub(2,2):upper() end
+    local r = m:gsub("models/sprops/mechanics/","")
+    local s = r:find("/")
+    local o = s and {r:sub(1,s-1)} or nil
+    for i = 1, #o do o[i] = ("_"..o[i]):gsub("_%w", conv):sub(2,-1) end; return o end]])
   asmlib.InsertRecord({"models/sprops/mechanics/sgears/spur_10t_s.mdl", "#", "#", 0, " 2.820, 0, 0", " 0.004917243029922200, -0.004917799960821900, -1.5156917498871e-008", ""})
   asmlib.InsertRecord({"models/sprops/mechanics/sgears/spur_12t_s.mdl", "#", "#", 0, " 3.100, 0, 0", "-0.001883051590994000,  0.000501719361636790, -0.000593971111811700", ""})
   asmlib.InsertRecord({"models/sprops/mechanics/sgears/spur_14t_s.mdl", "#", "#", 0, " 3.784, 0, 0", " 0.002141302684322000, -0.002729385625571000,  0.013979037292302000", ""})
