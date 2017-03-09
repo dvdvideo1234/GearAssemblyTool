@@ -62,7 +62,9 @@ local gsLimitName = asmlib.GetOpVar("CVAR_LIMITNAME")
 local gsNoAnchor  = gsNoID..gsSymRev..gsNoMD
 local conPalette  = asmlib.GetOpVar("CONTAIN_PALETTE")
 
-------------- LOCAL FUNCTIONS AND STUFF ----------------
+if(not asmlib.ProcessDSV()) then -- Default tab delimiter
+  asmlib.LogInstance("Processing data list failed <"..gsDataRoot.."trackasmlib_dsv.txt>")
+end
 
 if(CLIENT) then
   TOOL.Information = {
@@ -112,8 +114,10 @@ TOOL.ClientConVar = {
   [ "bgskids"   ] = "",
   [ "spnflat"   ] = "0",
   [ "exportdb"  ] = "0",
-  [ "forcelim"  ] = "0",
   [ "deltarot"  ] = "360",
+  [ "friction"  ] = "0",
+  [ "forcelim"  ] = "0",
+  [ "torquelim" ] = "0",
   [ "maxstatts" ] = "3",
   [ "nocollide" ] = "0",
   [ "ignphysgn" ] = "0",
@@ -210,8 +214,16 @@ function TOOL:GetDeltaRotation()
   return math.Clamp(self:GetClientNumber("deltarot") or 0,-gnMaxOffRot,gnMaxOffRot)
 end
 
+function TOOL:GetFriction()
+  return math.Clamp(self:GetClientNumber("friction") or 0,0,asmlib.GetAsmVar("maxfrict","FLT"))
+end
+
 function TOOL:GetForceLimit()
   return math.Clamp(self:GetClientNumber("forcelim") or 0,0,asmlib.GetAsmVar("maxforce","FLT"))
+end
+
+function TOOL:GetTorqueLimit()
+  return math.Clamp(self:GetClientNumber("torquelim") or 0,0,asmlib.GetAsmVar("maxtorque","FLT"))
 end
 
 function TOOL:GetStackMode()
@@ -320,14 +332,15 @@ function TOOL:GetStatus(stTrace,anyMessage,hdEnt)
         sDu = sDu..sSpace.."  HD.NoCollide:   <"..tostring(self:GetNoCollide())..">"..sDelim
         sDu = sDu..sSpace.."  HD.SpawnFlat:   <"..tostring(self:GetSpawnFlat())..">"..sDelim
         sDu = sDu..sSpace.."  HD.IgnoreType:  <"..tostring(self:GetIgnoreType())..">"..sDelim
+        sDu = sDu..sSpace.."  HD.Friction:    <"..tostring(self:GetFriction())..">"..sDelim
         sDu = sDu..sSpace.."  HD.ForceLimit:  <"..tostring(self:GetForceLimit())..">"..sDelim
+        sDu = sDu..sSpace.."  HD.TorqueLimit: <"..tostring(self:GetTorqueLimit())..">"..sDelim
         sDu = sDu..sSpace.."  HD.GhostHold:   <"..tostring(self:GetGhostHolder())..">"..sDelim
         sDu = sDu..sSpace.."  HD.SkinBG:      <"..tostring(self:GetBodyGroupSkin())..">"..sDelim
         sDu = sDu..sSpace.."  HD.StackAtempt: <"..tostring(self:GetStackAttempts())..">"..sDelim
         sDu = sDu..sSpace.."  HD.IgnorePG:    <"..tostring(self:GetIgnorePhysgun())..">"..sDelim
         sDu = sDu..sSpace.."  HD.ModDataBase: <"..gsModeDataB..","..tostring(asmlib.GetAsmVar("modedb" ,"STR"))..">"..sDelim
         sDu = sDu..sSpace.."  HD.TimerMode:   <"..tostring(asmlib.GetAsmVar("timermode","STR"))..">"..sDelim
-        sDu = sDu..sSpace.."  HD.EnableWire:  <"..tostring(asmlib.GetAsmVar("enwiremod","INT"))..">"..sDelim
         sDu = sDu..sSpace.."  HD.DevelopMode: <"..tostring(asmlib.GetAsmVar("devmode"  ,"INT"))..">"..sDelim
         sDu = sDu..sSpace.."  HD.MaxMass:     <"..tostring(asmlib.GetAsmVar("maxmass"  ,"INT"))..">"..sDelim
         sDu = sDu..sSpace.."  HD.MaxLinear:   <"..tostring(asmlib.GetAsmVar("maxlinear","INT"))..">"..sDelim
@@ -364,7 +377,9 @@ function TOOL:LeftClick(stTrace)
   local mass      = self:GetMass()
   local staatts   = self:GetStackAttempts()
   local deltarot  = self:GetDeltaRotation()
+  local friction  = self:GetFriction()
   local forcelim  = self:GetForceLimit()
+  local torquelim = self:GetTorqueLimit()
   local ignphysgn = self:GetIgnorePhysgun()
   local bnderrmod = self:GetBoundErrorMode()
   local fnmodel   = stringToFileName(model)
@@ -387,7 +402,7 @@ function TOOL:LeftClick(stTrace)
     asmlib.UndoCratePly(gsUndoPrefN..fnmodel.." ( World spawn )")
     if(not asmlib.ApplyPhysicalSettings(ePiece,freeze,gravity,ignphysgn)) then
       return asmlib.StatusLog(false,self:GetStatus(stTrace,"TOOL:LeftClick(World): Failed to apply physical settings",ePiece)) end
-    if(not asmlib.ApplyPhysicalAnchor(ePiece,eBase,stTrace.HitPos,stTrace.HitNormal,contyp,nocollide,forcelim)) then
+    if(not asmlib.ApplyPhysicalAnchor(ePiece,eBase,stTrace.HitPos,stTrace.HitNormal,contyp,nocollide,forcelim,torquelim,friction)) then
       return asmlib.StatusLog(false,self:GetStatus(stTrace,"TOOL:LeftClick(World): Failed to apply physical anchor",ePiece)) end
     asmlib.UndoAddEntityPly(ePiece)
     asmlib.UndoFinishPly(ply)
@@ -439,7 +454,7 @@ function TOOL:LeftClick(stTrace)
       if(ePieceN) then
         if(not asmlib.ApplyPhysicalSettings(ePieceN,forcelim,freeze,gravity,ignphysgn)) then
           return asmlib.StatusLog(false,self:GetStatus(stTrace,"TOOL:LeftClick(Stack): Failed to apply physical settings",ePiece)) end
-        if(not asmlib.ApplyPhysicalAnchor(ePieceN,eBase,stSpawn.SPos,stSpawn.DAng:Up(),contyp,nocollide,forcelim)) then
+        if(not asmlib.ApplyPhysicalAnchor(ePieceN,eBase,stSpawn.SPos,stSpawn.DAng:Up(),contyp,nocollide,forcelim,torquelim,friction)) then
           return asmlib.StatusLog(false,self:GetStatus(stTrace,"TOOL:LeftClick(Stack): Failed to apply physical anchor",ePiece)) end
         asmlib.UndoAddEntityPly(ePieceN)
         if(stmode == 1) then
@@ -473,7 +488,7 @@ function TOOL:LeftClick(stTrace)
     if(ePiece) then
       if(not asmlib.ApplyPhysicalSettings(ePieceN,forcelim,freeze,gravity,ignphysgn)) then
         return asmlib.StatusLog(false,self:GetStatus(stTrace,"TOOL:LeftClick(Snap): Failed to apply physical settings",ePiece)) end
-      if(not ApplyPhysicalAnchor(ePiece,eBase,stSpawn.SPos,stSpawn.DAng:Up(),contyp,nocollide,forcelim,freeze,gravity,ignphysgn)) then
+      if(not ApplyPhysicalAnchor(ePiece,eBase,stSpawn.SPos,stSpawn.DAng:Up(),contyp,nocollide,forcelim,freeze,gravity,ignphysgn,torquelim,friction)) then
         return asmlib.StatusLog(false,self:GetStatus(stTrace,"TOOL:LeftClick(Snap): Failed to apply physical anchor",ePiece)) end
       asmlib.UndoCratePly(gsUndoPrefN..fnmodel.." ( Snap prop )")
       asmlib.UndoAddEntityPly(ePiece)
@@ -843,8 +858,12 @@ function TOOL.BuildCPanel(CPanel)
            pItem:SetTooltip(languageGetPhrase("tool."..gsToolNameL..".nexty"))
   pItem = CPanel:NumSlider(languageGetPhrase("tool."..gsToolNameL..".nextz_con"), gsToolPrefL.."nextz", -nMaxOffLin, nMaxOffLin, 3)
            pItem:SetTooltip(languageGetPhrase("tool."..gsToolNameL..".nextz"))
+  pItem = CPanel:NumSlider(languageGetPhrase("tool."..gsToolNameL..".friction_con"), gsToolPrefL.."friction", 0, asmlib.GetAsmVar("maxfrict","FLT"), 3)
+           pItem:SetTooltip(languageGetPhrase("tool."..gsToolNameL..".friction"))
   pItem = CPanel:NumSlider(languageGetPhrase("tool."..gsToolNameL..".forcelim_con"), gsToolPrefL.."forcelim", 0, asmlib.GetAsmVar("maxforce","FLT"), 3)
            pItem:SetTooltip(languageGetPhrase("tool."..gsToolNameL..".forcelim"))
+  pItem = CPanel:NumSlider(languageGetPhrase("tool."..gsToolNameL..".torquelim_con"), gsToolPrefL.."torquelim", 0, asmlib.GetAsmVar("maxtorque","FLT"), 3)
+           pItem:SetTooltip(languageGetPhrase("tool."..gsToolNameL..".torquelim"))
   pItem = CPanel:CheckBox(languageGetPhrase("tool."..gsToolNameL..".nocollide_con"), gsToolPrefL.."nocollide")
            pItem:SetTooltip(languageGetPhrase("tool."..gsToolNameL..".nocollide"))
   pItem = CPanel:CheckBox(languageGetPhrase("tool."..gsToolNameL..".freeze_con"), gsToolPrefL.."freeze")

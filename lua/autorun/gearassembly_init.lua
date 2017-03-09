@@ -45,7 +45,9 @@ asmlib.MakeAsmVar("enwiremod", "1"  , {0, 1 } ,bitBor(FCVAR_ARCHIVE, FCVAR_ARCHI
 asmlib.MakeAsmVar("devmode"  , "0"  , {0, 1 } ,bitBor(FCVAR_ARCHIVE, FCVAR_ARCHIVE_XBOX, FCVAR_NOTIFY, FCVAR_REPLICATED, FCVAR_PRINTABLEONLY), "Toggle developer mode on/off server side")
 asmlib.MakeAsmVar("maxmass"  , "50000" ,  {1}, bitBor(FCVAR_ARCHIVE, FCVAR_ARCHIVE_XBOX, FCVAR_NOTIFY, FCVAR_REPLICATED, FCVAR_PRINTABLEONLY), "Maximum mass to be applied on a piece")
 asmlib.MakeAsmVar("maxlinear", "250"   ,  {1}, bitBor(FCVAR_ARCHIVE, FCVAR_ARCHIVE_XBOX, FCVAR_NOTIFY, FCVAR_REPLICATED, FCVAR_PRINTABLEONLY), "Maximum linear offset available")
+asmlib.MakeAsmVar("maxfrict" , "100000",  {0}, bitBor(FCVAR_ARCHIVE, FCVAR_ARCHIVE_XBOX, FCVAR_NOTIFY, FCVAR_REPLICATED, FCVAR_PRINTABLEONLY), "Maximum friction limit when creating constraints")
 asmlib.MakeAsmVar("maxforce" , "100000",  {0}, bitBor(FCVAR_ARCHIVE, FCVAR_ARCHIVE_XBOX, FCVAR_NOTIFY, FCVAR_REPLICATED, FCVAR_PRINTABLEONLY), "Maximum force limit when creating constraints")
+asmlib.MakeAsmVar("maxtorque", "100000",  {0}, bitBor(FCVAR_ARCHIVE, FCVAR_ARCHIVE_XBOX, FCVAR_NOTIFY, FCVAR_REPLICATED, FCVAR_PRINTABLEONLY), "Maximum torque limit when creating constraints")
 asmlib.MakeAsmVar("maxstcnt" , "200", {1,200} ,bitBor(FCVAR_ARCHIVE, FCVAR_ARCHIVE_XBOX, FCVAR_NOTIFY, FCVAR_REPLICATED, FCVAR_PRINTABLEONLY), "Maximum pieces to spawn in stack mode")
 if(SERVER) then
   CreateConVar("sbox_max"..asmlib.GetOpVar("CVAR_LIMITNAME"), "1500", bitBor(FCVAR_ARCHIVE, FCVAR_ARCHIVE_XBOX, FCVAR_NOTIFY, FCVAR_REPLICATED, FCVAR_PRINTABLEONLY), "Maximum number of gears to be spawned")
@@ -153,7 +155,9 @@ if(CLIENT) then
         asmlib.ConCommandPly(oPly, "bgskids"  , "")
         asmlib.ConCommandPly(oPly, "spnflat"  , "0")
         asmlib.ConCommandPly(oPly, "exportdb" , "0")
+        asmlib.ConCommandPly(oPly, "friction" , "0")
         asmlib.ConCommandPly(oPly, "forcelim" , "0")
+        asmlib.ConCommandPly(oPly, "torquelim", "0")
         asmlib.ConCommandPly(oPly, "deltarot" , "360")
         asmlib.ConCommandPly(oPly, "maxstatts", "3")
         asmlib.ConCommandPly(oPly, "nocollide", "0")
@@ -387,10 +391,11 @@ asmlib.CreateTable("PIECES",{
     [1] = {"MODEL" , "TEXT", "LOW", "QMK"},
     [2] = {"TYPE"  , "TEXT",  nil , "QMK"},
     [3] = {"NAME"  , "TEXT",  nil , "QMK"},
-    [4] = {"AMESH" , "REAL"},
-    [7] = {"POINT" , "TEXT"},
-    [5] = {"ORIGN" , "TEXT"},
-    [6] = {"ANGLE" , "TEXT"}
+    [4] = {"AMESH" , "REAL",  nil ,  nil },
+    [5] = {"POINT" , "TEXT",  nil ,  nil },
+    [6] = {"ORIGN" , "TEXT",  nil ,  nil },
+    [7] = {"ANGLE" , "TEXT",  nil ,  nil },
+    [8] = {"CLASS" , "TEXT",  nil ,  nil }
 },true,true)
 
 --[[ Categories are only needed client side ]]--
@@ -662,8 +667,12 @@ if(CLIENT) then
   asmlib.SetLocalify("en","tool."..gsToolNameL..".bgskids"       , "Selection code of comma delimited Bodygroup/Skin IDs > ENTER to accept, TAB to auto-fill from trace")
   asmlib.SetLocalify("en","tool."..gsToolNameL..".spnflat"       , "Spawn the piece flat on the ground")
   asmlib.SetLocalify("en","tool."..gsToolNameL..".exportdb"      , "Controls the flag to export the database")
-  asmlib.SetLocalify("en","tool."..gsToolNameL..".forcelim"      , "Controls how much force is needed to break the constraint")
-  asmlib.SetLocalify("en","tool."..gsToolNameL..".forcelim_con"  , "Force Limit: ")
+  asmlib.SetLocalify("en","tool."..gsToolNameL..".forcelim"      , "Controls the constraint force limit")
+  asmlib.SetLocalify("en","tool."..gsToolNameL..".friction_con"  , "Friction amount: ")
+  asmlib.SetLocalify("en","tool."..gsToolNameL..".friction"      , "Defines how much friction constraint created")
+  asmlib.SetLocalify("en","tool."..gsToolNameL..".forcelim_con"  , "Force limit: ")
+  asmlib.SetLocalify("en","tool."..gsToolNameL..".torquelim"     , "Controls the constraint torque limit")
+  asmlib.SetLocalify("en","tool."..gsToolNameL..".torquelim_con" , "Torque limit: ")
   asmlib.SetLocalify("en","tool."..gsToolNameL..".deltarot"      , "Controls the end-pivot angle when stacking")
   asmlib.SetLocalify("en","tool."..gsToolNameL..".deltarot_con"  , "End angle pivot: ")
   asmlib.SetLocalify("en","tool."..gsToolNameL..".gravity"       , "Controls the gravity on the piece spawned")

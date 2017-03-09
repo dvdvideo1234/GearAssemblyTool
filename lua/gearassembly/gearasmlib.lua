@@ -50,6 +50,7 @@ local RENDERMODE_TRANSALPHA = RENDERMODE_TRANSALPHA
 ---------------- Localizing needed functions ----------------
 local next                    = next
 local type                    = type
+local pcall                   = pcall
 local Angle                   = Angle
 local Color                   = Color
 local pairs                   = pairs
@@ -67,16 +68,18 @@ local tostring                = tostring
 local GetConVar               = GetConVar
 local LocalPlayer             = LocalPlayer
 local CreateConVar            = CreateConVar
+local SetClipboardText        = SetClipboardText
+local CompileString           = CompileString
 local getmetatable            = getmetatable
 local setmetatable            = setmetatable
 local collectgarbage          = collectgarbage
-local SetClipboardText        = SetClipboardText
 local osClock                 = os and os.clock
 local osDate                  = os and os.date
 local bitBand                 = bit and bit.band
 local sqlQuery                = sql and sql.Query
 local sqlLastError            = sql and sql.LastError
 local sqlTableExists          = sql and sql.TableExists
+local gameSinglePlayer        = game and game.SinglePlayer
 local utilTraceLine           = util and util.TraceLine
 local utilIsInWorld           = util and util.IsInWorld
 local utilIsValidModel        = util and util.IsValidModel
@@ -110,6 +113,7 @@ local timerCreate             = timer and timer.Create
 local timerDestroy            = timer and timer.Destroy
 local tableEmpty              = table and table.Empty
 local tableMaxn               = table and table.maxn
+local tableGetKeys            = table and table.GetKeys
 local debugGetinfo            = debug and debug.getinfo
 local stringExplode           = string and string.Explode
 local stringImplode           = string and string.Implode
@@ -286,27 +290,20 @@ function StatusLog(anyStatus,sError)
 end
 
 function Print(tT,sS)
-  if(not IsExistent(tT)) then
-    return StatusLog(nil,"Print: {nil, name="..tostring(sS or "\"Data\"").."}") end
-  local S, T, Key = type(sS), type(tT), ""
-  if    (S == "string") then S = sS
-  elseif(S == "number") then S = tostring(sS)
-  else                       S = "Data" end
-  if(T ~= "table") then
-    LogInstance("{"..T.."}["..tostring(sS or "N/A").."] = "..tostring(tT)); return end
-  T = tT
-  if(next(T) == nil) then
-    LogInstance(S.." = {}"); return end
-  LogInstance(S)
-  for k,v in pairs(T) do
+  local vS, vT, vK, cK = type(sS), type(tT), tostring(sS or "Data"), ""
+  if(vT ~= "table") then
+    LogInstance("{"..vT.."}["..vK.."] = <"..tostring(tT)..">"); return end
+  LogInstance(vK.." = {}")
+  if(next(tT) == nil) then return end
+  for k, v in pairs(tT) do
     if(type(k) == "string") then
-      Key = S.."[\""..k.."\"]"
-    else Key = S.."["..tostring(k).."]" end
+      cK = vK.."[\""..k.."\"]"
+    else cK = vK.."["..tostring(k).."]" end
     if(type(v) ~= "table") then
       if(type(v) == "string") then
-        LogInstance(Key.." = \""..v.."\"")
-      else LogInstance(Key.." = "..tostring(v)) end
-    else Print(v,Key) end
+        LogInstance(cK.." = \""..v.."\"")
+      else LogInstance(cK.." = "..tostring(v)) end
+    else Print(v, cK) end
   end
 end
 
@@ -384,7 +381,7 @@ function InitBase(sName,sPurpose)
   SetOpVar("ARRAY_DECODEPOA",{0,0,0,1,1,1,false})
   SetOpVar("LOCALIFY_TABLE",{})
   SetOpVar("LOCALIFY_AUTO","en")
-  SetOpVar("FILE_MODEL","%.mdl")
+  SetOpVar("MODELNAM_FILE","%.mdl")
   SetOpVar("MODELNAM_FUNC",function(x) return " "..x:sub(2,2):upper() end)
   SetOpVar("QUERY_STORE", {})
   SetOpVar("TABLE_BORDERS",{})
@@ -407,12 +404,12 @@ function InitBase(sName,sPurpose)
     SPos = Vector(),
     SAng = Angle (),
     DAng = Angle (),
-    -- Holder
+    --- Holder ---
     HRec = 0,
     HPnt = Vector(), -- P
     HPos = Vector(), -- O
     HAng = Angle (), -- A
-    -- Traced
+    --- Traced ---
     TRec = 0,
     TPnt = Vector(), -- P
     TPos = Vector(), -- O
@@ -615,7 +612,7 @@ function MakeContainer(sInfo,sDefKey)
 end
 
 --[[
- * Creates a screen object better user api fro drawing on the gmod screens
+ * Creates a screen object better user api for drawing on the gmod screens
  * The drawing methods are the following:
  * SURF - Uses the surface library to draw directly
  * SEGM - Uses the surface library to draw line segment interpolations
@@ -675,9 +672,7 @@ function MakeScreen(sW,sH,eW,eH,conColors)
     if(sMeth == "SURF") then
       if(sKey == "TXT" and tArgs ~= DrawArgs[sKey]) then
         surfaceSetFont(tostring(tArgs[1] or "Default")) end -- Time to set the font again
-    end
-    DrawMeth[sKey] = sMeth; DrawArgs[sKey] = tArgs
-    return sMeth, tArgs
+    end; DrawMeth[sKey], DrawArgs[sKey] = sMeth, tArgs; return sMeth, tArgs
   end
   function self:SetTextEdge(nX,nY)
     Text.ScrW, Text.ScrH = 0, 0
@@ -717,8 +712,7 @@ function MakeScreen(sW,sH,eW,eH,conColors)
     if(xyPnt.x < sW) then return -1 end
     if(xyPnt.x > eW) then return -1 end
     if(xyPnt.y < sH) then return -1 end
-    if(xyPnt.y > eH) then return -1 end
-    return 1
+    if(xyPnt.y > eH) then return -1 end; return 1
   end
   function self:DrawLine(pS,pE,keyColor,sMeth,tArgs)
     if(not (pS and pE)) then return end
@@ -799,8 +793,7 @@ function SetAction(sKey,fAct,tDat)
   if(not (fAct and type(fAct) == "function")) then
     return StatusLog(nil,"SetAction: Act {"..type(fAct).."}<"..tostring(fAct).."> not function") end
   if(not libAction[sKey]) then libAction[sKey] = {} end
-  libAction[sKey].Act = fAct
-  libAction[sKey].Dat = tDat
+  libAction[sKey].Act, libAction[sKey].Dat = fAct, tDat
   return true
 end
 
@@ -849,7 +842,7 @@ local function AddLineListView(pnListView,frUsed,ivNdex)
   local sName  = tValue.Table[defTable[3][1]]
   local nMesh  = tValue.Table[defTable[4][1]]
   local nUsed  = RoundValue(tValue.Value,0.001)
-  local pnLine = pnListView:AddLine(nUsed,nAct,sType,sName,sModel)
+  local pnLine = pnListView:AddLine(nUsed,nMesh,sType,sName,sModel)
         pnLine:SetTooltip(sModel)
   return true
 end
@@ -1027,8 +1020,7 @@ local function BorderValue(nsVal,sName)
   if(IsExistent(Border)) then
     if(Border[1] and nsVal < Border[1]) then return Border[1] end
     if(Border[2] and nsVal > Border[2]) then return Border[2] end
-  end
-  return nsVal
+  end; return nsVal
 end
 
 function ModelToName(sModel,bNoSettings)
@@ -1047,35 +1039,29 @@ function ModelToName(sModel,bNoSettings)
         local bCh = tonumber(tCut[Cnt+1])
         if(not (IsExistent(fCh) and IsExistent(bCh))) then
           return StatusLog("","ModelToName: Cannot cut the model in {"
-                   ..tostring(tCut[Cnt])..","..tostring(tCut[Cnt+1]).."} for "..sModel)
-        end
-        LogInstance("ModelToName[CUT]: {"..tostring(tCut[Cnt])..", "..tostring(tCut[Cnt+1]).."} << "..gModel)
+                   ..tostring(tCut[Cnt])..","..tostring(tCut[Cnt+1]).."} for "..sModel) end
         gModel = gModel:gsub(sModel:sub(fCh,bCh),"")
         LogInstance("ModelToName[CUT]: {"..tostring(tCut[Cnt])..", "..tostring(tCut[Cnt+1]).."} >> "..gModel)
         Cnt = Cnt + 2
-      end
-      Cnt = 1
+      end; Cnt = 1
     end
     -- Replace the unneeded parts by finding an in-string gModel
     if(tSub and tSub[1]) then
       while(tSub[Cnt]) do
         local fCh = tostring(tSub[Cnt]   or "")
         local bCh = tostring(tSub[Cnt+1] or "")
-        LogInstance("ModelToName[SUB]: {"..tostring(tSub[Cnt])..", "..tostring(tSub[Cnt+1]).."} << "..gModel)
         gModel = gModel:gsub(fCh,bCh)
         LogInstance("ModelToName[SUB]: {"..tostring(tSub[Cnt])..", "..tostring(tSub[Cnt+1]).."} >> "..gModel)
         Cnt = Cnt + 2
-      end
-      Cnt = 1
+      end; Cnt = 1
     end
     -- Append something if needed
     if(tApp and tApp[1]) then
-      LogInstance("ModelToName[APP]: {"..tostring(tApp[Cnt])..", "..tostring(tApp[Cnt+1]).."} << "..gModel)
       gModel = tostring(tApp[1] or "")..gModel..tostring(tApp[2] or "")
       LogInstance("ModelToName[APP]: {"..tostring(tSub[Cnt])..", "..tostring(tSub[Cnt+1]).."} >> "..gModel)
     end
   end
-  -- Trigger the capital-space using the divider
+  -- Trigger the capital spacing using the divider
   if(gModel:sub(1,1) ~= sSymDiv) then gModel = sSymDiv..gModel end
   -- Here in gModel we have: _aaaaa_bbbb_ccccc
   return gModel:gsub(sSymDiv.."%w",GetOpVar("MODELNAM_FUNC")):sub(2,-1)
@@ -1100,8 +1086,7 @@ local function IsEqualPOA(staPOA,stbPOA)
     return StatusLog(false,"EqualPOA: Missing offset B") end
   for kKey, vComp in pairs(staPOA) do
     if(kKey ~= csD and stbPOA[kKey] ~= vComp) then return false end
-  end
-  return true
+  end; return true
 end
 
 local function IsZeroPOA(stPOA,sOffs)
@@ -1151,15 +1136,12 @@ end
 local function DecodePOA(sStr)
   if(not IsString(sStr)) then
     return StatusLog(nil,"DecodePOA: Argument {"..type(sStr).."}<"..tostring(sStr).."> not string") end
-  local sCh = ""
-  local dInd, iSep = 1, 0
-  local S, E, iCnt = 1, 1, 1
-  local strLen = sStr:len()
+  local strLen = sStr:len(); ReloadPOA()
   local symOff = GetOpVar("OPSYM_DISABLE")
   local symRev = GetOpVar("OPSYM_REVSIGN")
   local symSep = GetOpVar("OPSYM_SEPARATOR")
   local arPOA  = GetOpVar("ARRAY_DECODEPOA")
-  ReloadPOA()
+  local S, E, iCnt, dInd, iSep, sCh = 1, 1, 1, 1, 0, ""
   if(sStr:sub(iCnt,iCnt) == symOff) then
     arPOA[7] = true; iCnt = iCnt + 1; S = S + 1 end
   while(iCnt <= strLen) do
@@ -1272,8 +1254,7 @@ function DisableString(sBase, anyDisable, anyDefault)
     elseif(sFirst == GetOpVar("OPSYM_DISABLE")) then
       return anyDisable
     end
-  end
-  return anyDefault
+  end; return anyDefault
 end
 
 function DefaultString(sBase, sDefault)
@@ -1660,20 +1641,19 @@ function CreateTable(sTable,defTable,bDelete,bReload)
     return StatusLog(false,"CreateTable: Record definition missing for "..sTable) end
   if(#defTable ~= tableMaxn(defTable)) then
     return StatusLog(false,"CreateTable: Record definition mismatch for "..sTable) end
+  local sTable  = sTable:upper()
+  local sModeDB = GetOpVar("MODE_DATABASE")
+  local symDis  = GetOpVar("OPSYM_DISABLE")
+  local iCnt, defField = 1, nil
   SetOpVar("DEFTABLE_"..sTable,defTable)
   defTable.Size = #defTable
   defTable.Name = GetOpVar("TOOLNAME_PU")..sTable
-  local sModeDB = GetOpVar("MODE_DATABASE")
-  local sTable  = sTable:upper()
-  local symDis  = GetOpVar("OPSYM_DISABLE")
-  local iCnt, defField = 1, nil
   while(defTable[iCnt]) do
     defField    = defTable[iCnt]
     defField[3] = DefaultString(tostring(defField[3] or symDis), symDis)
     defField[4] = DefaultString(tostring(defField[4] or symDis), symDis)
     iCnt = iCnt + 1
-  end
-  libCache[defTable.Name] = {}
+  end; libCache[defTable.Name] = {}
   if(sModeDB == "SQL") then
     local tQ = SQLBuildCreate(defTable)
     if(not IsExistent(tQ)) then return StatusLog(false,"CreateTable: Build statement failed") end
@@ -1694,8 +1674,7 @@ function CreateTable(sTable,defTable,bDelete,bReload)
       end
     end
     if(sqlTableExists(defTable.Name)) then
-      LogInstance("CreateTable: Table "..sTable.." exists!")
-      return true
+      return StatusLog(true,"CreateTable: Table "..sTable.." exists!")
     else
       local qRez = sqlQuery(tQ.Create)
       if(not qRez and IsBool(qRez)) then
@@ -1711,18 +1690,18 @@ function CreateTable(sTable,defTable,bDelete,bReload)
       else
         return StatusLog(false,"CreateTable: Table "..sTable..
           " failed to create because of "..sqlLastError().." Query ran > "..tQ.Create) end
-    end; LogInstance("CreateTable: ["..sModeDB.."] Table "..defTable.Name)
+    end; LogInstance("CreateTable: Created "..defTable.Name)
   elseif(sModeDB == "LUA") then
-    LogInstance("CreateTable: ["..sModeDB.."] Table "..defTable.Name)
+    LogInstance("CreateTable: Created "..defTable.Name)
   else return StatusLog(false,"CreateTable: Wrong database mode <"..sModeDB..">") end
 end
 
-function InsertRecord(sTable,tData)
+function InsertRecord(sTable,arLine)
   if(not IsExistent(sTable)) then
     return StatusLog(false,"InsertRecord: Missing table name/values")
   end
   if(type(sTable) == "table") then
-    tData  = sTable
+    arLine = sTable
     sTable = DefaultTable()
     if(not (IsExistent(sTable) and sTable ~= "")) then
       return StatusLog(false,"InsertRecord: Missing table default name for "..sTable) end
@@ -1734,51 +1713,65 @@ function InsertRecord(sTable,tData)
     return StatusLog(false,"InsertRecord: Missing table definition for "..sTable) end
   if(not defTable[1])  then
     return StatusLog(false,"InsertRecord: Missing table definition is empty for "..sTable) end
-  if(not tData)      then
+  if(not arLine)      then
     return StatusLog(false,"InsertRecord: Missing data table for "..sTable) end
-  if(not tData[1])   then
+  if(not arLine[1])   then
     return StatusLog(false,"InsertRecord: Missing data table is empty for "..sTable) end
 
   if(sTable == "PIECES") then
-    tData[2] = DisableString(tData[2],GetOpVar("DEFAULT_TYPE"),"TYPE")
-    tData[3] = DisableString(tData[3],ModelToName(tData[1]),"MODEL")
+    local trClass = GetOpVar("TRACE_CLASS")
+    arLine[2] = DisableString(arLine[2],DefaultType(),"TYPE")
+    arLine[3] = DisableString(arLine[3],ModelToName(arLine[1]),"MODEL")
+    arLine[8] = DisableString(arLine[8],nil,nil)
+    if(IsString(arLine[8]) and (arLine[8] ~= "NULL")
+       and not trClass[arLine[8]] and not IsEmptyString(arLine[8])) then
+      trClass[arLine[8]] = true -- Register the class provided
+      LogInstance("InsertRecord: Register trace <"..tostring(arLine[8])..">")
+    end -- Add the special class to the trace list
   end
 
   local sModeDB = GetOpVar("MODE_DATABASE")
-  if(sModeDB == "SQL") then
-    local Q = SQLBuildInsert(defTable,nil,tData)
-    if(not IsExistent(Q)) then return StatusLog(false,"InsertRecord: Build error <"..SQLBuildError()..">") end
+  if(sModeDB == "SQL") then local Q
+    for iID = 1, defTable.Size, 1 do
+      arLine[iID] = MatchType(defTable,arLine[iID],iID,true) end
+    Q = SQLCacheStmt("stmtInsertPieces", nil, unpack(arLine))
+    if(not Q) then
+      local Stmt = SQLBuildInsert(defTable,nil,{"%s","%s","%s","%f","%s","%s","%s","%s"})
+      if(not IsExistent(Stmt)) then
+        return StatusLog(nil,"InsertRecord: Build statement <"..sTable.."> failed") end
+      Q = SQLCacheStmt("stmtInsertPieces", Stmt, unpack(arLine)) end
+    if(not IsExistent(Q)) then
+      return StatusLog(false, "InsertRecord: Internal cache error <"..sTable..">")end
     local qRez = sqlQuery(Q)
     if(not qRez and IsBool(qRez)) then
        return StatusLog(false,"InsertRecord: Failed to insert a record because of <"
               ..sqlLastError().."> Query ran <"..Q..">") end
     return true
   elseif(sModeDB == "LUA") then
-    local snPrimaryKey = MatchType(defTable,tData[1],1)
+    local snPrimaryKey = MatchType(defTable,arLine[1],1)
     if(not IsExistent(snPrimaryKey)) then -- If primary key becomes a number
       return StatusLog(nil,"InsertRecord: Cannot match primary key "
-                          ..sTable.." <"..tostring(tData[1]).."> to "
+                          ..sTable.." <"..tostring(arLine[1]).."> to "
                           ..defTable[1][1].." for "..tostring(snPrimaryKey)) end
-    local Cache = libCache[namTable]
-    if(not IsExistent(Cache)) then
-      return StatusLog(false,"InsertRecord: Cache not allocated for "..namTable) end
+    local tCache = libCache[defTable.Name]
+    if(not IsExistent(tCache)) then
+      return StatusLog(false,"InsertRecord: Cache not allocated for "..defTable.Name) end
     if(sTable == "PIECES") then
-      local tLine = Cache[snPrimaryKey]
-      if(not tLine) then
-        Cache[snPrimaryKey] = {}
-        tLine = Cache[snPrimaryKey]
-      end
-      if(not IsExistent(tLine.Kept)) then tLine.Kept = 1        end
-      if(not IsExistent(tLine.Type)) then tLine.Type = tData[2] end
-      if(not IsExistent(tLine.Name)) then tLine.Name = tData[3] end
-      if(not IsExistent(tLine.Slot)) then tLine.Slot = snPrimaryKey end
-      if(not IsExistent(tLine.Mesh)) then tLine.Mesh = MatchType(defTable,tData[4],4) end
-      if(not IsExistent(tLine.Mesh)) then
+      local stData = tCache[snPrimaryKey]
+      if(not stData) then
+        tCache[snPrimaryKey] = {}; stData = tCache[snPrimaryKey] end
+      if(not IsExistent(stData.Kept)) then stData.Kept = 1        end
+      if(not IsExistent(stData.Type)) then stData.Type = arLine[2] end
+      if(not IsExistent(stData.Name)) then stData.Name = arLine[3] end
+      if(not IsExistent(stData.Unit)) then stData.Unit = arLine[8] end
+      if(not IsExistent(stData.Slot)) then stData.Slot = snPrimaryKey end
+      if(not IsExistent(stData.Mesh)) then stData.Mesh = MatchType(defTable,arLine[4],4) end
+      if(not IsExistent(stData.Mesh)) then
         return StatusLog(nil,"InsertRecord: Cannot match "
-                            ..sTable.." <"..tostring(tData[4]).."> to "
+                            ..sTable.." <"..tostring(arLine[4]).."> to "
                             ..defTable[4][1].." for "..tostring(snPrimaryKey))
       end
-      local stRezul = RegisterPOA(tLine,snPrimaryKey,tData[5],tData[6],tData[7])
+      local stRezul = RegisterPOA(stData,snPrimaryKey,arLine[5],arLine[6],arLine[7])
       if(not IsExistent(stRezul)) then
         return StatusLog(nil,"InsertRecord: Cannot process offset for "..tostring(snPrimaryKey)) end
     else
@@ -1791,18 +1784,18 @@ end
 
 local function NavigateTable(oLocation,tKeys)
   if(not IsExistent(oLocation)) then
-    return StatusLog(nil,"NavigateTable: Location missing") end
+    return nil, StatusLog(nil,"NavigateTable: Location missing") end
   if(not IsExistent(tKeys)) then
-    return StatusLog(nil,"NavigateTable: Key table missing") end
+    return nil, StatusLog(nil,"NavigateTable: Key table missing") end
   if(not IsExistent(tKeys[1])) then
-    return StatusLog(nil,"NavigateTable: First key missing") end
+    return nil, StatusLog(nil,"NavigateTable: First key missing") end
   local oPlace, kKey, iCnt = oLocation, tKeys[1], 1
   while(tKeys[iCnt]) do
     kKey = tKeys[iCnt]
     if(tKeys[iCnt+1]) then
       oPlace = oPlace[kKey]
       if(not IsExistent(oPlace)) then
-        return StatusLog(nil,"NavigateTable: Key #"..tostring(kKey).." irrelevant to location") end
+        return nil, StatusLog(nil,"NavigateTable: Key #"..tostring(kKey).." irrelevant to location") end
     end; iCnt = iCnt + 1
   end; return oPlace, kKey
 end
@@ -1831,8 +1824,6 @@ local function TimerAttach(oLocation,tKeys,defTable,anyMessage)
   local sModeDB = GetOpVar("MODE_DATABASE")
   LogInstance("TimerAttach: Called by <"..tostring(anyMessage).."> for Place["..tostring(Key).."]")
   if(sModeDB == "SQL") then
-    -- Get the proper line count to avoid doing in every caching function"
-    if(IsExistent(Place[Key].Kept)) then Place[Key].Kept = Place[Key].Kept - 1 end
     local nNowTM, tTimer = Time(), defTable.Timer -- See that there is a timer and get "now"
     if(not IsExistent(tTimer)) then
       return StatusLog(Place[Key],"TimerAttach: Missing timer settings") end
@@ -1970,20 +1961,19 @@ function CacheQueryPiece(sModel)
         return StatusLog(nil,"CacheQueryPiece: SQL exec error <"..sqlLastError()..">") end
       if(not (qData and qData[1])) then
         return StatusLog(nil,"CacheQueryPiece: No data found <"..Q..">") end
-      stPiece.Kept = 1 --- Found at least one record
+      stPiece.Kept = 0; local iCnt = 1 --- Notrhing registered yet
       stPiece.Slot = sModel
       stPiece.Type = qData[1][defTable[2][1]]
       stPiece.Name = qData[1][defTable[3][1]]
       stPiece.Unit = qData[1][defTable[8][1]]
-      while(qData[stPiece.Kept]) do
-        local qRec = qData[stPiece.Kept]
-        local qRez = RegisterPOA(stPiece, sModel,
-                           qRec[defTable[5][1]],
-                           qRec[defTable[6][1]],
-                           qRec[defTable[7][1]])
-        if(not IsExistent(qRez)) then
+      while(qData[iCnt]) do
+        local qRec = qData[iCnt]
+        if(not IsExistent(RegisterPOA(stPiece,sModel,
+                                      qRec[defTable[5][1]],
+                                      qRec[defTable[6][1]],
+                                      qRec[defTable[7][1]]))) then
           return StatusLog(nil,"CacheQueryPiece: Cannot process offset #"..tostring(stPiece.Kept).." for <"..sModel..">") end
-        stPiece.Kept = stPiece.Kept + 1
+        stPiece.Kept, iCnt = iCnt, (iCnt + 1)
       end; return TimerAttach(libCache,caInd,defTable,"CacheQueryPiece")
     elseif(sModeDB == "LUA") then return StatusLog(nil,"CacheQueryPiece: Record not located")
     else return StatusLog(nil,"CacheQueryPiece: Wrong database mode <"..sModeDB..">") end
@@ -2013,38 +2003,37 @@ function CacheQueryPanel()
     libCache[keyPan] = {}; stPanel = libCache[keyPan]
     local sModeDB = GetOpVar("MODE_DATABASE")
     if(sModeDB == "SQL") then
-      local Q = SQLBuildSelect(defTable,{1,2,3},{{4,1}},{2,3})
-      if(not IsExistent(Q)) then
-        return StatusLog(nil,"CacheQueryPanel: Build error: <"..SQLBuildError()..">") end
+      local Q = SQLCacheStmt("stmtSelectPanel", nil)
+      if(not Q) then
+        local sStmt = SQLBuildSelect(defTable,{1,2,3},nil,{2,3})
+        if(not IsExistent(sStmt)) then
+          return StatusLog(nil,"CacheQueryPanel: Build statement failed") end
+        Q = SQLCacheStmt("stmtSelectPanel", sStmt)
+      end
       local qData = sqlQuery(Q)
       if(not qData and IsBool(qData)) then
         return StatusLog(nil,"CacheQueryPanel: SQL exec error <"..sqlLastError()..">") end
       if(not (qData and qData[1])) then
         return StatusLog(nil,"CacheQueryPanel: No data found <"..Q..">") end
-      stPanel.Kept = 1
-      while(qData[stPanel.Kept]) do
-        stPanel[stPanel.Kept] = qData[stPanel.Kept]
-        stPanel.Kept = stPanel.Kept + 1
+      stPanel.Kept = 1; local iCnt = 1
+      while(qData[iCnt]) do
+        stPanel[iCnt] = qData[iCnt]
+        stPanel.Kept, iCnt = iCnt, (iCnt + 1)
       end
       return TimerAttach(libCache,caInd,defTable,"CacheQueryPanel")
     elseif(sModeDB == "LUA") then
-      local tCache = libCache[defTable.Name]
-      local tData = {}
-      local iNdex = 0
-      for sModel, tRecord in pairs(tCache) do
-        tData[sModel] = {
-          [defTable[1][1]] = sModel,
-          [defTable[2][1]] = tRecord.Type,
-          [defTable[3][1]] = tRecord.Name
-        }
-      end
-      local tSorted = Sort(tData,nil,{defTable[2][1],defTable[3][1]})
+      local tCache  = libCache[defTable.Name]
+      local tSorted = Sort(tCache,nil,{"Type","Name"})
       if(not tSorted) then
         return StatusLog(nil,"CacheQueryPanel: Cannot sort cache data") end
-      iNdex = 1
-      while(tSorted[iNdex]) do
-        stPanel[iNdex] = tData[tSorted[iNdex].Key]
-        iNdex = iNdex + 1
+      stPanel.Kept = 0; local iCnt = 1
+      while(tSorted[iCnt]) do
+        local vSort = tSorted[iCnt]
+        stPanel[iCnt] = {
+          [defTable[1][1]] = vSort.Key,
+          [defTable[2][1]] = tCache[vSort.Key].Type,
+          [defTable[3][1]] = tCache[vSort.Key].Name
+        }; stPanel.Kept, iCnt = iCnt, (iCnt + 1)
       end
       return stPanel
     else return StatusLog(nil,"CacheQueryPanel: Wrong database mode <"..sModeDB..">") end
@@ -2052,7 +2041,6 @@ function CacheQueryPanel()
   end
 end
 
----------------------- EXPORT --------------------------------
 ---------------------- EXPORT --------------------------------
 
 local function StripValue(vVal)
@@ -2125,7 +2113,7 @@ function ImportCategory(vEq, sPref)
   if(not F) then return StatusLog(false,"ImportCategory: fileOpen("..fName..") failed") end
   local sEq, sLine, nLen = ("="):rep(nEq), "", (nEq+2)
   local cFr, cBk, sCh = "["..sEq.."[", "]"..sEq.."]", "X"
-  local tCat, syOff = GetOpVar("TABLE_CATEGORIES"), GetOpVar("OPSYM_DISABLE")
+  local tCat, symOff = GetOpVar("TABLE_CATEGORIES"), GetOpVar("OPSYM_DISABLE")
   local sPar, isPar = "", false
   while(sCh) do
     sCh = F:Read(1)
@@ -2143,7 +2131,7 @@ function ImportCategory(vEq, sPref)
         local key, txt = tBoo[1]:Trim(), tBoo[2]
         if(not IsEmptyString(key)) then
           if(txt:find("function")) then
-            if(key:sub(1,1) ~= syOff) then
+            if(key:sub(1,1) ~= symOff) then
               tCat[key] = {}; tCat[key].Txt = txt:Trim()
               tCat[key].Cmp = CompileString("return ("..tCat[key].Txt..")",key)
               local suc, out = pcall(tCat[key].Cmp)
@@ -2158,10 +2146,9 @@ function ImportCategory(vEq, sPref)
 end
 
 --[[
- * Save/Load the DB Using Excel or
- * anything that supports delimiter separated digital tables
- * sTable > Definition KEY to export
- * sPref  > Prefix used on exporting ( if any )
+ * This function removes DSV associated with a given prefix
+ * sTable > Extermal table database to export
+ * sPref  > Prefix used on exporting ( if any ) else instance is used
 ]]--
 function RemoveDSV(sTable, sPref)
   local sPref = tostring(sPref or GetInstPref())
@@ -2751,8 +2738,7 @@ function GetPropBodyGroup(oEnt)
   while(BGs[iCnt]) do
     sRez = sRez..symSep..tostring(bgEnt:GetBodygroup(BGs[iCnt].id) or 0)
     iCnt = iCnt + 1
-  end
-  sRez = sRez:sub(2,-1)
+  end; sRez = sRez:sub(2,-1)
   Print(BGs,"GetPropBodyGrp: BGs")
   return StatusLog(sRez,"GetPropBodyGrp: Success <"..sRez..">")
 end
@@ -2809,7 +2795,7 @@ function MakePiece(pPly,sModel,vPos,aAng,nMass,sBgSkIDs,clColor,sMode)
     return StatusLog(nil,"MakePiece: Record missing for <"..sModel..">") end
   local bcUnit = (IsString(stPiece.Unit) and
     (stPiece.Unit ~= "NULL") and not IsEmptyString(stPiece.Unit))
-  LogInstance("MakePiece: Unit("..tostring(bcUnit)..") <"..tostring(stPiece.Unit)..">")
+  LogInstance("MakePiece: Unit("..tostring(bcUnit)..") <"..tostring(stPiece.Unit or "")..">")
   local ePiece = bcUnit and entsCreate(stPiece.Unit) or entsCreate("prop_physics")
   if(not (ePiece and ePiece:IsValid())) then
     return StatusLog(nil,"MakePiece: Piece <"..tostring(ePiece).."> invalid") end
@@ -2830,7 +2816,7 @@ function MakePiece(pPly,sModel,vPos,aAng,nMass,sBgSkIDs,clColor,sMode)
   local phPiece = ePiece:GetPhysicsObject()
   if(not (phPiece and phPiece:IsValid())) then ePiece:Remove()
     return StatusLog(nil,"MakePiece: Entity phys object invalid") end
-  phPiece:EnableMotion(false); ePiece.owner = pPly
+  phPiece:EnableMotion(false); ePiece.owner = pPly -- Some SPPs actually use this value
   local Mass = (tonumber(nMass) or 1); phPiece:SetMass((Mass >= 1) and Mass or 1)
   local BgSk = stringExplode(GetOpVar("OPSYM_DIRECTORY"),(sBgSkIDs or ""))
   ePiece:SetSkin(mathClamp(tonumber(BgSk[2]) or 0,0,ePiece:SkinCount()-1))
@@ -2839,6 +2825,24 @@ function MakePiece(pPly,sModel,vPos,aAng,nMass,sBgSkIDs,clColor,sMode)
   pPly:AddCount(sLimit , ePiece); pPly:AddCleanup(sLimit , ePiece) -- This sets the ownership
   pPly:AddCount("props", ePiece); pPly:AddCleanup("props", ePiece) -- To be deleted with clearing props
   return StatusLog(ePiece,"MakePiece: "..tostring(ePiece)..sModel)
+end
+
+function ApplyPhysicalSettings(ePiece,bFr,bGr,bPh)
+  if(CLIENT) then return StatusLog(true,"ApplyPhysicalSettings: Working on client") end
+  local bFr, bGr, bPh = (tobool(bFr) or false), (tobool(bGr) or false), (tobool(bPh) or false)
+  LogInstance("ApplyPhysicalSettings: {"..tostring(bFr)..","..tostring(bGr)..","..tostring(bPh).."}")
+  if(not (ePiece and ePiece:IsValid())) then
+    return StatusLog(false,"ApplyPhysicalSettings: Piece not valid") end
+  arSettings = {bFr,bGr,bPh}
+  ePiece.PhysgunDisabled = bPh
+  ePiece:SetUnFreezable(bPh)
+  local pyPiece = ePiece:GetPhysicsObject()
+  if(not (pyPiece and pyPiece:IsValid())) then
+    return StatusLog(false,"ApplyPhysicalSettings: Physics piece invalid") end
+  pyPiece:EnableMotion(not bFr)
+  constructSetPhysProp(nil,ePiece,0,pyPiece,{GravityToggle = bGr, Material = "gmod_ice"})
+  duplicatorStoreEntityModifier(ePiece,GetOpVar("TOOLNAME_PL").."dupe_phys_set",arSettings)
+  return StatusLog(true,"ApplyPhysicalSettings: Success")
 end
 
 function HookOnRemove(oBas,oEnt,arCTable,nMax)
@@ -2854,30 +2858,11 @@ function HookOnRemove(oBas,oEnt,arCTable,nMax)
   end; LogInstance("HookOnRemove: Done "..(Ind-1).." of "..nMax..".")
 end
 
-function ApplyPhysicalSettings(ePiece,bFr,bGr,bPh)
-  if(not (ePiece and ePiece:IsValid())) then
-    return StatusLog(false,"ApplyPhysicalSettings: Piece not valid") end
-  local bFr = tobool(bFr) or false
-  local bGr = tobool(bGr) or false
-  local bPh = tobool(bPh) or false
-  LogInstance("ApplyPhysicalSettings: {"..tostring(bFr)..","..tostring(bGr)..","..tostring(bPh).."}")
-  arSettings = {bFr,bGr,bPh}
-  ePiece.PhysgunDisabled = bPh
-  ePiece:SetUnFreezable(bPh)
-  local pyPiece = ePiece:GetPhysicsObject()
-  if(not (pyPiece and pyPiece:IsValid())) then
-    return StatusLog(false,"ApplyPhysicalSettings: Physics piece invalid") end
-  pyPiece:EnableMotion(not bFr)
-  constructSetPhysProp(nil,ePiece,0,pyPiece,{GravityToggle = bGr, Material = "gmod_ice"})
-  duplicatorStoreEntityModifier(ePiece,GetOpVar("TOOLNAME_PL").."dupe_phys_set",arSettings)
-end
-
-function ApplyPhysicalAnchor(ePiece,eBase,vPos,vNorm,nCID,nNoC,nFoL)
+function ApplyPhysicalAnchor(ePiece,eBase,vPos,vNorm,nCID,nNoC,nFoL,nToL,nFri)
   local ConstrDB = GetOpVar("CONTAIN_CONSTRAINT_TYPE")
-  local CID = tonumber(nCID) or 1
-  local NoC = tonumber(nNoC) or 0
-  local FrL = tonumber(nFoL) or 0
-  local IsIn
+  local CID, NoC = (tonumber(nCID) or 1), (tonumber(nNoC) or 0)
+  local FrL, ToL = (tonumber(nFoL) or 0), (tonumber(nToL) or 0)
+  local Fri, SID = (tonumber(nFri) or 0)
   local ConstrInfo = ConstrDB:Select(CID)
   if(not IsExistent(ConstrInfo)) then
     return StatusLog(false,"ApplyPhysicalAnchor: Constraint not available") end
@@ -2891,81 +2876,69 @@ function ApplyPhysicalAnchor(ePiece,eBase,vPos,vNorm,nCID,nNoC,nFoL)
   local pyPiece = ePiece:GetPhysicsObject()
   if(not (pyPiece and pyPiece:IsValid())) then
     return StatusLog(false,"ApplyPhysicalAnchor: Phys Piece not valid") end
-  if(not IsIn and CID == 1) then IsIn = CID end
+  if(not SID and CID == 1) then SID = CID end
   if(not (eBase and eBase:IsValid())) then
     return StatusLog(0,"ApplyPhysicalAnchor: Base not valid") end
   if(not constraintCanConstrain(eBase,0)) then
     return StatusLog(false,"ApplyPhysicalAnchor: Cannot constrain Base") end
   if(IsOther(eBase)) then
     return StatusLog(false,"ApplyPhysicalAnchor: Base is other object") end
-  if(not IsIn and CID == 2) then
+  if(not SID and CID == 2) then
     -- http://wiki.garrysmod.com/page/Entity/SetParent
-    ePiece:SetParent(eBase)
-    IsIn = CID
-  elseif(not IsIn and CID == 3) then
+    ePiece:SetParent(eBase); SID = CID
+  elseif(not SID and CID == 3) then
     -- http://wiki.garrysmod.com/page/constraint/Weld
     local C = ConstrInfo.Make(ePiece,eBase,0,0,FrL,(NoC ~= 0),false)
-    HookOnRemove(eBase,ePiece,{C},1)
-    IsIn = CID
+    HookOnRemove(eBase,ePiece,{C},1); SID = CID
   end
-  if(not IsIn and CID == 4 and vNorm) then
+  if(not SID and CID == 4 and vNorm) then
     -- http://wiki.garrysmod.com/page/constraint/Axis
     local LPos1 = pyPiece:GetMassCenter()
     local LPos2 = ePiece:LocalToWorld(LPos1)
           LPos2:Add(vNorm)
           LPos2:Set(eBase:WorldToLocal(LPos2))
-    local C = ConstrInfo.Make(ePiece,eBase,0,0,
-                LPos1,LPos2,FrL,0,0,NoC)
-     HookOnRemove(eBase,ePiece,{C},1)
-     IsIn = CID
-  elseif(not IsIn and CID == 5) then
+    local C = ConstrInfo.Make(ePiece,eBase,0,0,LPos1,LPos2,FrL,ToL,Fri,NoC)
+     HookOnRemove(eBase,ePiece,{C},1); SID = CID
+  elseif(not SID and CID == 5) then
     -- http://wiki.garrysmod.com/page/constraint/Ballsocket ( HD )
-    local C = ConstrInfo.Make(eBase,ePiece,0,0,pyPiece:GetMassCenter(),FrL,0,NoC)
-    HookOnRemove(eBase,ePiece,{C},1)
-    IsIn = CID
-  elseif(not IsIn and CID == 6 and vPos) then
+    local C = ConstrInfo.Make(eBase,ePiece,0,0,pyPiece:GetMassCenter(),FrL,ToL,NoC)
+    HookOnRemove(eBase,ePiece,{C},1); SID = CID
+  elseif(not SID and CID == 6 and vPos) then
     -- http://wiki.garrysmod.com/page/constraint/Ballsocket ( TR )
     local vLPos2 = eBase:WorldToLocal(vPos)
-    local C = ConstrInfo.Make(ePiece,eBase,0,0,vLPos2,FrL,0,NoC)
-    HookOnRemove(eBase,ePiece,{C},1)
-    IsIn = CID
+    local C = ConstrInfo.Make(ePiece,eBase,0,0,vLPos2,FrL,ToL,NoC)
+    HookOnRemove(eBase,ePiece,{C},1); SID = CID
   end
   -- http://wiki.garrysmod.com/page/constraint/AdvBallsocket
   local pyBase = eBase:GetPhysicsObject()
   if(not (pyBase and pyBase:IsValid())) then
     return StatusLog(false,"ApplyPhysicalAnchor: Phys Base not valid") end
-  local Min,Max = 0.01,180
+  local Min, Max = 0.01, 180
   local LPos1 = pyBase:GetMassCenter()
   local LPos2 = pyPiece:GetMassCenter()
-  if(not IsIn and CID == 7) then -- Lock X
-    local C = ConstrInfo.Make(ePiece,eBase,0,0,LPos1,LPos2,FrL,0,-Min,-Max,-Max,Min,Max,Max,0,0,0,1,NoC)
-    HookOnRemove(eBase,ePiece,{C},1)
-    IsIn = CID
-  elseif(not IsIn and CID == 8) then -- Lock Y
-    local C = ConstrInfo.Make(ePiece,eBase,0,0,LPos1,LPos2,FrL,0,-Max,-Min,-Max,Max,Min,Max,0,0,0,1,NoC)
-    HookOnRemove(eBase,ePiece,{C},1)
-    IsIn = CID
-  elseif(not IsIn and CID == 9) then -- Lock Z
-    local C = ConstrInfo.Make(ePiece,eBase,0,0,LPos1,LPos2,FrL,0,-Max,-Max,-Min,Max,Max,Min,0,0,0,1,NoC)
-    HookOnRemove(eBase,ePiece,{C},1)
-    IsIn = CID
-  elseif(not IsIn and CID == 10) then -- Spin X
-    local C1 = ConstrInfo.Make(ePiece,eBase,0,0,LPos1,LPos2,FrL,0,-Max,-Min,-Min,Max, Min, Min,0,0,0,1,NoC)
-    local C2 = ConstrInfo.Make(ePiece,eBase,0,0,LPos1,LPos2,FrL,0,-Max, Min, Min,Max,-Min,-Min,0,0,0,1,NoC)
-    HookOnRemove(eBase,ePiece,{C1,C2},2)
-    IsIn = CID
-  elseif(not IsIn and CID == 11) then -- Spin Y
-    local C1 = ConstrInfo.Make(ePiece,eBase,0,0,LPos1,LPos2,FrL,0,-Min,-Max,-Min, Min,Max, Min,0,0,0,1,NoC)
-    local C2 = ConstrInfo.Make(ePiece,eBase,0,0,LPos1,LPos2,FrL,0, Min,-Max, Min,-Min,Max,-Min,0,0,0,1,NoC)
-    HookOnRemove(eBase,ePiece,{C1,C2},2)
-    IsIn = CID
-  elseif(not IsIn and CID == 12) then -- Spin Z
-    local C1 = ConstrInfo.Make(ePiece,eBase,0,0,LPos1,LPos2,FrL,0,-Min,-Min,-Max, Min, Min,Max,0,0,0,1,NoC)
-    local C2 = ConstrInfo.Make(ePiece,eBase,0,0,LPos1,LPos2,FrL,0, Min, Min,-Max,-Min,-Min,Max,0,0,0,1,NoC)
-    HookOnRemove(eBase,ePiece,{C1,C2},2)
-    IsIn = CID
+  if(not SID and CID == 7) then -- Lock X
+    local C = ConstrInfo.Make(ePiece,eBase,0,0,LPos1,LPos2,FrL,0,-Min,-Max,-Max,Min,Max,Max,Fri,Fri,Fri,1,NoC)
+    HookOnRemove(eBase,ePiece,{C},1); SID = CID
+  elseif(not SID and CID == 8) then -- Lock Y
+    local C = ConstrInfo.Make(ePiece,eBase,0,0,LPos1,LPos2,FrL,0,-Max,-Min,-Max,Max,Min,Max,Fri,Fri,Fri,1,NoC)
+    HookOnRemove(eBase,ePiece,{C},1); SID = CID
+  elseif(not SID and CID == 9) then -- Lock Z
+    local C = ConstrInfo.Make(ePiece,eBase,0,0,LPos1,LPos2,FrL,0,-Max,-Max,-Min,Max,Max,Min,Fri,Fri,Fri,1,NoC)
+    HookOnRemove(eBase,ePiece,{C},1); SID = CID
+  elseif(not SID and CID == 10) then -- Spin X
+    local C1 = ConstrInfo.Make(ePiece,eBase,0,0,LPos1,LPos2,FrL,0,-Max,-Min,-Min,Max, Min, Min,Fri,Fri,Fri,1,NoC)
+    local C2 = ConstrInfo.Make(ePiece,eBase,0,0,LPos1,LPos2,FrL,0,-Max, Min, Min,Max,-Min,-Min,Fri,Fri,Fri,1,NoC)
+    HookOnRemove(eBase,ePiece,{C1,C2},2); SID = CID
+  elseif(not SID and CID == 11) then -- Spin Y
+    local C1 = ConstrInfo.Make(ePiece,eBase,0,0,LPos1,LPos2,FrL,0,-Min,-Max,-Min, Min,Max, Min,Fri,Fri,Fri,1,NoC)
+    local C2 = ConstrInfo.Make(ePiece,eBase,0,0,LPos1,LPos2,FrL,0, Min,-Max, Min,-Min,Max,-Min,Fri,Fri,Fri,1,NoC)
+    HookOnRemove(eBase,ePiece,{C1,C2},2); SID = CID
+  elseif(not SID and CID == 12) then -- Spin Z
+    local C1 = ConstrInfo.Make(ePiece,eBase,0,0,LPos1,LPos2,FrL,0,-Min,-Min,-Max, Min, Min,Max,Fri,Fri,Fri,1,NoC)
+    local C2 = ConstrInfo.Make(ePiece,eBase,0,0,LPos1,LPos2,FrL,0, Min, Min,-Max,-Min,-Min,Max,Fri,Fri,Fri,1,NoC)
+    HookOnRemove(eBase,ePiece,{C1,C2},2); SID = CID
   end
-  return StatusLog(IsIn,"ApplyPhysicalAnchor: Status <"..tostring(IsIn)..">")
+  return StatusLog(true,"ApplyPhysicalAnchor: Status <"..tostring(SID)..">")
 end
 
 function MakeAsmVar(sName, sValue, tBorder, nFlags, sInfo)
