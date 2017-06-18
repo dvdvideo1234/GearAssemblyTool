@@ -11,11 +11,13 @@ local Vector               = Vector
 local Angle                = Angle
 local IsValid              = IsValid
 local bitBor               = bit and bit.bor
+local mathFloor            = math and math.floor
 local vguiCreate           = vgui and vgui.Create
 local fileExists           = file and file.Exists
 local stringExplode        = string and string.Explode
 local surfaceScreenWidth   = surface and surface.ScreenWidth
 local surfaceScreenHeight  = surface and surface.ScreenHeight
+local languageGetPhrase    = language and language.GetPhrase
 local duplicatorStoreEntityModifier = duplicator and duplicator.StoreEntityModifier
 
 ------ MODULE POINTER -------
@@ -29,30 +31,45 @@ asmlib.SetIndexes("A",1,2,3)
 asmlib.SetIndexes("S",4,5,6,7)
 asmlib.SetOpVar("CONTAIN_STACK_MODE",asmlib.MakeContainer("Stack Mode"))
 asmlib.SetOpVar("CONTAIN_CONSTRAINT_TYPE",asmlib.MakeContainer("Constraint Type"))
+asmlib.SetOpVar("LOG_ONLY",nil)
+asmlib.SetOpVar("LOG_SKIP",{
+  "QuickSort",
+  "ModelToName%[CUT%]",
+  "ModelToName%[SUB%]",
+  "ModelToName%[APP%]",
+  "MakeScreen.SetColor: Color reset",
+  "MakeScreen: Color list not container"
+})
+
+------ VARIABLE FLAGS ------
+-- Client and server have independent value
+local gnIndependentUsed = bitBor(FCVAR_ARCHIVE, FCVAR_ARCHIVE_XBOX, FCVAR_NOTIFY, FCVAR_PRINTABLEONLY)
+-- Server tells the client what value to use
+local gnServerControled = bitBor(FCVAR_ARCHIVE, FCVAR_ARCHIVE_XBOX, FCVAR_NOTIFY, FCVAR_REPLICATED, FCVAR_PRINTABLEONLY)
 
 ------ CONFIGURE LOGGING ------
-asmlib.SetOpVar("LOG_DEBUGEN",true)
-asmlib.MakeAsmVar("logsmax"  , "0" , {0}, bitBor(FCVAR_ARCHIVE, FCVAR_ARCHIVE_XBOX, FCVAR_NOTIFY, FCVAR_PRINTABLEONLY), "Maximum logging lines to be printed")
-asmlib.MakeAsmVar("logfile"  , ""  , nil, bitBor(FCVAR_ARCHIVE, FCVAR_ARCHIVE_XBOX, FCVAR_NOTIFY, FCVAR_PRINTABLEONLY), "File to store the logs ( if any )")
+asmlib.SetOpVar("LOG_DEBUGEN", false)
+asmlib.MakeAsmVar("logsmax"  , "0" , {0}  , gnIndependentUsed, "Maximum logging lines to be printed")
+asmlib.MakeAsmVar("logfile"  , "0" , {0,1}, gnIndependentUsed, "File to store the logs ( if any )")
 asmlib.SetLogControl(asmlib.GetAsmVar("logsmax","INT"),asmlib.GetAsmVar("logfile","STR"))
 
 ------ CONFIGURE NON-REPLICATED CVARS ----- Client's got a mind of its own
-asmlib.MakeAsmVar("modedb"   , "SQL", nil, bitBor(FCVAR_ARCHIVE, FCVAR_ARCHIVE_XBOX, FCVAR_NOTIFY, FCVAR_PRINTABLEONLY), "Database operating mode")
-asmlib.MakeAsmVar("timermode", "CQT@3600@1@1", nil, bitBor(FCVAR_ARCHIVE, FCVAR_ARCHIVE_XBOX, FCVAR_NOTIFY, FCVAR_PRINTABLEONLY), "Cache management setting when DB mode is SQL")
+asmlib.MakeAsmVar("modedb"   , "SQL"         , nil, gnIndependentUsed, "Database operating mode")
+asmlib.MakeAsmVar("timermode", "CQT@3600@1@1", nil, gnIndependentUsed, "Cache management setting when DB mode is SQL")
 
 ------ CONFIGURE REPLICATED CVARS ----- Server tells the client what value to use
-asmlib.MakeAsmVar("enwiremod", "1"  , {0, 1 } ,bitBor(FCVAR_ARCHIVE, FCVAR_ARCHIVE_XBOX, FCVAR_NOTIFY, FCVAR_REPLICATED, FCVAR_PRINTABLEONLY), "Toggle the wire extension on/off server side")
-asmlib.MakeAsmVar("devmode"  , "0"  , {0, 1 } ,bitBor(FCVAR_ARCHIVE, FCVAR_ARCHIVE_XBOX, FCVAR_NOTIFY, FCVAR_REPLICATED, FCVAR_PRINTABLEONLY), "Toggle developer mode on/off server side")
-asmlib.MakeAsmVar("maxmass"  , "50000" ,  {1}, bitBor(FCVAR_ARCHIVE, FCVAR_ARCHIVE_XBOX, FCVAR_NOTIFY, FCVAR_REPLICATED, FCVAR_PRINTABLEONLY), "Maximum mass to be applied on a piece")
-asmlib.MakeAsmVar("maxlinear", "250"   ,  {1}, bitBor(FCVAR_ARCHIVE, FCVAR_ARCHIVE_XBOX, FCVAR_NOTIFY, FCVAR_REPLICATED, FCVAR_PRINTABLEONLY), "Maximum linear offset available")
-asmlib.MakeAsmVar("maxfrict" , "100000",  {0}, bitBor(FCVAR_ARCHIVE, FCVAR_ARCHIVE_XBOX, FCVAR_NOTIFY, FCVAR_REPLICATED, FCVAR_PRINTABLEONLY), "Maximum friction limit when creating constraints")
-asmlib.MakeAsmVar("maxforce" , "100000",  {0}, bitBor(FCVAR_ARCHIVE, FCVAR_ARCHIVE_XBOX, FCVAR_NOTIFY, FCVAR_REPLICATED, FCVAR_PRINTABLEONLY), "Maximum force limit when creating constraints")
-asmlib.MakeAsmVar("maxtorque", "100000",  {0}, bitBor(FCVAR_ARCHIVE, FCVAR_ARCHIVE_XBOX, FCVAR_NOTIFY, FCVAR_REPLICATED, FCVAR_PRINTABLEONLY), "Maximum torque limit when creating constraints")
-asmlib.MakeAsmVar("maxstcnt" , "200", {1,200} ,bitBor(FCVAR_ARCHIVE, FCVAR_ARCHIVE_XBOX, FCVAR_NOTIFY, FCVAR_REPLICATED, FCVAR_PRINTABLEONLY), "Maximum pieces to spawn in stack mode")
+asmlib.MakeAsmVar("enwiremod", "1"  , {0, 1 }, gnServerControled, "Toggle the wire extension on/off server side")
+asmlib.MakeAsmVar("devmode"  , "0"  , {0, 1 }, gnServerControled, "Toggle developer mode on/off server side")
+asmlib.MakeAsmVar("maxmass"  , "50000" ,  {1}, gnServerControled, "Maximum mass to be applied on a piece")
+asmlib.MakeAsmVar("maxlinear", "250"   ,  {1}, gnServerControled, "Maximum linear offset available")
+asmlib.MakeAsmVar("maxfrict" , "100000",  {0}, gnServerControled, "Maximum friction limit when creating constraints")
+asmlib.MakeAsmVar("maxforce" , "100000",  {0}, gnServerControled, "Maximum force limit when creating constraints")
+asmlib.MakeAsmVar("maxtorque", "100000",  {0}, gnServerControled, "Maximum torque limit when creating constraints")
+asmlib.MakeAsmVar("maxstcnt" , "200", {1,200}, gnServerControled, "Maximum pieces to spawn in stack mode")
 if(SERVER) then
-  CreateConVar("sbox_max"..asmlib.GetOpVar("CVAR_LIMITNAME"), "1500", bitBor(FCVAR_ARCHIVE, FCVAR_ARCHIVE_XBOX, FCVAR_NOTIFY, FCVAR_REPLICATED, FCVAR_PRINTABLEONLY), "Maximum number of gears to be spawned")
-  asmlib.MakeAsmVar("bnderrmod", "1" , {0, 4 } ,bitBor(FCVAR_ARCHIVE, FCVAR_ARCHIVE_XBOX, FCVAR_NOTIFY, FCVAR_REPLICATED, FCVAR_PRINTABLEONLY), "Unreasonable position error handling mode")
-  asmlib.MakeAsmVar("maxfruse" , "50", {1,100} ,bitBor(FCVAR_ARCHIVE, FCVAR_ARCHIVE_XBOX, FCVAR_NOTIFY, FCVAR_REPLICATED, FCVAR_PRINTABLEONLY), "Maximum frequent pieces to be listed")
+  CreateConVar("sbox_max"..asmlib.GetOpVar("CVAR_LIMITNAME"), "1500", gnServerControled, "Maximum number of gears to be spawned")
+  asmlib.MakeAsmVar("bnderrmod", "LOG", nil    , gnServerControled, "Unreasonable position error handling mode")
+  asmlib.MakeAsmVar("maxfruse" , "50" , {1,100}, gnServerControled, "Maximum frequent pieces to be listed")
 end
 
 ------ CONFIGURE INTERNALS -----
@@ -61,15 +78,12 @@ asmlib.SetOpVar("MODE_DATABASE" , asmlib.GetAsmVar("modedb","STR"))
 ------ GLOBAL VARIABLES -------
 local gsLimitName = asmlib.GetOpVar("CVAR_LIMITNAME")
 local gsToolPrefL = asmlib.GetOpVar("TOOLNAME_PL")
-local gsToolPrefU = asmlib.GetOpVar("TOOLNAME_PU")
 local gsToolNameL = asmlib.GetOpVar("TOOLNAME_NL")
 local gsToolNameU = asmlib.GetOpVar("TOOLNAME_NU")
-local gsInstPrefx = asmlib.GetInstPref()
-local gsPathBAS   = asmlib.GetOpVar("DIRPATH_BAS")
-local gsPathDSV   = asmlib.GetOpVar("DIRPATH_DSV")
-local gsFullDSV   = gsPathBAS..gsPathDSV..gsInstPrefx..gsToolPrefU
+local gsFullDSV   = asmlib.GetOpVar("DIRPATH_BAS")..asmlib.GetOpVar("DIRPATH_DSV")..
+                    asmlib.GetInstPref()..asmlib.GetOpVar("TOOLNAME_PU")
 local gaTimerSet  = stringExplode(asmlib.GetOpVar("OPSYM_DIRECTORY"),asmlib.GetAsmVar("timermode","STR"))
-local conPalette  = asmlib.MakeContainer("Colours"); asmlib.SetOpVar("CONTAIN_PALETTE", conPalette)
+local conPalette  = asmlib.MakeContainer("Colours"); asmlib.SetOpVar("CONTAINER_PALETTE", conPalette)
       conPalette:Insert("r" ,Color(255, 0 , 0 ,255))
       conPalette:Insert("g" ,Color( 0 ,255, 0 ,255))
       conPalette:Insert("b" ,Color( 0 , 0 ,255,255))
@@ -78,10 +92,10 @@ local conPalette  = asmlib.MakeContainer("Colours"); asmlib.SetOpVar("CONTAIN_PA
       conPalette:Insert("y" ,Color(255,255, 0 ,255))
       conPalette:Insert("w" ,Color(255,255,255,255))
       conPalette:Insert("k" ,Color( 0 , 0 , 0 ,255))
-      conPalette:Insert("gh",Color(255,255,255,150))
-      conPalette:Insert("an",Color(180,255,150,255))
-      conPalette:Insert("tx",Color(161,161,161,255))
-
+      conPalette:Insert("gh",Color(255,255,255,150)) -- self.GhostEntity
+      conPalette:Insert("an",Color(180,255,150,255)) -- Panel names color
+      conPalette:Insert("tx",Color(161,161,161,255)) -- Selected anchor
+      conPalette:Insert("db",Color(220,164, 52,255)) -- Database mode
 ------ CONFIGURE TOOL -----
 
 local SMode = asmlib.GetOpVar("CONTAIN_STACK_MODE")
@@ -351,10 +365,10 @@ if(CLIENT) then
       xyTmp.x, xyTmp.y = pnFrame:GetSize()
       xySiz.y = xyTmp.y - xyPos.y - xyDelta.y
       ------------------------------------
-      local wUse = mathFloor(0.120377559 * xySiz.x)
-      local wMec = mathFloor(0.047460893 * xySiz.x)
-      local wTyp = mathFloor(0.214127559 * xySiz.x)
-      local wNam = xySiz.x - wUse - wMec - wTyp
+      local wUse = mathFloor(0.150 * xySiz.x)
+      local wRak = mathFloor(0.065 * xySiz.x)
+      local wTyp = mathFloor(0.214 * xySiz.x)
+      local wNam = xySiz.x - wUse - wRak - wTyp
       pnListView:SetParent(pnFrame)
       pnListView:SetVisible(false)
       pnListView:SetSortable(true)
@@ -362,7 +376,7 @@ if(CLIENT) then
       pnListView:SetPos(xyPos.x,xyPos.y)
       pnListView:SetSize(xySiz.x,xySiz.y)
       pnListView:AddColumn(languageGetPhrase("tool."..gsToolNameL..".pn_routine_lb1")):SetFixedWidth(wUse) -- (1)
-      pnListView:AddColumn(languageGetPhrase("tool."..gsToolNameL..".pn_routine_lb2")):SetFixedWidth(wMec) -- (2)
+      pnListView:AddColumn(languageGetPhrase("tool."..gsToolNameL..".pn_routine_lb2")):SetFixedWidth(wRak) -- (2)
       pnListView:AddColumn(languageGetPhrase("tool."..gsToolNameL..".pn_routine_lb3")):SetFixedWidth(wTyp) -- (3)
       pnListView:AddColumn(languageGetPhrase("tool."..gsToolNameL..".pn_routine_lb4")):SetFixedWidth(wNam) -- (4)
       pnListView.OnRowSelected = function(pnSelf, nIndex, pnLine)
@@ -642,6 +656,7 @@ if(CLIENT) then
   asmlib.SetLocalify("en","tool."..gsToolNameL..".nextz_con"     , "Offset Z: ")
   asmlib.SetLocalify("en","tool."..gsToolNameL..".count"         , "Maximum number of pieces to create while stacking")
   asmlib.SetLocalify("en","tool."..gsToolNameL..".count_con"     , "Pieces count: ")
+  asmlib.SetLocalify("en","tool."..gsToolNameL..".bgskids_def"   , "Comma delimited Body/Skin IDs > ENTER ( TAB to Auto-fill from Trace )")
   asmlib.SetLocalify("en","tool."..gsToolNameL..".resetvars"     , "V Reset variables V")
   asmlib.SetLocalify("en","tool."..gsToolNameL..".resetvars_con" , "Click to reset the additional values")
   asmlib.SetLocalify("en","tool."..gsToolNameL..".contyp"        , "Select constraint type for the spawned piece")
@@ -665,6 +680,7 @@ if(CLIENT) then
   asmlib.SetLocalify("en","tool."..gsToolNameL..".trorang"       , "If checked make it use the origing from the trace")
   asmlib.SetLocalify("en","tool."..gsToolNameL..".trorang_con"   , "Use trace origin")
   asmlib.SetLocalify("en","tool."..gsToolNameL..".bgskids"       , "Selection code of comma delimited Bodygroup/Skin IDs > ENTER to accept, TAB to auto-fill from trace")
+  asmlib.SetLocalify("en","tool."..gsToolNameL..".bgskids_def"   , "Write selection code here. For example 1,0,0,2,1/3")
   asmlib.SetLocalify("en","tool."..gsToolNameL..".spnflat"       , "Spawn the piece flat on the ground")
   asmlib.SetLocalify("en","tool."..gsToolNameL..".exportdb"      , "Controls the flag to export the database")
   asmlib.SetLocalify("en","tool."..gsToolNameL..".forcelim"      , "Controls the constraint force limit")
@@ -694,10 +710,10 @@ if(CLIENT) then
   asmlib.SetLocalify("en","tool."..gsToolNameL..".pn_srchcol_lb1", "Model")
   asmlib.SetLocalify("en","tool."..gsToolNameL..".pn_srchcol_lb2", "Type")
   asmlib.SetLocalify("en","tool."..gsToolNameL..".pn_srchcol_lb3", "Name")
-  asmlib.SetLocalify("en","tool."..gsToolNameL..".pn_srchcol_lb4", "Mesh")
+  asmlib.SetLocalify("en","tool."..gsToolNameL..".pn_srchcol_lb4", "Rake")
   asmlib.SetLocalify("en","tool."..gsToolNameL..".pn_routine_lb" , "Routine items")
   asmlib.SetLocalify("en","tool."..gsToolNameL..".pn_routine_lb1", "Used")
-  asmlib.SetLocalify("en","tool."..gsToolNameL..".pn_routine_lb2", "Mesh")
+  asmlib.SetLocalify("en","tool."..gsToolNameL..".pn_routine_lb2", "Rake")
   asmlib.SetLocalify("en","tool."..gsToolNameL..".pn_routine_lb3", "Type")
   asmlib.SetLocalify("en","tool."..gsToolNameL..".pn_routine_lb4", "Name")
   asmlib.SetLocalify("en","tool."..gsToolNameL..".pn_display_lb" , "Piece Display")

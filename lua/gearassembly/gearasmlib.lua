@@ -136,6 +136,7 @@ local languageAdd             = language and language.Add
 local constructSetPhysProp    = construct and construct.SetPhysProp
 local constraintWeld          = constraint and constraint.Weld
 local constraintNoCollide     = constraint and constraint.NoCollide
+local constraintCanConstrain  = constraint and constraint.CanConstrain
 local duplicatorStoreEntityModifier = duplicator and duplicator.StoreEntityModifier
 
 ---------------- CASHES SPACE --------------------
@@ -228,7 +229,7 @@ local function Log(anyStuff)
   if(logLast == logData) then SetOpVar("LOG_CURLOGS",nCurLogs); return end
   SetOpVar("LOG_LOGLAST",logData)
   if(GetOpVar("LOG_LOGFILE")) then
-    local fName = GetOpVar("DIRPATH_BAS").."trackasmlib_log.txt"
+    local fName = GetOpVar("DIRPATH_BAS").."gearasmlib_log.txt"
     if(nCurLogs > nMaxLogs) then nCurLogs = 0; fileDelete(fName) end
     fileAppend(fName,FormatNumberMax(nCurLogs,nMaxLogs).." ["..osDate().."] "..logData.."\n")
   else -- The current has values 1..nMaxLogs(0)
@@ -840,9 +841,9 @@ local function AddLineListView(pnListView,frUsed,ivNdex)
   local sModel = tValue.Table[defTable[1][1]]
   local sType  = tValue.Table[defTable[2][1]]
   local sName  = tValue.Table[defTable[3][1]]
-  local nMesh  = tValue.Table[defTable[4][1]]
+  local nRake  = tValue.Table[defTable[4][1]]
   local nUsed  = RoundValue(tValue.Value,0.001)
-  local pnLine = pnListView:AddLine(nUsed,nMesh,sType,sName,sModel)
+  local pnLine = pnListView:AddLine(nUsed,nRake,sType,sName,sModel)
         pnLine:SetTooltip(sModel)
   return true
 end
@@ -947,13 +948,13 @@ function GetFrequentModels(snCount)
   local iInd, tmNow = 1, Time()
   local frUsed = GetOpVar("TABLE_FREQUENT_MODELS")
   tableEmpty(frUsed)
-  for Model, Record in pairs(tCache) do
-    if(IsExistent(Record.Used) and IsExistent(Record.Kept) and Record.Kept > 0) then
-      iInd = PushSortValues(frUsed,snCount,tmNow-Record.Used,{
-               [defTable[1][1]] = Model,
-               [defTable[2][1]] = Record.Type,
-               [defTable[3][1]] = Record.Name,
-               [defTable[4][1]] = Record.Mesh
+  for mod, rec in pairs(tCache) do
+    if(IsExistent(rec.Used) and IsExistent(rec.Kept) and rec.Kept > 0) then
+      iInd = PushSortValues(frUsed,snCount,tmNow-rec.Used,{
+               [defTable[1][1]] = mod,
+               [defTable[2][1]] = rec.Type,
+               [defTable[3][1]] = rec.Name,
+               [defTable[4][1]] = rec.Rake
              })
       if(iInd < 1) then return StatusLog(nil,"GetFrequentModels: Array index out of border") end
     end
@@ -1158,11 +1159,14 @@ local function DecodePOA(sStr)
   end; arPOA[dInd] = (tonumber(sStr:sub(S,E)) or 0); return arPOA
 end
 
-local function RegisterPOA(stPiece, sMod, sP, sO, sA)
+local function RegisterPOA(stPiece, ivID, sP, sO, sA)
   if(not stPiece) then
     return StatusLog(nil,"RegisterPOA: Cache record invalid") end
-  if(not IsString(sMod)) then
-    return StatusLog(nil,"RegisterPOA: Hash <"..tostring(sMod).."> invalid") end
+  local iID = tonumber(ivID)
+  if(not IsExistent(iID)) then
+    return StatusLog(nil,"RegisterPOA: OffsetID NAN {"..type(ivID).."}<"..tostring(ivID)..">") end
+  if(ivID ~= 1) then
+    return StatusLog(nil,"RegisterPOA: OffsetID <"..tostring(ivID)..">") end
   local sP = sP or "NULL"
   local sO = sO or "NULL"
   local sA = sA or "NULL"
@@ -1172,10 +1176,10 @@ local function RegisterPOA(stPiece, sMod, sP, sO, sA)
     return StatusLog(nil,"RegisterPOA: Origin {"..type(sO).."}<"..tostring(sO)..">") end
   if(not IsString(sA)) then
     return StatusLog(nil,"RegisterPOA: Angle  {"..type(sA).."}<"..tostring(sA)..">") end
-  local stPOA = stPiece.Offs
-  if(not stPOA) then
-    stPiece.Offs = {}; stPOA = stPiece.Offs
-    stPOA.P = {}; stPOA.O = {}; stPOA.A = {}
+  local tOffs = stPiece.Offs
+  if(not tOffs) then
+    stPiece.Offs = {}; tOffs = stPiece.Offs
+    tOffs.P = {}; tOffs.O = {}; tOffs.A = {}
   else return StatusLog(nil,"RegisterPOA: Hash <"..tostring(sMod).."> exists") end
   ---------------- Origin ----------------
   if((sO ~= "NULL") and not IsEmptyString(sO)) then DecodePOA(sO) else ReloadPOA() end
@@ -1534,9 +1538,9 @@ local function SQLCacheStmt(sHash,sStmt,...)
     return StatusLog(nil, "SQLCacheStmt: Store place missing") end
   if(IsExistent(sStmt)) then
     tStore[sHash] = tostring(sStmt); Print(tStore,"SQLCacheStmt: stmt") end
-  local sStmt = tStore[sHash]
-  if(not sStmt) then return StatusLog(nil, "SQLCacheStmt: Store stmt <"..sHash.."> missing") end
-  return sStmt:format(...)
+  local sBase = tStore[sHash]
+  if(not sBase) then return StatusLog(nil, "SQLCacheStmt: Store stmt <"..sHash.."> missing") end
+  return sBase:format(...)
 end
 
 local function SQLBuildSelect(defTable,tFields,tWhere,tOrderBy)
@@ -1765,8 +1769,8 @@ function InsertRecord(sTable,arLine)
       if(not IsExistent(stData.Name)) then stData.Name = arLine[3] end
       if(not IsExistent(stData.Unit)) then stData.Unit = arLine[8] end
       if(not IsExistent(stData.Slot)) then stData.Slot = snPrimaryKey end
-      if(not IsExistent(stData.Mesh)) then stData.Mesh = MatchType(defTable,arLine[4],4) end
-      if(not IsExistent(stData.Mesh)) then
+      if(not IsExistent(stData.Rake)) then stData.Rake = MatchType(defTable,arLine[4],4) end
+      if(not IsExistent(stData.Rake)) then
         return StatusLog(nil,"InsertRecord: Cannot match "
                             ..sTable.." <"..tostring(arLine[4]).."> to "
                             ..defTable[4][1].." for "..tostring(snPrimaryKey))
@@ -1965,10 +1969,11 @@ function CacheQueryPiece(sModel)
       stPiece.Slot = sModel
       stPiece.Type = qData[1][defTable[2][1]]
       stPiece.Name = qData[1][defTable[3][1]]
+      stPiece.Rake = qData[1][defTable[4][1]]
       stPiece.Unit = qData[1][defTable[8][1]]
       while(qData[iCnt]) do
         local qRec = qData[iCnt]
-        if(not IsExistent(RegisterPOA(stPiece,sModel,
+        if(not IsExistent(RegisterPOA(stPiece,iCnt,
                                       qRec[defTable[5][1]],
                                       qRec[defTable[6][1]],
                                       qRec[defTable[7][1]]))) then
@@ -2197,10 +2202,8 @@ function ExportDSV(sTable, sPref, sDelim)
   F:Write("# Data settings:\t"..GetColumns(defTable,sDelim).."\n")
   if(sModeDB == "SQL") then
     local Q = ""
-    if    (sTable == "PIECES"        ) then Q = SQLBuildSelect(defTable,nil,nil,{2,3,1,4})
-    elseif(sTable == "ADDITIONS"     ) then Q = SQLBuildSelect(defTable,nil,nil,{1,4})
-    elseif(sTable == "PHYSPROPERTIES") then Q = SQLBuildSelect(defTable,nil,nil,{1,2})
-    else                                    Q = SQLBuildSelect(defTable,nil,nil,nil) end
+    if(sTable == "PIECES") then Q = SQLBuildSelect(defTable,nil,nil,{2,3,1,4})
+    else                        Q = SQLBuildSelect(defTable,nil,nil,nil) end
     if(not IsExistent(Q)) then F:Flush(); F:Close()
       return StatusLog(false,"ExportDSV("..sPref.."): Build statement failed") end
     F:Write("# Query ran: <"..Q..">\n")
@@ -2247,34 +2250,6 @@ function ExportDSV(sTable, sPref, sDelim)
                    "\""..  StringPOA(stPnt.O,"V").."\""..sDelim..
                    "\""..( IsZeroPOA(stPnt.A,"A") and "" or StringPOA(stPnt.A,"A")).."\""..sDelim..
                    "\""..(tData.Unit and tData.Unit or "").."\"\n")
-        end
-      end
-    elseif(sTable == "ADDITIONS") then
-     for mod, rec in pairs(tCache) do
-        local sData = defTable.Name..sDelim..mod
-        for iIdx = 1, #rec do
-          local tData = rec[iIdx]; F:Write(sData)
-          for iID = 2, defTable.Size do
-            local vData = tData[defTable[iID][1]]
-            F:Write(sDelim..MatchType(defTable,tData[defTable[iID][1]],iID,true,"\""))
-          end; F:Write("\n") -- Data is already inserted, there will be no crash
-        end
-      end
-    elseif(sTable == "PHYSPROPERTIES") then
-      local tTypes = tCache[GetOpVar("HASH_PROPERTY_TYPES")]
-      local tNames = tCache[GetOpVar("HASH_PROPERTY_NAMES")]
-      if(not (tTypes or tNames)) then F:Flush(); F:Close()
-        return StatusLog(false,"ExportDSV("..sPref.."): No data found") end
-      for iInd = 1, tTypes.Kept do
-        local sType = tTypes[iInd]
-        local tType = tNames[sType]
-        if(not tType) then F:Flush(); F:Close()
-          return StatusLog(false,"ExportDSV("..sPref
-            .."): Missing index #"..iInd.." on type <"..sType..">") end
-        for iCnt = 1, tType.Kept do
-          F:Write(defTable.Name..sDelim..MatchType(defTable,sType      ,1,true,"\"")..
-                                 sDelim..MatchType(defTable,iCnt       ,2,true,"\"")..
-                                 sDelim..MatchType(defTable,tType[iCnt],3,true,"\"").."\n")
         end
       end
     end
@@ -2353,9 +2328,7 @@ function SynchronizeDSV(sTable, tData, bRepl, sPref, sDelim)
             if(not fData[sKey]) then fData[sKey] = {Kept = 0} end
               tKey = fData[sKey]
             local nID, vID = 0 -- Where the lime ID mut be read from
-            if    (sTable == "PIECES") then vID = tLine[5]; nID = tonumber(vID) or 0
-            elseif(sTable == "ADDITIONS") then vID = tLine[5]; nID = tonumber(vID) or 0
-            elseif(sTable == "PHYSPROPERTIES") then  vID = tLine[3]; nID = tonumber(vID) or 0 end
+            if    (sTable == "PIECES") then vID = tLine[5]; nID = tonumber(vID) or 0 end
             if((tKey.Kept < 0) or (nID <= tKey.Kept) or ((nID - tKey.Kept) ~= 1)) then
               I:Close(); return StatusLog(false,"SynchronizeDSV("..fPref.."): Read pont ID #"..
                 tostring(vID).." desynchronized <"..sKey.."> of <"..sTable..">") end
@@ -2375,16 +2348,19 @@ function SynchronizeDSV(sTable, tData, bRepl, sPref, sDelim)
       else sLine = sLine..sCh end
     end; I:Close()
   else LogInstance("SynchronizeDSV("..fPref.."): Creating file <"..fName..">") end
-  for mod, rec in pairs(tData) do -- Check the given table
+  for key, rec in pairs(tData) do -- Check the given table
     for pnID = 1, #rec do
       local tRec = rec[pnID]
       local nID, vID = 0 -- Where the lime ID mut be read from
-      if    (sTable == "PIECES") then vID = tRec[3]; nID = tonumber(vID) or 0
+      if(sTable == "PIECES") then
+        vID = tRec[3]; nID = tonumber(vID) or 0
+        if(pnID ~= nID) then
+          return StatusLog(false,"SynchronizeDSV("..fPref.."): Given pont ID #"..
+            tostring(vID).." desynchronized <"..key.."> of "..sTable) end
+        if(not fileExists(key, "GAME")) then
+          LogInstance("SynchronizeDSV("..fPref.."): Missing piece <"..key..">") end
       elseif(sTable == "ADDITIONS") then vID = tRec[3]; nID = tonumber(vID) or 0
       elseif(sTable == "PHYSPROPERTIES") then vID = tRec[1]; nID = tonumber(vID) or 0 end
-      if(pnID ~= nID) then
-        return StatusLog(false,"SynchronizeDSV("..fPref.."): Given pont ID #"..
-          tostring(vID).." desynchronized <"..mod.."> of "..sTable) end
       for nCnt = 1, #tRec do -- Do a value matching without automatic quotes
         local vMatch = MatchType(defTable,tRec[nCnt],nCnt+1,true,"\"",true)
         if(not IsExistent(vMatch)) then
@@ -2393,12 +2369,10 @@ function SynchronizeDSV(sTable, tData, bRepl, sPref, sDelim)
               ..defTable[nCnt+1][1].."> of "..sTable)
         end
       end
-    end
-  end
-  for mod, rec in pairs(tData) do -- Synchronize extended DSV
-    if((fData[mod] and bRepl) or not fData[mod]) then
-      fData[mod] = rec
-      fData[mod].Kept = #rec
+    end -- Register the read line to the output file
+    if((fData[key] and bRepl) or not fData[key]) then
+      fData[key] = rec
+      fData[key].Kept = #rec
     end
   end
   local tSort = Sort(tableGetKeys(fData))
@@ -2409,9 +2383,9 @@ function SynchronizeDSV(sTable, tData, bRepl, sPref, sDelim)
   O:Write("# SynchronizeDSV("..fPref.."): "..osDate().." ["..GetOpVar("MODE_DATABASE").."]\n")
   O:Write("# Data settings:\t"..GetColumns(defTable,sDelim).."\n")
   for rcID = 1, #tSort do
-    local mod = tSort[rcID].Val
-    local rec = fData[mod]
-    local sCash, sData = defTable.Name..sDelim..mod, ""
+    local key = tSort[rcID].Val
+    local rec = fData[key]
+    local sCash, sData = defTable.Name..sDelim..key, ""
     for pnID = 1, rec.Kept do
       local tItem = rec[pnID]
       for nCnt = 1, #tItem do
@@ -2545,14 +2519,6 @@ function ProcessDSV(sDelim)
         if(not ImportDSV("PIECES", true, prf)) then
           LogInstance("ProcessDSV("..prf.."): Failed PIECES") end
       end
-      if(fileExists(dir.."ADDITIONS.txt", "DATA")) then
-        if(not ImportDSV("ADDITIONS", true, prf)) then
-          LogInstance("ProcessDSV("..prf.."): Failed ADDITIONS") end
-      end
-      if(fileExists(dir.."PHYSPROPERTIES.txt", "DATA")) then
-        if(not ImportDSV("PHYSPROPERTIES", true, prf)) then
-          LogInstance("ProcessDSV("..prf.."): Failed PHYSPROPERTIES") end
-      end
     end
   end; return StatusLog(true,"ProcessDSV: Success")
 end
@@ -2603,9 +2569,12 @@ end
 ]]--
 function GetNormalSpawn(ucsPos,ucsAng,hdModel,hdPivot,ucsPosX,ucsPosY,ucsPosZ,ucsAngP,ucsAngY,ucsAngR)
   local hdRec = CacheQueryPiece(hdModel)
-  if(not IsExistent(hdRec)) then return StatusLog(nil,"GetNormalSpawn: Holder is not a piece <"..hdModel..">") end
+  if(not IsExistent(hdRec)) then
+    return StatusLog(nil,"GetNormalSpawn: Holder is not a piece <"..tostring(hdModel)..">") end
   if(not IsExistent(hdRec.Kept) and (hdRec.Kept < 1 or hdRec.Kept > 1)) then
-    return StatusLog(nil,"GetNormalSpawn: Line count <"..tostring(hdRec.Kept).."> mismatch for <"..hdModel..">") end
+    return StatusLog(nil,"GetNormalSpawn: Line count <"..tostring(hdRec.Kept).."> mismatch for <"..tostring(hdModel)..">") end
+  local hdPOA   = hdRec.Offs
+  if(not IsExistent(hdPOA)) then return StatusLog(nil,"GetNormalSpawn: Offsets missing <"..tostring(hdModel)..">") end
   local stSpawn = GetOpVar("STRUCT_SPAWN")
         stSpawn.HRec = hdRec
   if(ucsPos) then SetVector(stSpawn.OPos,ucsPos) end
@@ -2622,21 +2591,21 @@ function GetNormalSpawn(ucsPos,ucsAng,hdModel,hdPivot,ucsPosX,ucsPosY,ucsPosZ,uc
   stSpawn.R:Set(stSpawn.OAng:Right()  )
   stSpawn.F:Set(stSpawn.OAng:Forward())
   -- Read holder's data
-  SetVector(stSpawn.HPnt, hdRec.P)
-  SetVector(stSpawn.HPos, hdRec.O)
-  SetAngle (stSpawn.HAng, hdRec.A)
+  SetVector(stSpawn.HPnt, hdPOA.P)
+  SetVector(stSpawn.HPos, hdPOA.O)
+  SetAngle (stSpawn.HAng, hdPOA.A)
   -- Calcolate domain ( Angle )
   stSpawn.DAng:Set(stSpawn.OAng)
-  stSpawn.DAng:RotateAroundAxis(stSpawn.R,hdRec.Mesh)
+  stSpawn.DAng:RotateAroundAxis(stSpawn.R,hdRec.Rake)
   stSpawn.DAng:RotateAroundAxis(stSpawn.DAng:Up(),(tonumber(hdPivot) or 0) + 180)
   stSpawn.HPnt:Mul(-1)
   stSpawn.HAng:RotateAroundAxis(stSpawn.HAng:Up(),180)
   DecomposeByAngle(stSpawn.HPnt,stSpawn.HAng)
   -- Calcolate spawns
   stSpawn.SAng:Set(stSpawn.DAng)
-  stSpawn.SAng:RotateAroundAxis(stSpawn.U,stSpawn.HAng[caY] * hdRec.A[csB])
-  stSpawn.SAng:RotateAroundAxis(stSpawn.R,stSpawn.HAng[caP] * hdRec.A[csA])
-  stSpawn.SAng:RotateAroundAxis(stSpawn.F,stSpawn.HAng[caR] * hdRec.A[csC])
+  stSpawn.SAng:RotateAroundAxis(stSpawn.U,stSpawn.HAng[caY] * hdPOA.A[csB])
+  stSpawn.SAng:RotateAroundAxis(stSpawn.R,stSpawn.HAng[caP] * hdPOA.A[csA])
+  stSpawn.SAng:RotateAroundAxis(stSpawn.F,stSpawn.HAng[caR] * hdPOA.A[csC])
   stSpawn.SPos:Add(stSpawn.HPos)
   stSpawn.SPos:Mul(-1)
   stSpawn.SPos:Rotate(stSpawn.SAng)
@@ -2675,14 +2644,16 @@ function GetEntitySpawn(trEnt,trPivot,hdPivot,hdModel,enIgnTyp,
     return StatusLog(nil,"GetEntitySpawn: Holder not grouped <"..tostring(hdRec.Type)..">") end
   if((not enIgnTyp) and trRec.Type ~= hdRec.Type ) then
     return StatusLog(nil,"GetEntitySpawn: Types different <"..tostring(trRec.Type)..","..tostring(hdRec.Type)..">") end
+  local trPOA = trRec.Offs
+  if(not IsExistent(trPOA)) then return StatusLog(nil,"GetEntitySpawn: Offsets missing <"..trRec.Slot..">") end
   local trPos  , trAng    = trEnt:GetPos(), trEnt:GetAngles()
   local trPivot, hdPivot  = (tonumber(trPivot) or  0), (tonumber(hdPivot ) or 0)
   local hdModel, enIgnTyp =  tostring(hdModel  or ""), (tonumber(enIgnTyp) or 0)
   local stSpawn = GetOpVar("STRUCT_SPAWN")   -- Get cached spawn
   stSpawn.HRec, stSpawn.TRec = hdRec, trRec  -- Save records
-  SetVector(stSpawn.TPnt,trRec.P)            -- Store data in objects
-  SetVector(stSpawn.TPos,trRec.O)
-  SetAngle (stSpawn.TAng,trRec.A)
+  SetVector(stSpawn.TPnt,trPOA.P)            -- Store data in objects
+  SetVector(stSpawn.TPos,trPOA.O)
+  SetAngle (stSpawn.TAng,trPOA.A)
   stSpawn.TPos:Rotate(trAng); stSpawn.TPos:Add(trPos)       -- Trace mass-center world
   stSpawn.TAng:Set(trEnt:LocalToWorldAngles(stSpawn.TAng))  -- Initial coordinate system
   stSpawn.TAng:RotateAroundAxis(stSpawn.TAng:Up(),-trPivot) -- Apply the pivot rotation for trace
@@ -2691,7 +2662,7 @@ function GetEntitySpawn(trEnt,trPivot,hdPivot,hdModel,enIgnTyp,
   stSpawn.OPos:Rotate(stSpawn.TAng)
   stSpawn.OPos:Add(stSpawn.TPos)
   stSpawn.OAng:Set(stSpawn.TAng)
-  stSpawn.OAng:RotateAroundAxis(stSpawn.TAng:Right(),trRec.Mesh)
+  stSpawn.OAng:RotateAroundAxis(stSpawn.TAng:Right(),trRec.Rake)
   return GetNormalSpawn(nil,nil,hdModel,hdPivot,ucsPosX,ucsPosY,ucsPosZ,ucsAngP,ucsAngY,ucsAngR)
 end
 
@@ -2866,7 +2837,7 @@ function ApplyPhysicalAnchor(ePiece,eBase,vPos,vNorm,nCID,nNoC,nFoL,nToL,nFri)
   local ConstrInfo = ConstrDB:Select(CID)
   if(not IsExistent(ConstrInfo)) then
     return StatusLog(false,"ApplyPhysicalAnchor: Constraint not available") end
-  LogInstance("ApplyPhysicalAnchor: ["..ConstrInfo.Name.."] {"..CID..","..NoC..","..FrL.."}")
+  LogInstance("ApplyPhysicalAnchor: ["..ConstrInfo.Name.."] {"..CID..","..NoC..","..FrL..","..ToL..","..Fri.."}")
   if(not (ePiece and ePiece:IsValid())) then
     return StatusLog(false,"ApplyPhysicalAnchor: Piece not valid") end
   if(IsOther(ePiece)) then
@@ -2972,26 +2943,6 @@ function GetAsmVar(sName, sMode)
   elseif(sMode == "INF") then return  CVar:GetHelpText()
   elseif(sMode == "NAM") then return  CVar:GetName()
   end; return StatusLog(nil,"GetAsmVar("..sName..", "..sMode.."): Missed mode")
-end
-
-function SetLocalify(sCode, sPhrase, sDetail)
-  if(not IsString(sCode)) then
-    return StatusLog(nil,"SetLocalify: Language code <"..tostring(sCode).."> invalid") end
-  if(not IsString(sPhrase)) then
-    return StatusLog(nil,"SetLocalify: Phrase words <"..tostring(sPhrase).."> invalid") end
-  local tPool = GetOpVar("LOCALIFY_TABLE")
-  if(not IsExistent(tPool[sCode])) then tPool[sCode] = {}; end
-  tPool[sCode][sPhrase] = tostring(sDetail)
-end
-
-function InitLocalify(sCode) -- https://en.wikipedia.org/wiki/List_of_ISO_639-1_codes
-  local tPool = GetOpVar("LOCALIFY_TABLE") -- ( Column "ISO 639-1" )
-  local sCode = tostring(sCode or "") -- English is used when missing
-        sCode = tPool[sCode] and sCode or GetOpVar("LOCALIFY_AUTO")
-  if(not IsExistent(tPool[sCode])) then
-    return StatusLog(nil,"InitLocalify: Code <"..sCode.."> invalid") end
-  LogInstance("InitLocalify: Code <"..sCode.."> selected")
-  for phrase, detail in pairs(tPool[sCode]) do languageAdd(phrase, detail) end
 end
 
 function SetLocalify(sCode, sPhrase, sDetail)

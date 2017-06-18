@@ -20,10 +20,12 @@ local fileExists            = file and file.Exists
 local utilIsValidModel      = util and util.IsValidModel
 local utilIsTraceLine       = util and util.TraceLine
 local utilIsGetPlayerTrace  = util and util.GetPlayerTrace
+local tableGetKeys          = table and table.GetKeys
 local stringSub             = string and string.sub
 local stringUpper           = string and string.upper
 local stringToFileName      = string and string.GetFileFromFilename
 local stringExplode         = string and string.Explode
+local inputIsKeyDown        = input and input.IsKeyDown
 local cleanupRegister       = cleanup and cleanup.Register
 local concommandAdd         = concommand and concommand.Add
 local surfaceScreenWidth    = surface and surface.ScreenWidth
@@ -45,12 +47,15 @@ local caP, caY, caR = asmlib.GetIndexes("A")
 local VEC_ZERO = asmlib.GetOpVar("VEC_ZERO")
 local ANG_ZERO = asmlib.GetOpVar("ANG_ZERO")
 
+local gsDataRoot  = asmlib.GetOpVar("DIRPATH_BAS")
 local gsModeDataB = asmlib.GetOpVar("MODE_DATABASE")
 local gsNoID      = asmlib.GetOpVar("MISS_NOID")
 local gsNoMD      = asmlib.GetOpVar("MISS_NOMD")
 local SMode       = asmlib.GetOpVar("CONTAIN_STACK_MODE")
 local CType       = asmlib.GetOpVar("CONTAIN_CONSTRAINT_TYPE")
 local gsSymRev    = asmlib.GetOpVar("OPSYM_REVSIGN")
+local gsLimitName = asmlib.GetOpVar("CVAR_LIMITNAME")
+local gsUndoPrefN = asmlib.GetOpVar("NAME_INIT"):gsub("^%l", string.upper)..": "
 local gnRatio     = asmlib.GetOpVar("GOLDEN_RATIO")
 local gnMaxOffRot = asmlib.GetOpVar("MAX_ROTATION")
 local gnMaxErMode = asmlib.GetAsmVar("bnderrmod","STR")
@@ -58,9 +63,8 @@ local gsToolPrefL = asmlib.GetOpVar("TOOLNAME_PL")
 local gsToolNameL = asmlib.GetOpVar("TOOLNAME_NL")
 local gsToolPrefU = asmlib.GetOpVar("TOOLNAME_PU")
 local gsToolNameU = asmlib.GetOpVar("TOOLNAME_NU")
-local gsLimitName = asmlib.GetOpVar("CVAR_LIMITNAME")
 local gsNoAnchor  = gsNoID..gsSymRev..gsNoMD
-local conPalette  = asmlib.GetOpVar("CONTAIN_PALETTE")
+local conPalette  = asmlib.GetOpVar("CONTAINER_PALETTE")
 
 if(not asmlib.ProcessDSV()) then -- Default tab delimiter
   asmlib.LogInstance("Processing data list failed <"..gsDataRoot.."trackasmlib_dsv.txt>")
@@ -85,8 +89,8 @@ if(SERVER) then
   duplicatorRegisterEntityModifier(gsToolPrefL.."dupe_phys_set",asmlib.GetActionCode("DUPE_PHYS_SETTINGS"))
 end
 
-TOOL.Category   = languageGetPhrase("tool."..gsToolNameL..".category") -- Name of the category
-TOOL.Name       = languageGetPhrase("tool."..gsToolNameL..".name")     -- Name to display
+TOOL.Category   = languageGetPhrase and languageGetPhrase("tool."..gsToolNameL..".category") -- Name of the category
+TOOL.Name       = languageGetPhrase and languageGetPhrase("tool."..gsToolNameL..".name")     -- Name to display
 TOOL.Command    = nil  -- Command on click ( nil )
 TOOL.ConfigName = nil  -- Config file name ( nil )
 TOOL.AddToMenu  = true -- Yo add it to the Q menu or not ( true )
@@ -125,7 +129,7 @@ TOOL.ClientConVar = {
 }
 
 function TOOL:GetModel()
-  return self:GetClientInfo("model") or ""
+  return tostring(self:GetClientInfo("model") or "")
 end
 
 function TOOL:GetCount()
@@ -286,8 +290,8 @@ function TOOL:GetStatus(stTrace,anyMessage,hdEnt)
   local ply, sDelim  = self:GetOwner(), "\n"
   local iCurLog = asmlib.GetOpVar("LOG_CURLOGS")
   local sFleLog = asmlib.GetOpVar("LOG_LOGFILE")
-  local sSpace  = stringRep(" ",6 + stringLen(tostring(iMaxlog)))
-  local plyKeys = asmlib.LoadKeyPly(ply,"DEBUG")
+  local sSpace  = (" "):rep(6 + tostring(iMaxlog):len())
+  local plyKeys = asmlib.ReadKeyPly(ply)
   local rotpivt, rotpivh = self:GetRotatePivot()
   local aninfo , anEnt   = self:GetAnchor()
   local nextx  , nexty  , nextz   = self:GetPosOffsets()
@@ -307,12 +311,12 @@ function TOOL:GetStatus(stTrace,anyMessage,hdEnt)
         sDu = sDu..sSpace.."  MaxProps:       <"..tostring(GetConVar("sbox_maxprops","INT"))..">"..sDelim
         sDu = sDu..sSpace.."  MaxTrack:       <"..tostring(GetConVar("sbox_max"..gsLimitName,"INT"))..">"..sDelim
         sDu = sDu..sSpace.."Dumping player keys:"..sDelim
-        sDu = sDu..sSpace.."  Player:         "..stringGsub(tostring(ply),"Player%s","")..sDelim
-        sDu = sDu..sSpace.."  IN.USE:         <"..tostring(plyKeys["USE"])..">"..sDelim
-        sDu = sDu..sSpace.."  IN.DUCK:        <"..tostring(plyKeys["DUCK"])..">"..sDelim
-        sDu = sDu..sSpace.."  IN.SPEED:       <"..tostring(plyKeys["SPEED"])..">"..sDelim
-        sDu = sDu..sSpace.."  IN.RELOAD:      <"..tostring(plyKeys["RELOAD"])..">"..sDelim
-        sDu = sDu..sSpace.."  IN.SCORE:       <"..tostring(plyKeys["SCORE"])..">"..sDelim
+        sDu = sDu..sSpace.."  Player:         "..tostring(ply):gsub("Player%s","")..sDelim
+        sDu = sDu..sSpace.."  IN.USE:         <"..tostring(asmlib.CheckButtonPly(ply,IN_USE))..">"..sDelim
+        sDu = sDu..sSpace.."  IN.DUCK:        <"..tostring(asmlib.CheckButtonPly(ply,IN_DUCK))..">"..sDelim
+        sDu = sDu..sSpace.."  IN.SPEED:       <"..tostring(asmlib.CheckButtonPly(ply,IN_SPEED))..">"..sDelim
+        sDu = sDu..sSpace.."  IN.RELOAD:      <"..tostring(asmlib.CheckButtonPly(ply,IN_RELOAD))..">"..sDelim
+        sDu = sDu..sSpace.."  IN.SCORE:       <"..tostring(asmlib.CheckButtonPly(ply,IN_SCORE))..">"..sDelim
         sDu = sDu..sSpace.."Dumping trace data state:"..sDelim
         sDu = sDu..sSpace.."  Trace:          <"..tostring(stTrace)..">"..sDelim
         sDu = sDu..sSpace.."  TR.Hit:         <"..tostring(stTrace and stTrace.Hit or gsNoAV)..">"..sDelim
@@ -392,8 +396,9 @@ function TOOL:LeftClick(stTrace)
   asmlib.ReadKeyPly(ply)
   if(not asmlib.CheckButtonPly(ply,IN_SPEED) and not asmlib.CheckButtonPly(ply,IN_DUCK)) then
     if(not (eBase and eBase:IsValid()) and (trEnt and trEnt:IsValid())) then eBase = trEnt end
-    local stSpawn = asmlib.GetNormalSpawn(stTrace,model,rotpivh,nextx,nexty,nextz,
-                                              nextpic,nextyaw,nextrol)
+    local vPos = stTrace.HitPos
+    local aAng = stTrace.HitNormal:Angle(); aAng[caP] = aAng[caP] + 90;
+    local stSpawn = asmlib.GetNormalSpawn(vPos,aAng,model,rotpivh,nextx,nexty,nextz,nextpic,nextyaw,nextrol)
     if(not stSpawn) then return asmlib.StatusLog(false,self:GetStatus(stTrace,"TOOL:LeftClick(World): Normal spawn failed")) end
     local ePiece = asmlib.MakePiece(ply,model,stTrace.HitPos,ANG_ZERO,mass,bgskids,conPalette:Select("w"),bnderrmod)
     if(not ePiece) then return asmlib.StatusLog(false,self:GetStatus(stTrace,"TOOL:LeftClick(World): Making piece failed")) end
@@ -519,7 +524,7 @@ function TOOL:RightClick(stTrace)
       if(not asmlib.IsPhysTrace(stTrace)) then return false end
       if(asmlib.IsOther(trEnt)) then return false end
       self:SetAnchor(stTrace); return asmlib.StatusLog(true,"TOOL:RightClick(Prop): Anchor set")
-    else return asmlib.StatusLog(true,self:GetStaus(stTrace,"TOOL:RightClick(Prop): Invalid action",trEnt)) end
+    else return asmlib.StatusLog(true,self:GetStatus(stTrace,"TOOL:RightClick(Prop): Invalid action",trEnt)) end
   else
     local stmode = asmlib.GetCorrectID(self:GetStackMode(),SMode)
           stmode = asmlib.GetCorrectID(stmode + 1,SMode)
@@ -530,7 +535,10 @@ function TOOL:RightClick(stTrace)
 end
 
 function TOOL:Reload(Trace)
-  if(CLIENT) then return true end
+  if(CLIENT) then
+
+    return true
+  end
   if(not Trace) then return false end
   local ply = self:GetOwner()
   asmlib.ReadKeyPly(ply)
@@ -541,12 +549,12 @@ function TOOL:Reload(Trace)
       asmlib.ExportDSV("PIECES")
       asmlib.ConCommandPly(ply, "exportdb", 0)
     end; return asmlib.StatusLog(true,"TOOL:Reload(World): Success")
-  end
+  end 
   if(not asmlib.IsPhysTrace(Trace)) then
-    return asmlib.StatusLog(false,self:GetStaus(stTrace,"TOOL:Reload(): Trace not physics")) end
+    return asmlib.StatusLog(false,self:GetStatus(stTrace,"TOOL:Reload(): Trace not physics")) end
   local trEnt = Trace.Entity
   if(asmlib.IsOther(trEnt)) then
-    return asmlib.StatusLog(false,self:GetStaus(stTrace,"TOOL:Reload(): Other entity",trEnt)) end
+    return asmlib.StatusLog(false,self:GetStatus(stTrace,"TOOL:Reload(): Other entity",trEnt)) end
   local trRec = asmlib.CacheQueryPiece(trEnt:GetModel())
   if(trRec) then trEnt:Remove(); return asmlib.StatusLog(true,"TOOL:Reload(Prop): Removed a piece") end
   return asmlib.StatusLog(false,"TOOL:Reload(): Nothing removed")
@@ -594,14 +602,13 @@ function TOOL:DrawHUD()
   local ratiom = (gnRatio * 1000)
   local plyd   = (stTrace.HitPos - oPly:GetPos()):Length()
   local plyrad = mathClamp(ratiom / plyd,1,ratioc)
+  local rotpivt, rotpivh = self:GetRotatePivot()
   local nextx  , nexty  , nextz   = self:GetPosOffsets()
   local nextpic, nextyaw, nextrol = self:GetAngOffsets()
-  asmlib.ReadKeyPly(oPly)
-  if(trEnt and trEnt:IsValid() and asmlib.CheckButtonPly(oPly,IN_SPEED)) then
+  if(trEnt and trEnt:IsValid() and inputIsKeyDown(IN_SPEED)) then
     if(asmlib.IsOther(trEnt)) then return end
     local igntyp  = self:GetIgnoreType()
     local trorang = self:GetTraceOriginAngle()
-    local rotpivt, rotpivh = self:GetRotatePivot()
     local stSpawn = asmlib.GetEntitySpawn(trEnt,rotpivt,rotpivh,model,igntyp,
                                           nextx,nexty,nextz,nextpic,nextyaw,nextrol)
     if(not stSpawn) then return end
@@ -615,11 +622,11 @@ function TOOL:DrawHUD()
     local Cp =  stSpawn.CPos:ToScreen()
     local Cu = (stSpawn.CPos + 15 * stSpawn.CAng:Up()):ToScreen()
     -- Draw UCS
-    hudMonitor:DrawLine(Op,Xs,"r","SURF")-- Base X
-    hudMonitor:DrawLine(Sp,Df)           -- Next
-    hudMonitor:DrawLine(Op,Zs,"b")       -- Base Z
-    hudMonitor:DrawLine(Cp,Cu,"y")       -- Base Z
-    hudMonitor:DrawCircle(Op,plyrad)     -- Base O
+    hudMonitor:DrawLine(Op,Xs,"r","SURF")   -- Base X
+    hudMonitor:DrawLine(Sp,Df)              -- Next
+    hudMonitor:DrawLine(Op,Zs,"b")          -- Base Z
+    hudMonitor:DrawLine(Cp,Cu,"y")          -- Base Z
+    hudMonitor:DrawCircle(Op,plyrad,"SURF") -- Base O
     hudMonitor:DrawLine(Op,Ys,"g")
     hudMonitor:DrawLine(Cp,Op)
     hudMonitor:DrawCircle(Cp,plyrad)
@@ -628,16 +635,18 @@ function TOOL:DrawHUD()
     hudMonitor:DrawLine(Sp,Du,"c")
     if(self:GetDeveloperMode()) then DrawAdditionalInfo(hudMonitor,stSpawn) end
   else
-    local stSpawn  = asmlib.GetNormalSpawn(Trace,model,nextx,nexty,nextz,nextpic,nextyaw,nextrol)
+    local vPos = stTrace.HitPos
+    local aAng = stTrace.HitNormal:Angle(); aAng[caP] = aAng[caP] + 90
+    local stSpawn  = asmlib.GetNormalSpawn(vPos,aAng,model,rotpivh,nextx,nexty,nextz,nextpic,nextyaw,nextrol)
     if(not stSpawn) then return false end
     local Os = stSpawn.SPos:ToScreen()
     local Xs = (stSpawn.SPos + 15 * stSpawn.F):ToScreen()
     local Ys = (stSpawn.SPos + 15 * stSpawn.R):ToScreen()
     local Zs = (stSpawn.SPos + 15 * stSpawn.U):ToScreen()
-    hudMonitor:DrawLine(Os,Xs,"r")
+    hudMonitor:DrawLine(Os,Xs,"r","SURF")
     hudMonitor:DrawLine(Os,Ys,"g")
     hudMonitor:DrawLine(Os,Zs,"b")
-    hudMonitor:DrawCircle(Os,plyrad,"y")
+    hudMonitor:DrawCircle(Os,plyrad,"y","SURF")
     if(self:GetDeveloperMode()) then DrawAdditionalInfo(hudMonitor,stSpawn) end
   end
 end
@@ -650,15 +659,15 @@ local function DrawRatioVisual(oScr,nTrR,nHdR,nDeep)
   local dx, dy, dw, dh = oScr:GetTextState(0,0,0,2)
   if(nTrR) then
     local Cent = mathFloor((nTrR / ( nTrR + nHdR )) * nW)
-    oScr:DrawRect(0,dh,nDeep,nH-dy,"y")               -- Trace Teeth
-    oScr:DrawRect(nDeep,dh,Cent-hDeep,nH-dy,"g")      -- Trace Gear
-    oScr:DrawRect(Cent-hDeep,dh,Cent+hDeep,nH-dy,"y") -- Meshing
-    oScr:DrawRect(Cent+hDeep,dh,nW-nDeep,nH-dy,"m")   -- Holds Gear
-    oScr:DrawRect(nW-nDeep,dh,nW,nH-dy,"y")           -- Holds Teeth
+    oScr:DrawRect({x=0,y=dh},{x=nDeep,y=nH-dy},"y","SURF")        -- Trace Teeth
+    oScr:DrawRect({x=nDeep,y=dh},{x=Cent-hDeep,y=nH-dy},"g")      -- Trace Gear
+    oScr:DrawRect({x=Cent-hDeep,y=dh},{x=Cent+hDeep,y=nH-dy},"y") -- Raking
+    oScr:DrawRect({x=Cent+hDeep,y=dh},{x=nW-nDeep,y=nH-dy},"m")   -- Holds Gear
+    oScr:DrawRect({x=nW-nDeep,y=dh},{x=nW,y=nH-dy},"y")           -- Holds Teeth
   else
-    oScr:DrawRect(0,dh,nDeep,nH-dy,"y")               -- Holds Teeth
-    oScr:DrawRect(nDeep,dh,nW-nDeep,nH-dy,"g")        -- Holds
-    oScr:DrawRect(nW-nDeep,dh,nW,nH-dy,"y")           -- Holds Teeth
+    oScr:DrawRect({x=0,y=dh},{x=nDeep,y=nH-dy},"y","SURF")         -- Holds Teeth
+    oScr:DrawRect({x=nDeep,y=dh},{x=nW-nDeep,y=nH-dy},"g")         -- Holds
+    oScr:DrawRect({x=nW-nDeep,y=dh},{x=nW,y=nH-dy},"y")            -- Holds Teeth
   end
 end
 
@@ -686,6 +695,8 @@ function TOOL:DrawToolScreen(w, h)
   scrTool:DrawText("Trace status: Valid","g","SURF",{"Trebuchet24"})
   scrTool:DrawTextAdd("  ["..(tInfo[1] or gsNoID).."]","an")
   local model = self:GetModel()
+  print("Tst", model, util.IsValidModel(model))
+  
   local hdRec = asmlib.CacheQueryPiece(model)
   if(not hdRec) then
     scrTool:DrawText("Holds Model: Invalid","r")
@@ -696,24 +707,24 @@ function TOOL:DrawToolScreen(w, h)
   scrTool:DrawTextAdd("  ["..gsModeDataB.."]","db")
   local NoAV  = "N/A"
   local trEnt = Trace.Entity
-  local trOrig, trModel, trMesh, trRad
+  local trOrig, trModel, trRake, trRad
   local stmode = asmlib.GetCorrectID(self:GetStackMode(),SMode)
   if(trEnt and trEnt:IsValid()) then
     if(asmlib.IsOther(trEnt)) then return end
           trModel = trEnt:GetModel()
     local trRec   = asmlib.CacheQueryPiece(trModel)
-          trModel = asmlib.GetModelFileName(trModel)
+          trModel = stringToFileName(trModel)
     if(trRec) then
-      trMesh = asmlib.RoundValue(trRec.Mesh,0.01)
-      trRad  = asmlib.RoundValue(asmlib.GetLengthVector(trRec.O),0.01)
+      trRake = asmlib.RoundValue(trRec.Rake,0.01)
+      trRad  = asmlib.RoundValue(asmlib.GetLengthVector(trRec.Offs.O),0.01)
     end
   end
-  local hdRad = asmlib.RoundValue(asmlib.GetLengthVector(hdRec.O),0.01)
+  local hdRad = asmlib.RoundValue(asmlib.GetLengthVector(hdRec.Offs.O),0.01)
   local Ratio = asmlib.RoundValue((trRad or 0) / hdRad,0.01)
   scrTool:DrawText("TM: "..(trModel or NoAV),"g")
-  scrTool:DrawText("HM: "..(asmlib.GetModelFileName(model) or NoAV),"m")
+  scrTool:DrawText("HM: "..(stringToFileName(model) or NoAV),"m")
   scrTool:DrawText("Anc: "..self:GetAnchor("anchor"),"an")
-  scrTool:DrawText("Mesh: "..tostring(trMesh or NoAV).." > "..tostring(asmlib.RoundValue(hdRec.Mesh,0.01) or NoAV),"y")
+  scrTool:DrawText("Rake: "..tostring(trRake or NoAV).." > "..tostring(asmlib.RoundValue(hdRec.Rake,0.01) or NoAV),"y")
   scrTool:DrawText("Ratio: "..tostring(Ratio).." > "..tostring(trRad or NoAV).."/"..tostring(hdRad))
   scrTool:DrawText("StackMod: "..SMode:Select(stmode),"r")
   scrTool:DrawText(tostring(osDate()),"w")
@@ -734,28 +745,28 @@ function TOOL.BuildCPanel(CPanel)
 
   local Panel  = asmlib.CacheQueryPanel()
   if(not Panel) then return asmlib.StatusPrint(nil,"TOOL:BuildCPanel(cPanel): Panel population empty") end
-  local stTable = asmlib.GetOpVar("DEFTABLE_PIECES")
-  local pTree   = vguiCreate("DTree")
+  local defTable = asmlib.GetOpVar("DEFTABLE_PIECES")
+  local catTypes = asmlib.GetOpVar("TABLE_CATEGORIES")
+  local pTree    = vguiCreate("DTree")
         pTree:SetPos(2, CurY)
         pTree:SetSize(2, 200)
         pTree:SetIndentSize(0)
-  local iCnt, pFolders, pNode = 1, {}
+  local iCnt, pFolders, pCateg, pNode = 1, {}, {}
   while(Panel[iCnt]) do
-    local Val = Panel[iCnt]
-    local Mod = Val[stTable[1][1]]
-    local Typ = Val[stTable[2][1]]
-    local Nam = Val[stTable[3][1]]
+    local Rec = Panel[iCnt]
+    local Mod = Rec[defTable[1][1]]
+    local Typ = Rec[defTable[2][1]]
+    local Nam = Rec[defTable[3][1]]
     if(fileExists(Mod, "GAME")) then
       if(Typ ~= "" and not pFolders[Typ]) then
-      -- No Folder, Make one xD
-        pItem = pTree:AddNode(Typ)
-        pItem:SetName(Typ)
-        pItem.Icon:SetImage("icon16/database_connect.png")
-        pItem.InternalDoClick = function() end
-        pItem.DoClick = function() return false end
-        pItem.Label.UpdateColours = function(pSelf)
-          return pSelf:SetTextStyleColor(conPalette:Select("tx")) end
-        pFolders[Typ] = pItem
+        local pRoot = pTree:AddNode(Typ) -- No type folder made already
+              pRoot.Icon:SetImage("icon16/database_connect.png")
+              pRoot.InternalDoClick = function() end
+              pRoot.DoClick         = function() return false end
+              pRoot.DoRightClick    = function() SetClipboardText(pRoot:GetText()) end
+              pRoot.Label.UpdateColours = function(pSelf)
+                return pSelf:SetTextStyleColor(conPalette:Select("tx")) end
+        pFolders[Typ] = pRoot
       end -- Reset the primary tree node pointer
       if(pFolders[Typ]) then pItem = pFolders[Typ] else pItem = pTree end
       -- Register the category if definition functional is given
@@ -782,7 +793,7 @@ function TOOL.BuildCPanel(CPanel)
       end
       -- Register the node asociated with the track piece
       pNode = pItem:AddNode(Nam)
-      pNode:SetName(Nam)
+      pNode.DoRightClick = function() SetClipboardText(Mod) end
       pNode:SetTooltip(languageGetPhrase("tool."..gsToolNameL..".model"))
       pNode.Icon:SetImage("icon16/brick.png")
       pNode.DoClick = function() RunConsoleCommand(gsToolPrefL.."model", Mod) end
@@ -813,24 +824,22 @@ function TOOL.BuildCPanel(CPanel)
   pConsType:ChooseOptionID(ConID)
   CPanel:AddItem(pConsType)
 
-  -- http://wiki.garrysmod.com/page/Category:DTextEntry
+-- http://wiki.garrysmod.com/page/Category:DTextEntry
   local pText = vguiCreate("DTextEntry")
-        pText:SetPos(2, 300)
+        pText:SetPos(2, CurY)
         pText:SetTall(18)
-        pText:SetText(asmlib.GetDefaultString(asmlib.GetAsmVar("bgskids","STR"),
-                 "Comma delimited Body/Skin IDs > ENTER ( TAB to Auto-fill from Trace )"))
+        pText:SetTooltip(languageGetPhrase("tool."..gsToolNameL..".bgskids"))
+        pText:SetText(asmlib.DefaultString(asmlib.GetAsmVar("bgskids", "STR"),languageGetPhrase("tool."..gsToolNameL..".bgskids_def")))
         pText.OnKeyCodeTyped = function(pnSelf, nKeyEnum)
           if(nKeyEnum == KEY_TAB) then
-            local sTX = asmlib.GetPropBodyGrp()
-                 .."/"..asmlib.GetPropSkin()
+            local sTX = asmlib.GetPropBodyGroup()..gsSymDir..asmlib.GetPropSkin()
             pnSelf:SetText(sTX)
             pnSelf:SetValue(sTX)
           elseif(nKeyEnum == KEY_ENTER) then
             local sTX = pnSelf:GetValue() or ""
             RunConsoleCommand(gsToolPrefL.."bgskids",sTX)
           end
-        end
-        CurY = CurY + pText:GetTall() + 2
+        end; CurY = CurY + pText:GetTall() + 2
   CPanel:AddItem(pText)
 
   pItem = CPanel:NumSlider(languageGetPhrase("tool."..gsToolNameL..".mass_con"), gsToolPrefL.."mass", 1, asmlib.GetAsmVar("maxmass","FLT")  , 0)
@@ -887,15 +896,14 @@ end
 function TOOL:UpdateGhost(oEnt, oPly)
   if(not oEnt) then return end
   if(not oEnt:IsValid()) then return end
-  local Trace = utilTraceLine(utilGetPlayerTrace(oPly))
-  if(not Trace) then return end
-  local trEnt = Trace.Entity
+  local stTrace = utilTraceLine(utilGetPlayerTrace(oPly))
+  if(not stTrace) then return end
+  local trEnt = stTrace.Entity
   oEnt:SetNoDraw(true)
   oEnt:DrawShadow(false)
   oEnt:SetColor(conPalette:Select("gh"))
-  asmlib.PlyLoadKey(oPly)
   local rotpivt, rotpivh = self:GetRotatePivot()
-  if(trEnt and trEnt:IsValid() and asmlib.PlyLoadKey(oPly,"SPEED")) then
+  if(trEnt and trEnt:IsValid() and inputIsKeyDown(IN_SPEED)) then
     if(asmlib.IsOther(trEnt)) then return end
     local trRec = asmlib.CacheQueryPiece(trEnt:GetModel())
     if(trRec) then
@@ -914,12 +922,14 @@ function TOOL:UpdateGhost(oEnt, oPly)
     local model = self:GetModel()
     local nextx, nexty, nextz = self:GetPosOffsets()
     local nextpic, nextyaw, nextrol = self:GetAngOffsets()
-    local stSpawn = asmlib.GetNormalSpawn(Trace,model,nextx,nexty,nextz,nextpic,nextyaw,nextrol)
+    local vPos = stTrace.HitPos
+    local aAng = stTrace.HitNormal:Angle(); aAng[caP] = aAng[caP] + 90
+    local stSpawn = asmlib.GetNormalSpawn(vPos,aAng,model,rotpivh,nextx,nexty,nextz,nextpic,nextyaw,nextrol)
     if(not stSpawn) then return end
     local spnflat = self:GetSpawnFlat()
     oEnt:SetNoDraw(false)
     oEnt:SetAngles(stSpawn.SAng)
-    stSpawn.SPos:Add(asmlib.GetCustomAngBBZ(oEnt,stSpawn.HRec,spnflat) * Trace.HitNormal)
+    stSpawn.SPos:Add(asmlib.GetCustomAngBBZ(oEnt,stSpawn.HRec,spnflat) * stTrace.HitNormal)
     oEnt:SetPos(stSpawn.SPos)
     return
   end
