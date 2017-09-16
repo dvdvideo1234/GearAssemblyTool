@@ -365,6 +365,7 @@ function InitBase(sName,sPurpose)
   SetOpVar("OPSYM_DIVIDER","_")
   SetOpVar("OPSYM_DIRECTORY","/")
   SetOpVar("OPSYM_SEPARATOR",",")
+  SetOpVar("DELAY_FREEZE",0.01)
   SetOpVar("DIAG_SQUARE", 2 * mathSqrt(2))
   SetOpVar("GOLDEN_RATIO",1.61803398875)
   SetOpVar("NAME_INIT",sName:lower())
@@ -397,21 +398,24 @@ function InitBase(sName,sPurpose)
   SetOpVar("NAV_PIECE",{})
   SetOpVar("NAV_PANEL",{})
   SetOpVar("STRUCT_SPAWN",{
-    F    = Vector(),
-    R    = Vector(),
-    U    = Vector(),
-    OPos = Vector(),
-    OAng = Angle (),
-    SPos = Vector(),
-    SAng = Angle (),
-    DAng = Angle (),
+    F    = Vector(), -- Origing forward vector
+    R    = Vector(), -- Origin right vector
+    U    = Vector(), -- Origin up vector
+    OPos = Vector(), -- Origin position
+    OAng = Angle (), -- Origin angle
+    SPos = Vector(), -- Gear spawn posiotion
+    SAng = Angle (), -- Gear spawn angle
+    DAng = Angle (), -- Domain angle. Used to constraints
+    NPos = Vector(), -- Offset as position
+    NAng = Angle (), -- Offset as angle 
+    MAng = Angle (), -- Temporary model dcomposition angle
     --- Holder ---
-    HRec = 0,
+    HRec = 0,        -- Pointer to the holder record
     HPnt = Vector(), -- P
     HPos = Vector(), -- O
     HAng = Angle (), -- A
     --- Traced ---
-    TRec = 0,
+    TRec = 0,        -- Pointer to the trace record
     TPnt = Vector(), -- P
     TPos = Vector(), -- O
     TAng = Angle ()  -- A
@@ -1400,12 +1404,9 @@ function CheckButtonPly(pPly, ivInKey)
   local iInKey = tonumber(ivInKey)
   if(not IsExistent(iInKey)) then
     return StatusLog(false,"CheckButtonPly: Input key {"..type(ivInKey)"}<"..tostring(ivInKey).."> invalid") end
-  local plyKeys  = GetOpVar("TABLE_PLAYER_KEYS")
-  local plyNick  = pPly:Nick()
-  local plyPlace = plyKeys[plyNick]
-  if(not IsExistent(plyPlace)) then
-    return StatusLog(false,"CheckButtonPly: Player <"..plyNick.."> commands not loaded") end
-  return (bitBand(plyPlace["K_BTN"],iInKey) ~= 0)
+  local plyPlace = GetOpVar("TABLE_PLAYER_KEYS")[pPly]
+  if(CLIENT or (SERVER and not IsExistent(plyPlace))) then return pPly:KeyDown(iInKey) end
+  return (bitBand(plyPlace["K_BTN"],iInKey) ~= 0) -- Read the cache
 end
 
 -------------------------- BUILDSQL ------------------------------
@@ -2550,10 +2551,16 @@ function GetCustomAngBBZ(oEnt,oRec,nMode)
     local vOBB = oEnt:OBBMins()
           SubVector(vOBB,oRec.M)
           vOBB:Rotate(aAngDB)
-          DecomposeByAngle(vOBB,Angle(0,0,0))
+          DecomposeByAngle(vOBB,Angle())
     return mathAbs(vOBB[cvZ])
   end
   return (oEnt:OBBMaxs() - oEnt:OBBMins()):Length() / GetOpVar("DIAG_SQUARE")
+end
+
+function GetNormalAngle(oPly, stTr)
+  local aAng = Angle()
+  if(not IsPlayer(oPly)) then return StatusLog(aAng,"GetNormalAngle: No player <"..tostring(oPly)..">") end
+  aAng:Set(stTr.HitNormal:Cross(oPly:GetRight()):AngleEx(stTr.HitNormal)); return aAng
 end
 
 ----------------------------- SNAPPING ------------------------------
@@ -2571,7 +2578,7 @@ function GetNormalSpawn(ucsPos,ucsAng,hdModel,hdPivot,ucsPosX,ucsPosY,ucsPosZ,uc
   local hdRec = CacheQueryPiece(hdModel)
   if(not IsExistent(hdRec)) then
     return StatusLog(nil,"GetNormalSpawn: Holder is not a piece <"..tostring(hdModel)..">") end
-  if(not IsExistent(hdRec.Kept) and (hdRec.Kept < 1 or hdRec.Kept > 1)) then
+  if(not (IsExistent(hdRec.Kept) and (hdRec.Kept == 1))) then
     return StatusLog(nil,"GetNormalSpawn: Line count <"..tostring(hdRec.Kept).."> mismatch for <"..tostring(hdModel)..">") end
   local hdPOA   = hdRec.Offs
   if(not IsExistent(hdPOA)) then return StatusLog(nil,"GetNormalSpawn: Offsets missing <"..tostring(hdModel)..">") end
@@ -2584,35 +2591,42 @@ function GetNormalSpawn(ucsPos,ucsAng,hdModel,hdPivot,ucsPosX,ucsPosY,ucsPosZ,uc
   stSpawn.R:Set(stSpawn.OAng:Right()  )
   stSpawn.F:Set(stSpawn.OAng:Forward())
   -- Rotate origin
-  stSpawn.OAng:RotateAroundAxis(stSpawn.U,(tonumber(ucsAngY) or 0))
-  stSpawn.OAng:RotateAroundAxis(stSpawn.R,(tonumber(ucsAngP) or 0))
-  stSpawn.OAng:RotateAroundAxis(stSpawn.F,(tonumber(ucsAngR) or 0))
+  SetAnglePYR(stSpawn.NAng, (tonumber(ucsAngP) or 0), (tonumber(ucsAngY) or 0), (tonumber(ucsAngR) or 0))
+  stSpawn.OAng:RotateAroundAxis(stSpawn.U, stSpawn.NAng[caY])
+  stSpawn.OAng:RotateAroundAxis(stSpawn.R, stSpawn.NAng[caP])
+  stSpawn.OAng:RotateAroundAxis(stSpawn.F, stSpawn.NAng[caR])
   stSpawn.U:Set(stSpawn.OAng:Up()     )
   stSpawn.R:Set(stSpawn.OAng:Right()  )
   stSpawn.F:Set(stSpawn.OAng:Forward())
   -- Read holder's data
-  SetVector(stSpawn.HPnt, hdPOA.P)
-  SetVector(stSpawn.HPos, hdPOA.O)
-  SetAngle (stSpawn.HAng, hdPOA.A)
+  SetVector(stSpawn.HPnt, hdPOA.P) -- Offset meshing point
+  SetVector(stSpawn.HPos, hdPOA.O) -- Mass center origin
+  SetAngle (stSpawn.HAng, hdPOA.A) -- Custom angle
   -- Calcolate domain ( Angle )
   stSpawn.DAng:Set(stSpawn.OAng)
   stSpawn.DAng:RotateAroundAxis(stSpawn.R,hdRec.Rake)
-  stSpawn.DAng:RotateAroundAxis(stSpawn.DAng:Up(),(tonumber(hdPivot) or 0) + 180)
-  stSpawn.HPnt:Mul(-1)
-  stSpawn.HAng:RotateAroundAxis(stSpawn.HAng:Up(),180)
-  DecomposeByAngle(stSpawn.HPnt,stSpawn.HAng)
+  stSpawn.DAng:RotateAroundAxis(stSpawn.DAng:Up(),(tonumber(hdPivot) or 0))
+  stSpawn.MAng:Set(stSpawn.HAng)
+  stSpawn.MAng:RotateAroundAxis(stSpawn.MAng:Up(),180)  
+  stSpawn.MAng:RotateAroundAxis(stSpawn.MAng:Right(),-hdRec.Rake)
+  stSpawn.HPnt:Mul(-1); DecomposeByAngle(stSpawn.HPnt,stSpawn.MAng);
+  
   -- Calcolate spawns
   stSpawn.SAng:Set(stSpawn.DAng)
   stSpawn.SAng:RotateAroundAxis(stSpawn.U,stSpawn.HAng[caY] * hdPOA.A[csB])
   stSpawn.SAng:RotateAroundAxis(stSpawn.R,stSpawn.HAng[caP] * hdPOA.A[csA])
-  stSpawn.SAng:RotateAroundAxis(stSpawn.F,stSpawn.HAng[caR] * hdPOA.A[csC])
-  stSpawn.SPos:Add(stSpawn.HPos)
-  stSpawn.SPos:Mul(-1)
-  stSpawn.SPos:Rotate(stSpawn.SAng)
-  stSpawn.SPos:Add(stSpawn.HPnt)
-  stSpawn.SPos:Add((tonumber(ucsPosX) or 0) * stSpawn.F)
-  stSpawn.SPos:Add((tonumber(ucsPosY) or 0) * stSpawn.R)
-  stSpawn.SPos:Add((tonumber(ucsPosZ) or 0) * stSpawn.U)
+  stSpawn.SAng:RotateAroundAxis(stSpawn.F,stSpawn.HAng[caR] * hdPOA.A[csC]) 
+  stSpawn.HPos:Mul(-1); stSpawn.HPos:Rotate(stSpawn.SAng) -- Mass center  
+  stSpawn.SPos:Set(stSpawn.OPos); stSpawn.SPos:Add(stSpawn.HPos)
+  
+  stSpawn.SPos:Add(stSpawn.HPnt[cvX] * stSpawn.F)
+  stSpawn.SPos:Add(stSpawn.HPnt[cvY] * stSpawn.R)
+  stSpawn.SPos:Add(stSpawn.HPnt[cvZ] * stSpawn.U)
+  
+  SetVectorXYZ(stSpawn.NPos, (tonumber(ucsPosX) or 0), (tonumber(ucsPosY) or 0), (tonumber(ucsPosZ) or 0))
+  stSpawn.SPos:Add(stSpawn.NPos[cvX] * stSpawn.F)
+  stSpawn.SPos:Add(stSpawn.NPos[cvY] * stSpawn.R)
+  stSpawn.SPos:Add(stSpawn.NPos[cvZ] * stSpawn.U)
   return stSpawn
 end
 
@@ -2798,35 +2812,38 @@ function MakePiece(pPly,sModel,vPos,aAng,nMass,sBgSkIDs,clColor,sMode)
   return StatusLog(ePiece,"MakePiece: "..tostring(ePiece)..sModel)
 end
 
-function ApplyPhysicalSettings(ePiece,bFr,bGr,bPh)
+function ApplyPhysicalSettings(ePiece,bPi,bFr,bGr)
   if(CLIENT) then return StatusLog(true,"ApplyPhysicalSettings: Working on client") end
-  local bFr, bGr, bPh = (tobool(bFr) or false), (tobool(bGr) or false), (tobool(bPh) or false)
-  LogInstance("ApplyPhysicalSettings: {"..tostring(bFr)..","..tostring(bGr)..","..tostring(bPh).."}")
-  if(not (ePiece and ePiece:IsValid())) then
-    return StatusLog(false,"ApplyPhysicalSettings: Piece not valid") end
-  arSettings = {bFr,bGr,bPh}
-  ePiece.PhysgunDisabled = bPh
-  ePiece:SetUnFreezable(bPh)
-  local pyPiece = ePiece:GetPhysicsObject()
-  if(not (pyPiece and pyPiece:IsValid())) then
-    return StatusLog(false,"ApplyPhysicalSettings: Physics piece invalid") end
-  pyPiece:EnableMotion(not bFr)
+  local bPi, bFr, bGr = (tobool(bPi) or false), (tobool(bFr) or false), (tobool(bGr) or false)
+  LogInstance("ApplyPhysicalSettings: {"..tostring(bPi)..","..tostring(bFr)..","..tostring(bGr).."}")
+  if(not (ePiece and ePiece:IsValid())) then   -- Cannot manipulate invalid entities
+    return StatusLog(false,"ApplyPhysicalSettings: Piece entity invalid for <"..tostring(ePiece)..">") end
+  local pyPiece = ePiece:GetPhysicsObject()    -- Get the physics object
+  if(not (pyPiece and pyPiece:IsValid())) then -- Cannot manipulate invalid physics
+    return StatusLog(false,"ApplyPhysicalSettings: Piece physical object invalid for <"..tostring(ePiece)..">") end
+  local arSettings = {bPi,bFr,bGr}  -- Initialize dupe settings using this array
+  ePiece.PhysgunDisabled = bPi          -- If enabled stop the player from grabbing the track piece
+  ePiece:SetUnFreezable(bPi)            -- If enabled stop the player from hitting reload to mess it all up
+  ePiece:SetMoveType(MOVETYPE_VPHYSICS) -- Moves and behaves like a normal prop
+  -- Delay the freeze by a tiny amout because on physgun snap the piece
+  -- is unfrozen automatically after physgun drop hook call
+  timerSimple(GetOpVar("DELAY_FREEZE"), function() -- If frozen motion is disabled
+    LogInstance("ApplyPhysicalSettings: Freeze");  -- Make shure that the physics are valid
+    if(pyPiece and pyPiece:IsValid()) then pyPiece:EnableMotion(not bFr) end end )
   constructSetPhysProp(nil,ePiece,0,pyPiece,{GravityToggle = bGr, Material = "gmod_ice"})
   duplicatorStoreEntityModifier(ePiece,GetOpVar("TOOLNAME_PL").."dupe_phys_set",arSettings)
   return StatusLog(true,"ApplyPhysicalSettings: Success")
 end
 
-function HookOnRemove(oBas,oEnt,arCTable,nMax)
+function HookOnRemove(oBas,oEnt,cnTab,nMax)
   if(not (oBas and oBas:IsValid())) then return StatusLog(nil,"HookOnRemove: Base invalid") end
   if(not (oEnt and oEnt:IsValid())) then return StatusLog(nil,"HookOnRemove: Prop invalid") end
-  if(not (arCTable and nMax)) then return StatusLog(nil,"HookOnRemove: Constraint list empty") end
-  if(nMax < 1) then return end
-  local Ind = 1
-  while(Ind <= nMax) do
-    if(not arCTable[Ind]) then
-      StatusLog(nil,"HookOnRemove: Empty value on index "..tostring(Ind)..", ignored !")
-    else oEnt:DeleteOnRemove(arCTable[Ind]); oBas:DeleteOnRemove(arCTable[Ind]); Ind = Ind + 1 end
-  end; LogInstance("HookOnRemove: Done "..(Ind-1).." of "..nMax..".")
+  if(not (cnTab and cnTab[1])) then return StatusLog(nil,"HookOnRemove: Constraint list empty") end
+  local ID = 1 while(ID <= nMax) do
+    if(not cnTab[ID]) then
+      StatusLog(nil,"HookOnRemove: Empty constraint <"..tostring(ID)..">")
+    else oEnt:DeleteOnRemove(cnTab[ID]); oBas:DeleteOnRemove(cnTab[ID]); ID = ID + 1 end
+  end; LogInstance("HookOnRemove: Done")
 end
 
 function ApplyPhysicalAnchor(ePiece,eBase,vPos,vNorm,nCID,nNoC,nFoL,nToL,nFri)

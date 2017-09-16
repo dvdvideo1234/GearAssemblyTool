@@ -18,8 +18,8 @@ local mathClamp             = math and math.Clamp
 local vguiCreate            = vgui and vgui.Create
 local fileExists            = file and file.Exists
 local utilIsValidModel      = util and util.IsValidModel
-local utilIsTraceLine       = util and util.TraceLine
-local utilIsGetPlayerTrace  = util and util.GetPlayerTrace
+local utilTraceLine         = util and util.TraceLine
+local utilGetPlayerTrace    = util and util.GetPlayerTrace
 local tableGetKeys          = table and table.GetKeys
 local stringSub             = string and string.sub
 local stringUpper           = string and string.upper
@@ -206,7 +206,7 @@ function TOOL:GetTraceOriginAngle()
 end
 
 function TOOL:GetStackAttempts()
-  return math.Clamp(self:GetClientNumber("maxstaatts"),1,5)
+  return math.Clamp(self:GetClientNumber("maxstatts"),1,5)
 end
 
 function TOOL:GetRotatePivot()
@@ -291,7 +291,6 @@ function TOOL:GetStatus(stTrace,anyMessage,hdEnt)
   local iCurLog = asmlib.GetOpVar("LOG_CURLOGS")
   local sFleLog = asmlib.GetOpVar("LOG_LOGFILE")
   local sSpace  = (" "):rep(6 + tostring(iMaxlog):len())
-  local plyKeys = asmlib.ReadKeyPly(ply)
   local rotpivt, rotpivh = self:GetRotatePivot()
   local aninfo , anEnt   = self:GetAnchor()
   local nextx  , nexty  , nextz   = self:GetPosOffsets()
@@ -379,7 +378,7 @@ function TOOL:LeftClick(stTrace)
   local trorang   = self:GetTraceOriginAngle()
   local count     = self:GetCount()
   local mass      = self:GetMass()
-  local staatts   = self:GetStackAttempts()
+  local maxstatts = self:GetStackAttempts()
   local deltarot  = self:GetDeltaRotation()
   local friction  = self:GetFriction()
   local forcelim  = self:GetForceLimit()
@@ -393,19 +392,17 @@ function TOOL:LeftClick(stTrace)
   local rotpivt, rotpivh = self:GetRotatePivot()
   local nextx  , nexty  , nextz   = self:GetPosOffsets()
   local nextpic, nextyaw, nextrol = self:GetAngOffsets()
-  asmlib.ReadKeyPly(ply)
   if(not asmlib.CheckButtonPly(ply,IN_SPEED) and not asmlib.CheckButtonPly(ply,IN_DUCK)) then
     if(not (eBase and eBase:IsValid()) and (trEnt and trEnt:IsValid())) then eBase = trEnt end
     local vPos = stTrace.HitPos
-    local aAng = stTrace.HitNormal:Angle(); aAng[caP] = aAng[caP] + 90;
+    local aAng = asmlib.GetNormalAngle(ply, stTrace)
     local stSpawn = asmlib.GetNormalSpawn(vPos,aAng,model,rotpivh,nextx,nexty,nextz,nextpic,nextyaw,nextrol)
     if(not stSpawn) then return asmlib.StatusLog(false,self:GetStatus(stTrace,"TOOL:LeftClick(World): Normal spawn failed")) end
     local ePiece = asmlib.MakePiece(ply,model,stTrace.HitPos,ANG_ZERO,mass,bgskids,conPalette:Select("w"),bnderrmod)
     if(not ePiece) then return asmlib.StatusLog(false,self:GetStatus(stTrace,"TOOL:LeftClick(World): Making piece failed")) end
-    stSpawn.SPos:Add(asmlib.GetCustomAngBBZ(ePiece,stSpawn.HRec,spnflat) * stTrace.HitNormal)
     ePiece:SetAngles(stSpawn.SAng); ePiece:SetPos(stSpawn.SPos)
     asmlib.UndoCratePly(gsUndoPrefN..fnmodel.." ( World spawn )")
-    if(not asmlib.ApplyPhysicalSettings(ePiece,freeze,gravity,ignphysgn)) then
+    if(not asmlib.ApplyPhysicalSettings(ePiece,ignphysgn,freeze,gravity)) then
       return asmlib.StatusLog(false,self:GetStatus(stTrace,"TOOL:LeftClick(World): Failed to apply physical settings",ePiece)) end
     if(not asmlib.ApplyPhysicalAnchor(ePiece,eBase,stTrace.HitPos,stTrace.HitNormal,contyp,nocollide,forcelim,torquelim,friction)) then
       return asmlib.StatusLog(false,self:GetStatus(stTrace,"TOOL:LeftClick(World): Failed to apply physical anchor",ePiece)) end
@@ -433,7 +430,7 @@ function TOOL:LeftClick(stTrace)
 
   if(asmlib.CheckButtonPly(ply,IN_DUCK)) then -- USE: Use the valid trace as a piece
     if(asmlib.CheckButtonPly(ply,IN_USE)) then -- Physical
-      if(not asmlib.ApplyPhysicalSettings(trEnt,freeze,gravity,ignphysgn)) then
+      if(not asmlib.ApplyPhysicalSettings(trEnt,ignphysgn,freeze,gravity)) then
         return asmlib.StatusLog(false,self:GetStatus(stTrace,"TOOL:LeftClick(Physical): Failed to apply physical settings",trEnt)) end
       trEnt:GetPhysicsObject():SetMass(mass)
       return asmlib.StatusLog(true,"TOOL:LeftClick(Physical): Success")
@@ -447,35 +444,35 @@ function TOOL:LeftClick(stTrace)
   if(not hdRec) then return asmlib.StatusLog(false,self:GetStatus(stTrace,"TOOL:LeftClick(Prop): Holder model not a piece")) end
 
   if(asmlib.CheckButtonPly(ply,IN_SPEED) and count > 1 and stmode >= 1 and stmode <= SMode:GetSize()) then
-    local stSpawn = asmlib.GetEntitySpawn(trEnt,rotpiv,model,igntyp,trorang,nextx,nexty,nextz,nextpic,nextyaw,nextrol)
+    local stSpawn = asmlib.GetEntitySpawn(trEnt,rotpivt,rotpivh,model,igntyp,trorang,nextx,nexty,nextz,nextpic,nextyaw,nextrol)
     if(not stSpawn) then return asmlib.StatusLog(false,self:GetStatus(stTrace,"TOOL:LeftClick(Stack): Failed to retrieve spawn data")) end
     local ePieceO, ePieceN = trEnt, nil
     local aIter  , aStart  = ePieceO:GetAngles(), ePieceO:GetAngles()
-    local iNdex  , nTrys, dRot = count, staatts, (deltarot / count)
+    local iNdex  , iTrys, dRot = count, maxstatts, (deltarot / count)
     asmlib.UndoCratePly(gsUndoPrefN..fnmodel.." ( Stack #"..tostring(count).." )")
     while(iNdex > 0) do
       local sIterat = "["..tostring(iNdex).."]"
       ePieceN = asmlib.MakePiece(ply,model,stSpawn.SPos,stSpawn.SAng,mass,bgskids,conPalette:Select("w"),bnderrmod)
       if(ePieceN) then
-        if(not asmlib.ApplyPhysicalSettings(ePieceN,forcelim,freeze,gravity,ignphysgn)) then
+        if(not asmlib.ApplyPhysicalSettings(ePieceN,ignphysgn,freeze,gravity)) then
           return asmlib.StatusLog(false,self:GetStatus(stTrace,"TOOL:LeftClick(Stack): Failed to apply physical settings",ePiece)) end
         if(not asmlib.ApplyPhysicalAnchor(ePieceN,eBase,stSpawn.SPos,stSpawn.DAng:Up(),contyp,nocollide,forcelim,torquelim,friction)) then
           return asmlib.StatusLog(false,self:GetStatus(stTrace,"TOOL:LeftClick(Stack): Failed to apply physical anchor",ePiece)) end
         asmlib.UndoAddEntityPly(ePieceN)
         if(stmode == 1) then
-          stSpawn = asmlib.GetEntitySpawn(ePieceN,rotpiv,model,igntyp,trorang,nextx,nexty,nextz,nextpic,nextyaw,nextrol)
+          stSpawn = asmlib.GetEntitySpawn(ePieceN,rotpivt,rotpivh,model,igntyp,trorang,nextx,nexty,nextz,nextpic,nextyaw,nextrol)
         elseif(stmode == 2) then
-          aIter:RotateAroundAxis(stSpawn.CAng:Up(),-dRot)
+          aIter:RotateAroundAxis(stSpawn.TAng:Up(),-dRot)
           trEnt:SetAngles(aIter)
-          stSpawn = asmlib.GetEntitySpawn(trEnt,rotpiv,model,igntyp,trorang,nextx,nexty,nextz,nextpic,nextyaw,nextrol)
+          stSpawn = asmlib.GetEntitySpawn(trEnt,rotpivt,rotpivh,model,igntyp,trorang,nextx,nexty,nextz,nextpic,nextyaw,nextrol)
         end
         if(not stSpawn) then -- Look both ways in a one way street :D
           asmlib.PrintNotifyPly(ply,"Cannot obtain spawn data!","ERROR")
           asmlib.UndoFinishPly(ply,sIterat)
           return asmlib.StatusLog(false,self:GetStatus(stTrace,"TOOL:LeftClick(Stack)"..sIterat..": Stacking has invalid user data"))
         end -- Spawn data is valid for the current iteration iNdex
-        ePieceO, iNdex, nTrys = ePieceN, (iNdex - 1), staatts
-      else nTrys = nTrys - 1 end
+        ePieceO, iNdex, iTrys = ePieceN, (iNdex - 1), maxstatts
+      else iTrys = iTrys - 1 end
       if(iTrys <= 0) then
         asmlib.UndoFinishPly(ply,sIterat) --  Make it shoot but throw the error
         return asmlib.StatusLog(true,self:GetStatus(stTrace,"TOOL:LeftClick(Stack)"..sIterat..": All stack attempts failed"))
@@ -486,14 +483,13 @@ function TOOL:LeftClick(stTrace)
     return asmlib.StatusLog(true,"TOOL:LeftClick(Stack): Success")
   end
 
-  local stSpawn = asmlib.GetEntitySpawn(trEnt,rotpiv,model,igntyp,
-                    trorang,nextx,nexty,nextz,nextpic,nextyaw,nextrol)
+  local stSpawn = asmlib.GetEntitySpawn(trEnt,rotpivt,rotpivh,model,igntyp,trorang,nextx,nexty,nextz,nextpic,nextyaw,nextrol)
   if(stSpawn) then
     local ePiece = asmlib.MakePiece(ply,model,stSpawn.SPos,stSpawn.SAng,mass,bgskids,conPalette:Select("w"),bnderrmod)
     if(ePiece) then
-      if(not asmlib.ApplyPhysicalSettings(ePieceN,forcelim,freeze,gravity,ignphysgn)) then
+      if(not asmlib.ApplyPhysicalSettings(ePiece,ignphysgn,freeze,gravity)) then
         return asmlib.StatusLog(false,self:GetStatus(stTrace,"TOOL:LeftClick(Snap): Failed to apply physical settings",ePiece)) end
-      if(not ApplyPhysicalAnchor(ePiece,eBase,stSpawn.SPos,stSpawn.DAng:Up(),contyp,nocollide,forcelim,freeze,gravity,ignphysgn,torquelim,friction)) then
+      if(not asmlib.ApplyPhysicalAnchor(ePiece,eBase,stSpawn.SPos,stSpawn.DAng:Up(),contyp,nocollide,forcelim,freeze,gravity,torquelim,friction)) then
         return asmlib.StatusLog(false,self:GetStatus(stTrace,"TOOL:LeftClick(Snap): Failed to apply physical anchor",ePiece)) end
       asmlib.UndoCratePly(gsUndoPrefN..fnmodel.." ( Snap prop )")
       asmlib.UndoAddEntityPly(ePiece)
@@ -513,10 +509,9 @@ function TOOL:RightClick(stTrace)
     return asmlib.StatusLog(false,"TOOL:RightClick(): Trace not hit") end
   local trEnt = stTrace.Entity
   local ply   = self:GetOwner()
-  asmlib.ReadKeyPly(ply)
-  if(stTrace.HitWorld and asmlib.CheckButtonPly(ply,IN_USE)) then
-    asmlib.ConCommandPly(ply,"openframe",asmlib.GetAsmVar("maxfruse" ,"INT"))
-    return asmlib.StatusLog(true,"TOOL:RightClick(World): Success open frame")
+  if(asmlib.CheckButtonPly(ply,IN_USE)) then
+    if(stTrace.HitWorld) then asmlib.ConCommandPly(ply,"openframe",asmlib.GetAsmVar("maxfruse" ,"INT"))
+       return asmlib.StatusLog(true,"TOOL:RightClick(World): Success open frame") end
   elseif(asmlib.CheckButtonPly(ply,IN_SPEED)) then
     if(stTrace.HitWorld) then
       self:ClearAnchor(); return asmlib.StatusLog(true,"TOOL:RightClick(Prop): Anchor cleared")
@@ -535,13 +530,9 @@ function TOOL:RightClick(stTrace)
 end
 
 function TOOL:Reload(Trace)
-  if(CLIENT) then
-
-    return true
-  end
+  if(CLIENT) then return true end
   if(not Trace) then return false end
   local ply = self:GetOwner()
-  asmlib.ReadKeyPly(ply)
   if(asmlib.CheckButtonPly(ply,IN_SPEED) and Trace.HitWorld) then
     asmlib.SetLogControl(self:GetLogLines(),self:GetLogFile())
     if(self:GetExportDB()) then
@@ -549,7 +540,7 @@ function TOOL:Reload(Trace)
       asmlib.ExportDSV("PIECES")
       asmlib.ConCommandPly(ply, "exportdb", 0)
     end; return asmlib.StatusLog(true,"TOOL:Reload(World): Success")
-  end 
+  end
   if(not asmlib.IsPhysTrace(Trace)) then
     return asmlib.StatusLog(false,self:GetStatus(stTrace,"TOOL:Reload(): Trace not physics")) end
   local trEnt = Trace.Entity
@@ -562,17 +553,14 @@ end
 
 function TOOL:Holster()
   self:ReleaseGhostEntity()
-  if(self.GhostEntity and self.GhostEntity:IsValid()) then
-    self.GhostEntity:Remove()
-  end
+  local gho = self.GhostEntity
+  if(gho and gho:IsValid()) then gho:Remove() end
 end
 
-local function DrawAdditionalInfo(oScreen,stSpawn)
-  if(not oScreen) then return end
-  if(not stSpawn) then return end
-  local x, y = oScreen:GetCenter(10,10)
+function TOOL:DrawTextSpawn(oScreen, stSpawn, sCol, sMeth, tArgs)
+  local x,y = oScreen:GetCenter(10,10)
   oScreen:SetTextEdge(x,y)
-  oScreen:DrawText("Org POS: "..tostring(stSpawn.OPos)"k","SURF",{"Trebuchet18"})
+  oScreen:DrawText("Org POS: "..tostring(stSpawn.OPos),sCol,sMeth,tArgs)
   oScreen:DrawText("Dom ANG: "..tostring(stSpawn.DAng))
   oScreen:DrawText("Mod POS: "..tostring(stSpawn.MPos))
   oScreen:DrawText("Mod ANG: "..tostring(stSpawn.MAng))
@@ -605,12 +593,11 @@ function TOOL:DrawHUD()
   local rotpivt, rotpivh = self:GetRotatePivot()
   local nextx  , nexty  , nextz   = self:GetPosOffsets()
   local nextpic, nextyaw, nextrol = self:GetAngOffsets()
-  if(trEnt and trEnt:IsValid() and inputIsKeyDown(IN_SPEED)) then
+  if(trEnt and trEnt:IsValid() and asmlib.CheckButtonPly(oPly,IN_SPEED)) then
     if(asmlib.IsOther(trEnt)) then return end
     local igntyp  = self:GetIgnoreType()
-    local trorang = self:GetTraceOriginAngle()
     local stSpawn = asmlib.GetEntitySpawn(trEnt,rotpivt,rotpivh,model,igntyp,
-                                          nextx,nexty,nextz,nextpic,nextyaw,nextrol)
+                                            nextx,nexty,nextz,nextpic,nextyaw,nextrol)
     if(not stSpawn) then return end
     local Op =  stSpawn.OPos:ToScreen()
     local Xs = (stSpawn.OPos + 15 * stSpawn.F):ToScreen()
@@ -619,55 +606,56 @@ function TOOL:DrawHUD()
     local Sp =  stSpawn.SPos:ToScreen()
     local Df = (stSpawn.SPos + 15 * stSpawn.DAng:Forward()):ToScreen()
     local Du = (stSpawn.SPos + 15 * stSpawn.DAng:Up()):ToScreen()
-    local Cp =  stSpawn.CPos:ToScreen()
-    local Cu = (stSpawn.CPos + 15 * stSpawn.CAng:Up()):ToScreen()
+    local Tp =  stSpawn.TPos:ToScreen()
+    local Tu = (stSpawn.TPos + 15 * stSpawn.TAng:Up()):ToScreen()
     -- Draw UCS
-    hudMonitor:DrawLine(Op,Xs,"r","SURF")   -- Base X
-    hudMonitor:DrawLine(Sp,Df)              -- Next
-    hudMonitor:DrawLine(Op,Zs,"b")          -- Base Z
-    hudMonitor:DrawLine(Cp,Cu,"y")          -- Base Z
-    hudMonitor:DrawCircle(Op,plyrad,"SURF") -- Base O
+    hudMonitor:DrawLine(Op,Xs,"r","SURF")   -- Origin X
+    hudMonitor:DrawLine(Op,Zs,"b")          -- Origin Z
+    hudMonitor:DrawLine(Tp,Tu,"y")          -- Trace Z
+    hudMonitor:DrawCircle(Op,plyrad,"y","SURF") -- Origin position O
     hudMonitor:DrawLine(Op,Ys,"g")
-    hudMonitor:DrawLine(Cp,Op)
-    hudMonitor:DrawCircle(Cp,plyrad)
+    hudMonitor:DrawLine(Tp,Op)
+    hudMonitor:DrawCircle(Tp,plyrad)
     hudMonitor:DrawLine(Op,Sp,"m")
-    hudMonitor:DrawCircle(Sp,Sp,plyrad)
-    hudMonitor:DrawLine(Sp,Du,"c")
-    if(self:GetDeveloperMode()) then DrawAdditionalInfo(hudMonitor,stSpawn) end
+    hudMonitor:DrawCircle(Sp,plyrad)        -- Spawn position ( Mass center )
+    hudMonitor:DrawLine(Sp,Df,"r")          -- Domain forward
+    hudMonitor:DrawLine(Sp,Du,"c")          -- Domain up
+    if(not self:GetDeveloperMode()) then return end
+    self:DrawTextSpawn(hudMonitor, stSpawn, "k","SURF",{"Trebuchet18"})
   else
     local vPos = stTrace.HitPos
-    local aAng = stTrace.HitNormal:Angle(); aAng[caP] = aAng[caP] + 90
+    local aAng = asmlib.GetNormalAngle(oPly, stTrace)
     local stSpawn  = asmlib.GetNormalSpawn(vPos,aAng,model,rotpivh,nextx,nexty,nextz,nextpic,nextyaw,nextrol)
     if(not stSpawn) then return false end
-    local Os = stSpawn.SPos:ToScreen()
-    local Xs = (stSpawn.SPos + 15 * stSpawn.F):ToScreen()
-    local Ys = (stSpawn.SPos + 15 * stSpawn.R):ToScreen()
-    local Zs = (stSpawn.SPos + 15 * stSpawn.U):ToScreen()
+    local Os = stSpawn.OPos:ToScreen()
+    local Xs = (stSpawn.OPos + 15 * stSpawn.F):ToScreen()
+    local Ys = (stSpawn.OPos + 15 * stSpawn.R):ToScreen()
+    local Zs = (stSpawn.OPos + 15 * stSpawn.U):ToScreen()
     hudMonitor:DrawLine(Os,Xs,"r","SURF")
     hudMonitor:DrawLine(Os,Ys,"g")
     hudMonitor:DrawLine(Os,Zs,"b")
     hudMonitor:DrawCircle(Os,plyrad,"y","SURF")
-    if(self:GetDeveloperMode()) then DrawAdditionalInfo(hudMonitor,stSpawn) end
+    if(not self:GetDeveloperMode()) then return end
+    self:DrawTextSpawn(hudMonitor, stSpawn, "k","SURF",{"Trebuchet18"})
   end
 end
 
-local function DrawRatioVisual(oScr,nTrR,nHdR,nDeep)
-  if(not oScr) then return end
+function TOOL:DrawRatioVisual(oScreen,nTrR,nHdR,nDeep)
   local hDeep = mathFloor((nDeep or 0) / 2)
   if(hDeep <= 2) then return end
-  local nW, nH = oScr:GetSize()
-  local dx, dy, dw, dh = oScr:GetTextState(0,0,0,2)
+  local nW, nH = oScreen:GetSize()
+  local dx, dy, dw, dh = oScreen:GetTextState(0,0,0,2)
   if(nTrR) then
-    local Cent = mathFloor((nTrR / ( nTrR + nHdR )) * nW)
-    oScr:DrawRect({x=0,y=dh},{x=nDeep,y=nH-dy},"y","SURF")        -- Trace Teeth
-    oScr:DrawRect({x=nDeep,y=dh},{x=Cent-hDeep,y=nH-dy},"g")      -- Trace Gear
-    oScr:DrawRect({x=Cent-hDeep,y=dh},{x=Cent+hDeep,y=nH-dy},"y") -- Raking
-    oScr:DrawRect({x=Cent+hDeep,y=dh},{x=nW-nDeep,y=nH-dy},"m")   -- Holds Gear
-    oScr:DrawRect({x=nW-nDeep,y=dh},{x=nW,y=nH-dy},"y")           -- Holds Teeth
+    local nCen = mathFloor((nTrR / ( nTrR + nHdR )) * nW)
+    oScreen:DrawRect({x=0,y=dh},{x=nDeep,y=nH},"y")               -- Trace Teeth
+    oScreen:DrawRect({x=nDeep,y=dh},{x=nCen-hDeep,y=nH},"g")      -- Trace Gear
+    oScreen:DrawRect({x=nCen-hDeep,y=dh},{x=nCen+hDeep,y=nH},"y") -- Raking
+    oScreen:DrawRect({x=nCen+hDeep,y=dh},{x=nW-nDeep,y=nH},"m")   -- Holds Gear
+    oScreen:DrawRect({x=nW-nDeep,y=dh},{x=nW,y=nH},"y")           -- Holds Teeth
   else
-    oScr:DrawRect({x=0,y=dh},{x=nDeep,y=nH-dy},"y","SURF")         -- Holds Teeth
-    oScr:DrawRect({x=nDeep,y=dh},{x=nW-nDeep,y=nH-dy},"g")         -- Holds
-    oScr:DrawRect({x=nW-nDeep,y=dh},{x=nW,y=nH-dy},"y")            -- Holds Teeth
+    oScreen:DrawRect({x=0,y=dh},{x=nDeep,y=nH},"y")               -- Holds Teeth
+    oScreen:DrawRect({x=nDeep,y=dh},{x=nW-nDeep,y=nH},"g")        -- Holds
+    oScreen:DrawRect({x=nW-nDeep,y=dh},{x=nW,y=nH},"y")           -- Holds Teeth
   end
 end
 
@@ -695,8 +683,6 @@ function TOOL:DrawToolScreen(w, h)
   scrTool:DrawText("Trace status: Valid","g","SURF",{"Trebuchet24"})
   scrTool:DrawTextAdd("  ["..(tInfo[1] or gsNoID).."]","an")
   local model = self:GetModel()
-  print("Tst", model, util.IsValidModel(model))
-  
   local hdRec = asmlib.CacheQueryPiece(model)
   if(not hdRec) then
     scrTool:DrawText("Holds Model: Invalid","r")
@@ -725,10 +711,10 @@ function TOOL:DrawToolScreen(w, h)
   scrTool:DrawText("HM: "..(stringToFileName(model) or NoAV),"m")
   scrTool:DrawText("Anc: "..self:GetAnchor("anchor"),"an")
   scrTool:DrawText("Rake: "..tostring(trRake or NoAV).." > "..tostring(asmlib.RoundValue(hdRec.Rake,0.01) or NoAV),"y")
-  scrTool:DrawText("Ratio: "..tostring(Ratio).." > "..tostring(trRad or NoAV).."/"..tostring(hdRad))
+  scrTool:DrawText("Ratio: "..tostring(Ratio).." > "..tostring(trRad or gsNoID).."/"..tostring(hdRad))
   scrTool:DrawText("StackMod: "..SMode:Select(stmode),"r")
   scrTool:DrawText(tostring(osDate()),"w")
-  DrawRatioVisual(scrTool,trRad,hdRad,10)
+  self:DrawRatioVisual(scrTool,trRad,hdRad,10)
 end
 
 local ConVarList = TOOL:BuildConVarList()
@@ -903,13 +889,12 @@ function TOOL:UpdateGhost(oEnt, oPly)
   oEnt:DrawShadow(false)
   oEnt:SetColor(conPalette:Select("gh"))
   local rotpivt, rotpivh = self:GetRotatePivot()
-  if(trEnt and trEnt:IsValid() and inputIsKeyDown(IN_SPEED)) then
+  if(trEnt and trEnt:IsValid() and asmlib.CheckButtonPly(oPly,IN_SPEED)) then
     if(asmlib.IsOther(trEnt)) then return end
     local trRec = asmlib.CacheQueryPiece(trEnt:GetModel())
     if(trRec) then
       local model   = self:GetModel()
       local igntyp  = self:GetIgnoreType()
-      local trorang = self:GetTraceOriginAngle()
       local nextx  , nexty  , nextz   = self:GetPosOffsets()
       local nextpic, nextyaw, nextrol = self:GetAngOffsets()
       local stSpawn = asmlib.GetEntitySpawn(trEnt,rotpivt,rotpivh,model,igntyp,nextx,nexty,nextz,nextpic,nextyaw,nextrol)
@@ -923,13 +908,12 @@ function TOOL:UpdateGhost(oEnt, oPly)
     local nextx, nexty, nextz = self:GetPosOffsets()
     local nextpic, nextyaw, nextrol = self:GetAngOffsets()
     local vPos = stTrace.HitPos
-    local aAng = stTrace.HitNormal:Angle(); aAng[caP] = aAng[caP] + 90
+    local aAng = asmlib.GetNormalAngle(oPly, stTrace)
     local stSpawn = asmlib.GetNormalSpawn(vPos,aAng,model,rotpivh,nextx,nexty,nextz,nextpic,nextyaw,nextrol)
     if(not stSpawn) then return end
     local spnflat = self:GetSpawnFlat()
     oEnt:SetNoDraw(false)
     oEnt:SetAngles(stSpawn.SAng)
-    stSpawn.SPos:Add(asmlib.GetCustomAngBBZ(oEnt,stSpawn.HRec,spnflat) * stTrace.HitNormal)
     oEnt:SetPos(stSpawn.SPos)
     return
   end
@@ -937,18 +921,17 @@ end
 
 function TOOL:Think()
   local model = self:GetModel()
-  if(self:GetGhostHolder() and utilIsValidModel(model)) then
-    if (not self.GhostEntity or
-        not self.GhostEntity:IsValid() or
-            self.GhostEntity:GetModel() ~= model
-    ) then
-      self:MakeGhostEntity(model)
-    end
-    self:UpdateGhost(self.GhostEntity, self:GetOwner())
-  else
-    self:ReleaseGhostEntity()
-    if(self.GhostEntity and self.GhostEntity:IsValid()) then
-      self.GhostEntity:Remove()
+  if(utilIsValidModel(model)) then
+    local ply = self:GetOwner()
+    local gho = self.GhostEntity
+    if(self:GetGhostHolder()) then
+      if (not (gho and gho:IsValid() and gho:GetModel() == model)) then
+        self:MakeGhostEntity(model,VEC_ZERO,ANG_ZERO)
+      end
+      self:UpdateGhost(gho, ply)
+    else
+      self:ReleaseGhostEntity()
+      if(gho and gho:IsValid()) then gho:Remove() end
     end
   end
 end
