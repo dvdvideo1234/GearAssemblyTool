@@ -211,6 +211,11 @@ function IsOther(oEnt)
   return false
 end
 
+function GetDate()
+  return (osDate(GetOpVar("DATE_FORMAT"))
+   .." "..osDate(GetOpVar("TIME_FORMAT")))
+end
+
 ------------------ LOGS ------------------------
 
 local function FormatNumberMax(nNum,nMax)
@@ -231,7 +236,7 @@ local function Log(anyStuff)
   if(GetOpVar("LOG_LOGFILE")) then
     local fName = GetOpVar("DIRPATH_BAS").."gearasmlib_log.txt"
     if(nCurLogs > nMaxLogs) then nCurLogs = 0; fileDelete(fName) end
-    fileAppend(fName,FormatNumberMax(nCurLogs,nMaxLogs).." ["..osDate().."] "..logData.."\n")
+    fileAppend(fName,FormatNumberMax(nCurLogs,nMaxLogs).." ["..GetDate().."] "..logData.."\n")
   else -- The current has values 1..nMaxLogs(0)
     if(nCurLogs > nMaxLogs) then nCurLogs = 0 end
     print(FormatNumberMax(nCurLogs,nMaxLogs).." >> "..logData)
@@ -241,11 +246,11 @@ end
 function PrintInstance(anyStuff)
   local sModeDB = GetOpVar("MODE_DATABASE")
   if(SERVER) then
-    print("["..osDate().."] SERVER > "..GetOpVar("TOOLNAME_NU").." ["..sModeDB.."] "..tostring(anyStuff))
+    print("["..GetDate().."] SERVER > "..GetOpVar("TOOLNAME_NU").." ["..sModeDB.."] "..tostring(anyStuff))
   elseif(CLIENT) then
-    print("["..osDate().."] CLIENT > "..GetOpVar("TOOLNAME_NU").." ["..sModeDB.."] "..tostring(anyStuff))
+    print("["..GetDate().."] CLIENT > "..GetOpVar("TOOLNAME_NU").." ["..sModeDB.."] "..tostring(anyStuff))
   else
-    print("["..osDate().."] NOINST > "..GetOpVar("TOOLNAME_NU").." ["..sModeDB.."] "..tostring(anyStuff))
+    print("["..GetDate().."] NOINST > "..GetOpVar("TOOLNAME_NU").." ["..sModeDB.."] "..tostring(anyStuff))
   end
 end
 
@@ -380,6 +385,8 @@ function InitBase(sName,sPurpose)
   SetOpVar("MISS_NOID","N")    -- No ID selected
   SetOpVar("MISS_NOAV","N/A")  -- Not Available
   SetOpVar("MISS_NOMD","X")    -- No model
+  SetOpVar("DATE_FORMAT","%d-%m-%y")
+  SetOpVar("TIME_FORMAT","%H:%M:%S")
   SetOpVar("ARRAY_DECODEPOA",{0,0,0,1,1,1,false})
   SetOpVar("LOCALIFY_TABLE",{})
   SetOpVar("LOCALIFY_AUTO","en")
@@ -407,8 +414,9 @@ function InitBase(sName,sPurpose)
     SAng = Angle (), -- Gear spawn angle
     DAng = Angle (), -- Domain angle. Used to constraints
     NPos = Vector(), -- Offset as position
-    NAng = Angle (), -- Offset as angle 
-    MAng = Angle (), -- Temporary model dcomposition angle
+    NAng = Angle (), -- Offset as angle
+    MPos = Vector(), -- Temporary model position
+    MAng = Angle (), -- Temporary model angle
     --- Holder ---
     HRec = 0,        -- Pointer to the holder record
     HPnt = Vector(), -- P
@@ -1163,14 +1171,9 @@ local function DecodePOA(sStr)
   end; arPOA[dInd] = (tonumber(sStr:sub(S,E)) or 0); return arPOA
 end
 
-local function RegisterPOA(stPiece, ivID, sP, sO, sA)
+local function RegisterPOA(stPiece, sP, sO, sA)
   if(not stPiece) then
     return StatusLog(nil,"RegisterPOA: Cache record invalid") end
-  local iID = tonumber(ivID)
-  if(not IsExistent(iID)) then
-    return StatusLog(nil,"RegisterPOA: OffsetID NAN {"..type(ivID).."}<"..tostring(ivID)..">") end
-  if(ivID ~= 1) then
-    return StatusLog(nil,"RegisterPOA: OffsetID <"..tostring(ivID)..">") end
   local sP = sP or "NULL"
   local sO = sO or "NULL"
   local sA = sA or "NULL"
@@ -1184,7 +1187,7 @@ local function RegisterPOA(stPiece, ivID, sP, sO, sA)
   if(not tOffs) then
     stPiece.Offs = {}; tOffs = stPiece.Offs
     tOffs.P = {}; tOffs.O = {}; tOffs.A = {}
-  else return StatusLog(nil,"RegisterPOA: Hash <"..tostring(sMod).."> exists") end
+  else return StatusLog(nil,"RegisterPOA: Hash <"..tostring(stPiece.Slot).."> exists") end
   ---------------- Origin ----------------
   if((sO ~= "NULL") and not IsEmptyString(sO)) then DecodePOA(sO) else ReloadPOA() end
   if(not IsExistent(TransferPOA(tOffs.O,"V"))) then
@@ -1721,7 +1724,10 @@ function InsertRecord(sTable,arLine)
   if(not arLine)      then
     return StatusLog(false,"InsertRecord: Missing data table for "..sTable) end
   if(not arLine[1])   then
-    return StatusLog(false,"InsertRecord: Missing data table is empty for "..sTable) end
+    for key, val in pairs(arLine) do
+      LogInstance("PK data ["..tostring(key).."] = <"..tostring(val)..">") end
+    return StatusLog(false,"InsertRecord: Missing PK for "..sTable)
+  end
 
   if(sTable == "PIECES") then
     local trClass = GetOpVar("TRACE_CLASS")
@@ -1776,8 +1782,8 @@ function InsertRecord(sTable,arLine)
                             ..sTable.." <"..tostring(arLine[4]).."> to "
                             ..defTable[4][1].." for "..tostring(snPrimaryKey))
       end
-      local stRezul = RegisterPOA(stData,snPrimaryKey,arLine[5],arLine[6],arLine[7])
-      if(not IsExistent(stRezul)) then
+      local stPOA = RegisterPOA(stData,arLine[5],arLine[6],arLine[7])
+      if(not IsExistent(stPOA)) then
         return StatusLog(nil,"InsertRecord: Cannot process offset for "..tostring(snPrimaryKey)) end
     else
       return StatusLog(false,"InsertRecord: No settings for table "..sTable)
@@ -1974,7 +1980,7 @@ function CacheQueryPiece(sModel)
       stPiece.Unit = qData[1][defTable[8][1]]
       while(qData[iCnt]) do
         local qRec = qData[iCnt]
-        if(not IsExistent(RegisterPOA(stPiece,iCnt,
+        if(not IsExistent(RegisterPOA(stPiece,
                                       qRec[defTable[5][1]],
                                       qRec[defTable[6][1]],
                                       qRec[defTable[7][1]]))) then
@@ -2097,7 +2103,7 @@ function ExportCategory(vEq, tData, sPref)
   if(not F) then return StatusLog(false,"ExportCategory("..sPref.."): fileOpen("..fName..") failed from") end
   local sEq, nLen, sMod = ("="):rep(nEq), (nEq+2), GetOpVar("MODE_DATABASE")
   local tCat = (type(tData) == "table") and tData or GetOpVar("TABLE_CATEGORIES")
-  F:Write("# ExportCategory( "..tostring(nEq).." )("..sPref.."): "..osDate().." [ "..sMod.." ]".."\n")
+  F:Write("# ExportCategory( "..tostring(nEq).." )("..sPref.."): "..GetDate().." [ "..sMod.." ]".."\n")
   for cat, rec in pairs(tCat) do
     if(IsString(rec.Txt)) then
       local exp = "["..sEq.."["..cat..sEq..rec.Txt:Trim().."]"..sEq.."]"
@@ -2199,7 +2205,7 @@ function ExportDSV(sTable, sPref, sDelim)
       .."): fileOpen("..fName..") failed") end
   local sDelim = tostring(sDelim or "\t"):sub(1,1)
   local sModeDB, symOff = GetOpVar("MODE_DATABASE"), GetOpVar("OPSYM_DISABLE")
-  F:Write("# ExportDSV: "..osDate().." [ "..sModeDB.." ]".."\n")
+  F:Write("# ExportDSV: "..GetDate().." [ "..sModeDB.." ]".."\n")
   F:Write("# Data settings:\t"..GetColumns(defTable,sDelim).."\n")
   if(sModeDB == "SQL") then
     local Q = ""
@@ -2239,19 +2245,16 @@ function ExportDSV(sTable, sPref, sDelim)
         local stRec = tSorted[iIdx]
         local tData = tCache[stRec.Key]
         local sData = defTable.Name
-              sData = sData..sDelim..MatchType(defTable,stRec.Key,1,true,"\"")..sDelim..
-                       MatchType(defTable,tData.Type,2,true,"\"")..sDelim..
-                       MatchType(defTable,((ModelToName(stRec.Key) == tData.Name) and symOff or tData.Name),3,true,"\"")
-        local tOffs = tData.Offs
+              sData = sData..sDelim..MatchType(defTable,stRec.Key,1,true,"\"",true)..
+                             sDelim..MatchType(defTable,tData.Type,2,true,"\"",true)..
+                             sDelim..MatchType(defTable,((ModelToName(stRec.Key) == tData.Name) and symOff or tData.Name),3,true,"\"",true)
         -- Matching crashes only for numbers. The number is already inserted, so there will be no crash
-        for iInd = 1, #tOffs do
-          local stPnt = tData.Offs[iInd]
-          F:Write(sData..sDelim..MatchType(defTable,iInd,4,true,"\"")..sDelim..
-                   "\""..(IsEqualPOA(stPnt.P,stPnt.O) and "" or StringPOA(stPnt.P,"V")).."\""..sDelim..
-                   "\""..  StringPOA(stPnt.O,"V").."\""..sDelim..
-                   "\""..( IsZeroPOA(stPnt.A,"A") and "" or StringPOA(stPnt.A,"A")).."\""..sDelim..
-                   "\""..(tData.Unit and tData.Unit or "").."\"\n")
-        end
+        local stPOA = tData.Offs
+        F:Write(sData..sDelim..MatchType(defTable,tData.Rake,4,true,"\"")..
+                       sDelim.."\""..(IsZeroPOA(stPOA.P,"V") and "" or StringPOA(stPOA.P,"V")).."\""..
+                       sDelim.."\""..(IsZeroPOA(stPOA.O,"V") and "" or StringPOA(stPOA.O,"V")).."\""..
+                       sDelim.."\""..(IsZeroPOA(stPOA.A,"A") and "" or StringPOA(stPOA.A,"A")).."\""..
+                       sDelim.."\""..(tData.Unit and tostring(tData.Unit or "") or "").."\"\n")
       end
     end
   end; F:Flush(); F:Close()
@@ -2335,8 +2338,8 @@ function SynchronizeDSV(sTable, tData, bRepl, sPref, sDelim)
                 tostring(vID).." desynchronized <"..sKey.."> of <"..sTable..">") end
             tKey.Kept = nID; tKey[tKey.Kept] = {}
             local kKey, nCnt = tKey[tKey.Kept], 3
-            while(tLine[nCnt]) do -- Do a value matching without automatic quotes
-              local vMatch = MatchType(defTable,tLine[nCnt],nCnt-1,true,"\"",true)
+            while(tLine[nCnt]) do -- Do a value matching without quotes
+              local vMatch = MatchType(defTable,tLine[nCnt],nCnt-1)
               if(not IsExistent(vMatch)) then
                 I:Close(); return StatusLog(false,"SynchronizeDSV("..fPref.."): Read matching failed <"
                   ..tostring(tLine[nCnt]).."> to <"..tostring(nCnt-1).." # "
@@ -2362,8 +2365,8 @@ function SynchronizeDSV(sTable, tData, bRepl, sPref, sDelim)
           LogInstance("SynchronizeDSV("..fPref.."): Missing piece <"..key..">") end
       elseif(sTable == "ADDITIONS") then vID = tRec[3]; nID = tonumber(vID) or 0
       elseif(sTable == "PHYSPROPERTIES") then vID = tRec[1]; nID = tonumber(vID) or 0 end
-      for nCnt = 1, #tRec do -- Do a value matching without automatic quotes
-        local vMatch = MatchType(defTable,tRec[nCnt],nCnt+1,true,"\"",true)
+      for nCnt = 1, #tRec do -- Do a value matching without quotes
+        local vMatch = MatchType(defTable,tRec[nCnt],nCnt+1)
         if(not IsExistent(vMatch)) then
           return StatusLog(false,"SynchronizeDSV("..fPref.."): Given matching failed <"
             ..tostring(tRec[nCnt]).."> to <"..tostring(nCnt+1).." # "
@@ -2371,17 +2374,19 @@ function SynchronizeDSV(sTable, tData, bRepl, sPref, sDelim)
         end
       end
     end -- Register the read line to the output file
-    if((fData[key] and bRepl) or not fData[key]) then
-      fData[key] = rec
-      fData[key].Kept = #rec
-    end
+    if(bRepl) then
+      if(tData[key]) then -- Update the file with the new data
+        fData[key] = rec
+        fData[key].Kept = #rec
+      end
+    else --[[ Do not modify fData ]] end
   end
   local tSort = Sort(tableGetKeys(fData))
   if(not tSort) then
     return StatusLog(false,"SynchronizeDSV("..fPref.."): Sorting failed") end
   local O = fileOpen(fName, "wb" ,"DATA")
   if(not O) then return StatusLog(false,"SynchronizeDSV("..fPref.."): Write fileOpen("..fName..") failed") end
-  O:Write("# SynchronizeDSV("..fPref.."): "..osDate().." ["..GetOpVar("MODE_DATABASE").."]\n")
+  O:Write("# SynchronizeDSV("..fPref.."): "..GetDate().." ["..GetOpVar("MODE_DATABASE").."]\n")
   O:Write("# Data settings:\t"..GetColumns(defTable,sDelim).."\n")
   for rcID = 1, #tSort do
     local key = tSort[rcID].Val
@@ -2409,15 +2414,17 @@ function TranslateDSV(sTable, sPref, sDelim)
   local defTable = GetOpVar("DEFTABLE_"..sTable)
   if(not defTable) then
     return StatusLog(false,"TranslateDSV("..fPref.."): Missing table definition for <"..sTable..">") end
-  local sNdsv  = GetOpVar("DIRPATH_BAS")..GetOpVar("DIRPATH_DSV")
-        sNdsv  = sNdsv..fPref..defTable.Name..".txt"
-  local sNins  = GetOpVar("DIRPATH_BAS")..GetOpVar("DIRPATH_INS")
-        sNins  = sNins..fPref..defTable.Name..".txt"
+  local sNdsv, sNins = GetOpVar("DIRPATH_BAS"), GetOpVar("DIRPATH_BAS")
+  if(not fileExists(sNins,"DATA")) then fileCreateDir(sNins) end
+  sNdsv, sNins = sNdsv..GetOpVar("DIRPATH_DSV"), sNins..GetOpVar("DIRPATH_INS")
+  if(not fileExists(sNins,"DATA")) then fileCreateDir(sNins) end
+  sNdsv, sNins = sNdsv..fPref..defTable.Name..".txt", sNins..fPref..defTable.Name..".txt"
   local sDelim = tostring(sDelim or "\t"):sub(1,1)
-  local D, I   = fileOpen(sNdsv, "rb", "DATA"), fileOpen(sNins, "wb", "DATA")
+  local D = fileOpen(sNdsv, "rb", "DATA")
   if(not D) then return StatusLog(false,"TranslateDSV("..fPref.."): fileOpen("..sNdsv..") failed") end
+  local I = fileOpen(sNins, "wb", "DATA")
   if(not I) then return StatusLog(false,"TranslateDSV("..fPref.."): fileOpen("..sNins..") failed") end
-  I:Write("# TranslateDSV("..fPref.."@"..sTable.."): "..osDate().." ["..GetOpVar("MODE_DATABASE").."]\n")
+  I:Write("# TranslateDSV("..fPref.."@"..sTable.."): "..GetDateLog().." ["..GetOpVar("MODE_DATABASE").."]\n")
   I:Write("# Data settings:\t"..GetColumns(defTable, sDelim).."\n")
   local sLine, sCh, symOff = "", "X", GetOpVar("OPSYM_DISABLE")
   local sFr, sBk, sHs = "asmlib.InsertRecord(\""..sTable.."\", {", "})\n", (fPref.."@"..sTable)
@@ -2543,18 +2550,27 @@ function GetMCWorldPosAng(vPos,vAng,vdbMCL)
   return vMCW
 end
 
-function GetCustomAngBBZ(oEnt,oRec,nMode)
-  if(not (oEnt and oEnt:IsValid())) then return 0 end
-  local Mode = tonumber(nMode) or 0
-  if(oRec and Mode ~= 0) then
-    local aAngDB = Angle(oRec.A[caP],oRec.A[caY],oRec.A[caR])
+function ApplySpawnFlat(oEnt,stSpawn,stTrace)
+  if(not (oEnt and oEnt:IsValid())) then
+    return StatusLog(false,"ApplyFlatSpawn: Entity invalid <"..tostring(oEnt)..">") end
+  if(not (stSpawn and stSpawn.HRec)) then
+    return StatusLog(false,"ApplyFlatSpawn: Holder missing") end
+  local hPOA = stSpawn.HRec.Offs
+  if(hPOA) then
+    local aAngDB = Angle(hPOA.A[caP],hPOA.A[caY],hPOA.A[caR])
     local vOBB = oEnt:OBBMins()
-          SubVector(vOBB,oRec.M)
+          SubVector(vOBB,hPOA.O) -- Mass center
           vOBB:Rotate(aAngDB)
           DecomposeByAngle(vOBB,Angle())
-    return mathAbs(vOBB[cvZ])
-  end
-  return (oEnt:OBBMaxs() - oEnt:OBBMins()):Length() / GetOpVar("DIAG_SQUARE")
+    local zOffs = mathAbs(vOBB[cvZ])
+    stSpawn.MPos:Set(stSpawn.OPos); stSpawn.MPos:Add(stTrace.HitNormal * zOffs)
+    stSpawn.MPos:Add(stSpawn.F * stSpawn.NPos[cvX])
+    stSpawn.MPos:Add(stSpawn.R * stSpawn.NPos[cvY])
+    stSpawn.MPos:Add(stSpawn.U * stSpawn.NPos[cvZ])
+    stSpawn.SAng:Set(stSpawn.OAng)
+    SetVector(stSpawn.HPos, hPOA.O); stSpawn.HPos:Mul(-1); stSpawn.HPos:Rotate(stSpawn.SAng)
+    stSpawn.SPos:Set(stSpawn.MPos); stSpawn.SPos:Add(stSpawn.HPos)
+  end; return true
 end
 
 function GetNormalAngle(oPly, stTr)
@@ -2568,13 +2584,13 @@ end
 --[[
  * This function is the backbone of the tool for Trace.Normal
  * Calculates SPos, SAng based on the DB inserts and input parameters
- * ucsPos,ucsAng = Origin position and angle of the snapping
- * hdModel       = Holder's piece model
- * enOrAng       = Position offset comes from origin angle F,R,U
- * ucsPos(X,Y,Z) = Offset position
- * ucsAng(P,Y,R) = Offset angle
+ * ucsPos,ucsAng --> Origin position and angle of the snapping
+ * hdModel       --> Holder's piece model
+ * enOrAngTr     --> Position offset comes from trace origin angle F,R,U
+ * ucsPos(X,Y,Z) --> Offset position
+ * ucsAng(P,Y,R) --> Offset angle
 ]]--
-function GetNormalSpawn(ucsPos,ucsAng,hdModel,hdPivot,ucsPosX,ucsPosY,ucsPosZ,ucsAngP,ucsAngY,ucsAngR)
+function GetNormalSpawn(ucsPos,ucsAng,hdModel,hdPivot,enOrAngTr,ucsPosX,ucsPosY,ucsPosZ,ucsAngP,ucsAngY,ucsAngR)
   local hdRec = CacheQueryPiece(hdModel)
   if(not IsExistent(hdRec)) then
     return StatusLog(nil,"GetNormalSpawn: Holder is not a piece <"..tostring(hdModel)..">") end
@@ -2584,8 +2600,8 @@ function GetNormalSpawn(ucsPos,ucsAng,hdModel,hdPivot,ucsPosX,ucsPosY,ucsPosZ,uc
   if(not IsExistent(hdPOA)) then return StatusLog(nil,"GetNormalSpawn: Offsets missing <"..tostring(hdModel)..">") end
   local stSpawn = GetOpVar("STRUCT_SPAWN")
         stSpawn.HRec = hdRec
-  if(ucsPos) then SetVector(stSpawn.OPos,ucsPos) end
-  if(ucsAng) then SetVector(stSpawn.OAng,ucsAng) end
+  if(ucsPos) then SetVector(stSpawn.OPos,ucsPos); SetVector(stSpawn.TPos, ucsPos) end
+  if(ucsAng) then SetVector(stSpawn.OAng,ucsAng); SetVector(stSpawn.TAng, ucsAng) end
   -- Calculate directions
   stSpawn.U:Set(stSpawn.OAng:Up()     )
   stSpawn.R:Set(stSpawn.OAng:Right()  )
@@ -2602,31 +2618,39 @@ function GetNormalSpawn(ucsPos,ucsAng,hdModel,hdPivot,ucsPosX,ucsPosY,ucsPosZ,uc
   SetVector(stSpawn.HPnt, hdPOA.P) -- Offset meshing point
   SetVector(stSpawn.HPos, hdPOA.O) -- Mass center origin
   SetAngle (stSpawn.HAng, hdPOA.A) -- Custom angle
+  NegAngle(stSpawn.HAng)
   -- Calcolate domain ( Angle )
   stSpawn.DAng:Set(stSpawn.OAng)
   stSpawn.DAng:RotateAroundAxis(stSpawn.R,hdRec.Rake)
   stSpawn.DAng:RotateAroundAxis(stSpawn.DAng:Up(),(tonumber(hdPivot) or 0))
+  -- Calculate decomposition angle
   stSpawn.MAng:Set(stSpawn.HAng)
-  stSpawn.MAng:RotateAroundAxis(stSpawn.MAng:Up(),180)  
+  stSpawn.MAng:RotateAroundAxis(stSpawn.MAng:Up(),180)
   stSpawn.MAng:RotateAroundAxis(stSpawn.MAng:Right(),-hdRec.Rake)
   stSpawn.HPnt:Mul(-1); DecomposeByAngle(stSpawn.HPnt,stSpawn.MAng);
-  
-  -- Calcolate spawns
+  -- Calculate spawns
   stSpawn.SAng:Set(stSpawn.DAng)
   stSpawn.SAng:RotateAroundAxis(stSpawn.U,stSpawn.HAng[caY] * hdPOA.A[csB])
   stSpawn.SAng:RotateAroundAxis(stSpawn.R,stSpawn.HAng[caP] * hdPOA.A[csA])
-  stSpawn.SAng:RotateAroundAxis(stSpawn.F,stSpawn.HAng[caR] * hdPOA.A[csC]) 
-  stSpawn.HPos:Mul(-1); stSpawn.HPos:Rotate(stSpawn.SAng) -- Mass center  
-  stSpawn.SPos:Set(stSpawn.OPos); stSpawn.SPos:Add(stSpawn.HPos)
-  
-  stSpawn.SPos:Add(stSpawn.HPnt[cvX] * stSpawn.F)
-  stSpawn.SPos:Add(stSpawn.HPnt[cvY] * stSpawn.R)
-  stSpawn.SPos:Add(stSpawn.HPnt[cvZ] * stSpawn.U)
-  
+  stSpawn.SAng:RotateAroundAxis(stSpawn.F,stSpawn.HAng[caR] * hdPOA.A[csC])
+  stSpawn.HPos:Mul(-1); stSpawn.HPos:Rotate(stSpawn.SAng) -- Mass-center
+  stSpawn.MPos:Set(stSpawn.OPos)
+  -- Add the decomposed mass center origin
+  stSpawn.MPos:Add(stSpawn.HPnt[cvX] * stSpawn.F)
+  stSpawn.MPos:Add(stSpawn.HPnt[cvY] * stSpawn.R)
+  stSpawn.MPos:Add(stSpawn.HPnt[cvZ] * stSpawn.U)
+  -- Take offsets in consideration
   SetVectorXYZ(stSpawn.NPos, (tonumber(ucsPosX) or 0), (tonumber(ucsPosY) or 0), (tonumber(ucsPosZ) or 0))
-  stSpawn.SPos:Add(stSpawn.NPos[cvX] * stSpawn.F)
-  stSpawn.SPos:Add(stSpawn.NPos[cvY] * stSpawn.R)
-  stSpawn.SPos:Add(stSpawn.NPos[cvZ] * stSpawn.U)
+  if(enOrAngTr) then
+    stSpawn.F:Set(stSpawn.TAng:Forward())
+    stSpawn.R:Set(stSpawn.TAng:Right())
+    stSpawn.U:Set(stSpawn.TAng:Up())
+  end
+  stSpawn.MPos:Add(stSpawn.NPos[cvX] * stSpawn.F)
+  stSpawn.MPos:Add(stSpawn.NPos[cvY] * stSpawn.R)
+  stSpawn.MPos:Add(stSpawn.NPos[cvZ] * stSpawn.U)
+  -- Calcoalte the mass-center location as a position vector based on the database
+  stSpawn.SPos:Set(stSpawn.MPos); stSpawn.SPos:Add(stSpawn.HPos) -- Add the mass-center
   return stSpawn
 end
 
@@ -2635,15 +2659,16 @@ end
  * Calculates SPos, SAng based on the DB inserts and input parameters
  * From the position and angle of the entity, the masscenter is calculated
  * and used as an origin to build the spawn parameters,
- * trEnt         = Trace.Entity
- * nRotPivot     = Trace  pivot rotation
- * nRotPivot     = Holder pivot rotation
- * hdModel       = The holder model
- * enIgnTyp      = Ignore Gear Type
- * ucsPos(X,Y,Z) = Offset position
- * ucsAng(P,Y,R) = Offset angle
+ * trEnt         --> Trace.Entity
+ * trPivot       --> Trace  pivot rotation
+ * hdPivot       --> Holder pivot rotation
+ * hdModel       --> The holder model
+ * enIgnTyp      --> Ignore Gear Type
+ * enOrAngTr     --> Apply offsets
+ * ucsPos(X,Y,Z) --> Offset position
+ * ucsAng(P,Y,R) --> Offset angle
 ]]--
-function GetEntitySpawn(trEnt,trPivot,hdPivot,hdModel,enIgnTyp,
+function GetEntitySpawn(trEnt,trPivot,hdPivot,hdModel,enIgnTyp,enOrAngTr,
                         ucsPosX,ucsPosY,ucsPosZ,ucsAngP,ucsAngY,ucsAngR)
   if(not (trEnt and trEnt:IsValid())) then
     return StatusLog(nil,"GetEntitySpawn: Entity origin invalid") end
@@ -2677,7 +2702,7 @@ function GetEntitySpawn(trEnt,trPivot,hdPivot,hdModel,enIgnTyp,
   stSpawn.OPos:Add(stSpawn.TPos)
   stSpawn.OAng:Set(stSpawn.TAng)
   stSpawn.OAng:RotateAroundAxis(stSpawn.TAng:Right(),trRec.Rake)
-  return GetNormalSpawn(nil,nil,hdModel,hdPivot,ucsPosX,ucsPosY,ucsPosZ,ucsAngP,ucsAngY,ucsAngR)
+  return GetNormalSpawn(nil,nil,hdModel,hdPivot,enOrAngTr,ucsPosX,ucsPosY,ucsPosZ,ucsAngP,ucsAngY,ucsAngR)
 end
 
 local function GetEntityOrTrace(oEnt)

@@ -99,8 +99,8 @@ local conPalette  = asmlib.MakeContainer("Colours"); asmlib.SetOpVar("CONTAINER_
 ------ CONFIGURE TOOL -----
 
 local SMode = asmlib.GetOpVar("CONTAIN_STACK_MODE")
-      SMode:Insert(1,"Forward based")
-      SMode:Insert(2,"Around pivot")
+      SMode:Insert(1,"Forward direction")
+      SMode:Insert(2,"Around trace pivot")
 
 local CType = asmlib.GetOpVar("CONTAIN_CONSTRAINT_TYPE")
       CType:Insert(1 ,{Name = "Free Spawn"  , Make = nil                                    })
@@ -132,13 +132,15 @@ if(CLIENT) then
       local devmode = asmlib.GetAsmVar("devmode" ,"BUL")
       local bgskids = asmlib.GetAsmVar("bgskids", "STR")
       asmlib.LogInstance("RESET_VARIABLES: {"..tostring(devmode)..asmlib.GetOpVar("OPSYM_DISABLE")..tostring(command).."}")
-      asmlib.ConCommandPly(oPly,"nextx"  , 0)
-      asmlib.ConCommandPly(oPly,"nexty"  , 0)
-      asmlib.ConCommandPly(oPly,"nextz"  , 0)
-      asmlib.ConCommandPly(oPly,"nextpic", 0)
-      asmlib.ConCommandPly(oPly,"nextyaw", 0)
-      asmlib.ConCommandPly(oPly,"nextrol", 0)
-      asmlib.ConCommandPly(oPly,"rotpiv" , 0)
+      asmlib.ConCommandPly(oPly,"nextx"    , 0)
+      asmlib.ConCommandPly(oPly,"nexty"    , 0)
+      asmlib.ConCommandPly(oPly,"nextz"    , 0)
+      asmlib.ConCommandPly(oPly,"nextpic"  , 0)
+      asmlib.ConCommandPly(oPly,"nextyaw"  , 0)
+      asmlib.ConCommandPly(oPly,"nextrol"  , 0)
+      asmlib.ConCommandPly(oPly,"rotpivt"  , 0)
+      asmlib.ConCommandPly(oPly,"rotpivh"  , 0)
+      asmlib.ConCommandPly(oPly,"deltarot" , 360)
       if(not devmode) then
         return asmlib.StatusLog(true,"RESET_VARIABLES: Developer mode disabled") end
       asmlib.SetLogControl(asmlib.GetAsmVar("logsmax" , "INT"), asmlib.GetAsmVar("logfile" , "STR"))
@@ -323,7 +325,7 @@ if(CLIENT) then
         local uiBox = asmlib.CacheBoxLayout(oEnt,40)
         if(not asmlib.IsExistent(uiBox)) then
           return asmlib.StatusLog(false,"OPEN_FRAME: pnModelPanel.LayoutEntity: Box invalid") end
-        local stSpawn = asmlib.GetNormalSpawn(asmlib.GetOpVar("VEC_ZERO"),uiBox.Ang,oEnt:GetModel(),1)
+        local stSpawn = asmlib.GetNormalSpawn(asmlib.GetOpVar("VEC_ZERO"),uiBox.Ang,oEnt:GetModel())
               stSpawn.SPos:Set(uiBox.Cen)
               stSpawn.SPos:Rotate(stSpawn.SAng)
               stSpawn.SPos:Mul(-1)
@@ -663,6 +665,8 @@ if(CLIENT) then
   asmlib.SetLocalify("en","tool."..gsToolNameL..".stmode"        , "Select stack mode forward/pivot via right click")
   asmlib.SetLocalify("en","tool."..gsToolNameL..".freeze"        , "Makes the piece spawn in a frozen state")
   asmlib.SetLocalify("en","tool."..gsToolNameL..".freeze_con"    , "Freeze pieces")
+  asmlib.SetLocalify("en","tool."..gsToolNameL..".nocollide"     , "Check this to ignore the collisions when creating constraints")
+  asmlib.SetLocalify("en","tool."..gsToolNameL..".nocollide_con" , "Ignore collisions")
   asmlib.SetLocalify("en","tool."..gsToolNameL..".adviser"       , "Controls rendering the tool position/angle adviser")
   asmlib.SetLocalify("en","tool."..gsToolNameL..".adviser_con"   , "Enable adviser")
   asmlib.SetLocalify("en","tool."..gsToolNameL..".igntyp"        , "Makes the tool ignore the different piece types on snapping/stacking")
@@ -681,7 +685,8 @@ if(CLIENT) then
   asmlib.SetLocalify("en","tool."..gsToolNameL..".trorang_con"   , "Use trace origin")
   asmlib.SetLocalify("en","tool."..gsToolNameL..".bgskids"       , "Selection code of comma delimited Bodygroup/Skin IDs > ENTER to accept, TAB to auto-fill from trace")
   asmlib.SetLocalify("en","tool."..gsToolNameL..".bgskids_def"   , "Write selection code here. For example 1,0,0,2,1/3")
-  asmlib.SetLocalify("en","tool."..gsToolNameL..".spnflat"       , "Spawn the piece flat on the ground")
+  asmlib.SetLocalify("en","tool."..gsToolNameL..".spnflat"       , "Check this to enable spawning gears on trace surface")
+  asmlib.SetLocalify("en","tool."..gsToolNameL..".spnflat_con"   , "Surface flat spawn")
   asmlib.SetLocalify("en","tool."..gsToolNameL..".exportdb"      , "Controls the flag to export the database")
   asmlib.SetLocalify("en","tool."..gsToolNameL..".forcelim"      , "Controls the constraint force limit")
   asmlib.SetLocalify("en","tool."..gsToolNameL..".friction_con"  , "Friction amount: ")
