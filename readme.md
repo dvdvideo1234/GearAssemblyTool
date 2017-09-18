@@ -40,7 +40,7 @@ A: Set the stack mode to "Around pivot" ( Around the trace prop's yellow line ).
    Adjust pivot rotation if you don't want to start at 0 degrees.
    Use the meshing function, done ;).
 
-Q: Dude, how can I make a mighty gear diff, like in the icon?
+Q: Dude, how can I make a mighty gear differential, like in the icon?
 A: Repeat the same procedure as the planetary gear above, but with bevels.
    Last, adjust the piece's rotation to 180 degrees, set the stack count to one,
    point to one of the planetary bevels use the meshing function.
@@ -55,7 +55,7 @@ A: Below the gear selection tree, there is a drop-down menu. ( It shows "<Constr
    Click on it to select constraint type like Axis, BS, and so on ..
 
 Q: How should I chose an anchor prop to constrain the gears to and how can I know what did I select?
-A: Easy, see the "[ID]" selection on the toolgun's screen next to the trace status. It indicates
+A: Easy, see the "[ID]" selection on the toolgun screen next to the trace status. It indicates
    which prop is selected for "Anchor" ( A prop that the gears will be automatically constrained to )
    If it shows "N/A" ( Not Available ), then no anchor is selected.
    If it shows for example "[Entity_ID]", then an anchor is selected
@@ -66,7 +66,23 @@ A: Easy, see the "[ID]" selection on the toolgun's screen next to the trace stat
 Q: You said this thing is pretty mush like the TA, which settings are the same?
 A: The handling of Bodygroup/Skin selection, Mass, Gear's physical properties,
    Ghosting and stuff, Error logging, Screens, Translations and Data export/selection.
+
+Q: I want to stack a gearbox, but gear tooth is directly placed on on the angle's forward vector.
+   This makes the tool stack gears where the teeth are inside each other. What should I do?
+A: Adjust the trace pivot rotation until the tooth of the holder gear ( the piece that you are
+   holding ) aligns with the gap of the trace gear. Take this number and divide it by two.
+   Now apply the same value for both trace pivot rotation and piece ( holder pivot ) rotation.
+
+Q: I have a hard time reading the lines and circles if the adviser. What do these represent?
+A: All read lines are forward direction vectors in all the angles processed. The green circles
+   are trace and domain centers and yellow and cyan lines are their trace and holder pivot respectively.
+   The green line is the origin right vector and the blue line the up vector. The yellow circle is the
+   point where the gears mesh. The gear position is not displayed on the screen, as the mass center is
+   used for all internal position calculations and it is proper origin to relate the offset on.
+   If you are still confused about this, please take a look at the diagram below:
 ```
-**Destribution ownership is like the Track Assembly Tool, so DO NOT UPLOAD THIS TO ANY OTHER SITES !**
+![GearAssemblyCoordinates](https://raw.githubusercontent.com/dvdvideo1234/GearAssemblyTool/master/coordinates.jpg)
+
+**Distribution ownership is like the Track Assembly Tool, so DO NOT UPLOAD THIS TO ANY OTHER SITES !**
 
 **I mean it !**

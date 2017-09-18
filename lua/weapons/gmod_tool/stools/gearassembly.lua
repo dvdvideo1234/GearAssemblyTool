@@ -93,7 +93,6 @@ TOOL.Category   = languageGetPhrase and languageGetPhrase("tool."..gsToolNameL..
 TOOL.Name       = languageGetPhrase and languageGetPhrase("tool."..gsToolNameL..".name")     -- Name to display
 TOOL.Command    = nil  -- Command on click ( nil )
 TOOL.ConfigName = nil  -- Config file name ( nil )
-TOOL.AddToMenu  = true -- Yo add it to the Q menu or not ( true )
 
 TOOL.ClientConVar = {
   [ "mass"      ] = "250",
@@ -265,15 +264,15 @@ function TOOL:SetAnchor(stTrace)
   return asmlib.StatusLog(true,"TOOL:SetAnchor("..sAnchor..")")
 end
 
-function TOOL:ClearAnchor()
+function TOOL:ClearAnchor(bNotif)
   local svEnt = self:GetEnt(1)
   local plPly = self:GetOwner()
   if(svEnt and svEnt:IsValid()) then
     svEnt:SetRenderMode(RENDERMODE_TRANSALPHA)
     svEnt:SetColor(conPalette:Select("w"))
-  end
-  self:ClearObjects()
-  asmlib.PrintNotifyPly(plPly,"Anchor: Cleaned !","CLEANUP")
+  end; self:ClearObjects()
+  if(bNotif) then
+    asmlib.PrintNotifyPly(plPly,"Anchor: Cleaned !","CLEANUP") end
   asmlib.ConCommandPly(plPly,"anchor",gsNoAnchor)
   return asmlib.StatusLog(true,"TOOL:ClearAnchor(): Anchor cleared")
 end
@@ -360,6 +359,14 @@ function TOOL:GetStatus(stTrace,anyMessage,hdEnt)
   return sDu
 end
 
+function TOOL:ValidateTrace(stTrace)
+  if(not asmlib.IsPhysTrace(stTrace)) then
+    return asmlib.StatusLog(false, "TOOL:ValidateTrace(): Trace no physics") end
+  if(asmlib.IsOther(stTrace.Entity)) then
+    return asmlib.StatusLog(false, "TOOL:ValidateTrace(): Trace is other") end
+  return asmlib.StatusLog(true,"TOOL:ValidateTrace(): Trace validated")
+end
+
 function TOOL:LeftClick(stTrace)
   if(CLIENT) then
     return asmlib.StatusLog(true,"TOOL:LeftClick(): Working on client") end
@@ -369,23 +376,23 @@ function TOOL:LeftClick(stTrace)
     return asmlib.StatusLog(false,"TOOL:LeftClick(): Trace not hit") end
   local trEnt     = stTrace.Entity
   local ply       = self:GetOwner()
+  local mass      = self:GetMass()
   local model     = self:GetModel()
+  local count     = self:GetCount()
   local freeze    = self:GetFreeze()
-  local igntyp    = self:GetIgnoreType()
-  local bgskids   = self:GetBodyGroupSkin()
   local gravity   = self:GetGravity()
+  local friction  = self:GetFriction()
   local nocollide = self:GetNoCollide()
   local spnflat   = self:GetSpawnFlat()
-  local trorang   = self:GetTraceOriginAngle()
-  local count     = self:GetCount()
-  local mass      = self:GetMass()
-  local maxstatts = self:GetStackAttempts()
-  local deltarot  = self:GetDeltaRotation()
-  local friction  = self:GetFriction()
+  local igntyp    = self:GetIgnoreType()
   local forcelim  = self:GetForceLimit()
   local torquelim = self:GetTorqueLimit()
+  local bgskids   = self:GetBodyGroupSkin()
+  local maxstatts = self:GetStackAttempts()
+  local deltarot  = self:GetDeltaRotation()
   local ignphysgn = self:GetIgnorePhysgun()
   local bnderrmod = self:GetBoundErrorMode()
+  local trorang   = self:GetTraceOriginAngle()
   local fnmodel   = stringToFileName(model)
   local stmode    = asmlib.GetCorrectID(self:GetStackMode(),SMode)
   local contyp    = asmlib.GetCorrectID(self:GetContrType(),CType)
@@ -401,7 +408,7 @@ function TOOL:LeftClick(stTrace)
     if(not stSpawn) then return asmlib.StatusLog(false,self:GetStatus(stTrace,"TOOL:LeftClick(World): Normal spawn failed")) end
     local ePiece = asmlib.MakePiece(ply,model,stTrace.HitPos,ANG_ZERO,mass,bgskids,conPalette:Select("w"),bnderrmod)
     if(not ePiece) then return asmlib.StatusLog(false,self:GetStatus(stTrace,"TOOL:LeftClick(World): Making piece failed")) end
-    if(spnflat) then asmlib.ApplySpawnFlat(ePiece,stSpawn,stTrace) end
+    if(spnflat) then asmlib.ApplySpawnFlat(ePiece,stSpawn,stTrace.HitNormal) end
     ePiece:SetAngles(stSpawn.SAng); ePiece:SetPos(stSpawn.SPos)
     asmlib.UndoCratePly(gsUndoPrefN..fnmodel.." ( World spawn )")
     if(not asmlib.ApplyPhysicalSettings(ePiece,ignphysgn,freeze,gravity)) then
@@ -413,15 +420,11 @@ function TOOL:LeftClick(stTrace)
     return asmlib.StatusLog(true,"TOOL:LeftClick(World): Success")
   end
 
-  if(not (trEnt and trEnt:IsValid())) then
-    return asmlib.StatusLog(false,self:GetStatus(stTrace,"TOOL:LeftClick(Prop): Trace entity invalid")) end
-  if(asmlib.IsOther(trEnt)) then
-    return asmlib.StatusLog(false,self:GetStatus(stTrace,"TOOL:LeftClick(Prop): Trace is other type of object")) end
-  if(not asmlib.IsPhysTrace(stTrace)) then
-    return asmlib.StatusLog(false,self:GetStatus(stTrace,"TOOL:LeftClick(Prop): Trace is not physical object")) end
+  if(not self:ValidateTrace(stTrace)) then
+    return asmlib.StatusLog(false,self:GetStatus(stTrace,"TOOL:LeftClick(): Trace not valid")) end
 
-  local trModel = trEnt:GetModel()
   local bsModel = "N/A"
+  local trModel = trEnt:GetModel()
   if(eBase and eBase:IsValid()) then bsModel = eBase:GetModel() end
 
   --No need stacking relative to non-persistent props or using them...
@@ -432,14 +435,13 @@ function TOOL:LeftClick(stTrace)
 
   if(asmlib.CheckButtonPly(ply,IN_DUCK)) then -- USE: Use the valid trace as a piece
     if(asmlib.CheckButtonPly(ply,IN_USE)) then -- Physical
+      if(not asmlib.ApplyPhysicalAnchor(ePiece,eBase,stTrace.HitPos,stTrace.HitNormal,contyp,nocollide,forcelim,torquelim,friction)) then
+        return asmlib.StatusLog(false,self:GetStatus(stTrace,"TOOL:LeftClick(World): Failed to apply physical anchor",ePiece)) end
+    else -- Model
       if(not asmlib.ApplyPhysicalSettings(trEnt,ignphysgn,freeze,gravity)) then
         return asmlib.StatusLog(false,self:GetStatus(stTrace,"TOOL:LeftClick(Physical): Failed to apply physical settings",trEnt)) end
       trEnt:GetPhysicsObject():SetMass(mass)
       return asmlib.StatusLog(true,"TOOL:LeftClick(Physical): Success")
-    else -- Model
-      asmlib.ConCommandPly(ply,"model",trModel)
-      asmlib.PrintNotifyPly(ply,"Model: "..fnmodel.." selected !","GENERIC")
-      return asmlib.StatusLog(true,"TOOL:LeftClick(Select): Success <"..trModel..">")
     end
   end
 
@@ -512,16 +514,26 @@ function TOOL:RightClick(stTrace)
   local trEnt = stTrace.Entity
   local ply   = self:GetOwner()
   if(asmlib.CheckButtonPly(ply,IN_USE)) then
-    if(stTrace.HitWorld) then asmlib.ConCommandPly(ply,"openframe",asmlib.GetAsmVar("maxfruse" ,"INT"))
-       return asmlib.StatusLog(true,"TOOL:RightClick(World): Success open frame") end
+    if(stTrace.HitWorld) then
+      asmlib.ConCommandPly(ply,"openframe",asmlib.GetAsmVar("maxfruse" ,"INT"))
+      return asmlib.StatusLog(true,"TOOL:RightClick(World): Success open frame")
+    end
   elseif(asmlib.CheckButtonPly(ply,IN_SPEED)) then
     if(stTrace.HitWorld) then
-      self:ClearAnchor(); return asmlib.StatusLog(true,"TOOL:RightClick(Prop): Anchor cleared")
+      self:ClearAnchor(true); return asmlib.StatusLog(true,"TOOL:RightClick(SPEED): Anchor cleared")
     elseif(trEnt and trEnt:IsValid()) then
-      if(not asmlib.IsPhysTrace(stTrace)) then return false end
-      if(asmlib.IsOther(trEnt)) then return false end
-      self:SetAnchor(stTrace); return asmlib.StatusLog(true,"TOOL:RightClick(Prop): Anchor set")
-    else return asmlib.StatusLog(true,self:GetStatus(stTrace,"TOOL:RightClick(Prop): Invalid action",trEnt)) end
+      if(not self:ValidateTrace(stTrace)) then
+        return asmlib.StatusLog(false,self:GetStatus(stTrace,"TOOL:RightClick(SPEED): Trace not valid")) end
+      self:SetAnchor(stTrace); return asmlib.StatusLog(true,"TOOL:RightClick(SPEED): Anchor set")
+    else return asmlib.StatusLog(true,self:GetStatus(stTrace,"TOOL:RightClick(SPEED): Invalid action",trEnt)) end
+  elseif(asmlib.CheckButtonPly(ply,IN_DUCK)) then
+    if(not self:ValidateTrace(stTrace)) then
+      return asmlib.StatusLog(false,self:GetStatus(stTrace,"TOOL:RightClick(DUCK): Trace not valid")) end
+    local trModel = trEnt:GetModel()
+    local fnModel = stringToFileName(model)
+    asmlib.ConCommandPly(ply,"model",trModel)
+    asmlib.PrintNotifyPly(ply,"Model: "..fnModel.." selected !","GENERIC")
+    return asmlib.StatusLog(true,"TOOL:RightClick(DUCK): Success <"..fnModel..">")
   else
     local stmode = asmlib.GetCorrectID(self:GetStackMode(),SMode)
           stmode = asmlib.GetCorrectID(stmode + 1,SMode)
@@ -531,11 +543,11 @@ function TOOL:RightClick(stTrace)
   end
 end
 
-function TOOL:Reload(Trace)
+function TOOL:Reload(stTrace)
   if(CLIENT) then return true end
-  if(not Trace) then return false end
+  if(not stTrace) then return false end
   local ply = self:GetOwner()
-  if(asmlib.CheckButtonPly(ply,IN_SPEED) and Trace.HitWorld) then
+  if(asmlib.CheckButtonPly(ply,IN_SPEED) and stTrace.HitWorld) then
     asmlib.SetLogControl(self:GetLogLines(),self:GetLogFile())
     if(self:GetExportDB()) then
       asmlib.LogInstance("TOOL:Reload(World): Exporting DB")
@@ -543,11 +555,9 @@ function TOOL:Reload(Trace)
       asmlib.ConCommandPly(ply, "exportdb", 0)
     end; return asmlib.StatusLog(true,"TOOL:Reload(World): Success")
   end
-  if(not asmlib.IsPhysTrace(Trace)) then
-    return asmlib.StatusLog(false,self:GetStatus(stTrace,"TOOL:Reload(): Trace not physics")) end
-  local trEnt = Trace.Entity
-  if(asmlib.IsOther(trEnt)) then
-    return asmlib.StatusLog(false,self:GetStatus(stTrace,"TOOL:Reload(): Other entity",trEnt)) end
+  if(not self:ValidateTrace(stTrace)) then
+    return asmlib.StatusLog(false,self:GetStatus(stTrace,"TOOL:Reload(Prop): Trace not valid")) end
+  local trEnt = stTrace.Entity
   local trRec = asmlib.CacheQueryPiece(trEnt:GetModel())
   if(trRec) then trEnt:Remove(); return asmlib.StatusLog(true,"TOOL:Reload(Prop): Removed a piece") end
   return asmlib.StatusLog(false,"TOOL:Reload(): Nothing removed")
@@ -606,23 +616,25 @@ function TOOL:DrawHUD()
     local Xs = (stSpawn.OPos + 15 * stSpawn.F):ToScreen()
     local Ys = (stSpawn.OPos + 15 * stSpawn.R):ToScreen()
     local Zs = (stSpawn.OPos + 15 * stSpawn.U):ToScreen()
-    local Sp =  stSpawn.MPos:ToScreen()
+    local Dp =  stSpawn.MPos:ToScreen()
     local Df = (stSpawn.MPos + 15 * stSpawn.DAng:Forward()):ToScreen()
     local Du = (stSpawn.MPos + 15 * stSpawn.DAng:Up()):ToScreen()
     local Tp =  stSpawn.TPos:ToScreen()
+    local Tf = (stSpawn.TPos + 15 * stSpawn.TAng:Forward()):ToScreen()
     local Tu = (stSpawn.TPos + 15 * stSpawn.TAng:Up()):ToScreen()
     -- Draw UCS
-    hudMonitor:DrawLine(Op,Xs,"r","SURF")   -- Origin X
-    hudMonitor:DrawLine(Op,Zs,"b")          -- Origin Z
-    hudMonitor:DrawLine(Tp,Tu,"y")          -- Trace Z
-    hudMonitor:DrawCircle(Op,plyrad,"y","SURF") -- Origin position O
-    hudMonitor:DrawLine(Op,Ys,"g")
-    hudMonitor:DrawLine(Tp,Op)
-    hudMonitor:DrawCircle(Tp,plyrad)
-    hudMonitor:DrawLine(Op,Sp,"m")
-    hudMonitor:DrawCircle(Sp,plyrad)        -- Spawn position ( Mass center )
-    hudMonitor:DrawLine(Sp,Df,"r")          -- Domain forward
-    hudMonitor:DrawLine(Sp,Du,"c")          -- Domain up
+    hudMonitor:DrawLine(Op,Xs,"r","SURF")       -- Forward origin vector (X)
+    hudMonitor:DrawLine(Op,Ys,"g")              -- Right origin vector   (Y)
+    hudMonitor:DrawLine(Op,Zs,"b")              -- Up origin vector      (Z)
+    hudMonitor:DrawLine(Tp,Tu,"y")              -- Trace pivot
+    hudMonitor:DrawLine(Tp,Tf,"r")              -- Trace forward
+    hudMonitor:DrawCircle(Op,plyrad,"y","SURF") -- Origin mesh position
+    hudMonitor:DrawLine(Tp,Op,"m")              -- Trace offset vector
+    hudMonitor:DrawLine(Op,Dp)                  -- Domain offset vector
+    hudMonitor:DrawCircle(Tp,plyrad,"g")        -- Trace position ( Mass center )
+    hudMonitor:DrawCircle(Dp,plyrad)            -- Spawn position ( Mass center )
+    hudMonitor:DrawLine(Dp,Du,"c")              -- Domain pivot
+    hudMonitor:DrawLine(Dp,Df,"r")              -- Domain forward
     if(not self:GetDeveloperMode()) then return end
     self:DrawTextSpawn(hudMonitor, stSpawn, "k","SURF",{"Trebuchet18"})
   else
@@ -705,16 +717,16 @@ function TOOL:DrawToolScreen(w, h)
           trModel = stringToFileName(trModel)
     if(trRec) then
       trRake = asmlib.RoundValue(trRec.Rake,0.01)
-      trRad  = asmlib.RoundValue(asmlib.GetLengthVector(trRec.Offs.O),0.01)
+      trRad  = asmlib.RoundValue(asmlib.AbsVector(trRec.Offs.P),0.01)
     end
   end
-  local hdRad = asmlib.RoundValue(asmlib.GetLengthVector(hdRec.Offs.O),0.01)
-  local Ratio = asmlib.RoundValue((trRad or 0) / hdRad,0.01)
+  local hdRad = asmlib.RoundValue(asmlib.AbsVector(hdRec.Offs.P),0.01)
+  local nFrac = asmlib.RoundValue((trRad or 0) / hdRad,0.01)
   scrTool:DrawText("TM: "..(trModel or NoAV),"g")
   scrTool:DrawText("HM: "..(stringToFileName(model) or NoAV),"m")
   scrTool:DrawText("Anc: "..self:GetAnchor("anchor"),"an")
   scrTool:DrawText("Rake: "..tostring(trRake or NoAV).." > "..tostring(asmlib.RoundValue(hdRec.Rake,0.01) or NoAV),"y")
-  scrTool:DrawText("Ratio: "..tostring(Ratio).." > "..tostring(trRad or gsNoID).."/"..tostring(hdRad))
+  scrTool:DrawText("Frac: "..tostring(nFrac).." > "..tostring(trRad or gsNoID).."/"..tostring(hdRad))
   scrTool:DrawText("Mode: "..SMode:Select(stmode),"r")
   scrTool:DrawText("Date: "..tostring(asmlib.GetDate()),"w")
   self:DrawRatioVisual(scrTool,trRad,hdRad,10)
@@ -804,8 +816,8 @@ function TOOL.BuildCPanel(CPanel)
   local Val = CType:Select(iCnt)
   while(Val) do
     pConsType:AddChoice(Val.Name)
-    pConsType.OnSelect = function(panel,index,value)
-      RunConsoleCommand(gsToolPrefL.."contyp",index)
+    pConsType.OnSelect = function(pnSelf,iID,anyVal)
+      RunConsoleCommand(gsToolPrefL.."contyp",iID)
     end
     iCnt = iCnt + 1
     Val = CType:Select(iCnt)
@@ -915,7 +927,7 @@ function TOOL:UpdateGhost(ePiece, oPly)
     local aAng = asmlib.GetNormalAngle(oPly, stTrace)
     local stSpawn = asmlib.GetNormalSpawn(vPos,aAng,model,rotpivh,trorang,nextx,nexty,nextz,nextpic,nextyaw,nextrol)
     if(not stSpawn) then return end
-    if(spnflat) then asmlib.ApplySpawnFlat(ePiece,stSpawn,stTrace) end
+    if(spnflat) then asmlib.ApplySpawnFlat(ePiece,stSpawn,stTrace.HitNormal) end
     ePiece:SetNoDraw(false); ePiece:SetAngles(stSpawn.SAng); ePiece:SetPos(stSpawn.SPos); return
   end
 end

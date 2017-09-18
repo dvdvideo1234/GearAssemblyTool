@@ -365,6 +365,9 @@ function InitBase(sName,sPurpose)
   SetOpVar("MAX_ROTATION",360)
   SetOpVar("ANG_ZERO",Angle())
   SetOpVar("VEC_ZERO",Vector())
+  SetOpVar("VEC_UP",Vector(0,0,1))
+  SetOpVar("VEC_FW",Vector(1,0,0))
+  SetOpVar("VEC_RG",Vector(0,-1,0)) -- In Gmod Left is +Y
   SetOpVar("OPSYM_DISABLE","#")
   SetOpVar("OPSYM_REVSIGN","@")
   SetOpVar("OPSYM_DIVIDER","_")
@@ -506,22 +509,20 @@ function ExpVector(vBase)
   return (tonumber(vBase[cvX]) or 0), (tonumber(vBase[cvY]) or 0), (tonumber(vBase[cvZ]) or 0)
 end
 
-function GetLengthVector(vBase)
-  if(not vBase) then return StatusLog(nil,"GetLengthVector: Base invalid") end
-  local X = (tonumber(vBase[cvX]) or 0); X = X * X
-  local Y = (tonumber(vBase[cvY]) or 0); Y = Y * Y
-  local Z = (tonumber(vBase[cvZ]) or 0); Z = Z * Z
+function AbsVector(vBase)
+  if(not vBase) then return StatusLog(nil,"AbsVector: Base invalid") end
+  local X, Y, Z = ExpVector(vBase); X, Y, Z = (X * X), (Y * Y), (Z * Z)
   return mathSqrt(X + Y + Z)
 end
 
-function RoundVector(vBase,nvRound)
-  if(not vBase) then return StatusLog(nil,"RoundVector: Base invalid") end
-  local R = tonumber(nvRound)
-  if(not IsExistent(R)) then
-    return StatusLog(nil,"RoundVector: Round NAN {"..type(nvRound).."}<"..tostring(nvRound)..">") end
-  local X = (tonumber(vBase[cvX]) or 0); X = RoundValue(X,R); vBase[cvX] = X
-  local Y = (tonumber(vBase[cvY]) or 0); Y = RoundValue(Y,R); vBase[cvY] = Y
-  local Z = (tonumber(vBase[cvZ]) or 0); Z = RoundValue(Z,R); vBase[cvZ] = Z
+function RoundVector(vBase,nvAcc)
+  if(not vBase) then return StatusLog(nil,"Round: Base invalid") end
+  local nAcc = tonumber(nvAcc)
+  if(not IsExistent(nAcc)) then
+    return StatusLog(nil,"RoundVector: Round NAN {"..type(nvAcc).."}<"..tostring(nvAcc)..">") end
+  local X, Y, Z = ExpVector(vBase)
+  X, Y, Z = RoundValue(X,nAcc), RoundValue(Y,nAcc), RoundValue(Z,nAcc)
+  vBase[cvX], vBase[cvY], vBase[cvZ] = X, Y, Z
 end
 
 function AddVector(vBase, vUnit)
@@ -1013,14 +1014,20 @@ function GetCorrectID(anyValue,oContainer)
   return Value
 end
 
-function IsPhysTrace(Trace)
-  if(not Trace) then return false end
-  if(not Trace.Hit) then return false end
-  if(Trace.HitWorld) then return false end
-  local eEnt = Trace.Entity
-  if(not eEnt) then return false end
-  if(not eEnt:IsValid()) then return false end
-  if(not eEnt:GetPhysicsObject():IsValid()) then return false end
+function IsPhysTrace(stTrace)
+  if(not stTrace) then
+    return StatusLog(false,"IsPhysTrace: Trace missing") end
+  if(not stTrace.Hit) then
+    return StatusLog(false,"IsPhysTrace: Trace not hit") end
+  if(stTrace.HitWorld) then
+    return StatusLog(false,"IsPhysTrace: Trace is world") end
+  local trEnt = stTrace.Entity
+  if(not IsExistent(trEnt)) then
+    return StatusLog(false,"IsPhysTrace: Entity missing") end
+  if(not trEnt:IsValid()) then
+    return StatusLog(false,"IsPhysTrace: Entity <"..tostring(trEnt).."> not valid") end
+  if(not trEnt:GetPhysicsObject():IsValid()) then
+    return StatusLog(false,"IsPhysTrace: Entity <"..tostring(trEnt).."> no physics") end
   return true
 end
 
@@ -2531,26 +2538,7 @@ function ProcessDSV(sDelim)
   end; return StatusLog(true,"ProcessDSV: Success")
 end
 
-function SetMCWorld(oEnt,vdbMCL,vMCW)
-  if(not vMCW) then return end
-  if(not vdbMCL) then return end
-  if(not (oEnt and oEnt:IsValid())) then return end
-  local vPos = Vector(vdbMCL[cvX],vdbMCL[cvY],vdbMCL[cvZ])
-        vPos:Mul(-1)
-        vPos:Rotate(oEnt:GetAngles())
-        vPos:Add(vMCW)
-        oEnt:SetPos(vPos)
-end
-
-function GetMCWorldPosAng(vPos,vAng,vdbMCL)
-  if(not (vdbMCL and vPos and vAng)) then return end
-  local vMCW = Vector(vdbMCL[cvX],vdbMCL[cvY],vdbMCL[cvZ])
-        vMCW:Rotate(vAng)
-        vMCW:Add(vPos)
-  return vMCW
-end
-
-function ApplySpawnFlat(oEnt,stSpawn,stTrace)
+function ApplySpawnFlat(oEnt,stSpawn,vNorm)
   if(not (oEnt and oEnt:IsValid())) then
     return StatusLog(false,"ApplyFlatSpawn: Entity invalid <"..tostring(oEnt)..">") end
   if(not (stSpawn and stSpawn.HRec)) then
@@ -2563,7 +2551,7 @@ function ApplySpawnFlat(oEnt,stSpawn,stTrace)
           vOBB:Rotate(aAngDB)
           DecomposeByAngle(vOBB,Angle())
     local zOffs = mathAbs(vOBB[cvZ])
-    stSpawn.MPos:Set(stSpawn.OPos); stSpawn.MPos:Add(stTrace.HitNormal * zOffs)
+    stSpawn.MPos:Set(stSpawn.OPos); stSpawn.MPos:Add(vNorm * zOffs)
     stSpawn.MPos:Add(stSpawn.F * stSpawn.NPos[cvX])
     stSpawn.MPos:Add(stSpawn.R * stSpawn.NPos[cvY])
     stSpawn.MPos:Add(stSpawn.U * stSpawn.NPos[cvZ])
@@ -2573,10 +2561,11 @@ function ApplySpawnFlat(oEnt,stSpawn,stTrace)
   end; return true
 end
 
-function GetNormalAngle(oPly, stTr)
+function GetNormalAngle(oPly, stTrace)
   local aAng = Angle()
-  if(not IsPlayer(oPly)) then return StatusLog(aAng,"GetNormalAngle: No player <"..tostring(oPly)..">") end
-  aAng:Set(stTr.HitNormal:Cross(oPly:GetRight()):AngleEx(stTr.HitNormal)); return aAng
+  if(not IsPlayer(oPly)) then
+    return StatusLog(aAng,"GetNormalAngle: No player <"..tostring(oPly)..">") end
+  aAng:Set(stTrace.HitNormal:Cross(oPly:GetRight()):AngleEx(stTrace.HitNormal)); return aAng
 end
 
 ----------------------------- SNAPPING ------------------------------
@@ -2602,24 +2591,22 @@ function GetNormalSpawn(ucsPos,ucsAng,hdModel,hdPivot,enOrAngTr,ucsPosX,ucsPosY,
         stSpawn.HRec = hdRec
   if(ucsPos) then SetVector(stSpawn.OPos,ucsPos); SetVector(stSpawn.TPos, ucsPos) end
   if(ucsAng) then SetVector(stSpawn.OAng,ucsAng); SetVector(stSpawn.TAng, ucsAng) end
-  -- Calculate directions
-  stSpawn.U:Set(stSpawn.OAng:Up()     )
-  stSpawn.R:Set(stSpawn.OAng:Right()  )
-  stSpawn.F:Set(stSpawn.OAng:Forward())
-  -- Rotate origin
-  SetAnglePYR(stSpawn.NAng, (tonumber(ucsAngP) or 0), (tonumber(ucsAngY) or 0), (tonumber(ucsAngR) or 0))
-  stSpawn.OAng:RotateAroundAxis(stSpawn.U, stSpawn.NAng[caY])
+  SetAnglePYR (stSpawn.NAng, (tonumber(ucsAngP) or 0), (tonumber(ucsAngY) or 0), (tonumber(ucsAngR) or 0))
+  SetVectorXYZ(stSpawn.NPos, (tonumber(ucsPosX) or 0), (tonumber(ucsPosY) or 0), (tonumber(ucsPosZ) or 0))
+  -- Calculate origin directions
+  stSpawn.U:Set(stSpawn.OAng:Up())
+  stSpawn.R:Set(stSpawn.OAng:Right())
   stSpawn.OAng:RotateAroundAxis(stSpawn.R, stSpawn.NAng[caP])
-  stSpawn.OAng:RotateAroundAxis(stSpawn.F, stSpawn.NAng[caR])
-  stSpawn.U:Set(stSpawn.OAng:Up()     )
-  stSpawn.R:Set(stSpawn.OAng:Right()  )
+  stSpawn.OAng:RotateAroundAxis(stSpawn.U, stSpawn.NAng[caY])
   stSpawn.F:Set(stSpawn.OAng:Forward())
-  -- Read holder's data
-  SetVector(stSpawn.HPnt, hdPOA.P) -- Offset meshing point
-  SetVector(stSpawn.HPos, hdPOA.O) -- Mass center origin
-  SetAngle (stSpawn.HAng, hdPOA.A) -- Custom angle
-  NegAngle(stSpawn.HAng)
-  -- Calcolate domain ( Angle )
+  stSpawn.OAng:RotateAroundAxis(stSpawn.F, stSpawn.NAng[caR])
+  stSpawn.U:Set(stSpawn.OAng:Up())
+  stSpawn.R:Set(stSpawn.OAng:Right())
+  -- Read holder data
+  SetVector(stSpawn.HPnt, hdPOA.P); NegVector(stSpawn.HPnt) -- Offset meshing point
+  SetVector(stSpawn.HPos, hdPOA.O); NegVector(stSpawn.HPos) -- Mass center origin
+  if(hdPOA.A[csD]) then SetAnglePYR(stSpawn.HAng) else SetAngle(stSpawn.HAng,hdPOA.A) end
+  -- Calculate domain ( Angle )
   stSpawn.DAng:Set(stSpawn.OAng)
   stSpawn.DAng:RotateAroundAxis(stSpawn.R,hdRec.Rake)
   stSpawn.DAng:RotateAroundAxis(stSpawn.DAng:Up(),(tonumber(hdPivot) or 0))
@@ -2627,20 +2614,19 @@ function GetNormalSpawn(ucsPos,ucsAng,hdModel,hdPivot,enOrAngTr,ucsPosX,ucsPosY,
   stSpawn.MAng:Set(stSpawn.HAng)
   stSpawn.MAng:RotateAroundAxis(stSpawn.MAng:Up(),180)
   stSpawn.MAng:RotateAroundAxis(stSpawn.MAng:Right(),-hdRec.Rake)
-  stSpawn.HPnt:Mul(-1); DecomposeByAngle(stSpawn.HPnt,stSpawn.MAng);
+  DecomposeByAngle(stSpawn.HPnt,stSpawn.MAng);
   -- Calculate spawns
-  stSpawn.SAng:Set(stSpawn.DAng)
+  stSpawn.SAng:Set(stSpawn.DAng); NegAngle(stSpawn.HAng)
   stSpawn.SAng:RotateAroundAxis(stSpawn.U,stSpawn.HAng[caY] * hdPOA.A[csB])
   stSpawn.SAng:RotateAroundAxis(stSpawn.R,stSpawn.HAng[caP] * hdPOA.A[csA])
   stSpawn.SAng:RotateAroundAxis(stSpawn.F,stSpawn.HAng[caR] * hdPOA.A[csC])
-  stSpawn.HPos:Mul(-1); stSpawn.HPos:Rotate(stSpawn.SAng) -- Mass-center
+  stSpawn.HPos:Rotate(stSpawn.SAng) -- Mass-center to world vector
   stSpawn.MPos:Set(stSpawn.OPos)
   -- Add the decomposed mass center origin
   stSpawn.MPos:Add(stSpawn.HPnt[cvX] * stSpawn.F)
   stSpawn.MPos:Add(stSpawn.HPnt[cvY] * stSpawn.R)
   stSpawn.MPos:Add(stSpawn.HPnt[cvZ] * stSpawn.U)
   -- Take offsets in consideration
-  SetVectorXYZ(stSpawn.NPos, (tonumber(ucsPosX) or 0), (tonumber(ucsPosY) or 0), (tonumber(ucsPosZ) or 0))
   if(enOrAngTr) then
     stSpawn.F:Set(stSpawn.TAng:Forward())
     stSpawn.R:Set(stSpawn.TAng:Right())
@@ -2649,7 +2635,7 @@ function GetNormalSpawn(ucsPos,ucsAng,hdModel,hdPivot,enOrAngTr,ucsPosX,ucsPosY,
   stSpawn.MPos:Add(stSpawn.NPos[cvX] * stSpawn.F)
   stSpawn.MPos:Add(stSpawn.NPos[cvY] * stSpawn.R)
   stSpawn.MPos:Add(stSpawn.NPos[cvZ] * stSpawn.U)
-  -- Calcoalte the mass-center location as a position vector based on the database
+  -- Calculate the mass-center location as a position vector based on the database
   stSpawn.SPos:Set(stSpawn.MPos); stSpawn.SPos:Add(stSpawn.HPos) -- Add the mass-center
   return stSpawn
 end
@@ -2657,7 +2643,7 @@ end
 --[[
  * This function is the backbone of the tool for Trace.Entity
  * Calculates SPos, SAng based on the DB inserts and input parameters
- * From the position and angle of the entity, the masscenter is calculated
+ * From the position and angle of the entity, the mass-center is calculated
  * and used as an origin to build the spawn parameters,
  * trEnt         --> Trace.Entity
  * trPivot       --> Trace  pivot rotation
@@ -2696,12 +2682,10 @@ function GetEntitySpawn(trEnt,trPivot,hdPivot,hdModel,enIgnTyp,enOrAngTr,
   stSpawn.TPos:Rotate(trAng); stSpawn.TPos:Add(trPos)       -- Trace mass-center world
   stSpawn.TAng:Set(trEnt:LocalToWorldAngles(stSpawn.TAng))  -- Initial coordinate system
   stSpawn.TAng:RotateAroundAxis(stSpawn.TAng:Up(),-trPivot) -- Apply the pivot rotation for trace
+  stSpawn.TPnt:Rotate(stSpawn.TAng) -- Non-raked angle must be used for offset origin (yellow)
   -- Calculate the origin based on the center
-  stSpawn.OPos:Set(stSpawn.TPnt)
-  stSpawn.OPos:Rotate(stSpawn.TAng)
-  stSpawn.OPos:Add(stSpawn.TPos)
-  stSpawn.OAng:Set(stSpawn.TAng)
-  stSpawn.OAng:RotateAroundAxis(stSpawn.TAng:Right(),trRec.Rake)
+  stSpawn.OPos:Set(stSpawn.TPnt); stSpawn.OPos:Add(stSpawn.TPos)
+  stSpawn.OAng:Set(stSpawn.TAng); stSpawn.OAng:RotateAroundAxis(stSpawn.TAng:Right(),trRec.Rake)
   return GetNormalSpawn(nil,nil,hdModel,hdPivot,enOrAngTr,ucsPosX,ucsPosY,ucsPosZ,ucsAngP,ucsAngY,ucsAngR)
 end
 

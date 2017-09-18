@@ -326,6 +326,9 @@ if(CLIENT) then
         if(not asmlib.IsExistent(uiBox)) then
           return asmlib.StatusLog(false,"OPEN_FRAME: pnModelPanel.LayoutEntity: Box invalid") end
         local stSpawn = asmlib.GetNormalSpawn(asmlib.GetOpVar("VEC_ZERO"),uiBox.Ang,oEnt:GetModel())
+        if(not stSpawn) then
+          return asmlib.StatusLog(false,"OPEN_FRAME: pnModelPanel.LayoutEntity: Spawn data fail") end
+        asmlib.ApplySpawnFlat(oEnt, stSpawn, asmlib.GetOpVar("VEC_UP"))
               stSpawn.SPos:Set(uiBox.Cen)
               stSpawn.SPos:Rotate(stSpawn.SAng)
               stSpawn.SPos:Mul(-1)
