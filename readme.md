@@ -5,13 +5,13 @@ GearAssemblyTool
 
 **IF YOU HAPPEN TO FIND REUPLOADS WITH DIFFERENT ORIGIN REPORT THEM TO ME IMMIDEATELY !!!**
 
-![GearAssemblyTool](https://raw.githubusercontent.com/dvdvideo1234/GearAssemblyTool/master/screenshot.jpg)
+![GearAssemblyTool](https://raw.githubusercontent.com/dvdvideo1234/GearAssemblyTool/LuaDB/data/pictures/screenshot.jpg)
 
  On the Steam WS: http://steamcommunity.com/sharedfiles/filedetails/?id=384782853
 
 This is a Gmod tool for assembling Gears
 
-Genral FAQ:
+General FAQ:
 
 ```
 Q: Why did you made this script and what is its purpose ?
@@ -67,11 +67,12 @@ Q: You said this thing is pretty mush like the TA, which settings are the same?
 A: The handling of Bodygroup/Skin selection, Mass, Gear's physical properties,
    Ghosting and stuff, Error logging, Screens, Translations and Data export/selection.
 
-Q: I want to stack a gearbox, but gear tooth is directly placed on on the angle's forward vector.
+Q: I want to stack a gearbox, but the gear tooth is directly placed on the angle forward vector.
    This makes the tool stack gears where the teeth are inside each other. What should I do?
 A: Adjust the trace pivot rotation until the tooth of the holder gear ( the piece that you are
-   holding ) aligns with the gap of the trace gear. Take this number and divide it by two.
-   Now apply the same value for both trace pivot rotation and piece ( holder pivot ) rotation.
+   holding ) aligns with the gap of the trace gear. Take this number (For example 7.25) and divide
+   it by two (3.625). Now use this same value (3.625) for both trace pivot rotation and piece
+   ( holder pivot ) rotation.
 
 Q: I have a hard time reading the lines and circles if the adviser. What do these represent?
 A: All read lines are forward direction vectors in all the angles processed. The green circles
@@ -81,7 +82,7 @@ A: All read lines are forward direction vectors in all the angles processed. The
    used for all internal position calculations and it is proper origin to relate the offset on.
    If you are still confused about this, please take a look at the diagram below:
 ```
-![GearAssemblyCoordinates](https://raw.githubusercontent.com/dvdvideo1234/GearAssemblyTool/master/coordinates.jpg)
+![GearAssemblyCoordinates](https://raw.githubusercontent.com/dvdvideo1234/GearAssemblyTool/LuaDB/data/pictures/coordinates.jpg)
 
 **Distribution ownership is like the Track Assembly Tool, so DO NOT UPLOAD THIS TO ANY OTHER SITES !**
 
