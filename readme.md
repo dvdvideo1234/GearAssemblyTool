@@ -67,15 +67,16 @@ Q: You said this thing is pretty mush like the TA, which settings are the same?
 A: The handling of Bodygroup/Skin selection, Mass, Gear's physical properties,
    Ghosting and stuff, Error logging, Screens, Translations and Data export/selection.
 
-Q: I want to stack a gearbox, but the gear tooth is directly placed on the angle forward vector.
-   This makes the tool stack gears where the teeth are inside each other. What should I do?
-A: Adjust the trace pivot rotation until the tooth of the holder gear ( the piece that you are
-   holding ) aligns with the gap of the trace gear. Take this number (For example 7.25) and divide
-   it by two (3.625). Now use this same value (3.625) for both trace pivot rotation and piece
-   ( holder pivot ) rotation.
+Q: I want to stack a gearbox relative to trace forward, but the gear tooth is directly placed
+   on the angle forward vector. This makes the tool stack gears where the teeth are inside each
+   other. What should I do?
+A: Ah, this happens when the gear piece has even set of teeth. Adjust the trace pivot rotation
+   until the tooth of the holder gear ( the piece that you are holding ) aligns with the gap of
+   the trace gear. Take this number (For example 7.25) and divide it by two (3.625). Now use this
+   same value (3.625) for both trace pivot rotation and piece ( holder pivot ) rotation.
 
-Q: I have a hard time reading the lines and circles if the adviser. What do these represent?
-A: All read lines are forward direction vectors in all the angles processed. The green circles
+Q: I have a hard time reading the lines and circles of the adviser. What do these represent?
+A: All red lines are forward direction vectors of all the angles processed. The green circles
    are trace and domain centers and yellow and cyan lines are their trace and holder pivot respectively.
    The green line is the origin right vector and the blue line the up vector. The yellow circle is the
    point where the gears mesh. The gear position is not displayed on the screen, as the mass center is
