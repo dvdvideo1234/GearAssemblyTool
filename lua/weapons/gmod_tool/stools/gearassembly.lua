@@ -264,17 +264,18 @@ function TOOL:SetAnchor(stTrace)
   return asmlib.StatusLog(true,"TOOL:SetAnchor("..sAnchor..")")
 end
 
-function TOOL:ClearAnchor(bNotif)
+function TOOL:ClearAnchor(bEnb)
+  local ntEnb = tobool(bEnb)
   local svEnt = self:GetEnt(1)
   local plPly = self:GetOwner()
   if(svEnt and svEnt:IsValid()) then
     svEnt:SetRenderMode(RENDERMODE_TRANSALPHA)
     svEnt:SetColor(conPalette:Select("w"))
   end; self:ClearObjects()
-  if(bNotif) then
+  if(bEnb and SERVER) then
     asmlib.PrintNotifyPly(plPly,"Anchor: Cleaned !","CLEANUP") end
   asmlib.ConCommandPly(plPly,"anchor",gsNoAnchor)
-  return asmlib.StatusLog(true,"TOOL:ClearAnchor(): Anchor cleared")
+  return asmlib.StatusLog(true,"TOOL:ClearAnchor("..tostring(ntEnb).."): Anchor cleared")
 end
 
 function TOOL:GetAnchor()
@@ -569,6 +570,60 @@ function TOOL:Holster()
   if(gho and gho:IsValid()) then gho:Remove() end
 end
 
+function TOOL:UpdateGhost(ePiece, oPly)
+  if(not (ePiece and ePiece:IsValid())) then return end
+  local stTrace = utilTraceLine(utilGetPlayerTrace(oPly))
+  if(not stTrace) then return end
+  local trEnt = stTrace.Entity
+  ePiece:SetNoDraw(true)
+  ePiece:DrawShadow(false)
+  ePiece:SetColor(conPalette:Select("gh"))
+  local trorang = self:GetTraceOriginAngle()
+  local rotpivt, rotpivh = self:GetRotatePivot()
+  if(trEnt and trEnt:IsValid() and asmlib.CheckButtonPly(oPly,IN_SPEED)) then
+    if(asmlib.IsOther(trEnt)) then return end
+    local trRec = asmlib.CacheQueryPiece(trEnt:GetModel())
+    if(trRec) then
+      local model   = self:GetModel()
+      local igntyp  = self:GetIgnoreType()
+      local nextx  , nexty  , nextz   = self:GetPosOffsets()
+      local nextpic, nextyaw, nextrol = self:GetAngOffsets()
+      local stSpawn = asmlib.GetEntitySpawn(trEnt,rotpivt,rotpivh,model,igntyp,trorang,nextx,nexty,nextz,nextpic,nextyaw,nextrol)
+      if(not stSpawn) then return end
+      ePiece:SetNoDraw(false)
+      ePiece:SetAngles(stSpawn.SAng)
+      ePiece:SetPos(stSpawn.SPos)
+    end
+  else
+    local model = self:GetModel()
+    local spnflat = self:GetSpawnFlat()
+    local nextx, nexty, nextz = self:GetPosOffsets()
+    local nextpic, nextyaw, nextrol = self:GetAngOffsets()
+    local vPos = stTrace.HitPos
+    local aAng = asmlib.GetNormalAngle(oPly, stTrace)
+    local stSpawn = asmlib.GetNormalSpawn(vPos,aAng,model,rotpivh,trorang,nextx,nexty,nextz,nextpic,nextyaw,nextrol)
+    if(not stSpawn) then return end
+    if(spnflat) then asmlib.ApplySpawnFlat(ePiece,stSpawn,stTrace.HitNormal) end
+    ePiece:SetNoDraw(false); ePiece:SetAngles(stSpawn.SAng); ePiece:SetPos(stSpawn.SPos); return
+  end
+end
+
+function TOOL:Think()
+  local model = self:GetModel()
+  if(utilIsValidModel(model)) then
+    local ply = self:GetOwner()
+    local gho = self.GhostEntity
+    if(self:GetGhostHolder()) then
+      if (not (gho and gho:IsValid() and gho:GetModel() == model)) then
+        self:MakeGhostEntity(model,VEC_ZERO,ANG_ZERO)
+      end; self:UpdateGhost(gho, ply)
+    else
+      self:ReleaseGhostEntity()
+      if(gho and gho:IsValid()) then gho:Remove() end
+    end
+  end
+end
+
 function TOOL:DrawTextSpawn(oScreen, stSpawn, sCol, sMeth, tArgs)
   local x,y = oScreen:GetCenter(10,10)
   oScreen:SetTextEdge(x,y)
@@ -596,12 +651,13 @@ function TOOL:DrawHUD()
   local stTrace = oPly:GetEyeTrace()
   if(not stTrace) then return end
   if(not self:GetAdviser()) then return end
-  local trEnt  = stTrace.Entity
-  local model  = self:GetModel()
-  local ratioc = (gnRatio - 1) * 100
-  local ratiom = (gnRatio * 1000)
-  local plyd   = (stTrace.HitPos - oPly:GetPos()):Length()
-  local plyrad = mathClamp(ratiom / plyd,1,ratioc)
+  local trEnt   = stTrace.Entity
+  local model   = self:GetModel()
+  local spnflat = self:GetSpawnFlat()
+  local ratioc  = (gnRatio - 1) * 100
+  local ratiom  = (gnRatio * 1000)
+  local plyd    = (stTrace.HitPos - oPly:GetPos()):Length()
+  local plyrad  = mathClamp(ratiom / plyd,1,ratioc)
   local trorang = self:GetTraceOriginAngle()
   local rotpivt, rotpivh = self:GetRotatePivot()
   local nextx  , nexty  , nextz   = self:GetPosOffsets()
@@ -642,14 +698,23 @@ function TOOL:DrawHUD()
     local aAng = asmlib.GetNormalAngle(oPly, stTrace)
     local stSpawn  = asmlib.GetNormalSpawn(vPos,aAng,model,rotpivh,trorang,nextx,nexty,nextz,nextpic,nextyaw,nextrol)
     if(not stSpawn) then return false end
-    local Os = stSpawn.OPos:ToScreen()
+    local Op = stSpawn.OPos:ToScreen()
     local Xs = (stSpawn.OPos + 15 * stSpawn.F):ToScreen()
     local Ys = (stSpawn.OPos + 15 * stSpawn.R):ToScreen()
     local Zs = (stSpawn.OPos + 15 * stSpawn.U):ToScreen()
-    hudMonitor:DrawLine(Os,Xs,"r","SURF")
-    hudMonitor:DrawLine(Os,Ys,"g")
-    hudMonitor:DrawLine(Os,Zs,"b")
-    hudMonitor:DrawCircle(Os,plyrad,"y","SURF")
+    hudMonitor:DrawLine(Op,Xs,"r","SURF")
+    hudMonitor:DrawLine(Op,Ys,"g")
+    hudMonitor:DrawLine(Op,Zs,"b")
+    hudMonitor:DrawCircle(Op,plyrad,"y","SURF")
+    if(not spnflat) then
+      local Dp =  stSpawn.MPos:ToScreen()
+      local Df = (stSpawn.MPos + 15 * stSpawn.DAng:Forward()):ToScreen()
+      local Du = (stSpawn.MPos + 15 * stSpawn.DAng:Up()):ToScreen()
+      hudMonitor:DrawLine(Op, Dp,"m")      -- Domain offset vector
+      hudMonitor:DrawCircle(Dp,plyrad,"g") -- Spawn position ( Mass center )
+      hudMonitor:DrawLine(Dp,Du,"c")       -- Domain pivot
+      hudMonitor:DrawLine(Dp,Df,"r")       -- Domain forward
+    end
     if(not self:GetDeveloperMode()) then return end
     self:DrawTextSpawn(hudMonitor, stSpawn, "k","SURF",{"Trebuchet18"})
   end
@@ -892,58 +957,4 @@ function TOOL.BuildCPanel(CPanel)
            pItem:SetTooltip(languageGetPhrase("tool."..gsToolNameL..".adviser"))
   pItem = CPanel:CheckBox(languageGetPhrase("tool."..gsToolNameL..".ghosthold_con"), gsToolPrefL.."ghosthold")
            pItem:SetTooltip(languageGetPhrase("tool."..gsToolNameL..".ghosthold"))
-end
-
-function TOOL:UpdateGhost(ePiece, oPly)
-  if(not (ePiece and ePiece:IsValid())) then return end
-  local stTrace = utilTraceLine(utilGetPlayerTrace(oPly))
-  if(not stTrace) then return end
-  local trEnt = stTrace.Entity
-  ePiece:SetNoDraw(true)
-  ePiece:DrawShadow(false)
-  ePiece:SetColor(conPalette:Select("gh"))
-  local trorang = self:GetTraceOriginAngle()
-  local rotpivt, rotpivh = self:GetRotatePivot()
-  if(trEnt and trEnt:IsValid() and asmlib.CheckButtonPly(oPly,IN_SPEED)) then
-    if(asmlib.IsOther(trEnt)) then return end
-    local trRec = asmlib.CacheQueryPiece(trEnt:GetModel())
-    if(trRec) then
-      local model   = self:GetModel()
-      local igntyp  = self:GetIgnoreType()
-      local nextx  , nexty  , nextz   = self:GetPosOffsets()
-      local nextpic, nextyaw, nextrol = self:GetAngOffsets()
-      local stSpawn = asmlib.GetEntitySpawn(trEnt,rotpivt,rotpivh,model,igntyp,trorang,nextx,nexty,nextz,nextpic,nextyaw,nextrol)
-      if(not stSpawn) then return end
-      ePiece:SetNoDraw(false)
-      ePiece:SetAngles(stSpawn.SAng)
-      ePiece:SetPos(stSpawn.SPos)
-    end
-  else
-    local model = self:GetModel()
-    local spnflat = self:GetSpawnFlat()
-    local nextx, nexty, nextz = self:GetPosOffsets()
-    local nextpic, nextyaw, nextrol = self:GetAngOffsets()
-    local vPos = stTrace.HitPos
-    local aAng = asmlib.GetNormalAngle(oPly, stTrace)
-    local stSpawn = asmlib.GetNormalSpawn(vPos,aAng,model,rotpivh,trorang,nextx,nexty,nextz,nextpic,nextyaw,nextrol)
-    if(not stSpawn) then return end
-    if(spnflat) then asmlib.ApplySpawnFlat(ePiece,stSpawn,stTrace.HitNormal) end
-    ePiece:SetNoDraw(false); ePiece:SetAngles(stSpawn.SAng); ePiece:SetPos(stSpawn.SPos); return
-  end
-end
-
-function TOOL:Think()
-  local model = self:GetModel()
-  if(utilIsValidModel(model)) then
-    local ply = self:GetOwner()
-    local gho = self.GhostEntity
-    if(self:GetGhostHolder()) then
-      if (not (gho and gho:IsValid() and gho:GetModel() == model)) then
-        self:MakeGhostEntity(model,VEC_ZERO,ANG_ZERO)
-      end; self:UpdateGhost(gho, ply)
-    else
-      self:ReleaseGhostEntity()
-      if(gho and gho:IsValid()) then gho:Remove() end
-    end
-  end
 end
