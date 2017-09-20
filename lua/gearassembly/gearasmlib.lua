@@ -335,12 +335,12 @@ function GetIndexes(sType)
   else return StatusLog(nil,"GetIndexes: Type <"..sType.."> not found") end
 end
 
-function SetIndexes(sType,I1,I2,I3,I4)
+function SetIndexes(sType,...)
   if(not IsString(sType)) then
     return StatusLog(false,"SetIndexes: Type {"..type(sType).."}<"..tostring(sType).."> not string") end
-  if    (sType == "V") then cvX, cvY, cvZ      = I1, I2, I3
-  elseif(sType == "A") then caP, caY, caR      = I1, I2, I3
-  elseif(sType == "S") then csA, csB, csC, csD = I1, I2, I3, I4
+  if    (sType == "V") then cvX, cvY, cvZ      = ...
+  elseif(sType == "A") then caP, caY, caR      = ...
+  elseif(sType == "S") then csA, csB, csC, csD = ...
   else return StatusLog(false,"SetIndexes: Type <"..sType.."> not found") end
   return StatusLog(true,"SetIndexes["..sType.."]: Success")
 end
@@ -365,16 +365,14 @@ function InitBase(sName,sPurpose)
   SetOpVar("MAX_ROTATION",360)
   SetOpVar("ANG_ZERO",Angle())
   SetOpVar("VEC_ZERO",Vector())
-  SetOpVar("VEC_UP",Vector(0,0,1))
   SetOpVar("VEC_FW",Vector(1,0,0))
-  SetOpVar("VEC_RG",Vector(0,-1,0)) -- In Gmod Left is +Y
+  SetOpVar("VEC_UP",Vector(0,0,1))
   SetOpVar("OPSYM_DISABLE","#")
   SetOpVar("OPSYM_REVSIGN","@")
   SetOpVar("OPSYM_DIVIDER","_")
   SetOpVar("OPSYM_DIRECTORY","/")
   SetOpVar("OPSYM_SEPARATOR",",")
   SetOpVar("DELAY_FREEZE",0.01)
-  SetOpVar("DIAG_SQUARE", 2 * mathSqrt(2))
   SetOpVar("GOLDEN_RATIO",1.61803398875)
   SetOpVar("NAME_INIT",sName:lower())
   SetOpVar("NAME_PERP",sPurpose:lower())
@@ -391,8 +389,8 @@ function InitBase(sName,sPurpose)
   SetOpVar("DATE_FORMAT","%d-%m-%y")
   SetOpVar("TIME_FORMAT","%H:%M:%S")
   SetOpVar("ARRAY_DECODEPOA",{0,0,0,1,1,1,false})
-  SetOpVar("LOCALIFY_TABLE",{})
-  SetOpVar("LOCALIFY_AUTO","en")
+  if(CLIENT) then SetOpVar("LOCALIFY_TABLE",{})
+                  SetOpVar("LOCALIFY_AUTO","en") end
   SetOpVar("MODELNAM_FILE","%.mdl")
   SetOpVar("MODELNAM_FUNC",function(x) return " "..x:sub(2,2):upper() end)
   SetOpVar("QUERY_STORE", {})
@@ -407,28 +405,35 @@ function InitBase(sName,sPurpose)
   SetOpVar("HASH_QUERY_STORE",GetOpVar("TOOLNAME_PU").."QHASH_QUERY")
   SetOpVar("NAV_PIECE",{})
   SetOpVar("NAV_PANEL",{})
+  if(CLIENT) then SetOpVar("STRUCT_SPAWN_KEYS",
+    {"F","R","U",
+     "OPos","OAng",
+     "SPos","SAng",
+     "DPos","DAng",
+     "NPos","NAng",
+     "HPnt","HMas","HAng",
+     "TPnt","TMas","TAng"}) end
   SetOpVar("STRUCT_SPAWN",{
-    F    = Vector(), -- Origing forward vector
+    F    = Vector(), -- Origin forward vector
     R    = Vector(), -- Origin right vector
     U    = Vector(), -- Origin up vector
     OPos = Vector(), -- Origin position
     OAng = Angle (), -- Origin angle
-    SPos = Vector(), -- Gear spawn posiotion
+    SPos = Vector(), -- Gear spawn position
     SAng = Angle (), -- Gear spawn angle
-    DAng = Angle (), -- Domain angle. Used to constraints
+    DPos = Vector(), -- Domain position. Used for decomposition
+    DAng = Angle (), -- Domain angle. Used for constraints
     NPos = Vector(), -- Offset as position
     NAng = Angle (), -- Offset as angle
-    MPos = Vector(), -- Temporary model position
-    MAng = Angle (), -- Temporary model angle
     --- Holder ---
     HRec = 0,        -- Pointer to the holder record
     HPnt = Vector(), -- P
-    HPos = Vector(), -- O
+    HMas = Vector(), -- O
     HAng = Angle (), -- A
     --- Traced ---
     TRec = 0,        -- Pointer to the trace record
     TPnt = Vector(), -- P
-    TPos = Vector(), -- O
+    TMas = Vector(), -- O
     TAng = Angle ()  -- A
   })
   return StatusPrint(true,"InitBase: Success")
@@ -475,11 +480,12 @@ function SubAnglePYR(aBase, nP, nY, nR)
   aBase[caR] = (tonumber(aBase[caR]) or 0) - (tonumber(nR) or 0)
 end
 
-function NegAngle(aBase)
-  if(not aBase ) then return StatusLog(nil,"NegAngle: Base invalid") end
-  aBase[caP] = -(tonumber(aBase[caP]) or 0)
-  aBase[caY] = -(tonumber(aBase[caY]) or 0)
-  aBase[caR] = -(tonumber(aBase[caR]) or 0)
+function NegAngle(vBase, bP, bY, bR)
+  if(not vBase) then return StatusLog(nil,"NegVector: Base invalid") end
+  local P = (tonumber(vBase[caP]) or 0); P = (IsExistent(bP) and (bP and -P or P) or -P)
+  local Y = (tonumber(vBase[caY]) or 0); Y = (IsExistent(bY) and (bY and -Y or Y) or -Y)
+  local R = (tonumber(vBase[caR]) or 0); R = (IsExistent(bR) and (bR and -R or R) or -R)
+  vBase[caP], vBase[caY], vBase[caR] = P, Y, R
 end
 
 function SetAngle(aBase, aUnit)
@@ -555,11 +561,12 @@ function SubVectorXYZ(vBase, nX, nY, nZ)
   vBase[cvZ] = (tonumber(vBase[cvZ]) or 0) - (tonumber(nZ) or 0)
 end
 
-function NegVector(vBase)
+function NegVector(vBase, bX, bY, bZ)
   if(not vBase) then return StatusLog(nil,"NegVector: Base invalid") end
-  vBase[cvX] = -(tonumber(vBase[cvX]) or 0)
-  vBase[cvY] = -(tonumber(vBase[cvY]) or 0)
-  vBase[cvZ] = -(tonumber(vBase[cvZ]) or 0)
+  local X = (tonumber(vBase[cvX]) or 0); X = (IsExistent(bX) and (bX and -X or X) or -X)
+  local Y = (tonumber(vBase[cvY]) or 0); Y = (IsExistent(bY) and (bY and -Y or Y) or -Y)
+  local Z = (tonumber(vBase[cvZ]) or 0); Z = (IsExistent(bZ) and (bZ and -Z or Z) or -Z)
+  vBase[cvX], vBase[cvY], vBase[cvZ] = X, Y, Z
 end
 
 function SetVector(vBase, vUnit)
@@ -2545,19 +2552,22 @@ function ApplySpawnFlat(oEnt,stSpawn,vNorm)
     return StatusLog(false,"ApplyFlatSpawn: Holder missing") end
   local hPOA = stSpawn.HRec.Offs
   if(hPOA) then
-    local aAngDB = Angle(hPOA.A[caP],hPOA.A[caY],hPOA.A[caR])
+    if(hdPOA.A[csD]) then SetAnglePYR(stSpawn.HAng) else SetAngle(stSpawn.HAng,hdPOA.A) end)
     local vOBB = oEnt:OBBMins()
           SubVector(vOBB,hPOA.O) -- Mass center
-          vOBB:Rotate(aAngDB)
-          DecomposeByAngle(vOBB,Angle())
+          vOBB:Rotate(stSpawn.HAng)
+          DecomposeByAngle(vOBB,GetOpVar("ANG_ZERO"))
     local zOffs = mathAbs(vOBB[cvZ])
-    stSpawn.MPos:Set(stSpawn.OPos); stSpawn.MPos:Add(vNorm * zOffs)
-    stSpawn.MPos:Add(stSpawn.F * stSpawn.NPos[cvX])
-    stSpawn.MPos:Add(stSpawn.R * stSpawn.NPos[cvY])
-    stSpawn.MPos:Add(stSpawn.U * stSpawn.NPos[cvZ])
+    SetVector(stSpawn.HMas, hPOA.O)
     stSpawn.SAng:Set(stSpawn.OAng)
-    SetVector(stSpawn.HPos, hPOA.O); stSpawn.HPos:Mul(-1); stSpawn.HPos:Rotate(stSpawn.SAng)
-    stSpawn.SPos:Set(stSpawn.MPos); stSpawn.SPos:Add(stSpawn.HPos)
+    stSpawn.SPos:Set(stSpawn.HMas); NegVector(stSpawn.SPos)
+    stSpawn.SPos:Rotate(stSpawn.SAng) -- Make world space mass-center vector
+    stSpawn.HMas:Set(stSpawn.OPos)    -- Calculate mass-center position vector
+    stSpawn.HMas:Add(vNorm * zOffs)
+    stSpawn.HMas:Add(stSpawn.F * stSpawn.NPos[cvX])
+    stSpawn.HMas:Add(stSpawn.R * stSpawn.NPos[cvY])
+    stSpawn.HMas:Add(stSpawn.U * stSpawn.NPos[cvZ])
+    stSpawn.SPos:Add(stSpawn.HMas) -- Add mass-center position origin for spawn
   end; return true
 end
 
@@ -2603,40 +2613,44 @@ function GetNormalSpawn(ucsPos,ucsAng,hdModel,hdPivot,enOrAngTr,ucsPosX,ucsPosY,
   stSpawn.U:Set(stSpawn.OAng:Up())
   stSpawn.R:Set(stSpawn.OAng:Right())
   -- Read holder data
-  SetVector(stSpawn.HPnt, hdPOA.P); NegVector(stSpawn.HPnt) -- Offset meshing point
-  SetVector(stSpawn.HPos, hdPOA.O); NegVector(stSpawn.HPos) -- Mass center origin
+  SetVector(stSpawn.HPnt, hdPOA.P) -- Offset meshing point
+  SetVector(stSpawn.HMas, hdPOA.O) -- Mass center origin
   if(hdPOA.A[csD]) then SetAnglePYR(stSpawn.HAng) else SetAngle(stSpawn.HAng,hdPOA.A) end
-  -- Calculate domain ( Angle )
+  -- Local vector from the back meshing point to the mass-center
+  stSpawn.DPos:Set(stSpawn.HPnt)
+  NegVector(stSpawn.DPos, false, true, true)
+  -- Local angle for the vector decomposition
+  SetAngle(stSpawn.DAng, GetOpVar("ANG_ZERO"))
+  stSpawn.DAng:RotateAroundAxis(stSpawn.DAng:Right(), -hdRec.Rake)
+  DecomposeByAngle(stSpawn.DPos,stSpawn.DAng);
+  -- Calculate domain angle to apply holder pivot and rotation
   stSpawn.DAng:Set(stSpawn.OAng)
   stSpawn.DAng:RotateAroundAxis(stSpawn.R,hdRec.Rake)
   stSpawn.DAng:RotateAroundAxis(stSpawn.DAng:Up(),(tonumber(hdPivot) or 0))
-  -- Calculate decomposition angle
-  stSpawn.MAng:Set(stSpawn.HAng)
-  stSpawn.MAng:RotateAroundAxis(stSpawn.MAng:Up(),180)
-  stSpawn.MAng:RotateAroundAxis(stSpawn.MAng:Right(),-hdRec.Rake)
-  DecomposeByAngle(stSpawn.HPnt,stSpawn.MAng);
-  -- Calculate spawns
+  -- Calculate spawn angle
   stSpawn.SAng:Set(stSpawn.DAng); NegAngle(stSpawn.HAng)
   stSpawn.SAng:RotateAroundAxis(stSpawn.U,stSpawn.HAng[caY] * hdPOA.A[csB])
   stSpawn.SAng:RotateAroundAxis(stSpawn.R,stSpawn.HAng[caP] * hdPOA.A[csA])
   stSpawn.SAng:RotateAroundAxis(stSpawn.F,stSpawn.HAng[caR] * hdPOA.A[csC])
-  stSpawn.HPos:Rotate(stSpawn.SAng) -- Mass-center to world vector
-  stSpawn.MPos:Set(stSpawn.OPos)
+  -- Make sure saving the mass-center world offset vector in the spawn
+  stSpawn.SPos:Set(stSpawn.HMas); NegVector(stSpawn.SPos)
+  stSpawn.SPos:Rotate(stSpawn.SAng) -- World space vector mass-center to position
+  -- Calculate the location of the mass-center as a position vector
+  stSpawn.HMas:Add(stSpawn.OPos)
   -- Add the decomposed mass center origin
-  stSpawn.MPos:Add(stSpawn.HPnt[cvX] * stSpawn.F)
-  stSpawn.MPos:Add(stSpawn.HPnt[cvY] * stSpawn.R)
-  stSpawn.MPos:Add(stSpawn.HPnt[cvZ] * stSpawn.U)
-  -- Take offsets in consideration
-  if(enOrAngTr) then
+  stSpawn.HMas:Add(stSpawn.DPos[cvX] * stSpawn.F)
+  stSpawn.HMas:Add(stSpawn.DPos[cvY] * stSpawn.R)
+  stSpawn.HMas:Add(stSpawn.DPos[cvZ] * stSpawn.U)
+  if(enOrAngTr) then -- Take offsets in consideration
     stSpawn.F:Set(stSpawn.TAng:Forward())
     stSpawn.R:Set(stSpawn.TAng:Right())
     stSpawn.U:Set(stSpawn.TAng:Up())
-  end
-  stSpawn.MPos:Add(stSpawn.NPos[cvX] * stSpawn.F)
-  stSpawn.MPos:Add(stSpawn.NPos[cvY] * stSpawn.R)
-  stSpawn.MPos:Add(stSpawn.NPos[cvZ] * stSpawn.U)
+  end -- Deviate the mass-center location according to the user offsets
+  stSpawn.HMas:Add(stSpawn.NPos[cvX] * stSpawn.F)
+  stSpawn.HMas:Add(stSpawn.NPos[cvY] * stSpawn.R)
+  stSpawn.HMas:Add(stSpawn.NPos[cvZ] * stSpawn.U)
   -- Calculate the mass-center location as a position vector based on the database
-  stSpawn.SPos:Set(stSpawn.MPos); stSpawn.SPos:Add(stSpawn.HPos) -- Add the mass-center
+  stSpawn.SPos:Add(stSpawn.HMas) -- Add the mass-center
   return stSpawn
 end
 
@@ -2677,14 +2691,14 @@ function GetEntitySpawn(trEnt,trPivot,hdPivot,hdModel,enIgnTyp,enOrAngTr,
   local stSpawn = GetOpVar("STRUCT_SPAWN")   -- Get cached spawn
   stSpawn.HRec, stSpawn.TRec = hdRec, trRec  -- Save records
   SetVector(stSpawn.TPnt,trPOA.P)            -- Store data in objects
-  SetVector(stSpawn.TPos,trPOA.O)
-  SetAngle (stSpawn.TAng,trPOA.A)
-  stSpawn.TPos:Rotate(trAng); stSpawn.TPos:Add(trPos)       -- Trace mass-center world
-  stSpawn.TAng:Set(trEnt:LocalToWorldAngles(stSpawn.TAng))  -- Initial coordinate system
-  stSpawn.TAng:RotateAroundAxis(stSpawn.TAng:Up(),-trPivot) -- Apply the pivot rotation for trace
+  SetVector(stSpawn.TMas,trPOA.O)
+  SetAngle (stSpawn.TAng,trPOA.A) -- Custom angle and trace position
+  stSpawn.TMas:Rotate(trAng); stSpawn.TMas:Add(trPos)        -- Trace mass-center world
+  stSpawn.TAng:Set(trEnt:LocalToWorldAngles(stSpawn.TAng))   -- Initial coordinate system
+  stSpawn.TAng:RotateAroundAxis(stSpawn.TAng:Up(),-trPivot)  -- Apply the pivot rotation for trace
   stSpawn.TPnt:Rotate(stSpawn.TAng) -- Non-raked angle must be used for offset origin (yellow)
   -- Calculate the origin based on the center
-  stSpawn.OPos:Set(stSpawn.TPnt); stSpawn.OPos:Add(stSpawn.TPos)
+  stSpawn.OPos:Set(stSpawn.TPnt); stSpawn.OPos:Add(stSpawn.TMas)
   stSpawn.OAng:Set(stSpawn.TAng); stSpawn.OAng:RotateAroundAxis(stSpawn.TAng:Right(),trRec.Rake)
   return GetNormalSpawn(nil,nil,hdModel,hdPivot,enOrAngTr,ucsPosX,ucsPosY,ucsPosZ,ucsAngP,ucsAngY,ucsAngR)
 end
@@ -2983,10 +2997,15 @@ end
 
 function InitLocalify(sCode) -- https://en.wikipedia.org/wiki/List_of_ISO_639-1_codes
   local tPool = GetOpVar("LOCALIFY_TABLE") -- ( Column "ISO 639-1" )
-  local sCode = tostring(sCode or "") -- English is used when missing
-        sCode = tPool[sCode] and sCode or GetOpVar("LOCALIFY_AUTO")
-  if(not IsExistent(tPool[sCode])) then
-    return StatusLog(nil,"InitLocalify: Code <"..sCode.."> invalid") end
-  LogInstance("InitLocalify: Code <"..sCode.."> selected")
-  for phrase, detail in pairs(tPool[sCode]) do languageAdd(phrase, detail) end
+  local auCod = GetOpVar("LOCALIFY_AUTO")
+  local suCod = tostring(sCode or "") -- English is used when missing
+  local auLng, suLng = tPool[auCod], tPool[suCod]
+  if(not IsExistent(suLng)) then
+    LogInstance("InitLocalify: Missing code <"..suCod..">")
+    suCod, suLng = auCod, auLng
+  end; LogInstance("InitLocalify: Using code <"..auCod..">")
+  for phrase, default in pairs(auLng) do
+    local abrev = suLng[phrase] or default
+    languageAdd(phrase, abrev)
+  end
 end

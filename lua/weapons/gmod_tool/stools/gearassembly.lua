@@ -625,14 +625,20 @@ function TOOL:Think()
 end
 
 function TOOL:DrawTextSpawn(oScreen, stSpawn, sCol, sMeth, tArgs)
+  local arK = asmlib.GetOpVar("STRUCT_SPAWN_KEYS")
   local x,y = oScreen:GetCenter(10,10)
   oScreen:SetTextEdge(x,y)
-  oScreen:DrawText("Org POS: "..tostring(stSpawn.OPos),sCol,sMeth,tArgs)
-  oScreen:DrawText("Dom ANG: "..tostring(stSpawn.DAng))
-  oScreen:DrawText("Mod POS: "..tostring(stSpawn.MPos))
-  oScreen:DrawText("Mod ANG: "..tostring(stSpawn.MAng))
-  oScreen:DrawText("Spn POS: "..tostring(stSpawn.SPos))
-  oScreen:DrawText("Spn ANG: "..tostring(stSpawn.SAng))
+  oScreen:DrawText("Spawn debug information",sCol,sMeth,tArgs)
+  for ID = 1, #arK, 1 do
+    local key = arK[ID]
+    local val = stSpawn[key]
+    local typ = type(val)
+    if(typ == "Vector") then
+      oScreen:DrawText("<"..key.."> VEC: "..stSpawn[key])
+    elseif(typ == "Angle") then
+      oScreen:DrawText("<"..key.."> ANG: "..stSpawn[key])
+    end
+  end
 end
 
 function TOOL:DrawHUD()
@@ -668,29 +674,34 @@ function TOOL:DrawHUD()
     local stSpawn = asmlib.GetEntitySpawn(trEnt,rotpivt,rotpivh,model,igntyp,trorang,
                                             nextx,nexty,nextz,nextpic,nextyaw,nextrol)
     if(not stSpawn) then return end
+    local Tp =  trEnt:GetPos():ToScreen()
+    local Hp =  stSpawn.SPos:ToScreen()
     local Op =  stSpawn.OPos:ToScreen()
     local Xs = (stSpawn.OPos + 15 * stSpawn.F):ToScreen()
     local Ys = (stSpawn.OPos + 15 * stSpawn.R):ToScreen()
     local Zs = (stSpawn.OPos + 15 * stSpawn.U):ToScreen()
-    local Dp =  stSpawn.MPos:ToScreen()
-    local Df = (stSpawn.MPos + 15 * stSpawn.DAng:Forward()):ToScreen()
-    local Du = (stSpawn.MPos + 15 * stSpawn.DAng:Up()):ToScreen()
-    local Tp =  stSpawn.TPos:ToScreen()
-    local Tf = (stSpawn.TPos + 15 * stSpawn.TAng:Forward()):ToScreen()
-    local Tu = (stSpawn.TPos + 15 * stSpawn.TAng:Up()):ToScreen()
-    -- Draw UCS
-    hudMonitor:DrawLine(Op,Xs,"r","SURF")       -- Forward origin vector (X)
-    hudMonitor:DrawLine(Op,Ys,"g")              -- Right origin vector   (Y)
-    hudMonitor:DrawLine(Op,Zs,"b")              -- Up origin vector      (Z)
-    hudMonitor:DrawLine(Tp,Tu,"y")              -- Trace pivot
-    hudMonitor:DrawLine(Tp,Tf,"r")              -- Trace forward
-    hudMonitor:DrawCircle(Op,plyrad,"y","SURF") -- Origin mesh position
-    hudMonitor:DrawLine(Tp,Op,"m")              -- Trace offset vector
-    hudMonitor:DrawLine(Op,Dp)                  -- Domain offset vector
-    hudMonitor:DrawCircle(Tp,plyrad,"g")        -- Trace position ( Mass center )
-    hudMonitor:DrawCircle(Dp,plyrad)            -- Spawn position ( Mass center )
-    hudMonitor:DrawLine(Dp,Du,"c")              -- Domain pivot
-    hudMonitor:DrawLine(Dp,Df,"r")              -- Domain forward
+    local Mh =  stSpawn.HMas:ToScreen()
+    local Hf = (stSpawn.HMas + 15 * stSpawn.DAng:Forward()):ToScreen()
+    local Hu = (stSpawn.HMas + 15 * stSpawn.DAng:Up()):ToScreen()
+    local Mt =  stSpawn.TMas:ToScreen()
+    local Tf = (stSpawn.TMas + 15 * stSpawn.TAng:Forward()):ToScreen()
+    local Tu = (stSpawn.TMas + 15 * stSpawn.TAng:Up()):ToScreen()
+    hudMonitor:DrawLine(Op,Xs,"r","SURF") -- Forward origin vector (X)
+    hudMonitor:DrawLine(Mt,Tf)            -- Trace forward
+    hudMonitor:DrawLine(Mh,Hf)            -- Holder forward
+    hudMonitor:DrawCircle(Tp,plyrad)      -- Trace position
+    hudMonitor:DrawCircle(Hp,plyrad)      -- Holder position
+    hudMonitor:DrawLine(Op,Zs,"b")        -- Up origin vector      (Z)
+    hudMonitor:DrawLine(Mt,Tu)            -- Trace pivot
+    hudMonitor:DrawLine(Mh,Hu)            -- Holder pivot
+    hudMonitor:DrawLine(Op,Ys,"g")        -- Right origin vector   (Y)
+    hudMonitor:DrawCircle(Mt,plyrad)      -- Trace mass-center
+    hudMonitor:DrawCircle(Mh,plyrad)      -- Holder mass-center
+    hudMonitor:DrawCircle(Op,plyrad,"y")  -- Origin mesh position
+    hudMonitor:DrawLine(Mh,Hp)            -- Trace position distance
+    hudMonitor:DrawLine(Mt,Tp)            -- Holder position distance
+    hudMonitor:DrawLine(Mt,Op,"m")        -- Trace position distance
+    hudMonitor:DrawLine(Mh,Op)            -- Holder position distance
     if(not self:GetDeveloperMode()) then return end
     self:DrawTextSpawn(hudMonitor, stSpawn, "k","SURF",{"Trebuchet18"})
   else
@@ -707,13 +718,16 @@ function TOOL:DrawHUD()
     hudMonitor:DrawLine(Op,Zs,"b")
     hudMonitor:DrawCircle(Op,plyrad,"y","SURF")
     if(not spnflat) then
-      local Dp =  stSpawn.MPos:ToScreen()
-      local Df = (stSpawn.MPos + 15 * stSpawn.DAng:Forward()):ToScreen()
-      local Du = (stSpawn.MPos + 15 * stSpawn.DAng:Up()):ToScreen()
-      hudMonitor:DrawLine(Op, Dp,"m")      -- Domain offset vector
-      hudMonitor:DrawCircle(Dp,plyrad,"g") -- Spawn position ( Mass center )
-      hudMonitor:DrawLine(Dp,Du,"c")       -- Domain pivot
-      hudMonitor:DrawLine(Dp,Df,"r")       -- Domain forward
+      local Hp =  stSpawn.SPos:ToScreen()
+      local Mh =  stSpawn.HMas:ToScreen()
+      local Hf = (stSpawn.HMas + 15 * stSpawn.DAng:Forward()):ToScreen()
+      local Hu = (stSpawn.HMas + 15 * stSpawn.DAng:Up()):ToScreen()
+      hudMonitor:DrawLine(Mh,Hp)           -- Holder position distance
+      hudMonitor:DrawLine(Op,Mh,"m")       -- Holder distance vector
+      hudMonitor:DrawCircle(Mh,plyrad,"g") -- Holder mass-center
+      hudMonitor:DrawLine(Mh,Hu,"b")       -- Holder pivot vector
+      hudMonitor:DrawLine(Mh,Hf,"r")       -- Holder forward vector
+      hudMonitor:DrawCircle(Hp,plyrad)     -- Holder spawn position
     end
     if(not self:GetDeveloperMode()) then return end
     self:DrawTextSpawn(hudMonitor, stSpawn, "k","SURF",{"Trebuchet18"})

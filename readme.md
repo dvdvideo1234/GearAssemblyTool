@@ -75,12 +75,15 @@ A: Ah, this happens when the gear piece has even set of teeth. Adjust the trace 
    the trace gear. Take this number (For example 7.25) and divide it by two (3.625). Now use this
    same value (3.625) for both trace pivot rotation and piece ( holder pivot ) rotation.
 
-Q: I have a hard time reading the lines and circles of the adviser. What do these represent?
-A: All red lines are forward direction vectors of all the angles processed. The green circles
-   are trace and domain centers and yellow and cyan lines are their trace and holder pivot respectively.
+Q: I have a hard time reading the lines and circles of the adviser. What do these visuals represent?
+A: All the red lines are forward direction and the blues are the up direction vectors of all the
+   angle orientations processed. The trace and the holder blue lines are the trace and holder pivot
+   axises respectively. The green circles are the trace and domain mass-centers as position vectors.
    The green line is the origin right vector and the blue line the up vector. The yellow circle is the
-   point where the gears mesh. The gear position is not displayed on the screen, as the mass center is
-   used for all internal position calculations and it is proper origin to relate the offset on.
+   point where the gears mesh. The gear position is displayed on the screen in red. The mass-center is
+   used for all internal position calculations and it is proper origin to relate the offset on. The
+   world space distances between the mass-centers and positions are displayed with yellow line.
+   The magenta lines represent the distance vectors between holder and trace to the mesh origin.
    If you are still confused about this, please take a look at the diagram below:
 ```
 ![GearAssemblyCoordinates](https://raw.githubusercontent.com/dvdvideo1234/GearAssemblyTool/LuaDB/data/pictures/coordinates.jpg)
