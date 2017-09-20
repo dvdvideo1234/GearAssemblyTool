@@ -696,12 +696,12 @@ function TOOL:DrawHUD()
     hudMonitor:DrawLine(Mh,Hu)            -- Holder pivot
     hudMonitor:DrawLine(Op,Ys,"g")        -- Right origin vector   (Y)
     hudMonitor:DrawCircle(Mt,plyrad)      -- Trace mass-center
-    hudMonitor:DrawCircle(Mh,plyrad)      -- Holder mass-center
+    hudMonitor:DrawLine(Mt,Op)            -- Trace position distance
+    hudMonitor:DrawCircle(Mh,plyrad,"m")  -- Holder mass-center
+    hudMonitor:DrawLine(Mh,Op)            -- Holder position distance
     hudMonitor:DrawCircle(Op,plyrad,"y")  -- Origin mesh position
     hudMonitor:DrawLine(Mh,Hp)            -- Trace position distance
     hudMonitor:DrawLine(Mt,Tp)            -- Holder position distance
-    hudMonitor:DrawLine(Mt,Op,"m")        -- Trace position distance
-    hudMonitor:DrawLine(Mh,Op)            -- Holder position distance
     if(not self:GetDeveloperMode()) then return end
     self:DrawTextSpawn(hudMonitor, stSpawn, "k","SURF",{"Trebuchet18"})
   else

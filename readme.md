@@ -83,7 +83,7 @@ A: All the red lines are forward direction and the blues are the up direction ve
    point where the gears mesh. The gear position is displayed on the screen in red. The mass-center is
    used for all internal position calculations and it is proper origin to relate the offset on. The
    world space distances between the mass-centers and positions are displayed with yellow line.
-   The magenta lines represent the distance vectors between holder and trace to the mesh origin.
+   The magenta line represents the distance vector between holder and origin the yellow trace and origin.
    If you are still confused about this, please take a look at the diagram below:
 ```
 ![GearAssemblyCoordinates](https://raw.githubusercontent.com/dvdvideo1234/GearAssemblyTool/LuaDB/data/pictures/coordinates.jpg)
