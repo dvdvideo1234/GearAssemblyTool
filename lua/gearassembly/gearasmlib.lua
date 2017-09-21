@@ -389,13 +389,37 @@ function InitBase(sName,sPurpose)
   SetOpVar("DATE_FORMAT","%d-%m-%y")
   SetOpVar("TIME_FORMAT","%H:%M:%S")
   SetOpVar("ARRAY_DECODEPOA",{0,0,0,1,1,1,false})
-  if(CLIENT) then SetOpVar("LOCALIFY_TABLE",{})
-                  SetOpVar("LOCALIFY_AUTO","en") end
+  if(CLIENT) then
+    SetOpVar("LOCALIFY_AUTO","en")
+    SetOpVar("LOCALIFY_TABLE",{})
+    SetOpVar("TABLE_CATEGORIES",{})
+    SetOpVar("STRUCT_SPAWN_KEYS",{
+      {"--- Origin ---", nil},
+      {"F", "VEC", "Forward direction"},
+      {"R", "VEC", "Right direction"},
+      {"U", "VEC", "Up direction"},
+      {"OPos", "VEC", "Origin position"},
+      {"OAng", "ANG", "Origin angles"},
+      {"SPos", "VEC", "Spawn position"},
+      {"SAng", "ANG", "Spawn angles"},
+      {"DPos", "VEC", "Domain position"},
+      {"DAng", "ANG", "Domain angles"},
+      {"--- Holder ---", nil},
+      {"HPnt", "VEC", "Radius vector"},
+      {"HMas", "VEC", "Mass center position"},
+      {"HAng", "ANG", "Custom angles"},
+      {"--- Traced ---", nil},
+      {"TPnt", "VEC", "Radius vector"},
+      {"TMas", "VEC", "Mass center position"},
+      {"TAng", "ANG", "Custom angles"},
+      {"--- Offsets ---", nil},
+      {"PNxt", "VEC", "Custom user position"},
+      {"ANxt", "ANG", "Custom user angles"}})
+  end
   SetOpVar("MODELNAM_FILE","%.mdl")
   SetOpVar("MODELNAM_FUNC",function(x) return " "..x:sub(2,2):upper() end)
   SetOpVar("QUERY_STORE", {})
   SetOpVar("TABLE_BORDERS",{})
-  SetOpVar("TABLE_CATEGORIES", CLIENT and {} or nil)
   SetOpVar("TABLE_PLAYER_KEYS",{})
   SetOpVar("TABLE_FREQUENT_MODELS",{})
   SetOpVar("OOP_DEFAULTKEY","(!@<#_$|%^|&>*)DEFKEY(*>&|^%|$_#<@!)")
@@ -405,14 +429,6 @@ function InitBase(sName,sPurpose)
   SetOpVar("HASH_QUERY_STORE",GetOpVar("TOOLNAME_PU").."QHASH_QUERY")
   SetOpVar("NAV_PIECE",{})
   SetOpVar("NAV_PANEL",{})
-  if(CLIENT) then SetOpVar("STRUCT_SPAWN_KEYS",
-    {"F","R","U",
-     "OPos","OAng",
-     "SPos","SAng",
-     "DPos","DAng",
-     "NPos","NAng",
-     "HPnt","HMas","HAng",
-     "TPnt","TMas","TAng"}) end
   SetOpVar("STRUCT_SPAWN",{
     F    = Vector(), -- Origin forward vector
     R    = Vector(), -- Origin right vector
@@ -423,8 +439,6 @@ function InitBase(sName,sPurpose)
     SAng = Angle (), -- Gear spawn angle
     DPos = Vector(), -- Domain position. Used for decomposition
     DAng = Angle (), -- Domain angle. Used for constraints
-    NPos = Vector(), -- Offset as position
-    NAng = Angle (), -- Offset as angle
     --- Holder ---
     HRec = 0,        -- Pointer to the holder record
     HPnt = Vector(), -- P
@@ -434,7 +448,10 @@ function InitBase(sName,sPurpose)
     TRec = 0,        -- Pointer to the trace record
     TPnt = Vector(), -- P
     TMas = Vector(), -- O
-    TAng = Angle ()  -- A
+    TAng = Angle (), -- A
+    --- Offsets ---
+    ANxt = Angle (),
+    PNxt = Vector()
   })
   return StatusPrint(true,"InitBase: Success")
 end
@@ -2601,15 +2618,15 @@ function GetNormalSpawn(ucsPos,ucsAng,hdModel,hdPivot,enOrAngTr,ucsPosX,ucsPosY,
         stSpawn.HRec = hdRec
   if(ucsPos) then SetVector(stSpawn.OPos,ucsPos); SetVector(stSpawn.TPos, ucsPos) end
   if(ucsAng) then SetVector(stSpawn.OAng,ucsAng); SetVector(stSpawn.TAng, ucsAng) end
-  SetAnglePYR (stSpawn.NAng, (tonumber(ucsAngP) or 0), (tonumber(ucsAngY) or 0), (tonumber(ucsAngR) or 0))
-  SetVectorXYZ(stSpawn.NPos, (tonumber(ucsPosX) or 0), (tonumber(ucsPosY) or 0), (tonumber(ucsPosZ) or 0))
+  SetAnglePYR (stSpawn.ANxt, (tonumber(ucsAngP) or 0), (tonumber(ucsAngY) or 0), (tonumber(ucsAngR) or 0))
+  SetVectorXYZ(stSpawn.PNxt, (tonumber(ucsPosX) or 0), (tonumber(ucsPosY) or 0), (tonumber(ucsPosZ) or 0))
   -- Calculate origin directions
   stSpawn.U:Set(stSpawn.OAng:Up())
   stSpawn.R:Set(stSpawn.OAng:Right())
-  stSpawn.OAng:RotateAroundAxis(stSpawn.R, stSpawn.NAng[caP])
-  stSpawn.OAng:RotateAroundAxis(stSpawn.U, stSpawn.NAng[caY])
+  stSpawn.OAng:RotateAroundAxis(stSpawn.R, stSpawn.ANxt[caP])
+  stSpawn.OAng:RotateAroundAxis(stSpawn.U, stSpawn.ANxt[caY])
   stSpawn.F:Set(stSpawn.OAng:Forward())
-  stSpawn.OAng:RotateAroundAxis(stSpawn.F, stSpawn.NAng[caR])
+  stSpawn.OAng:RotateAroundAxis(stSpawn.F, stSpawn.ANxt[caR])
   stSpawn.U:Set(stSpawn.OAng:Up())
   stSpawn.R:Set(stSpawn.OAng:Right())
   -- Read holder data
@@ -2646,9 +2663,9 @@ function GetNormalSpawn(ucsPos,ucsAng,hdModel,hdPivot,enOrAngTr,ucsPosX,ucsPosY,
     stSpawn.R:Set(stSpawn.TAng:Right())
     stSpawn.U:Set(stSpawn.TAng:Up())
   end -- Deviate the mass-center location according to the user offsets
-  stSpawn.HMas:Add(stSpawn.NPos[cvX] * stSpawn.F)
-  stSpawn.HMas:Add(stSpawn.NPos[cvY] * stSpawn.R)
-  stSpawn.HMas:Add(stSpawn.NPos[cvZ] * stSpawn.U)
+  stSpawn.HMas:Add(stSpawn.PNxt[cvX] * stSpawn.F)
+  stSpawn.HMas:Add(stSpawn.PNxt[cvY] * stSpawn.R)
+  stSpawn.HMas:Add(stSpawn.PNxt[cvZ] * stSpawn.U)
   -- Calculate the mass-center location as a position vector based on the database
   stSpawn.SPos:Add(stSpawn.HMas) -- Add the mass-center
   return stSpawn

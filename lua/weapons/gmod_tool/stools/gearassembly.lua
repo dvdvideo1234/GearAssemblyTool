@@ -624,20 +624,26 @@ function TOOL:Think()
   end
 end
 
-function TOOL:DrawTextSpawn(oScreen, stSpawn, sCol, sMeth, tArgs)
+--[[
+ * This function draws value snapshot of the spawn structure in the screen
+ * oScreen > Screen to draw the text on
+ * sCol    > Text draw color
+ * sMeth   > Text draw method
+ * tArgs   > Text draw arguments
+]]--
+function TOOL:DrawTextSpawn(oScreen, sCol, sMeth, tArgs)
+  local stS = asmlib.GetOpVar("STRUCT_SPAWN")
   local arK = asmlib.GetOpVar("STRUCT_SPAWN_KEYS")
   local x,y = oScreen:GetCenter(10,10)
   oScreen:SetTextEdge(x,y)
   oScreen:DrawText("Spawn debug information",sCol,sMeth,tArgs)
   for ID = 1, #arK, 1 do
-    local key = arK[ID]
-    local val = stSpawn[key]
-    local typ = type(val)
-    if(typ == "Vector") then
-      oScreen:DrawText("<"..key.."> VEC: "..stSpawn[key])
-    elseif(typ == "Angle") then
-      oScreen:DrawText("<"..key.."> ANG: "..stSpawn[key])
-    end
+    local def = arK[ID]
+    local key, typ = def[1], def[2]
+    local inf = (tostring(def[3] or "") ~= "") and tostring(def[3]) or nil
+    local val = stS[key]
+    if(not typ) then oScreen:DrawText(tostring(key))
+    else oScreen:DrawText("<"..key.."> "..typ..": "..tostring(val)..(inf and (" > "..inf) or "")) end
   end
 end
 
@@ -703,7 +709,7 @@ function TOOL:DrawHUD()
     hudMonitor:DrawLine(Mh,Hp)            -- Trace position distance
     hudMonitor:DrawLine(Mt,Tp)            -- Holder position distance
     if(not self:GetDeveloperMode()) then return end
-    self:DrawTextSpawn(hudMonitor, stSpawn, "k","SURF",{"Trebuchet18"})
+    self:DrawTextSpawn(hudMonitor, "k","SURF",{"Trebuchet18"})
   else
     local vPos = stTrace.HitPos
     local aAng = asmlib.GetNormalAngle(oPly, stTrace)
@@ -730,7 +736,7 @@ function TOOL:DrawHUD()
       hudMonitor:DrawCircle(Hp,plyrad)     -- Holder spawn position
     end
     if(not self:GetDeveloperMode()) then return end
-    self:DrawTextSpawn(hudMonitor, stSpawn, "k","SURF",{"Trebuchet18"})
+    self:DrawTextSpawn(hudMonitor, "k","SURF",{"Trebuchet18"})
   end
 end
 
