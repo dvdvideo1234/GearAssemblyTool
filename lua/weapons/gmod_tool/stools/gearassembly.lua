@@ -749,7 +749,7 @@ function TOOL:DrawRatioVisual(oScreen,nTrR,nHdR,nDeep)
     local nCen = mathFloor((nTrR / ( nTrR + nHdR )) * nW)
     oScreen:DrawRect({x=0,y=dh},{x=nDeep,y=nH},"y")               -- Trace Teeth
     oScreen:DrawRect({x=nDeep,y=dh},{x=nCen-hDeep,y=nH},"g")      -- Trace Gear
-    oScreen:DrawRect({x=nCen-hDeep,y=dh},{x=nCen+hDeep,y=nH},"y") -- Raking
+    oScreen:DrawRect({x=nCen-hDeep,y=dh},{x=nCen+hDeep,y=nH},"y") -- Mesh position
     oScreen:DrawRect({x=nCen+hDeep,y=dh},{x=nW-nDeep,y=nH},"m")   -- Holds Gear
     oScreen:DrawRect({x=nW-nDeep,y=dh},{x=nW,y=nH},"y")           -- Holds Teeth
   else

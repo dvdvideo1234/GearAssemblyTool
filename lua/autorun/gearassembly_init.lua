@@ -31,7 +31,6 @@ asmlib.SetIndexes("A",1,2,3)
 asmlib.SetIndexes("S",4,5,6,7)
 asmlib.SetOpVar("CONTAIN_STACK_MODE",asmlib.MakeContainer("Stack Mode"))
 asmlib.SetOpVar("CONTAIN_CONSTRAINT_TYPE",asmlib.MakeContainer("Constraint Type"))
-asmlib.SetOpVar("LOG_ONLY",nil)
 asmlib.SetOpVar("LOG_SKIP",{
   "QuickSort",
   "ModelToName%[CUT%]",
@@ -40,6 +39,9 @@ asmlib.SetOpVar("LOG_SKIP",{
   "MakeScreen.SetColor: Color reset",
   "MakeScreen: Color list not container"
 })
+
+asmlib.SettingsLogs("SKIP")
+asmlib.SettingsLogs("ONLY")
 
 ------ VARIABLE FLAGS ------
 -- Client and server have independent value
