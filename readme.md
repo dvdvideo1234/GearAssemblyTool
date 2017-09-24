@@ -5,7 +5,7 @@ GearAssemblyTool
 
 **IF YOU HAPPEN TO FIND REUPLOADS WITH DIFFERENT ORIGIN REPORT THEM TO ME IMMIDEATELY !!!**
 
-![GearAssemblyTool](https://raw.githubusercontent.com/dvdvideo1234/GearAssemblyTool/LuaDB/data/pictures/screenshot.jpg)
+![GearAssemblyTool](https://raw.githubusercontent.com/dvdvideo1234/GearAssemblyTool/master/data/pictures/screenshot.jpg)
 
  On the Steam WS: http://steamcommunity.com/sharedfiles/filedetails/?id=384782853
 
@@ -86,7 +86,7 @@ A: All the red lines are forward direction and the blues are the up direction ve
    The magenta line represents the distance vector between holder and origin the yellow trace and origin.
    If you are still confused about this, please take a look at the diagram below:
 ```
-![GearAssemblyCoordinates](https://raw.githubusercontent.com/dvdvideo1234/GearAssemblyTool/LuaDB/data/pictures/coordinates.jpg)
+![GearAssemblyCoordinates](https://raw.githubusercontent.com/dvdvideo1234/GearAssemblyTool/master/data/pictures/coordinates.jpg)
 
 **Distribution ownership is like the Track Assembly Tool, so DO NOT UPLOAD THIS TO ANY OTHER SITES !**
 
