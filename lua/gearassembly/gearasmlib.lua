@@ -114,6 +114,7 @@ local timerDestroy            = timer and timer.Destroy
 local tableEmpty              = table and table.Empty
 local tableMaxn               = table and table.maxn
 local tableGetKeys            = table and table.GetKeys
+local tableInsert             = table and table.insert
 local debugGetinfo            = debug and debug.getinfo
 local stringExplode           = string and string.Explode
 local stringImplode           = string and string.Implode
@@ -228,13 +229,14 @@ end
 local function Log(anyStuff)
   local nMaxLogs = GetOpVar("LOG_MAXLOGS")
   if(nMaxLogs <= 0) then return end
+  local lbNam    = GetOpVar("NAME_LIBRARY")
   local logLast  = GetOpVar("LOG_LOGLAST")
   local logData  = tostring(anyStuff)
   local nCurLogs = GetOpVar("LOG_CURLOGS") + 1
   if(logLast == logData) then SetOpVar("LOG_CURLOGS",nCurLogs); return end
   SetOpVar("LOG_LOGLAST",logData)
   if(GetOpVar("LOG_LOGFILE")) then
-    local fName = GetOpVar("DIRPATH_BAS").."gearasmlib_log.txt"
+    local fName = GetOpVar("DIRPATH_BAS")..lbNam.."_log.txt"
     if(nCurLogs > nMaxLogs) then nCurLogs = 0; fileDelete(fName) end
     fileAppend(fName,FormatNumberMax(nCurLogs,nMaxLogs).." ["..GetDate().."] "..logData.."\n")
   else -- The current has values 1..nMaxLogs(0)
@@ -328,16 +330,21 @@ function SettingsLogs(sHash)
   local sKey = tostring(sHash or ""):upper():Trim()
   if(not (sKey == "SKIP" or sKey == "ONLY")) then
     return StatusLog(false,"SettingsLogs("..sKey.."): Invalid hash") end
-  local tLogs = GetOpVar("LOG_"..sKey)
+  local tLogs, lbNam = GetOpVar("LOG_"..sKey), GetOpVar("NAME_LIBRARY")
   if(not tLogs) then return StatusLog(true,"SettingsLogs("..sKey.."): Skip table") end
-  local fName = GetOpVar("DIRPATH_BAS").."trackasmlib_sl"..sKey:lower()..".txt"
+  local fName = GetOpVar("DIRPATH_BAS")..lbNam.."_sl"..sKey:lower()..".txt"
   local S = fileOpen(fName, "rb", "DATA")
   if(S) then
-    local sRow = S:Read()
-    while(sRow) do sRow = sRow:Trim()
-      if(sRow ~= "") then tableInsert(tLogs, sRow) end
-      sRow = S:Read()
-    end; S:Close(); return true
+    local sCh, sLine = "X", ""
+    while(sCh) do
+      sCh = S:Read(1)
+      if(not sCh) then break end
+      if(sCh == "\n") then
+        sLine = sLine:Trim()
+        if(sLine ~= "") then
+          tableInsert(tLogs, sLine) end; sLine = ""
+      else sLine = sLine..sCh end
+    end; S:Close(); return StatusLog(true,"SettingsLogs("..sKey.."): Success <"..fName..">")
   else return StatusLog(true,"SettingsLogs("..sKey.."): Missing <"..fName..">") end
 end
 
@@ -395,6 +402,7 @@ function InitBase(sName,sPurpose)
   SetOpVar("GOLDEN_RATIO",1.61803398875)
   SetOpVar("NAME_INIT",sName:lower())
   SetOpVar("NAME_PERP",sPurpose:lower())
+  SetOpVar("NAME_LIBRARY", GetOpVar("NAME_INIT").."asmlib")
   SetOpVar("TOOLNAME_NL",(GetOpVar("NAME_INIT")..GetOpVar("NAME_PERP")):lower())
   SetOpVar("TOOLNAME_NU",(GetOpVar("NAME_INIT")..GetOpVar("NAME_PERP")):upper())
   SetOpVar("TOOLNAME_PL",GetOpVar("TOOLNAME_NL").."_")
@@ -614,7 +622,7 @@ function SetVector(vBase, vUnit)
 end
 
 function SetVectorXYZ(vBase, nX, nY, nZ)
-  if(not vBase) then return StatusLog(nil,"SetVector: Base invalid") end
+  if(not vBase) then return StatusLog(nil,"SetVectorXYZ: Base invalid") end
   vBase[cvX] = (tonumber(nX or 0))
   vBase[cvY] = (tonumber(nY or 0))
   vBase[cvZ] = (tonumber(nZ or 0))
@@ -2476,8 +2484,9 @@ function TranslateDSV(sTable, sPref, sDelim)
   if(not I) then return StatusLog(false,"TranslateDSV("..fPref.."): fileOpen("..sNins..") failed") end
   I:Write("# TranslateDSV("..fPref.."@"..sTable.."): "..GetDateLog().." ["..GetOpVar("MODE_DATABASE").."]\n")
   I:Write("# Data settings:\t"..GetColumns(defTable, sDelim).."\n")
+  local pfLib = GetOpVar("NAME_LIBRARY"):gsub(GetOpVar("NAME_INIT"),"")
   local sLine, sCh, symOff = "", "X", GetOpVar("OPSYM_DISABLE")
-  local sFr, sBk, sHs = "asmlib.InsertRecord(\""..sTable.."\", {", "})\n", (fPref.."@"..sTable)
+  local sFr, sBk, sHs = pfLib..".InsertRecord(\""..sTable.."\", {", "})\n", (fPref.."@"..sTable)
   while(sCh) do
     sCh = D:Read(1)
     if(not sCh) then break end
@@ -2514,7 +2523,8 @@ function RegisterDSV(sProg, sPref, sDelim)
     return StatusLog(false,"RegisterDSV("..sPref.."): Prefix empty") end
   local sBas = GetOpVar("DIRPATH_BAS")
   if(not fileExists(sBas,"DATA")) then fileCreateDir(sBas) end
-  local fName = sBas.."trackasmlib_dsv.txt"
+  local lbNam = GetOpVar("NAME_LIBRARY")
+  local fName = sBas..lbNam.."_dsv.txt"
   local F = fileOpen(fName, "ab" ,"DATA")
   if(not F) then return StatusLog(false,"RegisterDSV("
     ..sPref.."): fileOpen("..fName..") failed") end
@@ -2532,7 +2542,8 @@ end
  * sDelim > The delimiter to be used while processing the DSV list
 ]]--
 function ProcessDSV(sDelim)
-  local fName = GetOpVar("DIRPATH_BAS").."trackasmlib_dsv.txt"
+  local lbNam = GetOpVar("NAME_LIBRARY")
+  local fName = GetOpVar("DIRPATH_BAS")..lbNam.."_dsv.txt"
   local F = fileOpen(fName, "rb" ,"DATA")
   if(not F) then return StatusLog(false,"ProcessDSV: fileOpen("..fName..") failed") end
   local sCh, sLine, symOff = "X", "", GetOpVar("OPSYM_DISABLE")
@@ -2554,7 +2565,7 @@ function ProcessDSV(sDelim)
             local tStore = tProc[fPrf]
             tStore.Cnt = tStore.Cnt + 1 -- Store the count of the repeated prefixes
             tStore[tStore.Cnt] = {Prog = fSrc, File = (sDv..fPrf..sNt)}
-          end -- That user puts there is a problem of his own
+          end -- What user puts there is a problem of his own
         end -- If the line is disabled/comment
       else LogInstance("ProcessDSV: Skipped <"..sLine..">") end; sLine = ""
     else sLine = sLine..sCh end
@@ -2588,7 +2599,7 @@ function ApplySpawnFlat(oEnt,stSpawn,vNorm)
     return StatusLog(false,"ApplyFlatSpawn: Holder missing") end
   local hPOA = stSpawn.HRec.Offs
   if(hPOA) then
-    if(hdPOA.A[csD]) then SetAnglePYR(stSpawn.HAng) else SetAngle(stSpawn.HAng,hdPOA.A) end)
+    if(hPOA.A[csD]) then SetAnglePYR(stSpawn.HAng) else SetAngle(stSpawn.HAng,hPOA.A) end
     local vOBB = oEnt:OBBMins()
           SubVector(vOBB,hPOA.O) -- Mass center
           vOBB:Rotate(stSpawn.HAng)
@@ -2600,9 +2611,9 @@ function ApplySpawnFlat(oEnt,stSpawn,vNorm)
     stSpawn.SPos:Rotate(stSpawn.SAng) -- Make world space mass-center vector
     stSpawn.HMas:Set(stSpawn.OPos)    -- Calculate mass-center position vector
     stSpawn.HMas:Add(vNorm * zOffs)
-    stSpawn.HMas:Add(stSpawn.F * stSpawn.NPos[cvX])
-    stSpawn.HMas:Add(stSpawn.R * stSpawn.NPos[cvY])
-    stSpawn.HMas:Add(stSpawn.U * stSpawn.NPos[cvZ])
+    stSpawn.HMas:Add(stSpawn.F * stSpawn.PNxt[cvX])
+    stSpawn.HMas:Add(stSpawn.R * stSpawn.PNxt[cvY])
+    stSpawn.HMas:Add(stSpawn.U * stSpawn.PNxt[cvZ])
     stSpawn.SPos:Add(stSpawn.HMas) -- Add mass-center position origin for spawn
   end; return true
 end
@@ -2635,10 +2646,10 @@ function GetNormalSpawn(ucsPos,ucsAng,hdModel,hdPivot,enOrAngTr,ucsPosX,ucsPosY,
   if(not IsExistent(hdPOA)) then return StatusLog(nil,"GetNormalSpawn: Offsets missing <"..tostring(hdModel)..">") end
   local stSpawn = GetOpVar("STRUCT_SPAWN")
         stSpawn.HRec = hdRec
-  if(ucsPos) then SetVector(stSpawn.OPos,ucsPos); SetVector(stSpawn.TPos, ucsPos) end
+  if(ucsPos) then SetVector(stSpawn.OPos,ucsPos); SetVector(stSpawn.TMas, ucsPos) end
   if(ucsAng) then SetVector(stSpawn.OAng,ucsAng); SetVector(stSpawn.TAng, ucsAng) end
-  SetAnglePYR (stSpawn.ANxt, (tonumber(ucsAngP) or 0), (tonumber(ucsAngY) or 0), (tonumber(ucsAngR) or 0))
-  SetVectorXYZ(stSpawn.PNxt, (tonumber(ucsPosX) or 0), (tonumber(ucsPosY) or 0), (tonumber(ucsPosZ) or 0))
+  SetAnglePYR (stSpawn.ANxt, (tonumber(ucsAngP) or 0), -(tonumber(ucsAngY) or 0), (tonumber(ucsAngR) or 0))
+  SetVectorXYZ(stSpawn.PNxt, (tonumber(ucsPosX) or 0),  (tonumber(ucsPosY) or 0), (tonumber(ucsPosZ) or 0))
   -- Calculate origin directions
   stSpawn.U:Set(stSpawn.OAng:Up())
   stSpawn.R:Set(stSpawn.OAng:Right())
@@ -2665,14 +2676,14 @@ function GetNormalSpawn(ucsPos,ucsAng,hdModel,hdPivot,enOrAngTr,ucsPosX,ucsPosY,
   stSpawn.DAng:RotateAroundAxis(stSpawn.DAng:Up(),(tonumber(hdPivot) or 0))
   -- Calculate spawn angle
   stSpawn.SAng:Set(stSpawn.DAng); NegAngle(stSpawn.HAng)
-  stSpawn.SAng:RotateAroundAxis(stSpawn.U,stSpawn.HAng[caY] * hdPOA.A[csB])
-  stSpawn.SAng:RotateAroundAxis(stSpawn.R,stSpawn.HAng[caP] * hdPOA.A[csA])
-  stSpawn.SAng:RotateAroundAxis(stSpawn.F,stSpawn.HAng[caR] * hdPOA.A[csC])
+  stSpawn.SAng:RotateAroundAxis(stSpawn.DAng:Up(),stSpawn.HAng[caY] * hdPOA.A[csB])
+  stSpawn.SAng:RotateAroundAxis(stSpawn.DAng:Right(),stSpawn.HAng[caP] * hdPOA.A[csA])
+  stSpawn.SAng:RotateAroundAxis(stSpawn.DAng:Forward(),stSpawn.HAng[caR] * hdPOA.A[csC])
   -- Make sure saving the mass-center world offset vector in the spawn
-  stSpawn.SPos:Set(stSpawn.HMas); NegVector(stSpawn.SPos)
+  stSpawn.SPos:Set(stSpawn.HMas) ; NegVector(stSpawn.SPos)
   stSpawn.SPos:Rotate(stSpawn.SAng) -- World space vector mass-center to position
   -- Calculate the location of the mass-center as a position vector
-  stSpawn.HMas:Add(stSpawn.OPos)
+  stSpawn.HMas:Set(stSpawn.OPos)
   -- Add the decomposed mass center origin
   stSpawn.HMas:Add(stSpawn.DPos[cvX] * stSpawn.F)
   stSpawn.HMas:Add(stSpawn.DPos[cvY] * stSpawn.R)

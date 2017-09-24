@@ -47,6 +47,7 @@ local caP, caY, caR = asmlib.GetIndexes("A")
 local VEC_ZERO = asmlib.GetOpVar("VEC_ZERO")
 local ANG_ZERO = asmlib.GetOpVar("ANG_ZERO")
 
+local gsLibName   = asmlib.GetOpVar("NAME_LIBRARY")
 local gsDataRoot  = asmlib.GetOpVar("DIRPATH_BAS")
 local gsModeDataB = asmlib.GetOpVar("MODE_DATABASE")
 local gsNoID      = asmlib.GetOpVar("MISS_NOID")
@@ -67,7 +68,7 @@ local gsNoAnchor  = gsNoID..gsSymRev..gsNoMD
 local conPalette  = asmlib.GetOpVar("CONTAINER_PALETTE")
 
 if(not asmlib.ProcessDSV()) then -- Default tab delimiter
-  asmlib.LogInstance("Processing data list failed <"..gsDataRoot.."trackasmlib_dsv.txt>")
+  asmlib.LogInstance("Processing data list failed <"..gsDataRoot..gsLibName.."_dsv.txt>")
 end
 
 if(CLIENT) then
@@ -531,7 +532,7 @@ function TOOL:RightClick(stTrace)
     if(not self:ValidateTrace(stTrace)) then
       return asmlib.StatusLog(false,self:GetStatus(stTrace,"TOOL:RightClick(DUCK): Trace not valid")) end
     local trModel = trEnt:GetModel()
-    local fnModel = stringToFileName(model)
+    local fnModel = stringToFileName(trModel)
     asmlib.ConCommandPly(ply,"model",trModel)
     asmlib.PrintNotifyPly(ply,"Model: "..fnModel.." selected !","GENERIC")
     return asmlib.StatusLog(true,"TOOL:RightClick(DUCK): Success <"..fnModel..">")
@@ -634,7 +635,7 @@ end
 function TOOL:DrawTextSpawn(oScreen, sCol, sMeth, tArgs)
   local stS = asmlib.GetOpVar("STRUCT_SPAWN")
   local arK = asmlib.GetOpVar("STRUCT_SPAWN_KEYS")
-  local x,y = oScreen:GetCenter(10,10)
+  local x,y = oScreen:GetCenter(-200,10)
   oScreen:SetTextEdge(x,y)
   oScreen:DrawText("Spawn debug information",sCol,sMeth,tArgs)
   for ID = 1, #arK, 1 do
@@ -829,14 +830,15 @@ function TOOL.BuildCPanel(CPanel)
               Options    = {["#Default"] = ConVarList},
               CVars      = tableGetKeys(ConVarList)}); CurY = CurY + pItem:GetTall() + 2
 
-  local Panel  = asmlib.CacheQueryPanel()
-  if(not Panel) then return asmlib.StatusPrint(nil,"TOOL:BuildCPanel(cPanel): Panel population empty") end
+  local Panel = asmlib.CacheQueryPanel()
+  if(not Panel) then return asmlib.StatusPrint(nil,"TOOL:BuildCPanel: Panel population empty") end
   local defTable = asmlib.GetOpVar("DEFTABLE_PIECES")
   local catTypes = asmlib.GetOpVar("TABLE_CATEGORIES")
   local pTree    = vguiCreate("DTree")
         pTree:SetPos(2, CurY)
-        pTree:SetSize(2, 200)
+        pTree:SetSize(2, 300)
         pTree:SetIndentSize(0)
+        pTree:SetTooltip(languageGetPhrase("tool."..gsToolNameL..".model_con"))
   local iCnt, pFolders, pCateg, pNode = 1, {}, {}
   while(Panel[iCnt]) do
     local Rec = Panel[iCnt]

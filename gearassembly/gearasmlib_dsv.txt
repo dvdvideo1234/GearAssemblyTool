@@ -1,0 +1,1 @@
+clock_	@lua/autorun/z_autorun_add_pieces_r2fttp.lua
