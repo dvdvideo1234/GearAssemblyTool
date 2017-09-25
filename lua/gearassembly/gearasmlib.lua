@@ -2599,8 +2599,8 @@ function ApplySpawnFlat(oEnt,stSpawn,vNorm)
           vOBB:Rotate(stSpawn.HAng)
           DecomposeByAngle(vOBB,GetOpVar("ANG_ZERO"))
     local zOffs = mathAbs(vOBB[cvZ])
-    SetVector(stSpawn.HMas, hPOA.O)
-    stSpawn.SAng:Set(stSpawn.OAng)
+    SetVector(stSpawn.HMas, hPOA.O) -- Apply negative rake to the angle to flatten it
+    stSpawn.SAng:RotateAroundAxis(stSpawn.DAng:Right(), -stSpawn.HRec.Rake)
     stSpawn.SPos:Set(stSpawn.HMas); NegVector(stSpawn.SPos)
     stSpawn.SPos:Rotate(stSpawn.SAng) -- Make world space mass-center vector
     stSpawn.HMas:Set(stSpawn.OPos)    -- Calculate mass-center position vector
