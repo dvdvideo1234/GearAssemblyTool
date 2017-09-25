@@ -2030,7 +2030,7 @@ function CacheQueryPiece(sModel)
         return StatusLog(nil,"CacheQueryPiece: SQL exec error <"..sqlLastError()..">") end
       if(not (qData and qData[1])) then
         return StatusLog(nil,"CacheQueryPiece: No data found <"..Q..">") end
-      stPiece.Kept = 0; local iCnt = 1 --- Notrhing registered yet
+      stPiece.Kept = 0; local iCnt = 1 --- Nothing registered yet
       stPiece.Slot = sModel
       stPiece.Type = qData[1][defTable[2][1]]
       stPiece.Name = qData[1][defTable[3][1]]
@@ -2217,7 +2217,7 @@ end
 
 --[[
  * This function removes DSV associated with a given prefix
- * sTable > Extermal table database to export
+ * sTable > External table database to export
  * sPref  > Prefix used on exporting ( if any ) else instance is used
 ]]--
 function RemoveDSV(sTable, sPref)
@@ -2240,7 +2240,7 @@ end
 
 --[[
  * This function exports a given table to DSV file format
- * It is used by the user when he wants to expoert the
+ * It is used by the user when he wants to export the
  * whole database to a delimiter separator format file
  * sTable > The table you want to export
  * sPref  > The external data prefix to be used
@@ -2389,12 +2389,10 @@ function SynchronizeDSV(sTable, tData, bRepl, sPref, sDelim)
             local sKey = tLine[2]
             if(not fData[sKey]) then fData[sKey] = {Kept = 0} end
               tKey = fData[sKey]
-            local nID, vID = 0 -- Where the lime ID mut be read from
-            if    (sTable == "PIECES") then vID = tLine[5]; nID = tonumber(vID) or 0 end
-            if((tKey.Kept < 0) or (nID <= tKey.Kept) or ((nID - tKey.Kept) ~= 1)) then
-              I:Close(); return StatusLog(false,"SynchronizeDSV("..fPref.."): Read pont ID #"..
-                tostring(vID).." desynchronized <"..sKey.."> of <"..sTable..">") end
-            tKey.Kept = nID; tKey[tKey.Kept] = {}
+            local nRake, vRake = 0 -- The raking angle
+            if(sTable == "PIECES") then
+              vRake = tLine[5]; nRake = tonumber(vRake) or 0 end
+            tKey.Kept = 1; tKey[tKey.Kept] = {}
             local kKey, nCnt = tKey[tKey.Kept], 3
             while(tLine[nCnt]) do -- Do a value matching without quotes
               local vMatch = MatchType(defTable,tLine[nCnt],nCnt-1)
@@ -2413,16 +2411,12 @@ function SynchronizeDSV(sTable, tData, bRepl, sPref, sDelim)
   for key, rec in pairs(tData) do -- Check the given table
     for pnID = 1, #rec do
       local tRec = rec[pnID]
-      local nID, vID = 0 -- Where the lime ID mut be read from
+      local nRake, vRake = 0 -- Where the lime ID mut be read from
       if(sTable == "PIECES") then
-        vID = tRec[3]; nID = tonumber(vID) or 0
-        if(pnID ~= nID) then
-          return StatusLog(false,"SynchronizeDSV("..fPref.."): Given pont ID #"..
-            tostring(vID).." desynchronized <"..key.."> of "..sTable) end
+        vRake = tRec[3]; nRake = tonumber(vRake) or 0
         if(not fileExists(key, "GAME")) then
           LogInstance("SynchronizeDSV("..fPref.."): Missing piece <"..key..">") end
-      elseif(sTable == "ADDITIONS") then vID = tRec[3]; nID = tonumber(vID) or 0
-      elseif(sTable == "PHYSPROPERTIES") then vID = tRec[1]; nID = tonumber(vID) or 0 end
+      end
       for nCnt = 1, #tRec do -- Do a value matching without quotes
         local vMatch = MatchType(defTable,tRec[nCnt],nCnt+1)
         if(not IsExistent(vMatch)) then
@@ -2482,7 +2476,7 @@ function TranslateDSV(sTable, sPref, sDelim)
   if(not D) then return StatusLog(false,"TranslateDSV("..fPref.."): fileOpen("..sNdsv..") failed") end
   local I = fileOpen(sNins, "wb", "DATA")
   if(not I) then return StatusLog(false,"TranslateDSV("..fPref.."): fileOpen("..sNins..") failed") end
-  I:Write("# TranslateDSV("..fPref.."@"..sTable.."): "..GetDateLog().." ["..GetOpVar("MODE_DATABASE").."]\n")
+  I:Write("# TranslateDSV("..fPref.."@"..sTable.."): "..GetDate().." ["..GetOpVar("MODE_DATABASE").."]\n")
   I:Write("# Data settings:\t"..GetColumns(defTable, sDelim).."\n")
   local pfLib = GetOpVar("NAME_LIBRARY"):gsub(GetOpVar("NAME_INIT"),"")
   local sLine, sCh, symOff = "", "X", GetOpVar("OPSYM_DISABLE")
@@ -2536,9 +2530,9 @@ end
 --[[
  * This function cycles all the lines made via @RegisterDSV(sPref, sDelim, sProg)
  * or manually added and loads all the content bound by the prefix line read
- * to the databaase. It is used by addon creators when they want automatically
+ * to the database. It is used by addon creators when they want automatically
  * include and auto-process their custom pieces. The addon creator must
- * check if the PIECES file is created befor calling this function
+ * check if the PIECES file is created before calling this function
  * sDelim > The delimiter to be used while processing the DSV list
 ]]--
 function ProcessDSV(sDelim)
