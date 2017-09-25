@@ -1,6 +1,6 @@
 --[[
- * The purpose of this Lua file is to add your track pack pieces to the
- * track assembly tool, so they can appear in the tool selection menu.
+ * The purpose of this Lua file is to add your gear pack pieces to the
+ * gear assembly tool, so they can appear in the tool selection menu.
  * Why the name starts with /z/ you may ask. When Gmod loads the game
  * it goes trough all the Lua addons alphabetically.
  * That means your file name ( The file you are reading right now )
@@ -11,7 +11,9 @@
 local asmlib = gearasmlib
 
 -- Change this to your addon name
-local myAddon = "Test's track pack" -- Your addon name goes here
+local myAddon = "RyuZU" -- Your addon name goes here
+-- https://en.wikipedia.org/wiki/Clockwork_Planet
+-- Yes, I am fan of the anime "Clockwork planet" and you can stop wondering now xD
 
 -- Change this if you want to use different in-game type
 local myType  = myAddon -- The type your addon resides in TA with
@@ -131,10 +133,10 @@ if(asmlib) then
   ]]--
   local myTable = {
     ["models/props_trainstation/trainstation_clock001.mdl"] = {
-      {"RyuZU","Gearheart",0,"33.158,0,0","0.00034787258482538,0.01172979734838,0.00039185225614347","",""}
-    } --   ^       ^
-  }   --   |       |     https://en.wikipedia.org/wiki/Clockwork_Planet
-      --    \-------\--- Yes, I am fan of the anime "Clockwork planet" and you can stop wondering now xD
+      {myType,"#",0,"33.158,0,0","0.00034787258482538,0.01172979734838,0.00039185225614347","90,0,0",""}
+    }
+  }
+
   --[[
    * This logic statement is needed for reporting the error in the console if the
    * process fails.
