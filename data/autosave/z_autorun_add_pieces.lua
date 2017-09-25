@@ -100,7 +100,7 @@ if(asmlib) then
    * nInd   > The index equal indent format to be stored with ( generally = 3 )
    * tData  > The category functional definition you want to use to divide your stuff with
    * sPref  > An export file custom prefix. For synchronizing
-   * it must be related to your addon ( default is tab )
+   * it must be related to your addon ( default is instance prefix )
   ]]--
   if(CLIENT) then
     if(not asmlib.ExportCategory(3, myCategory, myPrefix)) then
