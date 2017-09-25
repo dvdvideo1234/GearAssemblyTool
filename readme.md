@@ -17,7 +17,7 @@ General FAQ:
 Q: Why did you made this script and what is its purpose ?
 A: I made it, because I am pissed of messing my gears over and over and ... you get the
    idea xD, some friends suggested that I should make this thing. It's made
-   for assembling and precisely meshing gears the best way there is in Gmod
+   for assembling and precisely meshing gears the best way there is in Gmod.
 
 Q: How can I spawn gears then ?
 A: Spawn gears by clicking anywhere.
@@ -26,15 +26,19 @@ Q: That's nice, but want to mesh ( or stack ) gears for example, how should I do
 A: Set the Stack count to one or more, point to one gear, then
    hold IN_SPEED ( Def: Shift ) and click IN_ATTACK1 ( Def: Left mouse button ).
 
+Q: How can I adjust the stacking mode if I want different stacking option for my gearbox?
+A: Press the IN_ATTACK2 ( Def. Right mouse button ) without any additional keys.
+   GA will switch between all stacking options available.
+   
 Q: How can I adjust the stack mode of the tool and what is it for?
 A: The stack mode is used ( as the name suggests ) to support two
-   different gear stacking modes. When the state is "Around Pivot",
-   you are stacking around and relative to the trace gear's pivot line ( yellow ).
-   When the stack mode is set to "Forward based" the script will stack gears
+   different gear stacking modes. When the state is "Around trace pivot",
+   you are stacking around and relative to the trace gear's pivot line ( blue ).
+   When the stack mode is set to "Forward direction" the script will stack gears
    in a direction selected by the user, and precisely meshing those.
 
 Q: How can I make a planetary gear ?
-A: Set the stack mode to "Around pivot" ( Around the trace prop's yellow line ).
+A: Set the stack mode to "Around trace pivot" ( Around the trace prop's blue line ).
    Put some ending angle, if you don't want to stack all-around
    Set the stack count to 2 or more.
    Adjust pivot rotation if you don't want to start at 0 degrees.
@@ -42,17 +46,22 @@ A: Set the stack mode to "Around pivot" ( Around the trace prop's yellow line ).
 
 Q: Dude, how can I make a mighty gear differential, like in the icon?
 A: Repeat the same procedure as the planetary gear above, but with bevels.
-   Last, adjust the piece's rotation to 180 degrees, set the stack count to one,
-   point to one of the planetary bevels use the meshing function.
+   Last, set the stack count to one, point to one of the planetary bevels
+   and use the meshing function.
 
 Q: How can I stack gears in one particular direction.
 A: Orient the first gear's forward to point in the desired direction. Freeze it.
-   Adjust stack mode to "Forward based", set stack count to two or more
-   You can also use the used manual offsets like the TA. Now mesh those things !
+   Adjust stack mode to "Forward direction", set stack count to two or more
+   You can also use the used manual offsets like in TA. Now mesh those things !
+N: Beware, that some gears have different forward origin related to the mesh angle.
+   The bevels for example have mesh angle of 45 degrees and if you stack 3 of them,
+   this will result in a created differential with 2 planet gears and two suns gears
 
-Q: How can chose the constraint type when I want to automatically constrain a gear?
+Q: How can I chose the constraint type when I want to automatically constrain a gear?
 A: Below the gear selection tree, there is a drop-down menu. ( It shows "<Constraint Type>" at first )
    Click on it to select constraint type like Axis, BS, and so on ..
+N: The axises and ball-sockets are created in the gear's mass-center for increased precision
+   and I can admit no one likes off-centered gears
 
 Q: How should I chose an anchor prop to constrain the gears to and how can I know what did I select?
 A: Easy, see the "[ID]" selection on the toolgun screen next to the trace status. It indicates
@@ -63,10 +72,6 @@ A: Easy, see the "[ID]" selection on the toolgun screen next to the trace status
    ( Constraint type different than "Free spawn" ). You can also clear it any time by pointing
    to the world and using IN_SPEED ( Def: Shift ) + click IN_ATTACK2 ( Def: Right mouse button ).
 
-Q: You said this thing is pretty mush like the TA, which settings are the same?
-A: The handling of Bodygroup/Skin selection, Mass, Gear's physical properties,
-   Ghosting and stuff, Error logging, Screens, Translations and Data export/selection.
-
 Q: I want to stack a gearbox relative to trace forward, but the gear tooth is directly placed
    on the angle forward vector. This makes the tool stack gears where the teeth are inside each
    other. What should I do?
@@ -74,6 +79,16 @@ A: Ah, this happens when the gear piece has even set of teeth. Adjust the trace 
    until the tooth of the holder gear ( the piece that you are holding ) aligns with the gap of
    the trace gear. Take this number (For example 7.25) and divide it by two (3.625). Now use this
    same value (3.625) for both trace pivot rotation and piece ( holder pivot ) rotation.
+
+Q: Do you know how to switch fast the prop to be used as a gear?
+A: Yep, just point to another gear you want to use and press
+   IN_DUCK ( Def: Ctrl ) + click IN_ATTACK2 ( Def: Right mouse button )
+   If the gear is valid database model it will be selected normally and if not,
+   GA will say that this model is invalid.
+
+Q: You said this thing is pretty mush like the TA, which settings are the same?
+A: The handling of Bodygroup/Skin selection, Mass, Gear's physical properties,
+   Ghosting and stuff, Error logging, Screens, Translations and Data export/selection.
 
 Q: I have a hard time reading the lines and circles of the adviser. What do these visuals represent?
 A: All the red lines are forward direction and the blues are the up direction vectors of all the

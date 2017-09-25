@@ -15,14 +15,14 @@ This script can give you the ability to connect prop-segmented gear pieces fast.
  [*] Custom point position angle and orientation adviser
  [*] Advanced duplicator can be used on the gearbox created
  [*] Custom entity properties ( weld, freeze, no-collide )
- [*] User can disable phys-gun grabbing on a piece ( good for turntables )
+ [*] User can disable phys-gun grabbing on a piece ( good for messing-proof )
  [*] Ability to list up the most used pieces on the server ( E + Right )
  [*] Ability to search among the most server popular pieces by [url=https://www.lua.org/pil/20.2.html]Lua patterns[/url]
  [*] Ability to export server and client database as a file
  [*] Tool-tips for every button are available and can be translated easily
  [*] Ability to spawn scripted gear switches of other class
  [*] Ability to modify the bodygroups and skins of a gear piece ( with duping )
- [*] Ability to modify gear piece [url=https://www.youtube.com/watch?v=ALBnlFeC9tU]suface behavior[/url] ( wood, metal, slime, tire )
+ [*] Automatically sets super-ice on all the pieces on creation for collision hassle-free
 [/list]
 
 For detailed manual, please refer to Readme.md

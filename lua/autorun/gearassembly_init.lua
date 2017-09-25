@@ -25,7 +25,7 @@ local asmlib = gearasmlib
 
 ------ CONFIGURE ASMLIB ------
 asmlib.InitBase("gear","assembly")
-asmlib.SetOpVar("TOOL_VERSION","4.94")
+asmlib.SetOpVar("TOOL_VERSION","5.172")
 asmlib.SetIndexes("V",1,2,3)
 asmlib.SetIndexes("A",1,2,3)
 asmlib.SetIndexes("S",4,5,6,7)
@@ -85,8 +85,8 @@ local conPalette  = asmlib.MakeContainer("Colours"); asmlib.SetOpVar("CONTAINER_
       conPalette:Insert("w" ,Color(255,255,255,255))
       conPalette:Insert("k" ,Color( 0 , 0 , 0 ,255))
       conPalette:Insert("gh",Color(255,255,255,150)) -- self.GhostEntity
-      conPalette:Insert("an",Color(180,255,150,255)) -- Panel names color
-      conPalette:Insert("tx",Color(161,161,161,255)) -- Selected anchor
+      conPalette:Insert("an",Color(180,255,150,255)) -- Selected anchor
+      conPalette:Insert("tx",Color(161,161,161,255)) -- Panel names color
       conPalette:Insert("db",Color(220,164, 52,255)) -- Database mode
 ------ CONFIGURE TOOL -----
 
