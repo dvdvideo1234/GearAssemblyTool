@@ -127,14 +127,14 @@ if(asmlib) then
    * ANGLE  > This is the angle relative to which the forward and up vectors are calculated.
    *          An empty string is treated as {0,0,0}. Disabling this also makes it use {0,0,0}
    * CLASS  > This string is filled up when your entity class is not /prop_physics/ but something else
-   *          used by ents.Create of the gmod ents api library. Keep this empty if your stuff is a normal prop
+   *          used by ents.Create of the gmod ents API library. Keep this empty if your stuff is a normal prop
   ]]--
   local myTable = {
     ["models/props_trainstation/trainstation_clock001.mdl"] = {
-      {"Ryuzu","Gearheart",0,"33.158,0,0","0.00034787258482538,0.01172979734838,0.00039185225614347","",""}
-    }
-  }
-
+      {"RyuZU","Gearheart",0,"33.158,0,0","0.00034787258482538,0.01172979734838,0.00039185225614347","",""}
+    } --   ^       ^
+  }   --   |       |     https://en.wikipedia.org/wiki/Clockwork_Planet
+      --    \-------\--- Yes, I am fan of the anime "Clockwork planet" and you can stop wondering now xD
   --[[
    * This logic statement is needed for reporting the error in the console if the
    * process fails.
@@ -142,26 +142,26 @@ if(asmlib) then
    @ bSuccess = SynchronizeDSV(sTable, tData, bRepl, sPref, sDelim)
    * sTable > The table you want to sync
    * tData  > A data table like the one described above
-   * bRepl  > If set to /true/, makes the api to replace the repeating models with
+   * bRepl  > If set to /true/, makes the API to replace the repeating models with
               these of your addon. This is nice when you are constantly updating your track packs
               If set to /false/ keeps the current model in the
               database and ignores yours if they are the same file.
    * sPref  > An export file custom prefix. For synchronizing it must be related to your addon
-   * sDelim > The delimiter used by the server/client ( defaut is a tab symbol )
+   * sDelim > The delimiter used by the server/client ( default is a tab symbol )
    *
    @ bSuccess = TranslateDSV(sTable, sPref, sDelim)
    * sTable > The table you want to translate to Lua script
    * sPref  > An export file custom prefix. For synchronizing it must be related to your addon
-   * sDelim > The delimiter used by the server/client ( defaut is a tab symbol )
+   * sDelim > The delimiter used by the server/client ( default is a tab symbol )
   ]]--
   if(not asmlib.SynchronizeDSV("PIECES", myTable, true, myPrefix)) then
     myError("Failed to synchronize track pieces: "..myScript)
-  else -- You are saving me from all the work for manually generatin these
+  else -- You are saving me from all the work for manually generating these
     if(not asmlib.TranslateDSV("PIECES", myPrefix)) then
       myError("Failed to translate DSV into Lua: "..myScript) end
   end -- Now we have Lua inserts and DSV
 
   asmlib.LogInstance("<<< "..myScript)
 else
-  myError("Failed loading the requred module: "..myScript)
+  myError("Failed loading the required module: "..myScript)
 end

@@ -93,7 +93,7 @@ end
 TOOL.Category   = languageGetPhrase and languageGetPhrase("tool."..gsToolNameL..".category") -- Name of the category
 TOOL.Name       = languageGetPhrase and languageGetPhrase("tool."..gsToolNameL..".name")     -- Name to display
 TOOL.Command    = nil  -- Command on click ( nil )
-TOOL.ConfigName = nil  -- Config file name ( nil )
+TOOL.ConfigName = nil  -- Configuration file name ( nil )
 
 TOOL.ClientConVar = {
   [ "mass"      ] = "250",
@@ -402,6 +402,8 @@ function TOOL:LeftClick(stTrace)
   local rotpivt, rotpivh = self:GetRotatePivot()
   local nextx  , nexty  , nextz   = self:GetPosOffsets()
   local nextpic, nextyaw, nextrol = self:GetAngOffsets()
+
+  -- General spawning when we do not apply neither mesh
   if(not asmlib.CheckButtonPly(ply,IN_SPEED) and not asmlib.CheckButtonPly(ply,IN_DUCK)) then
     if(not (eBase and eBase:IsValid()) and (trEnt and trEnt:IsValid())) then eBase = trEnt end
     local vPos = stTrace.HitPos
@@ -435,6 +437,7 @@ function TOOL:LeftClick(stTrace)
 
   if(not trRec) then return asmlib.StatusLog(false,self:GetStatus(stTrace,"TOOL:LeftClick(Prop): Trace model not a piece")) end
 
+  -- Applies the physics or anchor on the piece selected
   if(asmlib.CheckButtonPly(ply,IN_DUCK)) then -- USE: Use the valid trace as a piece
     if(asmlib.CheckButtonPly(ply,IN_USE)) then -- Physical
       if(not asmlib.ApplyPhysicalAnchor(ePiece,eBase,stTrace.HitPos,stTrace.HitNormal,contyp,nocollide,forcelim,torquelim,friction)) then
@@ -448,7 +451,7 @@ function TOOL:LeftClick(stTrace)
   end
 
   if(not hdRec) then return asmlib.StatusLog(false,self:GetStatus(stTrace,"TOOL:LeftClick(Prop): Holder model not a piece")) end
-
+  -- Stacking when the mode is within borders and count is more than one
   if(asmlib.CheckButtonPly(ply,IN_SPEED) and count > 1 and stmode >= 1 and stmode <= SMode:GetSize()) then
     local stSpawn = asmlib.GetEntitySpawn(trEnt,rotpivt,rotpivh,model,igntyp,trorang,nextx,nexty,nextz,nextpic,nextyaw,nextrol)
     if(not stSpawn) then return asmlib.StatusLog(false,self:GetStatus(stTrace,"TOOL:LeftClick(Stack): Failed to retrieve spawn data")) end
@@ -488,7 +491,7 @@ function TOOL:LeftClick(stTrace)
     asmlib.UndoFinishPly(ply)
     return asmlib.StatusLog(true,"TOOL:LeftClick(Stack): Success")
   end
-
+  -- Mesh holder gear to the trace one when stack count is one
   local stSpawn = asmlib.GetEntitySpawn(trEnt,rotpivt,rotpivh,model,igntyp,trorang,nextx,nexty,nextz,nextpic,nextyaw,nextrol)
   if(stSpawn) then
     local ePiece = asmlib.MakePiece(ply,model,stSpawn.SPos,stSpawn.SAng,mass,bgskids,conPalette:Select("w"),bnderrmod)
@@ -516,11 +519,11 @@ function TOOL:RightClick(stTrace)
   local trEnt = stTrace.Entity
   local ply   = self:GetOwner()
   if(asmlib.CheckButtonPly(ply,IN_USE)) then
-    if(stTrace.HitWorld) then
+    if(stTrace.HitWorld) then -- Open frequent pieces frame
       asmlib.ConCommandPly(ply,"openframe",asmlib.GetAsmVar("maxfruse" ,"INT"))
       return asmlib.StatusLog(true,"TOOL:RightClick(World): Success open frame")
     end
-  elseif(asmlib.CheckButtonPly(ply,IN_SPEED)) then
+  elseif(asmlib.CheckButtonPly(ply,IN_SPEED)) then -- Controls anchor selection
     if(stTrace.HitWorld) then
       self:ClearAnchor(true); return asmlib.StatusLog(true,"TOOL:RightClick(SPEED): Anchor cleared")
     elseif(trEnt and trEnt:IsValid()) then
@@ -528,7 +531,7 @@ function TOOL:RightClick(stTrace)
         return asmlib.StatusLog(false,self:GetStatus(stTrace,"TOOL:RightClick(SPEED): Trace not valid")) end
       self:SetAnchor(stTrace); return asmlib.StatusLog(true,"TOOL:RightClick(SPEED): Anchor set")
     else return asmlib.StatusLog(true,self:GetStatus(stTrace,"TOOL:RightClick(SPEED): Invalid action",trEnt)) end
-  elseif(asmlib.CheckButtonPly(ply,IN_DUCK)) then
+  elseif(asmlib.CheckButtonPly(ply,IN_DUCK)) then -- Controls model selection
     if(not self:ValidateTrace(stTrace)) then
       return asmlib.StatusLog(false,self:GetStatus(stTrace,"TOOL:RightClick(DUCK): Trace not valid")) end
     local trModel = trEnt:GetModel()
@@ -536,7 +539,7 @@ function TOOL:RightClick(stTrace)
     asmlib.ConCommandPly(ply,"model",trModel)
     asmlib.PrintNotifyPly(ply,"Model: "..fnModel.." selected !","GENERIC")
     return asmlib.StatusLog(true,"TOOL:RightClick(DUCK): Success <"..fnModel..">")
-  else
+  else -- If neither is pressed changes the stack mode
     local stmode = asmlib.GetCorrectID(self:GetStackMode(),SMode)
           stmode = asmlib.GetCorrectID(stmode + 1,SMode)
     asmlib.ConCommandPly(ply,"stmode",stmode)
