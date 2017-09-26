@@ -447,7 +447,7 @@ function InitBase(sName,sPurpose)
   SetOpVar("MODELNAM_FUNC",function(x) return " "..x:sub(2,2):upper() end)
   SetOpVar("QUERY_STORE", {})
   SetOpVar("TABLE_BORDERS",{})
-  SetOpVar("TABLE_PLAYER_KEYS",{})
+  SetOpVar("TABLE_PLAYER",{})
   SetOpVar("TABLE_FREQUENT_MODELS",{})
   SetOpVar("OOP_DEFAULTKEY","(!@<#_$|%^|&>*)DEFKEY(*>&|^%|$_#<@!)")
   SetOpVar("CVAR_LIMITNAME","asm"..GetOpVar("NAME_INIT").."s")
@@ -1383,8 +1383,27 @@ end
 
 ------------------------- PLAYER -----------------------------------
 
+function GetTracePly(pPly)
+  if(not IsPlayer(pPly)) then
+    return StatusLog(nil,"GetTracePly: Player <"..tostring(pPly)"> invalid") end
+  local plyTable = GetOpVar("TABLE_PLAYER")
+  local plyPlace, plyTime = plyTable[pPly], Time()
+  if(not IsExistent(plyPlace)) then
+    plyTable[pPly] = {}; plyPlace = plyTable[pPly] end
+  if(not plyPlace["TDM"]) then -- Define trace delta margin
+    plyPlace["TDM"] = 0.2 -- Trace delta time margin
+    plyPlace["NXT"] = plyTime + plyPlace["TDM"] -- Define next trace pending
+    plyPlace["DAT"] = utilTraceLine(utilGetPlayerTrace(pPly)) -- Make a trace
+  end -- Check the trace time margin interval
+  if(plyTime >= plyPlace["NXT"]) then
+    plyPlace["NXT"] = plyTime + plyPlace["TDM"] -- Next trace margin
+    plyPlace["DAT"] = utilTraceLine(utilGetPlayerTrace(pPly))
+  end; return plyPlace["DAT"]
+end
+
 function ConCommandPly(pPly,sCvar,snValue)
-  if(not IsPlayer(pPly)) then return StatusLog(nil,"ConCommandPly: Player <"..type(pPly).."> invalid") end
+  if(not IsPlayer(pPly)) then
+    return StatusLog(nil,"ConCommandPly: Player <"..tostring(pPly).."> invalid") end
   if(not IsString(sCvar)) then -- Make it like so the space will not be forgotten
     return StatusLog(nil,"ConCommandPly: Convar {"..type(sCvar).."}<"..tostring(sCvar).."> not string") end
   return pPly:ConCommand(GetOpVar("TOOLNAME_PL")..sCvar.." "..tostring(snValue).."\n")
@@ -1392,7 +1411,7 @@ end
 
 function PrintNotifyPly(pPly,sText,sNotifType)
   if(not IsPlayer(pPly)) then
-    return StatusLog(false,"PrintNotifyPly: Player <"..type(pPly)"> invalid") end
+    return StatusLog(false,"PrintNotifyPly: Player <"..tostring(pPly)"> invalid") end
   if(SERVER) then -- Send notification to client that something happened
     pPly:SendLua("GAMEMODE:AddNotify(\""..sText.."\", NOTIFY_"..sNotifType..", 6)")
     pPly:SendLua("surface.PlaySound(\"ambient/water/drip"..mathRandom(1, 4)..".wav\")")
@@ -1412,7 +1431,8 @@ function UndoAddEntityPly(oEnt)
 end
 
 function UndoFinishPly(pPly,anyMessage)
-  if(not IsPlayer(pPly)) then return StatusLog(false,"UndoFinishPly: Player <"..type(pPly)"> invalid") end
+  if(not IsPlayer(pPly)) then
+    return StatusLog(false,"UndoFinishPly: Player <"..tostring(pPly)"> invalid") end
   pPly:EmitSound("physics/metal/metal_canister_impact_hard"..mathFloor(mathRandom(3))..".wav")
   undoSetCustomUndoText(GetOpVar("LABEL_UNDO")..tostring(anyMessage or ""))
   undoSetPlayer(pPly)
@@ -1420,54 +1440,54 @@ function UndoFinishPly(pPly,anyMessage)
   return true
 end
 
-function ReadKeyPly(pPly)
-  local plyKeys  = GetOpVar("TABLE_PLAYER_KEYS")
+function CachePressPly(pPly)
   if(not IsPlayer(pPly)) then
-    return StatusLog(false,"ReadKeyPly: Player <"..type(pPly)"> not available") end
-  local plyNick  = pPly:Nick()
-  local plyPlace = plyKeys[plyNick]
-  if(not IsExistent(plyPlace)) then plyKeys[plyNick] = {}; plyPlace = plyKeys[plyNick] end
+    return StatusLog(false,"CachePressPly: Player invalid <"..tostring(pPly)..">") end
+  local plyTable = GetOpVar("TABLE_PLAYER")
+  local plyPlace = plyTable[pPly]
+  if(plyPlace["CMD"]) then return true end -- Already cached
+  if(not IsExistent(plyPlace)) then
+    plyTable[pPly] = {}; plyPlace = plyTable[pPly] end
   local ucmdPressed = pPly:GetCurrentCommand()
   if(not IsExistent(ucmdPressed)) then
-    return StatusLog(false,"ReadKeyPly: Command not obtained correctly") end
-  plyPlace["M_DX"]   = ucmdPressed:GetMouseX()
-  plyPlace["M_DY"]   = ucmdPressed:GetMouseY()
-  plyPlace["K_BTN"]  = ucmdPressed:GetButtons()
-  plyPlace["M_DSCR"] = ucmdPressed:GetMouseWheel()
-  return StatusLog(true,"ReadKeyPly: Player <"..plyNick.."> keys loaded")
+    return StatusLog(false,"CachePressPly: Obtained incorrectly") end
+  plyPlace["CMD"] = ucmdPressed
+  return StatusLog(true,"CachePressPly: Cached <"..tostring(pPly)..">")
 end
 
 function GetMouseWheelPly(pPly)
   if(not IsPlayer(pPly)) then --- https://wiki.garrysmod.com/page/CUserCmd/GetMouseWheel
-    return StatusLog(false,"DeltaMousePly: Player <"..type(pPly)"> not available") end
-  local plyKeys  = GetOpVar("TABLE_PLAYER_KEYS")
-  local plyNick  = pPly:Nick()
-  local plyPlace = plyKeys[plyNick]
+    return StatusLog(false,"DeltaMousePly: Player invalid <"..tostring(pPly)">") end
+  local plyPlace = GetOpVar("TABLE_PLAYER")[pPly]
   if(not IsExistent(plyPlace)) then
-    return StatusLog(false,"DeltaMousePly: <"..plyNick.."> nomands not loaded") end
-  return plyPlace["M_DSCR"]
+    return StatusLog(false,"DeltaMousePly: Cache missing <"..pPly:Nick()..">") end
+  local ucmdPressed = plyPlace["CMD"]
+  return (ucmdPressed and ucmdPressed:GetMouseWheel() or 0)
 end
 
-function GetMouseDeltaPly(pPly)
+function GetMouseVectorPly(pPly)
   if(not IsPlayer(pPly)) then --- https://wiki.garrysmod.com/page/CUserCmd/GetMouse(XY)
-    return StatusLog(false,"GetMouseDeltaPly: Player <"..type(pPly)"> not available") end
-  local plyKeys  = GetOpVar("TABLE_PLAYER_KEYS")
-  local plyNick  = pPly:Nick()
-  local plyPlace = plyKeys[plyNick]
+    return StatusLog(false,"GetMouseVectorPly: Player <"..tostring(pPly)"> not available") end
+  local plyPlace = GetOpVar("TABLE_PLAYER")[pPly]
   if(not IsExistent(plyPlace)) then
-    return StatusLog(false,"GetMouseDeltaPly: <"..plyNick.."> nomands not loaded") end
-  return plyPlace["M_DX"], plyPlace["M_DY"]
+    return StatusLog(false,"GetMouseVectorPly: Cache missing <"..pPly:Nick()..">") end
+  local ucmdPressed = plyPlace["CMD"]
+  local ucmdX = (ucmdPressed and ucmdPressed:GetMouseX() or 0)
+  local ucmdY = (ucmdPressed and ucmdPressed:GetMouseY() or 0)
+  return ucmdX, ucmdY
 end
 
 function CheckButtonPly(pPly, ivInKey)
   if(not IsPlayer(pPly)) then --- https://wiki.garrysmod.com/page/Enums/IN
-    return StatusLog(false,"CheckButtonPly: Player <"..type(pPly)"> not available") end
+    return StatusLog(false,"CheckButtonPly: Player invalid <"..tostring(pPly)">") end
   local iInKey = tonumber(ivInKey)
   if(not IsExistent(iInKey)) then
     return StatusLog(false,"CheckButtonPly: Input key {"..type(ivInKey)"}<"..tostring(ivInKey).."> invalid") end
-  local plyPlace = GetOpVar("TABLE_PLAYER_KEYS")[pPly]
-  if(CLIENT or (SERVER and not IsExistent(plyPlace))) then return pPly:KeyDown(iInKey) end
-  return (bitBand(plyPlace["K_BTN"],iInKey) ~= 0) -- Read the cache
+  local plyPlace = GetOpVar("TABLE_PLAYER")[pPly]
+  if(CLIENT or (not IsExistent(plyPlace))) then return pPly:KeyDown(iInKey) end
+  local ucmdPressed = plyPlace["CMD"]
+  if(not IsExistent(ucmdPressed)) then return pPly:KeyDown(iInKey) end
+  return (bitBand(ucmdPressed:GetButtons(),iInKey) ~= 0) -- Read the cache
 end
 
 -------------------------- BUILDSQL ------------------------------
@@ -2613,10 +2633,10 @@ function ApplySpawnFlat(oEnt,stSpawn,vNorm)
 end
 
 function GetNormalAngle(oPly, stTrace)
-  local aAng = Angle()
+  local aAng, vNorm = Angle(), stTrace.HitNormal
   if(not IsPlayer(oPly)) then
     return StatusLog(aAng,"GetNormalAngle: No player <"..tostring(oPly)..">") end
-  aAng:Set(stTrace.HitNormal:Cross(oPly:GetRight()):AngleEx(stTrace.HitNormal)); return aAng
+  aAng:Set(vNorm:Cross(oPly:GetRight()):AngleEx(vNorm)); return aAng
 end
 
 ----------------------------- SNAPPING ------------------------------
@@ -2749,7 +2769,7 @@ local function GetEntityOrTrace(oEnt)
   local pPly = LocalPlayer()
   if(not IsPlayer(pPly)) then
     return StatusLog(nil,"GetEntityOrTrace: Player <"..type(pPly)"> missing") end
-  local stTrace = pPly:GetEyeTrace()
+  local stTrace = GetTracePly(pPly)
   if(not IsExistent(stTrace)) then
     return StatusLog(nil,"GetEntityOrTrace: Trace missing") end
   if(not stTrace.Hit) then -- Boolean

@@ -18,8 +18,6 @@ local mathClamp             = math and math.Clamp
 local vguiCreate            = vgui and vgui.Create
 local fileExists            = file and file.Exists
 local utilIsValidModel      = util and util.IsValidModel
-local utilTraceLine         = util and util.TraceLine
-local utilGetPlayerTrace    = util and util.GetPlayerTrace
 local tableGetKeys          = table and table.GetKeys
 local stringSub             = string and string.sub
 local stringUpper           = string and string.upper
@@ -298,8 +296,9 @@ function TOOL:GetStatus(stTrace,anyMessage,hdEnt)
   local nextpic, nextyaw, nextrol = self:GetAngOffsets()
   local hdModel, trModel, trRec   = self:GetModel()
   local hdRec   = asmlib.CacheQueryPiece(hdModel)
-  if(stTrace and stTrace.Entity and stTrace.Entity:IsValid()) then
-    trModel = stTrace.Entity:GetModel()
+  local trEnt   = stTrace.Entity
+  if(stTrace and trEnt and trEnt:IsValid()) then
+    trModel = trEnt:GetModel()
     trRec   = asmlib.CacheQueryPiece(trModel)
   end
   local sDu = ""
@@ -321,7 +320,7 @@ function TOOL:GetStatus(stTrace,anyMessage,hdEnt)
         sDu = sDu..sSpace.."  Trace:          <"..tostring(stTrace)..">"..sDelim
         sDu = sDu..sSpace.."  TR.Hit:         <"..tostring(stTrace and stTrace.Hit or gsNoAV)..">"..sDelim
         sDu = sDu..sSpace.."  TR.HitW:        <"..tostring(stTrace and stTrace.HitWorld or gsNoAV)..">"..sDelim
-        sDu = sDu..sSpace.."  TR.ENT:         <"..tostring(stTrace and stTrace.Entity or gsNoAV)..">"..sDelim
+        sDu = sDu..sSpace.."  TR.ENT:         <"..tostring(stTrace and trEnt or gsNoAV)..">"..sDelim
         sDu = sDu..sSpace.."  TR.Model:       <"..tostring(trModel or gsNoAV)..">["..tostring(trRec and trRec.Kept or gsNoID).."]"..sDelim
         sDu = sDu..sSpace.."  TR.File:        <"..stringToFileName(tostring(trModel or gsNoAV))..">"..sDelim
         sDu = sDu..sSpace.."Dumping console variables state:"..sDelim
@@ -564,7 +563,8 @@ function TOOL:Reload(stTrace)
     return asmlib.StatusLog(false,self:GetStatus(stTrace,"TOOL:Reload(Prop): Trace not valid")) end
   local trEnt = stTrace.Entity
   local trRec = asmlib.CacheQueryPiece(trEnt:GetModel())
-  if(trRec) then trEnt:Remove(); return asmlib.StatusLog(true,"TOOL:Reload(Prop): Removed a piece") end
+  if(trRec) then trEnt:Remove()
+    return asmlib.StatusLog(true,"TOOL:Reload(Prop): Removed a piece") end
   return asmlib.StatusLog(false,"TOOL:Reload(): Nothing removed")
 end
 
@@ -576,7 +576,7 @@ end
 
 function TOOL:UpdateGhost(ePiece, oPly)
   if(not (ePiece and ePiece:IsValid())) then return end
-  local stTrace = utilTraceLine(utilGetPlayerTrace(oPly))
+  local stTrace = asmlib.GetTracePly(oPly)
   if(not stTrace) then return end
   local trEnt = stTrace.Entity
   ePiece:SetNoDraw(true)
@@ -664,7 +664,7 @@ function TOOL:DrawHUD()
     asmlib.LogInstance("DrawHUD: Create screen")
   end; hudMonitor:SetColor()
   local oPly    = LocalPlayer()
-  local stTrace = oPly:GetEyeTrace()
+  local stTrace = asmlib.GetTracePly(oPly)
   if(not stTrace) then return end
   if(not self:GetAdviser()) then return end
   local trEnt   = stTrace.Entity
@@ -776,10 +776,10 @@ function TOOL:DrawToolScreen(w, h)
   scrTool:SetColor()
   scrTool:DrawRect({x=0,y=0},{x=w,y=h},"k","SURF",{"vgui/white"})
   scrTool:SetTextEdge(0,0)
-  local Trace = LocalPlayer():GetEyeTrace()
   local anInfo, anEnt = self:GetAnchor()
   local tInfo = stringExplode(gsSymRev,anInfo)
-  if(not Trace) then
+  local stTrace = asmlib.GetTracePly(LocalPlayer())
+  if(not stTrace) then
     scrTool:DrawText("Trace status: Invalid","r","SURF",{"Trebuchet24"})
     scrTool:DrawTextAdd("  ["..(tInfo[1] or gsNoID).."]","an")
     return
@@ -796,7 +796,7 @@ function TOOL:DrawToolScreen(w, h)
   scrTool:DrawText("Holds Model: Valid","g")
   scrTool:DrawTextAdd("  ["..gsModeDataB.."]","db")
   local NoAV  = "N/A"
-  local trEnt = Trace.Entity
+  local trEnt = stTrace.Entity
   local trOrig, trModel, trRake, trRad
   local stmode = asmlib.GetCorrectID(self:GetStackMode(),SMode)
   if(trEnt and trEnt:IsValid()) then
