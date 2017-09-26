@@ -1391,7 +1391,7 @@ function GetTracePly(pPly)
   if(not IsExistent(plyPlace)) then
     plyTable[pPly] = {}; plyPlace = plyTable[pPly] end
   if(not plyPlace["TDM"]) then -- Define trace delta margin
-    plyPlace["TDM"] = 0.2 -- Trace delta time margin
+    plyPlace["TDM"] = 0.02 -- Trace delta time margin
     plyPlace["NXT"] = plyTime + plyPlace["TDM"] -- Define next trace pending
     plyPlace["DAT"] = utilTraceLine(utilGetPlayerTrace(pPly)) -- Make a trace
   end -- Check the trace time margin interval

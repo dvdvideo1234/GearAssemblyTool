@@ -53,6 +53,7 @@ local gsNoMD      = asmlib.GetOpVar("MISS_NOMD")
 local SMode       = asmlib.GetOpVar("CONTAIN_STACK_MODE")
 local CType       = asmlib.GetOpVar("CONTAIN_CONSTRAINT_TYPE")
 local gsSymRev    = asmlib.GetOpVar("OPSYM_REVSIGN")
+local gsSymDir    = asmlib.GetOpVar("OPSYM_DIRECTORY")
 local gsLimitName = asmlib.GetOpVar("CVAR_LIMITNAME")
 local gsUndoPrefN = asmlib.GetOpVar("NAME_INIT"):gsub("^%l", string.upper)..": "
 local gnRatio     = asmlib.GetOpVar("GOLDEN_RATIO")
@@ -405,18 +406,20 @@ function TOOL:LeftClick(stTrace)
   -- General spawning when we do not apply neither mesh
   if(not asmlib.CheckButtonPly(ply,IN_SPEED) and not asmlib.CheckButtonPly(ply,IN_DUCK)) then
     if(not (eBase and eBase:IsValid()) and (trEnt and trEnt:IsValid())) then eBase = trEnt end
-    local vPos = stTrace.HitPos
+    local vPos, vAxis = stTrace.HitPos, Vector()
     local aAng = asmlib.GetNormalAngle(ply, stTrace)
     local stSpawn = asmlib.GetNormalSpawn(vPos,aAng,model,rotpivh,trorang,nextx,nexty,nextz,nextpic,nextyaw,nextrol)
     if(not stSpawn) then return asmlib.StatusLog(false,self:GetStatus(stTrace,"TOOL:LeftClick(World): Normal spawn failed")) end
     local ePiece = asmlib.MakePiece(ply,model,stTrace.HitPos,ANG_ZERO,mass,bgskids,conPalette:Select("w"),bnderrmod)
     if(not ePiece) then return asmlib.StatusLog(false,self:GetStatus(stTrace,"TOOL:LeftClick(World): Making piece failed")) end
-    if(spnflat) then asmlib.ApplySpawnFlat(ePiece,stSpawn,stTrace.HitNormal) end
+    if(spnflat) then vAxis:Set(stTrace.HitNormal)
+      asmlib.ApplySpawnFlat(ePiece,stSpawn,stTrace.HitNormal)
+    else vAxis:Set(stSpawn.DAng:Up()) end
     ePiece:SetAngles(stSpawn.SAng); ePiece:SetPos(stSpawn.SPos)
     asmlib.UndoCratePly(gsUndoPrefN..fnmodel.." ( World spawn )")
     if(not asmlib.ApplyPhysicalSettings(ePiece,ignphysgn,freeze,gravity)) then
       return asmlib.StatusLog(false,self:GetStatus(stTrace,"TOOL:LeftClick(World): Failed to apply physical settings",ePiece)) end
-    if(not asmlib.ApplyPhysicalAnchor(ePiece,eBase,stTrace.HitPos,stTrace.HitNormal,contyp,nocollide,forcelim,torquelim,friction)) then
+    if(not asmlib.ApplyPhysicalAnchor(ePiece,eBase,stTrace.HitPos,vAxis,contyp,nocollide,forcelim,torquelim,friction)) then
       return asmlib.StatusLog(false,self:GetStatus(stTrace,"TOOL:LeftClick(World): Failed to apply physical anchor",ePiece)) end
     asmlib.UndoAddEntityPly(ePiece)
     asmlib.UndoFinishPly(ply)
@@ -438,7 +441,7 @@ function TOOL:LeftClick(stTrace)
 
   -- Applies the physics or anchor on the piece selected
   if(asmlib.CheckButtonPly(ply,IN_DUCK)) then -- USE: Use the valid trace as a piece
-    if(asmlib.CheckButtonPly(ply,IN_USE)) then -- Physical
+    if(asmlib.CheckButtonPly(ply,IN_USE)) then -- The user must click on the gear surface to apply
       if(not asmlib.ApplyPhysicalAnchor(ePiece,eBase,stTrace.HitPos,stTrace.HitNormal,contyp,nocollide,forcelim,torquelim,friction)) then
         return asmlib.StatusLog(false,self:GetStatus(stTrace,"TOOL:LeftClick(World): Failed to apply physical anchor",ePiece)) end
     else -- Model
@@ -900,6 +903,7 @@ function TOOL.BuildCPanel(CPanel)
   local pConsType = vguiCreate("DComboBox")
         pConsType:SetPos(2, CurY)
         pConsType:SetTall(18)
+        pConsType:SetTooltip(languageGetPhrase("tool."..gsToolNameL..".contyp"))
         pConsType:SetValue(CType:Select(ConID).Name or ("<"..CType:GetInfo()..">"))
         CurY = CurY + pConsType:GetTall() + 2
   local iCnt = 1
