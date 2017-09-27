@@ -229,13 +229,13 @@ end
 local function Log(anyStuff)
   local nMaxLogs = GetOpVar("LOG_MAXLOGS")
   if(nMaxLogs <= 0) then return end
-  local lbNam    = GetOpVar("NAME_LIBRARY")
   local logLast  = GetOpVar("LOG_LOGLAST")
   local logData  = tostring(anyStuff)
   local nCurLogs = GetOpVar("LOG_CURLOGS") + 1
   if(logLast == logData) then SetOpVar("LOG_CURLOGS",nCurLogs); return end
   SetOpVar("LOG_LOGLAST",logData)
   if(GetOpVar("LOG_LOGFILE")) then
+    local lbNam = GetOpVar("NAME_LIBRARY")
     local fName = GetOpVar("DIRPATH_BAS")..lbNam.."_log.txt"
     if(nCurLogs > nMaxLogs) then nCurLogs = 0; fileDelete(fName) end
     fileAppend(fName,FormatNumberMax(nCurLogs,nMaxLogs).." ["..GetDate().."] "..logData.."\n")
