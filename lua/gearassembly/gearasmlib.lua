@@ -2528,8 +2528,9 @@ end
  * sProg  > The program which registered the DSV
  * sPref  > The external data prefix to be added
  * sDelim > The delimiter to be used for processing
+ * bSkip  > Skip addition for the DSV prefix if exists
 ]]--
-function RegisterDSV(sProg, sPref, sDelim)
+function RegisterDSV(sProg, sPref, sDelim, bSkip)
   if(CLIENT and gameSinglePlayer()) then
     return StatusLog(true,"RegisterDSV: Single client") end
   local sPref = tostring(sPref or GetInstPref())
@@ -2538,13 +2539,43 @@ function RegisterDSV(sProg, sPref, sDelim)
   local sBas = GetOpVar("DIRPATH_BAS")
   if(not fileExists(sBas,"DATA")) then fileCreateDir(sBas) end
   local lbNam = GetOpVar("NAME_LIBRARY")
-  local fName = sBas..lbNam.."_dsv.txt"
-  local F = fileOpen(fName, "ab" ,"DATA")
-  if(not F) then return StatusLog(false,"RegisterDSV("
-    ..sPref.."): fileOpen("..fName..") failed") end
+  local fName = (sBas..lbNam.."_dsv.txt")
   local sMiss, sDelim = GetOpVar("MISS_NOAV"), tostring(sDelim or "\t"):sub(1,1)
-  F:Write(sPref:Trim()..sDelim..tostring(sProg or sMiss).."\n"); F:Flush(); F:Close()
-  return StatusLog(true,"RegisterDSV("..sPref.."): Success")
+  if(bSkip) then
+    local symOff = GetOpVar("OPSYM_DISABLE")
+    local fPool, sCh, isAct = {}, "X", true
+    local F, sLine = fileOpen(fName, "rb" ,"DATA"), ""
+    if(not F) then return StatusLog(false,"RegisterDSV("
+      ..sPref.."): fileOpen("..fName..") read failed") end
+     while(sCh) do
+      sCh = F:Read(1)
+      if(not sCh) then break end
+      if(sCh == "\n") then sLine = sLine:Trim()
+        if(sLine:sub(1,1) == symOff) then
+          isAct, sLine = false, sLine:sub(2,-1) else isAct = true end
+        local tab = stringExplode(sDelim, sLine)
+        local prf, src = tab[1]:Trim(), tab[2]:Trim()
+        local inf = fPool[prf]
+        if(not inf) then
+          fPool[prf] = {Cnt = 1}; inf = fPool[prf]
+          inf[inf.Cnt] = {src, isAct}
+        else
+          inf.Cnt = inf.Cnt + 1
+          inf[inf.Cnt] = {src, isAct}
+        end; sLine = ""
+      else sLine = sLine..sCh end
+    end; F:Close()
+    if(fPool[sPref]) then
+      local inf = fPool[sPref]
+      for ID = 1, inf.Cnt do local tab = inf[ID]
+        LogInstance("RegisterDSV("..sPref.."): "..(tab[2] and "On " or "Off").." <"..tab[1]..">") end
+      return StatusLog(true,"RegisterDSV("..sPref.."): Skip <"..sProg..">")
+    end
+  end; local F = fileOpen(fName, "ab" ,"DATA")
+  if(not F) then return StatusLog(false,"RegisterDSV("
+    ..sPref.."): fileOpen("..fName..") append failed") end
+  F:Write(sPref..sDelim..tostring(sProg or sMiss).."\n"); F:Flush(); F:Close()
+  return StatusLog(true,"RegisterDSV("..sPref.."): Register")
 end
 
 --[[
