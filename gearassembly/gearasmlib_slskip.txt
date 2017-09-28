@@ -5,3 +5,6 @@ ModelToName%[APP%]
 CacheQueryPiece: Record not located
 MakeScreen.SetColor: Color reset
 MakeScreen: Color list not container
+MakeScreen.DrawLine: Start out of border
+MakeScreen.DrawLine: End out of border
+MakeScreen.DrawCircle: Draw method

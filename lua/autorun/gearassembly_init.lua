@@ -25,7 +25,7 @@ local asmlib = gearasmlib
 
 ------ CONFIGURE ASMLIB ------
 asmlib.InitBase("gear","assembly")
-asmlib.SetOpVar("TOOL_VERSION","5.184")
+asmlib.SetOpVar("TOOL_VERSION","5.185")
 asmlib.SetIndexes("V",1,2,3)
 asmlib.SetIndexes("A",1,2,3)
 asmlib.SetIndexes("S",4,5,6,7)
@@ -123,7 +123,7 @@ if(CLIENT) then
     function(oPly,oCom,oArgs)
       local devmode = asmlib.GetAsmVar("devmode" ,"BUL")
       local bgskids = asmlib.GetAsmVar("bgskids", "STR")
-      asmlib.LogInstance("RESET_VARIABLES: {"..tostring(devmode)..asmlib.GetOpVar("OPSYM_DISABLE")..tostring(command).."}")
+      asmlib.LogInstance("RESET_VARIABLES: {"..tostring(devmode)..asmlib.GetOpVar("OPSYM_DISABLE")..tostring(bgskids).."}")
       asmlib.ConCommandPly(oPly,"nextx"    , 0)
       asmlib.ConCommandPly(oPly,"nexty"    , 0)
       asmlib.ConCommandPly(oPly,"nextz"    , 0)
@@ -677,7 +677,7 @@ if(CLIENT) then
   asmlib.SetLocalify("en","tool."..gsToolNameL..".nextrol"       , "Additional origin angular roll offset")
   asmlib.SetLocalify("en","tool."..gsToolNameL..".nextrol_con"   , "Origin roll: ")
   asmlib.SetLocalify("en","tool."..gsToolNameL..".trorang"       , "If checked make it use the origing from the trace")
-  asmlib.SetLocalify("en","tool."..gsToolNameL..".trorang_con"   , "Use trace origin")
+  asmlib.SetLocalify("en","tool."..gsToolNameL..".trorang_con"   , "Use trace angle as origin")
   asmlib.SetLocalify("en","tool."..gsToolNameL..".bgskids"       , "Selection code of comma delimited Bodygroup/Skin IDs > ENTER to accept, TAB to auto-fill from trace")
   asmlib.SetLocalify("en","tool."..gsToolNameL..".bgskids_def"   , "Write selection code here. For example 1,0,0,2,1/3")
   asmlib.SetLocalify("en","tool."..gsToolNameL..".spnflat"       , "Check this to enable spawning gears on trace surface")

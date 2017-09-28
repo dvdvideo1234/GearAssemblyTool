@@ -656,15 +656,14 @@ function TOOL:DrawTextSpawn(oScreen, sCol, sMeth, tArgs)
 end
 
 function TOOL:DrawUCS(oScreen, vOrg, aOrg, nRad, sCol, bRgh)
-  local UCS = 15
-  local Op = vOrg:ToScreen()
+  local Op, UCS = vOrg:ToScreen(), 15
   local Xs = (vOrg + UCS * aOrg:Forward()):ToScreen()
   local Ys = (vOrg + UCS * aOrg:Right()):ToScreen()
   local Zs = (vOrg + UCS * aOrg:Up()):ToScreen()
   oScreen:DrawLine(Op,Xs,"r","SURF")
   if(bRgh) then oScreen:DrawLine(Op,Ys,"g") end
   oScreen:DrawLine(Op,Zs,"b")
-  oScreen:DrawCircle(Op,nRad,sCol)
+  oScreen:DrawCircle(Op,nRad,sCol,"SURF")
   return Op
 end
 
@@ -703,9 +702,9 @@ function TOOL:DrawHUD()
     if(not stSpawn) then return end
     local Tp =  trEnt:GetPos():ToScreen()
     local Hp =  stSpawn.SPos:ToScreen()
-    local Mt = self:DrawUCS(hudMonitor, stSpawn.OPos, stSpawn.TAng, plyrad, "g")
-    local Op = self:DrawUCS(hudMonitor, stSpawn.OPos, stSpawn.F:AngleEx(stSpawn.R), plyrad, "y", true)
-    local Mh = self:DrawUCS(hudMonitor, stSpawn.OPos, stSpawn.DAng, plyrad, "m")
+    local Mt = self:DrawUCS(hudMonitor, stSpawn.TMas, stSpawn.TAng, plyrad, "g")
+    local Op = self:DrawUCS(hudMonitor, stSpawn.OPos, stSpawn.F:AngleEx(stSpawn.U), plyrad, "y", true)
+    local Mh = self:DrawUCS(hudMonitor, stSpawn.HMas, stSpawn.DAng, plyrad, "m")
     hudMonitor:DrawCircle(Tp,plyrad,"r")  -- Trace position
     hudMonitor:DrawCircle(Hp,plyrad)      -- Holder position
     hudMonitor:DrawLine(Mh,Hp,"y")        -- Trace position distance
@@ -719,12 +718,10 @@ function TOOL:DrawHUD()
     local aAng = asmlib.GetNormalAngle(oPly, stTrace)
     local stSpawn  = asmlib.GetNormalSpawn(vPos,aAng,model,rotpivh,trorang,nextx,nexty,nextz,nextpic,nextyaw,nextrol)
     if(not stSpawn) then return false end
-    local Op = self:DrawUCS(hudMonitor, stSpawn.OPos, stSpawn.F:AngleEx(stSpawn.U), plyrad)
+    local Op = self:DrawUCS(hudMonitor, stSpawn.OPos, stSpawn.F:AngleEx(stSpawn.U), plyrad, "y", true)
     if(not spnflat) then
       local Hp = stSpawn.SPos:ToScreen()
-      local Mh = self:DrawUCS(hudMonitor, stSpawn.HMas, stSpawn.DAng, "g")
-      local Hf = (stSpawn.HMas + 15 * stSpawn.DAng:Forward()):ToScreen()
-      local Hu = (stSpawn.HMas + 15 * stSpawn.DAng:Up()):ToScreen()
+      local Mh = self:DrawUCS(hudMonitor, stSpawn.HMas, stSpawn.DAng, plyrad, "g")
       hudMonitor:DrawLine(Mh,Hp,"y")       -- Holder position distance
       hudMonitor:DrawCircle(Hp,plyrad,"r") -- Holder spawn position
       hudMonitor:DrawLine(Op,Mh,"m")       -- Holder distance vector
