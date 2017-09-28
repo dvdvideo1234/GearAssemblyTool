@@ -779,6 +779,13 @@ function MakeScreen(sW,sH,eW,eH,conColors)
     if(xyPnt.y < sH) then return -1 end
     if(xyPnt.y > eH) then return -1 end; return 1
   end
+  function self:GetDistance(pS, pE)
+    if(self:Enclose(pS) == -1) then
+      return StatusLog(nil,"MakeScreen.GetDistance: Start out of border") end
+    if(self:Enclose(pE) == -1) then
+      return StatusLog(nil,"MakeScreen.GetDistance: End out of border") end
+    return mathSqrt((pE.x - pS.x)^2 + (pE.y - pS.y)^2)
+  end
   function self:DrawLine(pS,pE,keyColor,sMeth,tArgs)
     if(not (pS and pE)) then return end
     local sMeth, tArgs = self:SetDrawParam(sMeth,tArgs,"LIN")
