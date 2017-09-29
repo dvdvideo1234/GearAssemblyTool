@@ -658,10 +658,12 @@ end
 function TOOL:DrawUCS(oScreen, vOrg, aOrg, nRad, sCol, bRgh)
   local Op, UCS = vOrg:ToScreen(), 15
   local Xs = (vOrg + UCS * aOrg:Forward()):ToScreen()
-  local Ys = (vOrg + UCS * aOrg:Right()):ToScreen()
   local Zs = (vOrg + UCS * aOrg:Up()):ToScreen()
   oScreen:DrawLine(Op,Xs,"r","SURF")
-  if(bRgh) then oScreen:DrawLine(Op,Ys,"g") end
+  if(bRgh) then -- Do not calculate the disabled Ys
+    local Ys = (vOrg + UCS * aOrg:Right()):ToScreen()
+    oScreen:DrawLine(Op,Ys,"g")
+  end
   oScreen:DrawLine(Op,Zs,"b")
   oScreen:DrawCircle(Op,nRad,sCol,"SURF")
   return Op
