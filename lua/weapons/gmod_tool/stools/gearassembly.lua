@@ -13,6 +13,7 @@ local LocalPlayer           = LocalPlayer
 local GetConVar             = GetConVar
 local RunConsoleCommand     = RunConsoleCommand
 local osDate                = os and os.date
+local hookAdd               = hook and hook.Add
 local mathFloor             = math and math.floor
 local mathClamp             = math and math.Clamp
 local vguiCreate            = vgui and vgui.Create
@@ -86,7 +87,7 @@ end
 
 if(SERVER) then
   cleanupRegister(gsLimitName)
-  hookAdd("PlayerDisconnected", gsToolPrefL.."player_quit", asmlib.GetActionCode("PLAYER_QUIT")))
+  hookAdd("PlayerDisconnected", gsToolPrefL.."player_quit", asmlib.GetActionCode("PLAYER_QUIT"))
   duplicatorRegisterEntityModifier(gsToolPrefL.."dupe_phys_set",asmlib.GetActionCode("DUPE_PHYS_SETTINGS"))
 end
 
@@ -715,7 +716,7 @@ function TOOL:DrawHUD()
   else
     local vPos = stTrace.HitPos
     local aAng = asmlib.GetNormalAngle(oPly, stTrace)
-    local stSpawn  = asmlib.GetNormalSpawn(oPly,vPos,aAng,model,rotpivh,trorang,nextx,nexty,nextz,nextpic,nextyaw,nextrol)
+    local stSpawn = asmlib.GetNormalSpawn(oPly,vPos,aAng,model,rotpivh,trorang,nextx,nexty,nextz,nextpic,nextyaw,nextrol)
     if(not stSpawn) then return false end
     local Op = self:DrawUCS(hudMonitor, stSpawn.OPos, stSpawn.F:AngleEx(stSpawn.U), plyrad, "y", true)
     if(not spnflat) then

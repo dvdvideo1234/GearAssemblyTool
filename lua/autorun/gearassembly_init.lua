@@ -25,7 +25,7 @@ local asmlib = gearasmlib
 
 ------ CONFIGURE ASMLIB ------
 asmlib.InitBase("gear","assembly")
-asmlib.SetOpVar("TOOL_VERSION","5.189")
+asmlib.SetOpVar("TOOL_VERSION","5.190")
 asmlib.SetIndexes("V",1,2,3)
 asmlib.SetIndexes("A",1,2,3)
 asmlib.SetIndexes("S",4,5,6,7)
@@ -117,8 +117,8 @@ if(SERVER) then
     end)
 
   asmlib.SetAction("PLAYER_QUIT",
-    function(oPly)
-      if(not asmlib.ClearCachePly(oPly)) then
+    function(oPly) -- Clear player cache when disconnects
+      if(not asmlib.CacheClearPly(oPly)) then
         return asmlib.StatusLog(nil,"PLAYER_QUIT: Failed swiping stuff "..tostring(oPly)) end
       return asmlib.StatusLog(nil,"PLAYER_QUIT: Success")
     end)

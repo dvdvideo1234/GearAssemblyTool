@@ -1409,12 +1409,12 @@ local function CacheSpawnPly(pPly)
   end; return plyData
 end
 
-function ClearCachePly(pPly)
+function CacheClearPly(pPly)
   if(not IsPlayer(pPly)) then
-    return StatusLog(false,"ClearCachePly: Player <"..tostring(pPly)"> invalid") end
+    return StatusLog(false,"CacheClearPly: Player <"..tostring(pPly)"> invalid") end
   local plyPlace = libPlayer[pPly]
   if(not IsExistent(plyPlace)) then
-    return StatusLog(true,"ClearCachePly: Clean") end
+    return StatusLog(true,"CacheClearPly: Clean") end
   plyTable[pPly] = nil; collectgarbage(); return true
 end
 
@@ -1432,7 +1432,7 @@ function CacheRadiusPly(pPly, vHit, nSca)
   if(not IsExistent(plyData)) then
     LogInstance("CacheRadiusPly: Malloc <"..pPly:Nick()..">")
     plyPlace["RADIUS"] = {}; plyData = plyPlace["RADIUS"]
-    plyData["MAR"] =  (GetOpVar("GOLDEN_RATIO") * 1000),
+    plyData["MAR"] =  (GetOpVar("GOLDEN_RATIO") * 1000)
     plyData["LIM"] = ((GetOpVar("GOLDEN_RATIO") - 1) * 100)
   end
   local nMul = (tonumber(nSca) or 1) -- Disable scaling on missing or outside
@@ -1447,7 +1447,7 @@ function CacheTracePly(pPly)
   local plyPlace = GetPlacePly(pPly)
   if(not IsExistent(plyPlace)) then
     return StatusLog(nil,"CacheTracePly: Place missing") end
-  local plyData = plyPlace["TRACE"]
+  local plyData, plyTime = plyPlace["TRACE"], Time()
   if(not IsExistent(plyData)) then -- Define trace delta margin
     LogInstance("CacheTracePly: Malloc <"..pPly:Nick()..">")
     plyPlace["TRACE"] = {}; plyData = plyPlace["TRACE"]
@@ -2863,7 +2863,7 @@ function GetEntitySpawn(oPly,trEnt,trPivot,hdPivot,hdModel,enIgnTyp,enOrAngTr,
   -- Calculate the origin based on the center
   stSpawn.OPos:Set(stSpawn.TPnt); stSpawn.OPos:Add(stSpawn.TMas)
   stSpawn.OAng:Set(stSpawn.TAng); stSpawn.OAng:RotateAroundAxis(stSpawn.TAng:Right(),trRec.Rake)
-  return GetNormalSpawn(nil,nil,hdModel,hdPivot,enOrAngTr,ucsPosX,ucsPosY,ucsPosZ,ucsAngP,ucsAngY,ucsAngR)
+  return GetNormalSpawn(oPly,nil,nil,hdModel,hdPivot,enOrAngTr,ucsPosX,ucsPosY,ucsPosZ,ucsAngP,ucsAngY,ucsAngR)
 end
 
 local function GetEntityOrTrace(oEnt)
