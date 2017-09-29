@@ -86,6 +86,7 @@ end
 
 if(SERVER) then
   cleanupRegister(gsLimitName)
+  hookAdd("PlayerDisconnected", gsToolPrefL.."player_quit", asmlib.GetActionCode("PLAYER_QUIT")))
   duplicatorRegisterEntityModifier(gsToolPrefL.."dupe_phys_set",asmlib.GetActionCode("DUPE_PHYS_SETTINGS"))
 end
 
@@ -408,7 +409,7 @@ function TOOL:LeftClick(stTrace)
     if(not (eBase and eBase:IsValid()) and (trEnt and trEnt:IsValid())) then eBase = trEnt end
     local vPos, vAxis = stTrace.HitPos, Vector()
     local aAng = asmlib.GetNormalAngle(ply, stTrace)
-    local stSpawn = asmlib.GetNormalSpawn(vPos,aAng,model,rotpivh,trorang,nextx,nexty,nextz,nextpic,nextyaw,nextrol)
+    local stSpawn = asmlib.GetNormalSpawn(ply,vPos,aAng,model,rotpivh,trorang,nextx,nexty,nextz,nextpic,nextyaw,nextrol)
     if(not stSpawn) then return asmlib.StatusLog(false,self:GetStatus(stTrace,"TOOL:LeftClick(World): Normal spawn failed")) end
     local ePiece = asmlib.MakePiece(ply,model,stTrace.HitPos,ANG_ZERO,mass,bgskids,conPalette:Select("w"),bnderrmod)
     if(not ePiece) then return asmlib.StatusLog(false,self:GetStatus(stTrace,"TOOL:LeftClick(World): Making piece failed")) end
@@ -455,7 +456,7 @@ function TOOL:LeftClick(stTrace)
   if(not hdRec) then return asmlib.StatusLog(false,self:GetStatus(stTrace,"TOOL:LeftClick(Prop): Holder model not a piece")) end
   -- Stacking when the mode is within borders and count is more than one
   if(asmlib.CheckButtonPly(ply,IN_SPEED) and count > 1 and stmode >= 1 and stmode <= SMode:GetSize()) then
-    local stSpawn = asmlib.GetEntitySpawn(trEnt,rotpivt,rotpivh,model,igntyp,trorang,nextx,nexty,nextz,nextpic,nextyaw,nextrol)
+    local stSpawn = asmlib.GetEntitySpawn(ply,trEnt,rotpivt,rotpivh,model,igntyp,trorang,nextx,nexty,nextz,nextpic,nextyaw,nextrol)
     if(not stSpawn) then return asmlib.StatusLog(false,self:GetStatus(stTrace,"TOOL:LeftClick(Stack): Failed to retrieve spawn data")) end
     local ePieceO, ePieceN = trEnt, nil
     local aIter  , aStart  = ePieceO:GetAngles(), ePieceO:GetAngles()
@@ -471,11 +472,11 @@ function TOOL:LeftClick(stTrace)
           return asmlib.StatusLog(false,self:GetStatus(stTrace,"TOOL:LeftClick(Stack): Failed to apply physical anchor",ePiece)) end
         asmlib.UndoAddEntityPly(ePieceN)
         if(stmode == 1) then
-          stSpawn = asmlib.GetEntitySpawn(ePieceN,rotpivt,rotpivh,model,igntyp,trorang,nextx,nexty,nextz,nextpic,nextyaw,nextrol)
+          stSpawn = asmlib.GetEntitySpawn(ply,ePieceN,rotpivt,rotpivh,model,igntyp,trorang,nextx,nexty,nextz,nextpic,nextyaw,nextrol)
         elseif(stmode == 2) then
           aIter:RotateAroundAxis(stSpawn.TAng:Up(),-dRot)
           trEnt:SetAngles(aIter)
-          stSpawn = asmlib.GetEntitySpawn(trEnt,rotpivt,rotpivh,model,igntyp,trorang,nextx,nexty,nextz,nextpic,nextyaw,nextrol)
+          stSpawn = asmlib.GetEntitySpawn(ply,trEnt,rotpivt,rotpivh,model,igntyp,trorang,nextx,nexty,nextz,nextpic,nextyaw,nextrol)
         end
         if(not stSpawn) then -- Look both ways in a one way street :D
           asmlib.PrintNotifyPly(ply,"Cannot obtain spawn data!","ERROR")
@@ -494,7 +495,7 @@ function TOOL:LeftClick(stTrace)
     return asmlib.StatusLog(true,"TOOL:LeftClick(Stack): Success")
   end
   -- Mesh holder gear to the trace one when stack count is one
-  local stSpawn = asmlib.GetEntitySpawn(trEnt,rotpivt,rotpivh,model,igntyp,trorang,nextx,nexty,nextz,nextpic,nextyaw,nextrol)
+  local stSpawn = asmlib.GetEntitySpawn(ply,trEnt,rotpivt,rotpivh,model,igntyp,trorang,nextx,nexty,nextz,nextpic,nextyaw,nextrol)
   if(stSpawn) then
     local ePiece = asmlib.MakePiece(ply,model,stSpawn.SPos,stSpawn.SAng,mass,bgskids,conPalette:Select("w"),bnderrmod)
     if(ePiece) then
@@ -579,7 +580,7 @@ end
 
 function TOOL:UpdateGhost(ePiece, oPly)
   if(not (ePiece and ePiece:IsValid())) then return end
-  local stTrace = asmlib.GetTracePly(oPly)
+  local stTrace = asmlib.CacheTracePly(oPly)
   if(not stTrace) then return end
   local trEnt = stTrace.Entity
   ePiece:SetNoDraw(true)
@@ -595,7 +596,7 @@ function TOOL:UpdateGhost(ePiece, oPly)
       local igntyp  = self:GetIgnoreType()
       local nextx  , nexty  , nextz   = self:GetPosOffsets()
       local nextpic, nextyaw, nextrol = self:GetAngOffsets()
-      local stSpawn = asmlib.GetEntitySpawn(trEnt,rotpivt,rotpivh,model,igntyp,trorang,nextx,nexty,nextz,nextpic,nextyaw,nextrol)
+      local stSpawn = asmlib.GetEntitySpawn(oPly,trEnt,rotpivt,rotpivh,model,igntyp,trorang,nextx,nexty,nextz,nextpic,nextyaw,nextrol)
       if(not stSpawn) then return end
       ePiece:SetNoDraw(false)
       ePiece:SetAngles(stSpawn.SAng)
@@ -608,7 +609,7 @@ function TOOL:UpdateGhost(ePiece, oPly)
     local nextpic, nextyaw, nextrol = self:GetAngOffsets()
     local vPos = stTrace.HitPos
     local aAng = asmlib.GetNormalAngle(oPly, stTrace)
-    local stSpawn = asmlib.GetNormalSpawn(vPos,aAng,model,rotpivh,trorang,nextx,nexty,nextz,nextpic,nextyaw,nextrol)
+    local stSpawn = asmlib.GetNormalSpawn(oPly,vPos,aAng,model,rotpivh,trorang,nextx,nexty,nextz,nextpic,nextyaw,nextrol)
     if(not stSpawn) then return end
     if(spnflat) then asmlib.ApplySpawnFlat(ePiece,stSpawn,stTrace.HitNormal) end
     ePiece:SetNoDraw(false); ePiece:SetAngles(stSpawn.SAng); ePiece:SetPos(stSpawn.SPos); return
@@ -681,7 +682,7 @@ function TOOL:DrawHUD()
     asmlib.LogInstance("DrawHUD: Create screen")
   end; hudMonitor:SetColor()
   local oPly    = LocalPlayer()
-  local stTrace = asmlib.GetTracePly(oPly)
+  local stTrace = asmlib.CacheTracePly(oPly)
   if(not stTrace) then return end
   if(not self:GetAdviser()) then return end
   local trEnt   = stTrace.Entity
@@ -691,11 +692,11 @@ function TOOL:DrawHUD()
   local rotpivt, rotpivh = self:GetRotatePivot()
   local nextx  , nexty  , nextz   = self:GetPosOffsets()
   local nextpic, nextyaw, nextrol = self:GetAngOffsets()
-  local plyrad  = asmlib.GetRadiusRatioPly(oPly, stTrace.HitPos, 1)
+  local plyrad  = asmlib.CacheRadiusPly(oPly, stTrace.HitPos, 1)
   if(trEnt and trEnt:IsValid() and asmlib.CheckButtonPly(oPly,IN_SPEED)) then
     if(asmlib.IsOther(trEnt)) then return end
     local igntyp  = self:GetIgnoreType()
-    local stSpawn = asmlib.GetEntitySpawn(trEnt,rotpivt,rotpivh,model,igntyp,trorang,
+    local stSpawn = asmlib.GetEntitySpawn(oPly,trEnt,rotpivt,rotpivh,model,igntyp,trorang,
                                             nextx,nexty,nextz,nextpic,nextyaw,nextrol)
     if(not stSpawn) then return end
     local Tp =  trEnt:GetPos():ToScreen()
@@ -714,7 +715,7 @@ function TOOL:DrawHUD()
   else
     local vPos = stTrace.HitPos
     local aAng = asmlib.GetNormalAngle(oPly, stTrace)
-    local stSpawn  = asmlib.GetNormalSpawn(vPos,aAng,model,rotpivh,trorang,nextx,nexty,nextz,nextpic,nextyaw,nextrol)
+    local stSpawn  = asmlib.GetNormalSpawn(oPly,vPos,aAng,model,rotpivh,trorang,nextx,nexty,nextz,nextpic,nextyaw,nextrol)
     if(not stSpawn) then return false end
     local Op = self:DrawUCS(hudMonitor, stSpawn.OPos, stSpawn.F:AngleEx(stSpawn.U), plyrad, "y", true)
     if(not spnflat) then
@@ -763,7 +764,7 @@ function TOOL:DrawToolScreen(w, h)
   scrTool:SetTextEdge(0,0)
   local anInfo, anEnt = self:GetAnchor()
   local tInfo = stringExplode(gsSymRev,anInfo)
-  local stTrace = asmlib.GetTracePly(LocalPlayer())
+  local stTrace = asmlib.CacheTracePly(LocalPlayer())
   if(not stTrace) then
     scrTool:DrawText("Trace status: Invalid","r","SURF",{"Trebuchet24"})
     scrTool:DrawTextAdd("  ["..(tInfo[1] or gsNoID).."]","an")

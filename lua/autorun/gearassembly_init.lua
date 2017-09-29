@@ -25,7 +25,7 @@ local asmlib = gearasmlib
 
 ------ CONFIGURE ASMLIB ------
 asmlib.InitBase("gear","assembly")
-asmlib.SetOpVar("TOOL_VERSION","5.188")
+asmlib.SetOpVar("TOOL_VERSION","5.189")
 asmlib.SetIndexes("V",1,2,3)
 asmlib.SetIndexes("A",1,2,3)
 asmlib.SetIndexes("S",4,5,6,7)
@@ -112,8 +112,15 @@ if(SERVER) then
   asmlib.SetAction("DUPE_PHYS_SETTINGS",
     function(oPly,oEnt,tData) -- Duplicator wrapper
       if(not asmlib.ApplyPhysicalSettings(oEnt,tData[1],tData[2],tData[3])) then
-        return asmlib.StatusLog(false,"DUPE_PHYS_SETTINGS: Failed to apply physical settings on "..tostring(oEnt)) end
-      return asmlib.StatusLog(true,"DUPE_PHYS_SETTINGS: Success")
+        return asmlib.StatusLog(nil,"DUPE_PHYS_SETTINGS: Failed to apply physical settings on "..tostring(oEnt)) end
+      return asmlib.StatusLog(nil,"DUPE_PHYS_SETTINGS: Success")
+    end)
+
+  asmlib.SetAction("PLAYER_QUIT",
+    function(oPly)
+      if(not asmlib.ClearCachePly(oPly)) then
+        return asmlib.StatusLog(nil,"PLAYER_QUIT: Failed swiping stuff "..tostring(oPly)) end
+      return asmlib.StatusLog(nil,"PLAYER_QUIT: Success")
     end)
 end
 
@@ -134,7 +141,7 @@ if(CLIENT) then
       asmlib.ConCommandPly(oPly,"rotpivh"  , 0)
       asmlib.ConCommandPly(oPly,"deltarot" , 360)
       if(not devmode) then
-        return asmlib.StatusLog(true,"RESET_VARIABLES: Developer mode disabled") end
+        return asmlib.StatusLog(nil,"RESET_VARIABLES: Developer mode disabled") end
       asmlib.SetLogControl(asmlib.GetAsmVar("logsmax" , "INT"), asmlib.GetAsmVar("logfile" , "STR"))
       if(bgskids == "reset cvars") then -- Reset the limit also
         oPly:ConCommand("sbox_max"..asmlib.GetOpVar("CVAR_LIMITNAME").." 1500\n")
@@ -181,22 +188,23 @@ if(CLIENT) then
          asmlib.RemoveDSV("PIECES",vPr)
          asmlib.LogInstance("RESET_VARIABLES: Match <"..vPr..">")
         end
-      else return asmlib.StatusLog(true,"RESET_VARIABLES: Command <"..bgskids.."> skipped") end
-      return asmlib.StatusLog(true,"RESET_VARIABLES: Success")
+      else return asmlib.StatusLog(nil,"RESET_VARIABLES: Command <"..bgskids.."> skipped") end
+      return asmlib.StatusLog(nil,"RESET_VARIABLES: Success")
     end)
 
   asmlib.SetAction("OPEN_FRAME",
     function(oPly,oCom,oArgs)
       local frUsed, nCount = asmlib.GetFrequentModels(oArgs[1])
       if(not asmlib.IsExistent(frUsed)) then
-        return asmlib.StatusLog(false,"OPEN_FRAME: Failed to retrieve most frequent models ["..tostring(oArgs[1]).."]")
+        return asmlib.StatusLog(nil,"OPEN_FRAME: Failed to retrieve most frequent models ["..tostring(oArgs[1]).."]")
       end
       local defTable = asmlib.GetOpVar("DEFTABLE_PIECES")
-      if(not defTable) then return StatusLog(false,"OPEN_FRAME: Missing definition for table PIECES") end
+      if(not defTable) then
+        return StatusLog(nil,"OPEN_FRAME: Missing definition for table PIECES") end
       local pnFrame = vguiCreate("DFrame")
       if(not IsValid(pnFrame)) then
         pnFrame:Remove()
-        return asmlib.StatusLog(false,"OPEN_FRAME: Failed to create base frame")
+        return asmlib.StatusLog(nil,"OPEN_FRAME: Failed to create base frame")
       end
       local pnElements = asmlib.MakeContainer("FREQ_VGUI")
             pnElements:Insert(1,{Label = { "DButton"    ,languageGetPhrase("tool."..gsToolNameL..".pn_export_lb") , languageGetPhrase("tool."..gsToolNameL..".pn_export")}})
@@ -220,7 +228,7 @@ if(CLIENT) then
             iNdex = iNdex + 1
           end
           pnFrame:Remove(); collectgarbage()
-          return StatusLog(false,"OPEN_FRAME: Invalid panel created. Frame removed")
+          return StatusLog(nil,"OPEN_FRAME: Invalid panel created. Frame removed")
         end
         vItem.Panel:SetName(vItem.Label[2])
         vItem.Panel:SetTooltip(vItem.Label[3])
@@ -314,12 +322,13 @@ if(CLIENT) then
       pnModelPanel:SetVisible(true)
       pnModelPanel.LayoutEntity = function(pnSelf, oEnt)
         if(pnSelf.bAnimated) then pnSelf:RunAnimation() end
+        local uiPly = LocalPlayer()
         local uiBox = asmlib.CacheBoxLayout(oEnt,40)
         if(not asmlib.IsExistent(uiBox)) then
-          return asmlib.StatusLog(false,"OPEN_FRAME: pnModelPanel.LayoutEntity: Box invalid") end
-        local stSpawn = asmlib.GetNormalSpawn(asmlib.GetOpVar("VEC_ZERO"),uiBox.Ang,oEnt:GetModel())
+          return asmlib.StatusLog(nil,"OPEN_FRAME: pnModelPanel.LayoutEntity: Box invalid") end
+        local stSpawn = asmlib.GetNormalSpawn(uiPly,asmlib.GetOpVar("VEC_ZERO"),uiBox.Ang,oEnt:GetModel())
         if(not stSpawn) then
-          return asmlib.StatusLog(false,"OPEN_FRAME: pnModelPanel.LayoutEntity: Spawn data fail") end
+          return asmlib.StatusLog(nil,"OPEN_FRAME: pnModelPanel.LayoutEntity: Spawn data fail") end
         asmlib.ApplySpawnFlat(oEnt, stSpawn, asmlib.GetOpVar("VEC_UP"))
               stSpawn.SPos:Set(uiBox.Cen)
               stSpawn.SPos:Rotate(stSpawn.SAng)
@@ -347,7 +356,7 @@ if(CLIENT) then
               sField   = tostring(sField or "")
         local sPattern = tostring(pnSelf:GetValue() or "")
         if(not asmlib.UpdateListView(pnListView,frUsed,nCount,sField,sPattern)) then
-          return asmlib.StatusLog(false,"OPEN_FRAME: TextEntry.OnEnter: Failed to update ListView {"..sName.."#"..sField.."#"..sPattern.."}")
+          return asmlib.StatusLog(nil,"OPEN_FRAME: TextEntry.OnEnter: Failed to update ListView {"..sName.."#"..sField.."#"..sPattern.."}")
         end
       end
       ------------ ListView --------------
@@ -382,17 +391,17 @@ if(CLIENT) then
         local uiEnt = pnModelPanel:GetEntity()
         local uiBox = asmlib.CacheBoxLayout(uiEnt,0,nRatio,nRatio-1)
         if(not asmlib.IsExistent(uiBox)) then
-          return asmlib.StatusLog(false,"OPEN_FRAME: ListView.OnRowSelected: Box invalid for <"..uiMod..">") end
+          return asmlib.StatusLog(nil,"OPEN_FRAME: ListView.OnRowSelected: Box invalid for <"..uiMod..">") end
         pnModelPanel:SetLookAt(uiBox.Eye); pnModelPanel:SetCamPos(uiBox.Cam)
         asmlib.ConCommandPly(oPly, "model" ,uiMod)
       end -- Copy the line model to the clipboard so it can be pasted with Ctrl+V
       pnListView.OnRowRightClick = function(pnSelf, nIndex, pnLine) SetClipboardText(pnLine:GetColumnText(5)) end
       if(not asmlib.UpdateListView(pnListView,frUsed,nCount)) then
-        asmlib.StatusLog(false,"OPEN_FRAME: ListView.OnRowSelected: Populate the list view failed") end
+        return asmlib.StatusLog(nil,"OPEN_FRAME: ListView.OnRowSelected: Populate the list view failed") end
       ------------ Show the completed panel --------------
       pnFrame:SetVisible(true); pnFrame:Center()
       pnFrame:MakePopup()     ; collectgarbage()
-      return asmlib.StatusLog(true,"OPEN_FRAME: Success")
+      return asmlib.StatusLog(nil,"OPEN_FRAME: Success")
     end)
 end
 
