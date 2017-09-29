@@ -57,7 +57,6 @@ local gsSymRev    = asmlib.GetOpVar("OPSYM_REVSIGN")
 local gsSymDir    = asmlib.GetOpVar("OPSYM_DIRECTORY")
 local gsLimitName = asmlib.GetOpVar("CVAR_LIMITNAME")
 local gsUndoPrefN = asmlib.GetOpVar("NAME_INIT"):gsub("^%l", string.upper)..": "
-local gnRatio     = asmlib.GetOpVar("GOLDEN_RATIO")
 local gnMaxOffRot = asmlib.GetOpVar("MAX_ROTATION")
 local gnMaxErMode = asmlib.GetAsmVar("bnderrmod","STR")
 local gsToolPrefL = asmlib.GetOpVar("TOOLNAME_PL")
@@ -688,14 +687,11 @@ function TOOL:DrawHUD()
   local trEnt   = stTrace.Entity
   local model   = self:GetModel()
   local spnflat = self:GetSpawnFlat()
-  local ratioc  = (gnRatio - 1) * 100
-  local ratiom  = (gnRatio * 1000)
-  local plyd    = (stTrace.HitPos - oPly:GetPos()):Length()
-  local plyrad  = mathClamp(ratiom / plyd,1,ratioc)
   local trorang = self:GetTraceOriginAngle()
   local rotpivt, rotpivh = self:GetRotatePivot()
   local nextx  , nexty  , nextz   = self:GetPosOffsets()
   local nextpic, nextyaw, nextrol = self:GetAngOffsets()
+  local plyrad  = asmlib.GetRadiusRatioPly(oPly, stTrace.HitPos, 1)
   if(trEnt and trEnt:IsValid() and asmlib.CheckButtonPly(oPly,IN_SPEED)) then
     if(asmlib.IsOther(trEnt)) then return end
     local igntyp  = self:GetIgnoreType()

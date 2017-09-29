@@ -1390,6 +1390,33 @@ end
 
 ------------------------- PLAYER -----------------------------------
 
+function GetDistanceHitPly(pPly, vHit)
+  if(not IsPlayer(pPly)) then
+    return StatusLog(nil,"GetDistanceHitPly: Player <"..tostring(pPly)"> invalid") end
+  return (vHit - pPly:GetPos()):Length()
+end
+
+function GetRadiusRatioPly(pPly, vHit, nMul)
+  if(not IsPlayer(pPly)) then
+    return StatusLog(nil,"GetRadiusRatioPly: Player <"..tostring(pPly)"> invalid") end
+  local plyTable = GetOpVar("TABLE_PLAYER")
+  local plyPlace = plyTable[pPly]
+  if(not IsExistent(plyPlace)) then
+    plyTable[pPly] = {}; plyPlace = plyTable[pPly] end
+  local plyRadius = plyPlace["RADIUS"]
+  if(not IsExistent(plyPlace)) then
+    plyPlace["RADIUS"] = {}; plyRadius = plyPlace["RADIUS"]
+    plyRadius["MAR"] =  (GetOpVar("GOLDEN_RATIO") * 1000),
+    plyRadius["LIM"] = ((GetOpVar("GOLDEN_RATIO") - 1) * 100)
+  end
+  local nMul = (tonumber(nMul) or 1) -- Disable scaling on missing
+        nMul = ((nMul <= 1 and nMul >= 0) and nMul or 1)
+  local nMar, nLim = plyRadius["MAR"], plyRadius["LIM"]
+  local nDst = GetDistanceHitPly(pPly, vHit)
+  local nRad = ((nDst ~= 0) and mathClamp((nMar / nDst) * nMul, 1, nLim) or 0)
+  return nRad, nDis
+end
+
 function GetTracePly(pPly)
   if(not IsPlayer(pPly)) then
     return StatusLog(nil,"GetTracePly: Player <"..tostring(pPly)"> invalid") end
@@ -1397,15 +1424,17 @@ function GetTracePly(pPly)
   local plyPlace, plyTime = plyTable[pPly], Time()
   if(not IsExistent(plyPlace)) then
     plyTable[pPly] = {}; plyPlace = plyTable[pPly] end
-  if(not plyPlace["TDM"]) then -- Define trace delta margin
-    plyPlace["TDM"] = 0.02 -- Trace delta time margin
-    plyPlace["NXT"] = plyTime + plyPlace["TDM"] -- Define next trace pending
-    plyPlace["DAT"] = utilTraceLine(utilGetPlayerTrace(pPly)) -- Make a trace
+  local plyTrace = plyPlace["TRACE"]
+  if(not plyTrace) then -- Define trace delta margin
+    plyPlace["TRACE"] = {}; plyTrace = plyPlace["TRACE"]
+    plyTrace["TDM"] = 0.02 -- Trace delta time margin
+    plyTrace["NXT"] = plyTime + plyTrace["TDM"] -- Define next trace pending
+    plyTrace["DAT"] = utilTraceLine(utilGetPlayerTrace(pPly)) -- Make a trace
   end -- Check the trace time margin interval
-  if(plyTime >= plyPlace["NXT"]) then
-    plyPlace["NXT"] = plyTime + plyPlace["TDM"] -- Next trace margin
-    plyPlace["DAT"] = utilTraceLine(utilGetPlayerTrace(pPly))
-  end; return plyPlace["DAT"]
+  if(plyTime >= plyTrace["NXT"]) then
+    plyTrace["NXT"] = plyTime + plyTrace["TDM"] -- Next trace margin
+    plyTrace["DAT"] = utilTraceLine(utilGetPlayerTrace(pPly))
+  end; return plyTrace["DAT"]
 end
 
 function ConCommandPly(pPly,sCvar,snValue)
@@ -1458,7 +1487,10 @@ function CachePressPly(pPly)
   local ucmdPressed = pPly:GetCurrentCommand()
   if(not IsExistent(ucmdPressed)) then
     return StatusLog(false,"CachePressPly: Obtained incorrectly") end
-  plyPlace["CMD"] = ucmdPressed
+  local plyPress = plyPlace["PRESS"]
+  if(not plyPress) then -- Define trace delta margin
+    plyPlace["PRESS"] = {}; plyPress = plyPlace["PRESS"] end
+  plyPress["CMD"] = ucmdPressed
   return StatusLog(true,"CachePressPly: Cached <"..tostring(pPly)..">")
 end
 
@@ -1468,8 +1500,9 @@ function GetMouseWheelPly(pPly)
   local plyPlace = GetOpVar("TABLE_PLAYER")[pPly]
   if(not IsExistent(plyPlace)) then
     return StatusLog(false,"DeltaMousePly: Cache missing <"..pPly:Nick()..">") end
-  local ucmdPressed = plyPlace["CMD"]
-  return (ucmdPressed and ucmdPressed:GetMouseWheel() or 0)
+  local plyPress =  plyPlace["PRESS"]
+  local cmdPress = (plyPress and plyPress["CMD"])
+  return (cmdPress and cmdPress:GetMouseWheel() or 0)
 end
 
 function GetMouseVectorPly(pPly)
@@ -1478,9 +1511,10 @@ function GetMouseVectorPly(pPly)
   local plyPlace = GetOpVar("TABLE_PLAYER")[pPly]
   if(not IsExistent(plyPlace)) then
     return StatusLog(false,"GetMouseVectorPly: Cache missing <"..pPly:Nick()..">") end
-  local ucmdPressed = plyPlace["CMD"]
-  local ucmdX = (ucmdPressed and ucmdPressed:GetMouseX() or 0)
-  local ucmdY = (ucmdPressed and ucmdPressed:GetMouseY() or 0)
+  local plyPress = plyPlace["PRESS"]
+  local cmdPress = (plyPress and plyPress["CMD"])
+  local cmdX = (cmdPress and cmdPress:GetMouseX() or 0)
+  local cmdY = (cmdPress and cmdPress:GetMouseY() or 0)
   return ucmdX, ucmdY
 end
 
@@ -1492,9 +1526,10 @@ function CheckButtonPly(pPly, ivInKey)
     return StatusLog(false,"CheckButtonPly: Input key {"..type(ivInKey)"}<"..tostring(ivInKey).."> invalid") end
   local plyPlace = GetOpVar("TABLE_PLAYER")[pPly]
   if(CLIENT or (not IsExistent(plyPlace))) then return pPly:KeyDown(iInKey) end
-  local ucmdPressed = plyPlace["CMD"]
-  if(not IsExistent(ucmdPressed)) then return pPly:KeyDown(iInKey) end
-  return (bitBand(ucmdPressed:GetButtons(),iInKey) ~= 0) -- Read the cache
+  local plyPress = plyPlace["PRESS"]
+  local cmdPress = (plyPress and plyPress["CMD"])
+  if(not IsExistent(cmdPress)) then return pPly:KeyDown(iInKey) end
+  return (bitBand(cmdPress:GetButtons(),iInKey) ~= 0) -- Read the cache
 end
 
 -------------------------- BUILDSQL ------------------------------
