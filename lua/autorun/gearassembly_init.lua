@@ -25,7 +25,7 @@ local asmlib = gearasmlib
 
 ------ CONFIGURE ASMLIB ------
 asmlib.InitBase("gear","assembly")
-asmlib.SetOpVar("TOOL_VERSION","5.186")
+asmlib.SetOpVar("TOOL_VERSION","5.187")
 asmlib.SetIndexes("V",1,2,3)
 asmlib.SetIndexes("A",1,2,3)
 asmlib.SetIndexes("S",4,5,6,7)
@@ -41,7 +41,7 @@ local gnServerControled = bitBor(FCVAR_ARCHIVE, FCVAR_ARCHIVE_XBOX, FCVAR_NOTIFY
 ------ CONFIGURE LOGGING ------
 asmlib.SetOpVar("LOG_DEBUGEN", false)
 asmlib.MakeAsmVar("logsmax"  , "0" , {0}  , gnIndependentUsed, "Maximum logging lines to be printed")
-asmlib.MakeAsmVar("logfile"  , "0" , {0,1}, gnIndependentUsed, "File to store the logs ( if any )")
+asmlib.MakeAsmVar("logfile"  , "0" , {0,1}, gnIndependentUsed, "Output the logs in a dedicated file")
 asmlib.SetLogControl(asmlib.GetAsmVar("logsmax","INT"),asmlib.GetAsmVar("logfile","STR"))
 asmlib.SettingsLogs("SKIP"); asmlib.SettingsLogs("ONLY")
 
