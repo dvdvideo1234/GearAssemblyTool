@@ -25,7 +25,7 @@ local asmlib = gearasmlib
 
 ------ CONFIGURE ASMLIB ------
 asmlib.InitBase("gear","assembly")
-asmlib.SetOpVar("TOOL_VERSION","5.190")
+asmlib.SetOpVar("TOOL_VERSION","5.191")
 asmlib.SetIndexes("V",1,2,3)
 asmlib.SetIndexes("A",1,2,3)
 asmlib.SetIndexes("S",4,5,6,7)
@@ -322,11 +322,10 @@ if(CLIENT) then
       pnModelPanel:SetVisible(true)
       pnModelPanel.LayoutEntity = function(pnSelf, oEnt)
         if(pnSelf.bAnimated) then pnSelf:RunAnimation() end
-        local uiPly = LocalPlayer()
         local uiBox = asmlib.CacheBoxLayout(oEnt,40)
         if(not asmlib.IsExistent(uiBox)) then
           return asmlib.StatusLog(nil,"OPEN_FRAME: pnModelPanel.LayoutEntity: Box invalid") end
-        local stSpawn = asmlib.GetNormalSpawn(uiPly,asmlib.GetOpVar("VEC_ZERO"),uiBox.Ang,oEnt:GetModel())
+        local stSpawn = asmlib.GetNormalSpawn(oPly,asmlib.GetOpVar("VEC_ZERO"),uiBox.Ang,oEnt:GetModel())
         if(not stSpawn) then
           return asmlib.StatusLog(nil,"OPEN_FRAME: pnModelPanel.LayoutEntity: Spawn data fail") end
         asmlib.ApplySpawnFlat(oEnt, stSpawn, asmlib.GetOpVar("VEC_UP"))
