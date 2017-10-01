@@ -641,10 +641,11 @@ end
  * tArgs   > Text draw arguments
 ]]--
 function TOOL:DrawTextSpawn(oScreen, sCol, sMeth, tArgs)
-  local stS = asmlib.GetOpVar("STRUCT_SPAWN")
-  local arK = asmlib.GetOpVar("STRUCT_SPAWN_KEYS")
-  local x,y = oScreen:GetCenter(-200,10)
-  oScreen:SetTextEdge(x,y)
+  local ply = LocalPlayer()
+  local stS = asmlib.CacheSpawnPly(ply)
+  local arK = asmlib.GetOpVar("STRUCT_SPAWN")
+  local w,h = oScreen:GetSize()
+  oScreen:SetTextEdge(w - 500,0)
   oScreen:DrawText("Spawn debug information",sCol,sMeth,tArgs)
   for ID = 1, #arK, 1 do
     local def = arK[ID]
@@ -664,9 +665,8 @@ function TOOL:DrawUCS(oScreen, vOrg, aOrg, nRad, sCol, bRgh)
   if(bRgh) then -- Do not calculate the disabled Ys
     local Ys = (vOrg + UCS * aOrg:Right()):ToScreen()
     oScreen:DrawLine(Op,Ys,"g")
-  end
+  end; oScreen:DrawCircle(Op,nRad,sCol,"SURF")
   oScreen:DrawLine(Op,Zs,"b")
-  oScreen:DrawCircle(Op,nRad,sCol,"SURF")
   return Op
 end
 

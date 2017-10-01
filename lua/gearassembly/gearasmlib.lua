@@ -141,10 +141,10 @@ local constraintCanConstrain  = constraint and constraint.CanConstrain
 local duplicatorStoreEntityModifier = duplicator and duplicator.StoreEntityModifier
 
 ---------------- CASHES SPACE --------------------
-local libCache  = {} -- Used to cache stuff in a Pool
+local libCache  = {} -- Used to cache stuff in a pool
 local libAction = {} -- Used to attach external function to the lib
-local libOpVars = {} -- Used to Store operational Variable Values
-local libPlayer = {}
+local libOpVars = {} -- Used to Store operational variable values
+local libPlayer = {} -- Used to allcoate personal space for players
 
 module( "gearasmlib" )
 
@@ -421,7 +421,7 @@ function InitBase(sName,sPurpose)
     SetOpVar("LOCALIFY_AUTO","en")
     SetOpVar("LOCALIFY_TABLE",{})
     SetOpVar("TABLE_CATEGORIES",{})
-    SetOpVar("STRUCT_SPAWN_KEYS",{
+    SetOpVar("STRUCT_SPAWN",{
       {"--- Origin ---", nil},
       {"F", "VEC", "Forward direction"},
       {"R", "VEC", "Right direction"},
@@ -849,7 +849,7 @@ function GetActionCode(sKey)
   if(not (sKey and IsString(sKey))) then
     return StatusLog(nil,"GetActionCode: Key {"..type(sKey).."}<"..tostring(sKey).."> not string") end
   if(not (libAction and libAction[sKey])) then
-    return StatusLog(nil,"GetActionCode: Key not located") end
+    return StatusLog(nil,"GetActionCode: Key missing <"..sKey..">") end
   return libAction[sKey].Act
 end
 
@@ -1376,7 +1376,7 @@ local function GetPlacePly(pPly)
   end; return plyPlace
 end
 
-local function CacheSpawnPly(pPly)
+function CacheSpawnPly(pPly)
   local plyPlace = GetPlacePly(pPly)
   if(not IsExistent(plyPlace)) then
     return StatusLog(nil,"CacheSpawnPly: Place missing") end
@@ -1404,8 +1404,8 @@ local function CacheSpawnPly(pPly)
     plyData.TMas = Vector() -- O
     plyData.TAng = Angle () -- A
     --- Offsets ---
-    plyData.ANxt = Angle ()
-    plyData.PNxt = Vector()
+    plyData.ANxt = Angle () -- Origin angle offsets
+    plyData.PNxt = Vector() -- Piece  position offsets
   end; return plyData
 end
 
