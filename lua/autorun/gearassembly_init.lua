@@ -14,7 +14,6 @@ local bitBor               = bit and bit.bor
 local mathFloor            = math and math.floor
 local vguiCreate           = vgui and vgui.Create
 local fileExists           = file and file.Exists
-local stringExplode        = string and string.Explode
 local surfaceScreenWidth   = surface and surface.ScreenWidth
 local surfaceScreenHeight  = surface and surface.ScreenHeight
 local languageGetPhrase    = language and language.GetPhrase
@@ -25,7 +24,7 @@ local asmlib = gearasmlib
 
 ------ CONFIGURE ASMLIB ------
 asmlib.InitBase("gear","assembly")
-asmlib.SetOpVar("TOOL_VERSION","5.193")
+asmlib.SetOpVar("TOOL_VERSION","5.194")
 asmlib.SetIndexes("V",1,2,3)
 asmlib.SetIndexes("A",1,2,3)
 asmlib.SetIndexes("S",4,5,6,7)
@@ -74,7 +73,7 @@ local gsToolNameL = asmlib.GetOpVar("TOOLNAME_NL")
 local gsToolNameU = asmlib.GetOpVar("TOOLNAME_NU")
 local gsFullDSV   = asmlib.GetOpVar("DIRPATH_BAS")..asmlib.GetOpVar("DIRPATH_DSV")..
                     asmlib.GetInstPref()..asmlib.GetOpVar("TOOLNAME_PU")
-local gaTimerSet  = stringExplode(asmlib.GetOpVar("OPSYM_DIRECTORY"),asmlib.GetAsmVar("timermode","STR"))
+local gaTimerSet  = asmlib.GetOpVar("OPSYM_DIRECTORY"):Explode(asmlib.GetAsmVar("timermode","STR"))
 local conPalette  = asmlib.MakeContainer("Colours"); asmlib.SetOpVar("CONTAINER_PALETTE", conPalette)
       conPalette:Insert("r" ,Color(255, 0 , 0 ,255))
       conPalette:Insert("g" ,Color( 0 ,255, 0 ,255))
@@ -182,7 +181,7 @@ if(CLIENT) then
         asmlib.ConCommandPly(oPly, "timermode", "CQT@1800@1@1")
         asmlib.PrintInstance("RESET_VARIABLES: Variables reset complete")
       elseif(bgskids:sub(1,7) == "delete ") then
-        local tPref = stringExplode(" ",bgskids:sub(8,-1))
+        local tPref = (" "):Explode(bgskids:sub(8,-1))
         for iCnt = 1, #tPref do
          local vPr = tPref[iCnt]
          asmlib.RemoveDSV("PIECES",vPr)

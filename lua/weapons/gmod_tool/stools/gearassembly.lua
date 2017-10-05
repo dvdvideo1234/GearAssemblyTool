@@ -20,10 +20,6 @@ local vguiCreate            = vgui and vgui.Create
 local fileExists            = file and file.Exists
 local utilIsValidModel      = util and util.IsValidModel
 local tableGetKeys          = table and table.GetKeys
-local stringSub             = string and string.sub
-local stringUpper           = string and string.upper
-local stringToFileName      = string and string.GetFileFromFilename
-local stringExplode         = string and string.Explode
 local inputIsKeyDown        = input and input.IsKeyDown
 local cleanupRegister       = cleanup and cleanup.Register
 local concommandAdd         = concommand and concommand.Add
@@ -257,7 +253,7 @@ function TOOL:SetAnchor(stTrace)
   if(not (phEnt and phEnt:IsValid())) then return asmlib.StatusLog(false,"TOOL:SetAnchor(): Trace no physics") end
   local plPly = self:GetOwner()
   if(not (plPly and plPly:IsValid())) then return asmlib.StatusLog(false,"TOOL:SetAnchor(): Player invalid") end
-  local sAnchor = trEnt:EntIndex()..gsSymRev..stringToFileName(trEnt:GetModel())
+  local sAnchor = trEnt:EntIndex()..gsSymRev..trEnt:GetModel():GetFileFromFilename()
   trEnt:SetRenderMode(RENDERMODE_TRANSALPHA)
   trEnt:SetColor(conPalette:Select("an"))
   self:SetObject(1,trEnt,stTrace.HitPos,phEnt,stTrace.PhysicsBone,stTrace.HitNormal)
@@ -325,11 +321,11 @@ function TOOL:GetStatus(stTrace,anyMessage,hdEnt)
         sDu = sDu..sSpace.."  TR.HitW:        <"..tostring(stTrace and stTrace.HitWorld or gsNoAV)..">"..sDelim
         sDu = sDu..sSpace.."  TR.ENT:         <"..tostring(stTrace and trEnt or gsNoAV)..">"..sDelim
         sDu = sDu..sSpace.."  TR.Model:       <"..tostring(trModel or gsNoAV)..">["..tostring(trRec and trRec.Kept or gsNoID).."]"..sDelim
-        sDu = sDu..sSpace.."  TR.File:        <"..tostring(trModel and stringToFileName(trModel) or gsNoAV)..">"..sDelim
+        sDu = sDu..sSpace.."  TR.File:        <"..tostring(trModel and trModel:GetFileFromFilename() or gsNoAV)..">"..sDelim
         sDu = sDu..sSpace.."Dumping console variables state:"..sDelim
         sDu = sDu..sSpace.."  HD.Entity:      <"..tostring(hdEnt or gsNoAV)..">"..sDelim
         sDu = sDu..sSpace.."  HD.Model:       <"..tostring(hdModel or gsNoAV)..">["..tostring(hdRec and hdRec.Kept or gsNoID).."]"..sDelim
-        sDu = sDu..sSpace.."  HD.File:        <"..tostring(hdModel and stringToFileName(hdModel) or gsNoAV)..">"..sDelim
+        sDu = sDu..sSpace.."  HD.File:        <"..tostring(hdModel and hdModel:GetFileFromFilename() or gsNoAV)..">"..sDelim
         sDu = sDu..sSpace.."  HD.Mass:        <"..tostring(self:GetMass())..">"..sDelim
         sDu = sDu..sSpace.."  HD.StackCNT:    <"..tostring(self:GetCount())..">"..sDelim
         sDu = sDu..sSpace.."  HD.Gravity:     <"..tostring(self:GetGravity())..">"..sDelim
@@ -397,7 +393,7 @@ function TOOL:LeftClick(stTrace)
   local ignphysgn = self:GetIgnorePhysgun()
   local bnderrmod = self:GetBoundErrorMode()
   local trorang   = self:GetTraceOriginAngle()
-  local fnmodel   = stringToFileName(model)
+  local fnmodel   = model:GetFileFromFilename()
   local stmode    = asmlib.GetCorrectID(self:GetStackMode(),SMode)
   local contyp    = asmlib.GetCorrectID(self:GetContrType(),CType)
   local aninfo , eBase   = self:GetAnchor()
@@ -539,7 +535,7 @@ function TOOL:RightClick(stTrace)
     if(not self:ValidateTrace(stTrace)) then
       return asmlib.StatusLog(false,self:GetStatus(stTrace,"TOOL:RightClick(DUCK): Trace not valid")) end
     local trModel = trEnt:GetModel()
-    local fnModel = stringToFileName(trModel)
+    local fnModel = trModel:GetFileFromFilename()
     asmlib.ConCommandPly(ply,"model",trModel)
     asmlib.PrintNotifyPly(ply,"Model: "..fnModel.." selected !","GENERIC")
     return asmlib.StatusLog(true,"TOOL:RightClick(DUCK): Success <"..fnModel..">")
@@ -764,7 +760,7 @@ function TOOL:DrawToolScreen(w, h)
   scrTool:DrawRect({x=0,y=0},{x=w,y=h},"k","SURF",{"vgui/white"})
   scrTool:SetTextEdge(0,0)
   local anInfo, anEnt = self:GetAnchor()
-  local tInfo = stringExplode(gsSymRev,anInfo)
+  local tInfo = gsSymRev:Explode(anInfo)
   local stTrace = asmlib.CacheTracePly(LocalPlayer())
   if(not stTrace) then
     scrTool:DrawText("Trace status: Invalid","r","SURF",{"Trebuchet24"})
@@ -790,7 +786,7 @@ function TOOL:DrawToolScreen(w, h)
     if(asmlib.IsOther(trEnt)) then return end
           trModel = trEnt:GetModel()
     local trRec   = asmlib.CacheQueryPiece(trModel)
-          trModel = stringToFileName(trModel)
+          trModel = trModel:GetFileFromFilename()
     if(trRec) then
       trRake = asmlib.RoundValue(trRec.Rake,0.01)
       trRad  = asmlib.RoundValue(asmlib.AbsVector(trRec.Offs.P),0.01)
@@ -799,7 +795,7 @@ function TOOL:DrawToolScreen(w, h)
   local hdRad = asmlib.RoundValue(asmlib.AbsVector(hdRec.Offs.P),0.01)
   local nFrac = asmlib.RoundValue((trRad or 0) / hdRad,0.01)
   scrTool:DrawText("TM: "..(trModel or NoAV),"g")
-  scrTool:DrawText("HM: "..(stringToFileName(model) or NoAV),"m")
+  scrTool:DrawText("HM: "..(model:GetFileFromFilename() or NoAV),"m")
   scrTool:DrawText("Anc: "..self:GetAnchor("anchor"),"an")
   scrTool:DrawText("Rake: "..tostring(trRake or NoAV).." > "..tostring(asmlib.RoundValue(hdRec.Rake,0.01) or NoAV),"y")
   scrTool:DrawText("Frac: "..tostring(nFrac).." > "..tostring(trRad or gsNoID).."/"..tostring(hdRad))
