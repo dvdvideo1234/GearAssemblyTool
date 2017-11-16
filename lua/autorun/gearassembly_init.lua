@@ -24,7 +24,7 @@ local asmlib = gearasmlib
 
 ------ CONFIGURE ASMLIB ------
 asmlib.InitBase("gear","assembly")
-asmlib.SetOpVar("TOOL_VERSION","5.195")
+asmlib.SetOpVar("TOOL_VERSION","5.196")
 asmlib.SetIndexes("V",1,2,3)
 asmlib.SetIndexes("A",1,2,3)
 asmlib.SetIndexes("S",4,5,6,7)
@@ -56,7 +56,7 @@ asmlib.MakeAsmVar("maxlinear", "250"   ,  {1}, gnServerControled, "Maximum linea
 asmlib.MakeAsmVar("maxfrict" , "100000",  {0}, gnServerControled, "Maximum friction limit when creating constraints")
 asmlib.MakeAsmVar("maxforce" , "100000",  {0}, gnServerControled, "Maximum force limit when creating constraints")
 asmlib.MakeAsmVar("maxtorque", "100000",  {0}, gnServerControled, "Maximum torque limit when creating constraints")
-asmlib.MakeAsmVar("maxstcnt" , "200", {1,200}, gnServerControled, "Maximum pieces to spawn in stack mode")
+asmlib.MakeAsmVar("maxstcnt" , "200", {1,400}, gnServerControled, "Maximum pieces to spawn in stack mode")
 if(SERVER) then
   CreateConVar("sbox_max"..asmlib.GetOpVar("CVAR_LIMITNAME"), "1500", gnServerControled, "Maximum number of gears to be spawned")
   asmlib.MakeAsmVar("bnderrmod", "LOG", nil    , gnServerControled, "Unreasonable position error handling mode")

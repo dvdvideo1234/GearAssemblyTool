@@ -210,16 +210,26 @@ function IsOther(oEnt)
   return false
 end
 
+-- Gets the date according to the specified format
 function GetDate()
   return (osDate(GetOpVar("DATE_FORMAT"))
    .." "..osDate(GetOpVar("TIME_FORMAT")))
 end
 
+-- Golden retriever. Retrieves file line as string
+-- But seriously returns the sting line and EOF flag
+local function GetStringFile(pFile)
+  if(not pFile) then return StatusLog("", "GetStringFile: No file"), true end
+  local sCh, sLine = "X", "" -- Use a value to start cycle with
+  while(sCh) do sCh = pFile:Read(1); if(not sCh) then break end
+    if(sCh == "\n") then return sLine:Trim(), false else sLine = sLine..sCh end
+  end; return sLine:Trim(), true -- EOF has been reached. Return the last data
+end
+
 ------------------ LOGS ------------------------
 
 local function FormatNumberMax(nNum,nMax)
-  local nNum = tonumber(nNum)
-  local nMax = tonumber(nMax)
+  local nNum, nMax = tonumber(nNum), tonumber(nMax)
   if(not (nNum and nMax)) then return "" end
   return ("%"..(tostring(mathFloor(nMax))):len().."d"):format(nNum)
 end
@@ -257,21 +267,16 @@ end
 function LogInstance(anyStuff)
   local logMax = (tonumber(GetOpVar("LOG_MAXLOGS")) or 0)
   if(logMax and (logMax <= 0)) then return end
-  local anyStuff = tostring(anyStuff)
-  local logStats = GetOpVar("LOG_SKIP")
+  local anyStuff, logStats = tostring(anyStuff), GetOpVar("LOG_SKIP")
   if(logStats and logStats[1]) then
-    local iNdex = 1
-    while(logStats[iNdex]) do
+    local iNdex = 1; while(logStats[iNdex]) do
       if(anyStuff:find(tostring(logStats[iNdex]))) then return end; iNdex = iNdex + 1 end
-  end -- Should the current log being skipped
-  logStats = GetOpVar("LOG_ONLY")
+  end; logStats = GetOpVar("LOG_ONLY") -- Should the current log being skipped
   if(logStats and logStats[1]) then
-    local iNdex, logMe = 1, false
-    while(logStats[iNdex]) do
+    local iNdex, logMe = 1, false; while(logStats[iNdex]) do
       if(anyStuff:find(tostring(logStats[iNdex]))) then logMe = true end; iNdex = iNdex + 1 end
     if(not logMe) then return end
-  end -- Only the chosen messages are processed
-  local sSors = ""
+  end; local sSors = "" -- Only the chosen messages are processed
   if(GetOpVar("LOG_DEBUGEN")) then
     local sInfo = debugGetinfo(3) or {}
     sSors = sSors..(sInfo.linedefined and "["..sInfo.linedefined.."]" or "[n/a]")
@@ -286,13 +291,11 @@ function LogInstance(anyStuff)
 end
 
 function StatusPrint(anyStatus,sError)
-  PrintInstance(sError)
-  return anyStatus
+  PrintInstance(sError); return anyStatus
 end
 
 function StatusLog(anyStatus,sError)
-  LogInstance(sError)
-  return anyStatus
+  LogInstance(sError); return anyStatus
 end
 
 function Print(tT,sS,tP)
@@ -306,7 +309,7 @@ function Print(tT,sS,tP)
       vK = sS.."[\""..k.."\"]"
     else sK = tostring(k)
       if(tP and tP[k]) then sK = tostring(tP[k]) end
-      vK = sS.."["..sK.."]"  
+      vK = sS.."["..sK.."]"
     end
     if(type(v) ~= "table") then
       if(type(v) == "string") then
@@ -341,16 +344,9 @@ function SettingsLogs(sHash)
   if(not tLogs) then return StatusLog(true,"SettingsLogs("..sKey.."): Skip table") end
   local fName = GetOpVar("DIRPATH_BAS")..lbNam.."_sl"..sKey:lower()..".txt"
   local S = fileOpen(fName, "rb", "DATA")
-  if(S) then
-    local sCh, sLine = "X", ""
-    while(sCh) do
-      sCh = S:Read(1)
-      if(not sCh) then break end
-      if(sCh == "\n") then
-        sLine = sLine:Trim()
-        if(sLine ~= "") then
-          tableInsert(tLogs, sLine) end; sLine = ""
-      else sLine = sLine..sCh end
+  if(S) then local sLine, isEOF = "", false
+    while(not isEOF) do sLine, isEOF = GetStringFile(S)
+      if(not IsEmptyString(sLine)) then tableInsert(tLogs, sLine) end
     end; S:Close(); return StatusLog(true,"SettingsLogs("..sKey.."): Success <"..fName..">")
   else return StatusLog(true,"SettingsLogs("..sKey.."): Missing <"..fName..">") end
 end
@@ -1197,10 +1193,8 @@ local function DecodePOA(sStr)
   if(not IsString(sStr)) then
     return StatusLog(nil,"DecodePOA: Argument {"..type(sStr).."}<"..tostring(sStr).."> not string") end
   local strLen = sStr:len(); ReloadPOA()
-  local symOff = GetOpVar("OPSYM_DISABLE")
-  local symRev = GetOpVar("OPSYM_REVSIGN")
-  local symSep = GetOpVar("OPSYM_SEPARATOR")
-  local arPOA  = GetOpVar("ARRAY_DECODEPOA")
+  local symOff, symRev = GetOpVar("OPSYM_DISABLE"), GetOpVar("OPSYM_REVSIGN")
+  local symSep, arPOA = GetOpVar("OPSYM_SEPARATOR"), GetOpVar("ARRAY_DECODEPOA")
   local S, E, iCnt, dInd, iSep, sCh = 1, 1, 1, 1, 0, ""
   if(sStr:sub(iCnt,iCnt) == symOff) then
     arPOA[7] = true; iCnt = iCnt + 1; S = S + 1 end
@@ -1256,13 +1250,10 @@ local function Sort(tTable,tKeys,tFields)
     if(not (Lo and Hi and (Lo > 0) and (Lo < Hi))) then
       return StatusLog(nil,"QuickSort: Data dimensions mismatch") end
     local iMid = mathRandom(Hi-(Lo-1))+Lo-1
-    Data[Lo], Data[iMid] = Data[iMid], Data[Lo]
-    iMid = Lo
-    local vMid = Data[Lo].Val
-    local iCnt = Lo + 1
+    Data[Lo], Data[iMid] = Data[iMid], Data[Lo]; iMid = Lo
+    local vMid, iCnt = Data[Lo].Val, (Lo + 1)
     while(iCnt <= Hi)do
-      if(Data[iCnt].Val < vMid) then
-        iMid = iMid + 1
+      if(Data[iCnt].Val < vMid) then iMid = iMid + 1
         Data[iMid], Data[iCnt] = Data[iCnt], Data[iMid]
       end
       iCnt = iCnt + 1
@@ -2274,14 +2265,11 @@ function ImportCategory(vEq, sPref)
   local F = fileOpen(fName, "rb", "DATA")
   if(not F) then return StatusLog(false,"ImportCategory: fileOpen("..fName..") failed") end
   local sEq, sLine, nLen = ("="):rep(nEq), "", (nEq+2)
-  local cFr, cBk, sCh = "["..sEq.."[", "]"..sEq.."]", "X"
+  local cFr, cBk = "["..sEq.."[", "]"..sEq.."]"
   local tCat, symOff = GetOpVar("TABLE_CATEGORIES"), GetOpVar("OPSYM_DISABLE")
-  local sPar, isPar = "", false
-  while(sCh) do
-    sCh = F:Read(1)
-    if(not sCh) then break end
-    if(sCh == "\n") then
-      sLine = sLine:Trim()
+  local sPar, isPar, isEOF = "", false, false
+  while(not isEOF) do sLine, isEOF = GetStringFile(F)
+    if(not IsEmptyString(sLine)) then
       local sFr, sBk = sLine:sub(1,nLen), sLine:sub(-nLen,-1)
       if(sFr == cFr and sBk == cBk) then
         sLine, isPar, sPar = sLine:sub(nLen+1,-1), true, "" end
@@ -2302,8 +2290,8 @@ function ImportCategory(vEq, sPref)
             else LogInstance("ImportCategory: Key skipped <"..key..">") end
           else LogInstance("ImportCategory: Function missing <"..key..">") end
         else LogInstance("ImportCategory: Name missing <"..txt..">") end
-      else sPar = sPar..sLine.."\n" end; sLine = ""
-    else sLine = sLine..sCh end
+      else sPar = sPar..sLine.."\n" end
+    end
   end; F:Close(); return StatusLog(true, "ImportCategory: Success")
 end
 
@@ -2326,8 +2314,7 @@ function RemoveDSV(sTable, sPref)
         fName = fName..sPref..defTable.Name..".txt"
   if(not fileExists(fName,"DATA")) then
     return StatusLog(true,"RemoveDSV("..sPref.."): File <"..fName.."> missing") end
-  fileDelete(fName)
-  return StatusLog(true,"RemoveDSV("..sPref.."): Success")
+  fileDelete(fName); return StatusLog(true,"RemoveDSV("..sPref.."): Success")
 end
 
 --[[
@@ -2429,19 +2416,16 @@ function ImportDSV(sTable, bComm, sPref, sDelim)
   local F = fileOpen(fName, "rb", "DATA")
   if(not F) then return StatusLog(false,"ImportDSV("..fPref.."): fileOpen("..fName..") failed") end
   local symOff, sDelim = GetOpVar("OPSYM_DISABLE"), tostring(sDelim or "\t"):sub(1,1)
-  local sLine, sCh, nLen = "", "X", defTable.Name:len()
-  while(sCh) do
-    sCh = F:Read(1)
-    if(not sCh) then break end -- Exit the loop and close the file
-    if(sCh == "\n") then
-      sLine = sLine:Trim()
-      if((sLine:sub(1,1) ~= symOff) and (sLine:sub(1,nLen) == defTable.Name)) then
+  local sLine, isEOF, nLen = "", false, defTable.Name:len()
+  while(not isEOF) do sLine, isEOF = GetStringFile(F)
+    if((not IsEmptyString(sLine)) and (sLine:sub(1,1) ~= symOff)) then
+      if(sLine:sub(1,nLen) == defTable.Name) then
         local tData = sDelim:Explode(sLine:sub(nLen+2,-1))
         for iCnt = 1, defTable.Size do
           tData[iCnt] = StripValue(tData[iCnt]) end
         if(bComm) then InsertRecord(sTable, tData) end
-      end; sLine = ""
-    else sLine = sLine..sCh end
+      end
+    end
   end; F:Close(); return StatusLog(true, "ImportDSV("..fPref.."@"..sTable.."): Success")
 end
 
@@ -2467,43 +2451,38 @@ function SynchronizeDSV(sTable, tData, bRepl, sPref, sDelim)
   if(not fileExists(fName,"DATA")) then fileCreateDir(fName) end
   fName = fName..fPref..defTable.Name..".txt"
   local I, fData, smOff = fileOpen(fName, "rb", "DATA"), {}, GetOpVar("OPSYM_DISABLE")
-  if(I) then
-    local sLine, sCh  = "", "X"
-    while(sCh) do
-      sCh = I:Read(1)
-      if(not sCh) then break end
-      if(sCh == "\n") then
-        sLine = sLine:Trim()
-        if(sLine:sub(1,1) ~= smOff) then
-          local tLine = sDelim:Explode(sLine)
-          if(tLine[1] == defTable.Name) then
-            for i = 1, #tLine do tLine[i] = StripValue(tLine[i]) end
-            local sKey = tLine[2]
-            if(not fData[sKey]) then fData[sKey] = {Kept = 0} end
-              tKey = fData[sKey]
-            local nRake, vRake = 0 -- The raking angle
-            if(sTable == "PIECES") then
-              vRake = tLine[5]; nRake = tonumber(vRake) or 0 end
-            tKey.Kept = 1; tKey[tKey.Kept] = {}
-            local kKey, nCnt = tKey[tKey.Kept], 3
-            while(tLine[nCnt]) do -- Do a value matching without quotes
-              local vMatch = MatchType(defTable,tLine[nCnt],nCnt-1)
-              if(not IsExistent(vMatch)) then
-                I:Close(); return StatusLog(false,"SynchronizeDSV("..fPref.."): Read matching failed <"
-                  ..tostring(tLine[nCnt]).."> to <"..tostring(nCnt-1).." # "
-                    ..defTable[nCnt-1][1].."> of <"..sTable..">")
-              end; kKey[nCnt-2] = vMatch; nCnt = nCnt + 1
-            end
-          else I:Close()
-            return StatusLog(false,"SynchronizeDSV("..fPref.."): Read table name mismatch <"..sTable..">") end
-        end; sLine = ""
-      else sLine = sLine..sCh end
+  if(I) then local sLine, isEOF = "", false
+    while(not isEOF) do sLine, isEOF = GetStringFile(I)
+      if((not IsEmptyString(sLine)) and (sLine:sub(1,1) ~= smOff)) then
+        sLine = sLine:gsub(defTable.Name,""):Trim()
+        local tLine = sDelim:Explode(sLine)
+        if(tLine[1] == defTable.Name) then
+          for i = 1, #tLine do tLine[i] = StripValue(tLine[i]) end
+          local sKey = tLine[2]
+          if(not fData[sKey]) then fData[sKey] = {Kept = 0} end
+            tKey = fData[sKey]
+          local nRake, vRake = 0 -- The raking angle
+          if(sTable == "PIECES") then
+            vRake = tLine[5]; nRake = tonumber(vRake) or 0 end
+          tKey.Kept = 1; tKey[tKey.Kept] = {}
+          local kKey, nCnt = tKey[tKey.Kept], 3
+          while(tLine[nCnt]) do -- Do a value matching without quotes
+            local vMatch = MatchType(defTable,tLine[nCnt],nCnt-1)
+            if(not IsExistent(vMatch)) then
+              I:Close(); return StatusLog(false,"SynchronizeDSV("..fPref.."): Read matching failed <"
+                ..tostring(tLine[nCnt]).."> to <"..tostring(nCnt-1).." # "
+                  ..defTable[nCnt-1][1].."> of <"..sTable..">")
+            end; kKey[nCnt-2] = vMatch; nCnt = nCnt + 1
+          end
+        else I:Close()
+          return StatusLog(false,"SynchronizeDSV("..fPref.."): Read table name mismatch <"..sTable..">") end
+      end
     end; I:Close()
   else LogInstance("SynchronizeDSV("..fPref.."): Creating file <"..fName..">") end
   for key, rec in pairs(tData) do -- Check the given table
     for pnID = 1, #rec do
       local tRec = rec[pnID]
-      local nRake, vRake = 0 -- Where the lime ID mut be read from
+      local nRake, vRake = 0 -- Where the lime ID must be read from
       if(sTable == "PIECES") then
         vRake = tRec[3]; nRake = tonumber(vRake) or 0
         if(not fileExists(key, "GAME")) then
@@ -2571,25 +2550,21 @@ function TranslateDSV(sTable, sPref, sDelim)
   I:Write("# TranslateDSV("..fPref.."@"..sTable.."): "..GetDate().." ["..GetOpVar("MODE_DATABASE").."]\n")
   I:Write("# Data settings:\t"..GetColumns(defTable, sDelim).."\n")
   local pfLib = GetOpVar("NAME_LIBRARY"):gsub(GetOpVar("NAME_INIT"),"")
-  local sLine, sCh, symOff = "", "X", GetOpVar("OPSYM_DISABLE")
+  local sLine, isEOF, symOff = "", false, GetOpVar("OPSYM_DISABLE")
   local sFr, sBk, sHs = pfLib..".InsertRecord(\""..sTable.."\", {", "})\n", (fPref.."@"..sTable)
-  while(sCh) do
-    sCh = D:Read(1)
-    if(not sCh) then break end
-    if(sCh == "\n") then
+  while(not isEOF) do sLine, isEOF = GetStringFile(D)
+    if((not IsEmptyString(sLine)) and (sLine:sub(1,1) ~= symOff)) then
       sLine = sLine:gsub(defTable.Name,""):Trim()
-      if(sLine:sub(1,1) ~= symOff) then
-        local tBoo, sCat = sDelim:Explode(sLine), ""
-        for nCnt = 1, #tBoo do
-          local vMatch = MatchType(defTable,StripValue(tBoo[nCnt]),nCnt,true,"\"",true)
-          if(not IsExistent(vMatch)) then D:Close(); I:Flush(); I:Close()
-            return StatusLog(false,"TranslateDSV("..sHs.."): Given matching failed <"
-              ..tostring(tBoo[nCnt]).."> to <"..tostring(nCnt).." # "
-                ..defTable[nCnt][1].."> of "..sTable) end
-          sCat = sCat..", "..tostring(vMatch)
-        end; I:Write(sFr..sCat:sub(3,-1)..sBk)
-      end sLine = ""
-    else sLine = sLine..sCh end
+      local tBoo, sCat = sDelim:Explode(sLine), ""
+      for nCnt = 1, #tBoo do
+        local vMatch = MatchType(defTable,StripValue(tBoo[nCnt]),nCnt,true,"\"",true)
+        if(not IsExistent(vMatch)) then D:Close(); I:Flush(); I:Close()
+          return StatusLog(false,"TranslateDSV("..sHs.."): Given matching failed <"
+            ..tostring(tBoo[nCnt]).."> to <"..tostring(nCnt).." # "
+              ..defTable[nCnt][1].."> of "..sTable) end
+        sCat = sCat..", "..tostring(vMatch)
+      end; I:Write(sFr..sCat:sub(3,-1)..sBk)
+    end
   end; D:Close(); I:Flush(); I:Close()
   return StatusLog(true,"TranslateDSV("..sHs.."): Success")
 end
@@ -2615,14 +2590,12 @@ function RegisterDSV(sProg, sPref, sDelim, bSkip)
   local sMiss, sDelim = GetOpVar("MISS_NOAV"), tostring(sDelim or "\t"):sub(1,1)
   if(bSkip) then
     local symOff = GetOpVar("OPSYM_DISABLE")
-    local fPool, sCh, isAct = {}, "X", true
+    local fPool, isEOF, isAct = {}, false, true
     local F, sLine = fileOpen(fName, "rb" ,"DATA"), ""
     if(not F) then return StatusLog(false,"RegisterDSV("
       ..sPref.."): fileOpen("..fName..") read failed") end
-     while(sCh) do
-      sCh = F:Read(1)
-      if(not sCh) then break end
-      if(sCh == "\n") then sLine = sLine:Trim()
+    while(not isEOF) do sLine, isEOF = GetStringFile(F)
+      if(not IsEmptyString(sLine)) then
         if(sLine:sub(1,1) == symOff) then
           isAct, sLine = false, sLine:sub(2,-1) else isAct = true end
         local tab = sDelim:Explode(sLine)
@@ -2634,11 +2607,10 @@ function RegisterDSV(sProg, sPref, sDelim, bSkip)
         else
           inf.Cnt = inf.Cnt + 1
           inf[inf.Cnt] = {src, isAct}
-        end; sLine = ""
-      else sLine = sLine..sCh end
+        end
+      end
     end; F:Close()
-    if(fPool[sPref]) then
-      local inf = fPool[sPref]
+    if(fPool[sPref]) then local inf = fPool[sPref]
       for ID = 1, inf.Cnt do local tab = inf[ID]
         LogInstance("RegisterDSV("..sPref.."): "..(tab[2] and "On " or "Off").." <"..tab[1]..">") end
       return StatusLog(true,"RegisterDSV("..sPref.."): Skip <"..sProg..">")
@@ -2663,14 +2635,12 @@ function ProcessDSV(sDelim)
   local fName = GetOpVar("DIRPATH_BAS")..lbNam.."_dsv.txt"
   local F = fileOpen(fName, "rb" ,"DATA")
   if(not F) then return StatusLog(false,"ProcessDSV: fileOpen("..fName..") failed") end
-  local sCh, sLine, symOff = "X", "", GetOpVar("OPSYM_DISABLE")
+  local sLine, isEOF, symOff = "", false, GetOpVar("OPSYM_DISABLE")
   local sNt, tProc = GetOpVar("TOOLNAME_PU"), {}
   local sDelim = tostring(sDelim or "\t"):sub(1,1)
   local sDv = GetOpVar("DIRPATH_BAS")..GetOpVar("DIRPATH_DSV")
-  while(sCh) do
-    sCh = F:Read(1)
-    if(not sCh) then break end
-    if(sCh == "\n") then sLine = sLine:Trim()
+  while(not isEOF) do sLine, isEOF = GetStringFile(F)
+    if(not IsEmptyString(sLine)) then
       if(sLine:sub(1,1) ~= symOff) then
         local tInf = sDelim:Explode(sLine)
         local fPrf = StripValue(tostring(tInf[1] or ""):Trim())
@@ -2684,8 +2654,8 @@ function ProcessDSV(sDelim)
             tStore[tStore.Cnt] = {Prog = fSrc, File = (sDv..fPrf..sNt)}
           end -- What user puts there is a problem of his own
         end -- If the line is disabled/comment
-      else LogInstance("ProcessDSV: Skipped <"..sLine..">") end; sLine = ""
-    else sLine = sLine..sCh end
+      else LogInstance("ProcessDSV: Skipped <"..sLine..">") end
+    end
   end; F:Close()
   for prf, tab in pairs(tProc) do
     if(tab.Cnt > 1) then
@@ -2693,8 +2663,7 @@ function ProcessDSV(sDelim)
       for i = 1, tab.Cnt do
         PrintInstance("ProcessDSV: Prefix <"..prf.."> "..tab[i].Prog)
       end
-    else
-      local dir = tab[tab.Cnt].File
+    else local dir = tab[tab.Cnt].File
       if(CLIENT) then
         if(fileExists(dir.."CATEGORY.txt", "DATA")) then
           if(not ImportCategory(3, prf)) then
