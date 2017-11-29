@@ -141,7 +141,7 @@ local duplicatorStoreEntityModifier = duplicator and duplicator.StoreEntityModif
 local libCache  = {} -- Used to cache stuff in a pool
 local libAction = {} -- Used to attach external function to the lib
 local libOpVars = {} -- Used to Store operational variable values
-local libPlayer = {} -- Used to allcoate personal space for players
+local libPlayer = {} -- Used to allocate personal space for players
 
 module( "gearasmlib" )
 
@@ -1086,13 +1086,12 @@ function ModelToName(sModel,bNoSettings)
   local sSymDiv, sSymDir = GetOpVar("OPSYM_DIVIDER"), GetOpVar("OPSYM_DIRECTORY")
   local sModel = (sModel:sub(1, 1) ~= sSymDir) and (sSymDir..sModel) or sModel
         sModel =  sModel:GetFileFromFilename():gsub(GetOpVar("MODELNAM_FILE"),"")
-  local gModel =  sModel:sub(1,-1) -- Create a copy so we can select cut-off parts later on
-  if(not bNoSettings) then
-    local tCut, Cnt, tSub, tApp = SettingsModelToName("GET"), 1
+  local gModel =  sModel:sub(1,-1) -- Create a copy so we can select cut-off parts later
+  if(not bNoSettings) then local Cnt = 1
+    local tCut, tSub, tApp = SettingsModelToName("GET")
     if(tCut and tCut[1]) then
       while(tCut[Cnt] and tCut[Cnt+1]) do
-        local fCh = tonumber(tCut[Cnt])
-        local bCh = tonumber(tCut[Cnt+1])
+        local fCh, bCh = tonumber(tCut[Cnt]), tonumber(tCut[Cnt+1])
         if(not (IsExistent(fCh) and IsExistent(bCh))) then
           return StatusLog("","ModelToName: Cannot cut the model in {"
                    ..tostring(tCut[Cnt])..","..tostring(tCut[Cnt+1]).."} for "..sModel) end
@@ -1104,8 +1103,7 @@ function ModelToName(sModel,bNoSettings)
     -- Replace the unneeded parts by finding an in-string gModel
     if(tSub and tSub[1]) then
       while(tSub[Cnt]) do
-        local fCh = tostring(tSub[Cnt]   or "")
-        local bCh = tostring(tSub[Cnt+1] or "")
+        local fCh, bCh = tostring(tSub[Cnt] or ""), tostring(tSub[Cnt+1] or "")
         gModel = gModel:gsub(fCh,bCh)
         LogInstance("ModelToName[SUB]: {"..tostring(tSub[Cnt])..", "..tostring(tSub[Cnt+1]).."} >> "..gModel)
         Cnt = Cnt + 2
@@ -1558,58 +1556,45 @@ end
 local function MatchType(defTable,snValue,ivIndex,bQuoted,sQuote,bStopRevise,bStopEmpty)
   if(not defTable) then
     return StatusLog(nil,"MatchType: Missing table definition") end
-  local nIndex = tonumber(ivIndex)
-  if(not IsExistent(nIndex)) then
+  local nIndex = tonumber(ivIndex); if(not IsExistent(nIndex)) then
     return StatusLog(nil,"MatchType: Field NAN {"..type(ivIndex)"}<"
              ..tostring(ivIndex).."> invalid on table "..defTable.Name) end
-  local defField = defTable[nIndex]
-  if(not IsExistent(defField)) then
+  local defCol = defTable[nIndex]; if(not IsExistent(defCol)) then
     return StatusLog(nil,"MatchType: Invalid field #"
              ..tostring(nIndex).." on table "..defTable.Name) end
-  local snOut
-  local tipField = tostring(defField[2])
-  local sModeDB  = GetOpVar("MODE_DATABASE")
-  if(tipField == "TEXT") then
-    snOut = tostring(snValue)
-    if(not bStopEmpty and (snOut == "nil" or IsEmptyString(snOut))) then
+  local tipCol, sModeDB, snOut = tostring(defCol[2]), GetOpVar("MODE_DATABASE")
+  if(tipCol == "TEXT") then snOut = tostring(snValue or "")
+    if(not bStopEmpty and IsEmptyString(snOut)) then
       if    (sModeDB == "SQL") then snOut = "NULL"
       elseif(sModeDB == "LUA") then snOut = "NULL"
-      else return StatusLog(nil,"MatchType: Wrong database mode <"..sModeDB..">") end
+      else return StatusLog(nil,"MatchType: Wrong database empty mode <"..sModeDB..">") end
     end
-    if    (defField[3] == "LOW") then snOut = snOut:lower()
-    elseif(defField[3] == "CAP") then snOut = snOut:upper() end
-    if(not bStopRevise and sModeDB == "SQL" and defField[4] == "QMK") then
-      snOut = snOut:gsub("'","''")
-    end
-    if(bQuoted) then
-      local sqChar
+    if    (defCol[3] == "LOW") then snOut = snOut:lower()
+    elseif(defCol[3] == "CAP") then snOut = snOut:upper() end
+    if(not bStopRevise and sModeDB == "SQL" and defCol[4] == "QMK") then
+      snOut = snOut:gsub("'","''") end
+    if(bQuoted) then local sqChar
       if(sQuote) then
-        sqChar = tostring(sQuote):sub(1,1)
+        sqChar = tostring(sQuote or ""):sub(1,1)
       else
         if    (sModeDB == "SQL") then sqChar = "'"
-        elseif(sModeDB == "LUA") then sqChar = "\"" end
-      end
-      snOut = sqChar..snOut..sqChar
+        elseif(sModeDB == "LUA") then sqChar = "\""
+        else return StatusLog(nil,"MatchType: Wrong database quote mode <"..sModeDB..">") end
+      end; snOut = sqChar..snOut..sqChar
     end
-  elseif(tipField == "REAL" or tipField == "INTEGER") then
+  elseif(tipCol == "REAL" or tipCol == "INTEGER") then
     snOut = tonumber(snValue)
     if(IsExistent(snOut)) then
-      if(tipField == "INTEGER") then
-        if(defField[3] == "FLR") then
-          snOut = mathFloor(snOut)
-        elseif(defField[3] == "CEL") then
-          snOut = mathCeil(snOut)
-        end
+      if(tipCol == "INTEGER") then
+        if    (defCol[3] == "FLR") then snOut = mathFloor(snOut)
+        elseif(defCol[3] == "CEL") then snOut = mathCeil (snOut) end
       end
-    else
-      return StatusLog(nil,"MatchType: Failed converting {"
-               ..type(snValue).."}<"..tostring(snValue).."> to NUMBER for table "
-               ..defTable.Name.." field #"..nIndex)
-    end
-  else
-    return StatusLog(nil,"MatchType: Invalid field type <"
-      ..tipField.."> on table "..defTable.Name) end
-  return snOut
+    else return StatusLog(nil,"MatchType: Failed converting {"
+      ..type(snValue).."}<"..tostring(snValue).."> to NUMBER for table "
+      ..defTable.Name.." field #"..nIndex) end
+  else return StatusLog(nil,"MatchType: Invalid field type <"
+    ..tipCol.."> on table "..defTable.Name)
+  end; return snOut
 end
 
 local function SQLBuildCreate(defTable)
@@ -1705,7 +1690,7 @@ local function SQLBuildSelect(defTable,tFields,tWhere,tOrderBy)
         return StatusLog(nil, "SQLBuildSelect: Missing field by index #"
           ..v.." in the table "..defTable.Name) end
       if(defTable[v][1]) then Command = Command..defTable[v][1]
-      else return StatusLog(nil, "SQLBuildSelect: Mising field name by index #"
+      else return StatusLog(nil, "SQLBuildSelect: Missing field name by index #"
         ..v.." in the table "..defTable.Name) end
       if(tFields[Cnt+1]) then Command = Command ..", " end
       Cnt = Cnt + 1
@@ -2344,8 +2329,7 @@ function ExportDSV(sTable, sPref, sDelim)
   local sModeDB, symOff = GetOpVar("MODE_DATABASE"), GetOpVar("OPSYM_DISABLE")
   F:Write("# ExportDSV: "..GetDate().." [ "..sModeDB.." ]".."\n")
   F:Write("# Data settings:\t"..GetColumns(defTable,sDelim).."\n")
-  if(sModeDB == "SQL") then
-    local Q = ""
+  if(sModeDB == "SQL") then local Q = ""
     if(sTable == "PIECES") then Q = SQLBuildSelect(defTable,nil,nil,{2,3,1,4})
     else                        Q = SQLBuildSelect(defTable,nil,nil,nil) end
     if(not IsExistent(Q)) then F:Flush(); F:Close()
@@ -2431,7 +2415,7 @@ end
 
 --[[
  * This function synchronizes extended database records loaded by the server and client
- * It is used by addon creators when they want to add extra piecs to TA
+ * It is used by addon creators when they want to add extra pieces
  * sTable > The table you want to sync
  * tData  > Data you want to add as extended records for the given table
  * bRepl  > If set to /true/ replaces persisting records with the addon
@@ -2934,7 +2918,7 @@ function MakePiece(pPly,sModel,vPos,aAng,nMass,sBgSkIDs,clColor,sMode)
   if(not IsPlayer(pPly)) then -- If not player we cannot register limit
     return StatusLog(nil,"MakePiece: Player missing <"..tostring(pPly)..">") end
   local sLimit = GetOpVar("CVAR_LIMITNAME") -- Get limit name
-  if(not pPly:CheckLimit(sLimit)) then -- Check TA interanl limit
+  if(not pPly:CheckLimit(sLimit)) then -- Check internal limit
     return StatusLog(nil,"MakePiece: Track limit reached") end
   if(not pPly:CheckLimit("props")) then -- Check the props limit
     return StatusLog(nil,"MakePiece: Prop limit reached") end
@@ -2988,10 +2972,10 @@ function ApplyPhysicalSettings(ePiece,bPi,bFr,bGr)
   ePiece.PhysgunDisabled = bPi          -- If enabled stop the player from grabbing the track piece
   ePiece:SetUnFreezable(bPi)            -- If enabled stop the player from hitting reload to mess it all up
   ePiece:SetMoveType(MOVETYPE_VPHYSICS) -- Moves and behaves like a normal prop
-  -- Delay the freeze by a tiny amout because on physgun snap the piece
+  -- Delay the freeze by a tiny amount because on physgun snap the piece
   -- is unfrozen automatically after physgun drop hook call
   timerSimple(GetOpVar("DELAY_FREEZE"), function() -- If frozen motion is disabled
-    LogInstance("ApplyPhysicalSettings: Freeze");  -- Make shure that the physics are valid
+    LogInstance("ApplyPhysicalSettings: Freeze");  -- Make sure that the physics are valid
     if(pyPiece and pyPiece:IsValid()) then pyPiece:EnableMotion(not bFr) end end )
   constructSetPhysProp(nil,ePiece,0,pyPiece,{GravityToggle = bGr, Material = "gmod_ice"})
   duplicatorStoreEntityModifier(ePiece,GetOpVar("TOOLNAME_PL").."dupe_phys_set",arSettings)
