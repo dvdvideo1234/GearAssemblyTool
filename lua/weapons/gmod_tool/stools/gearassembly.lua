@@ -678,18 +678,17 @@ function TOOL:DrawHUD()
     asmlib.SetOpVar("MONITOR_GAME", hudMonitor)
     asmlib.LogInstance("DrawHUD: Create screen")
   end; hudMonitor:SetColor()
-  local oPly    = LocalPlayer()
+  local oPly = LocalPlayer()
   local stTrace = asmlib.CacheTracePly(oPly)
   if(not stTrace) then return end
   if(not self:GetAdviser()) then return end
-  local trEnt   = stTrace.Entity
-  local model   = self:GetModel()
-  local spnflat = self:GetSpawnFlat()
+  local trEnt, trHit = stTrace.Entity, stTrace.HitPos
+  local spnflat, model = self:GetSpawnFlat(), self:GetModel()
   local trorang = self:GetTraceOriginAngle()
   local rotpivt, rotpivh = self:GetRotatePivot()
   local nextx  , nexty  , nextz   = self:GetPosOffsets()
   local nextpic, nextyaw, nextrol = self:GetAngOffsets()
-  local plyrad  = asmlib.CacheRadiusPly(oPly, stTrace.HitPos, 1)
+  local plyrad  = asmlib.CacheRadiusPly(oPly, trHit, 1)
   if(trEnt and trEnt:IsValid() and asmlib.CheckButtonPly(oPly,IN_SPEED)) then
     if(asmlib.IsOther(trEnt)) then return end
     local igntyp  = self:GetIgnoreType()
@@ -710,9 +709,8 @@ function TOOL:DrawHUD()
     if(not self:GetDeveloperMode()) then return end
     self:DrawTextSpawn(hudMonitor, "k","SURF",{"Trebuchet18"})
   else
-    local vPos = stTrace.HitPos
     local aAng = asmlib.GetNormalAngle(oPly, stTrace)
-    local stSpawn = asmlib.GetNormalSpawn(oPly,vPos,aAng,model,rotpivh,trorang,nextx,nexty,nextz,nextpic,nextyaw,nextrol)
+    local stSpawn = asmlib.GetNormalSpawn(oPly,trHit,aAng,model,rotpivh,trorang,nextx,nexty,nextz,nextpic,nextyaw,nextrol)
     if(not stSpawn) then return false end
     local Op = self:DrawUCS(hudMonitor, stSpawn.OPos, stSpawn.F:AngleEx(stSpawn.U), plyrad, "y", true)
     if(not spnflat) then
