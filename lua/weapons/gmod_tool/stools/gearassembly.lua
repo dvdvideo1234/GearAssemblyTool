@@ -244,7 +244,7 @@ function TOOL:GetBoundErrorMode()
 end
 
 function TOOL:SetAnchor(stTrace)
-  self:ClearAnchor()
+  self:ClearAnchor(true)
   if(not stTrace) then return asmlib.StatusLog(false,"TOOL:SetAnchor(): Trace invalid") end
   if(not stTrace.Hit) then return asmlib.StatusLog(false,"TOOL:SetAnchor(): Trace not hit") end
   local trEnt = stTrace.Entity
@@ -262,18 +262,17 @@ function TOOL:SetAnchor(stTrace)
   return asmlib.StatusLog(true,"TOOL:SetAnchor("..sAnchor..")")
 end
 
-function TOOL:ClearAnchor(bEnb)
-  local ntEnb = tobool(bEnb)
-  local svEnt = self:GetEnt(1)
-  local plPly = self:GetOwner()
-  if(svEnt and svEnt:IsValid()) then
-    svEnt:SetRenderMode(RENDERMODE_TRANSALPHA)
-    svEnt:SetColor(conPalette:Select("w"))
-  end; self:ClearObjects()
-  if(bEnb and SERVER) then
-    asmlib.PrintNotifyPly(plPly,"Anchor: Cleaned !","CLEANUP") end
+function TOOL:ClearAnchor(bMute)
+  local svEnt, plPly = self:GetEnt(1), self:GetOwner()
+  if(CLIENT) then return end; self:ClearObjects()
   asmlib.ConCommandPly(plPly,"anchor",gsNoAnchor)
-  return asmlib.StatusLog(true,"TOOL:ClearAnchor("..tostring(ntEnb).."): Anchor cleared")
+  if(svEnt and svEnt:IsValid()) then
+    svEnt:SetColor(conPalette:Select("w"))
+    svEnt:SetRenderMode(RENDERMODE_TRANSALPHA)
+    if(not bMute) then
+      local sAnchor = svEnt:EntIndex()..gsSymRev..svEnt:GetModel():GetFileFromFilename()
+      asmlib.PrintNotifyPly(plPly,"Anchor: Cleaned "..sAnchor.." !","CLEANUP") end
+  end; return asmlib.StatusLog(true,"TOOL:ClearAnchor("..tostring(bMute).."): Anchor cleared")
 end
 
 function TOOL:GetAnchor()
@@ -525,7 +524,7 @@ function TOOL:RightClick(stTrace)
     end
   elseif(asmlib.CheckButtonPly(ply,IN_SPEED)) then -- Controls anchor selection
     if(stTrace.HitWorld) then
-      self:ClearAnchor(true); return asmlib.StatusLog(true,"TOOL:RightClick(SPEED): Anchor cleared")
+      self:ClearAnchor(false); return asmlib.StatusLog(true,"TOOL:RightClick(SPEED): Anchor cleared")
     elseif(trEnt and trEnt:IsValid()) then
       if(not self:ValidateTrace(stTrace)) then
         return asmlib.StatusLog(false,self:GetStatus(stTrace,"TOOL:RightClick(SPEED): Trace not valid")) end
