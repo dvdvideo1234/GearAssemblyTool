@@ -424,7 +424,7 @@ function InitBase(sName,sPurpose)
     SetOpVar("LOCALIFY_TABLE",{})
     SetOpVar("TABLE_CATEGORIES",{})
     SetOpVar("STRUCT_SPAWN",{
-      {"--- Origin ---", nil},
+      {"--- Origin ---"},
       {"F", "VEC", "Forward direction"},
       {"R", "VEC", "Right direction"},
       {"U", "VEC", "Up direction"},
@@ -434,15 +434,15 @@ function InitBase(sName,sPurpose)
       {"SAng", "ANG", "Spawn angles"},
       {"DPos", "VEC", "Domain position"},
       {"DAng", "ANG", "Domain angles"},
-      {"--- Holder ---", nil},
+      {"--- Holder ---"},
       {"HPnt", "VEC", "Radius vector"},
       {"HMas", "VEC", "Mass center position"},
       {"HAng", "ANG", "Custom angles"},
-      {"--- Traced ---", nil},
+      {"--- Traced ---"},
       {"TPnt", "VEC", "Radius vector"},
       {"TMas", "VEC", "Mass center position"},
       {"TAng", "ANG", "Custom angles"},
-      {"--- Offsets ---", nil},
+      {"--- Offsets ---"},
       {"PNxt", "VEC", "Custom user position"},
       {"ANxt", "ANG", "Custom user angles"}})
   end

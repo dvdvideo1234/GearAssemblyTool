@@ -642,13 +642,12 @@ function TOOL:DrawTextSpawn(oScreen, sCol, sMeth, tArgs)
   local w,h = oScreen:GetSize()
   oScreen:SetTextEdge(w - 500,0)
   oScreen:DrawText("Spawn debug information",sCol,sMeth,tArgs)
-  for ID = 1, #arK, 1 do
-    local def = arK[ID]
-    local key, typ = def[1], def[2]
-    local inf = (tostring(def[3] or "") ~= "") and tostring(def[3]) or nil
-    local val = stS[key]
+  for ID = 1, #arK, 1 do local def = arK[ID]
+    local key, typ, inf = def[1], def[2], tostring(def[3] or "")
+    local cnv, val = ((inf ~= "") and (" > "..inf) or ""), stS[key]
     if(not typ) then oScreen:DrawText(tostring(key))
-    else oScreen:DrawText("<"..key.."> "..typ..": "..tostring(val)..(inf and (" > "..inf) or "")) end
+    else typ, val = tostring(typ or ""), tostring(val or "")
+      oScreen:DrawText("<"..key.."> "..typ..": "..val..cnv) end
   end
 end
 
