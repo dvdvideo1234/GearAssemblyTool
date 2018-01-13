@@ -17,6 +17,8 @@ local fileExists           = file and file.Exists
 local surfaceScreenWidth   = surface and surface.ScreenWidth
 local surfaceScreenHeight  = surface and surface.ScreenHeight
 local languageGetPhrase    = language and language.GetPhrase
+local cvarsAddChangeCallback = cvars and cvars.AddChangeCallback
+local cvarsRemoveChangeCallback = cvars and cvars.RemoveChangeCallback
 local duplicatorStoreEntityModifier = duplicator and duplicator.StoreEntityModifier
 
 ------ MODULE POINTER -------
@@ -24,7 +26,7 @@ local asmlib = gearasmlib
 
 ------ CONFIGURE ASMLIB ------
 asmlib.InitBase("gear","assembly")
-asmlib.SetOpVar("TOOL_VERSION","5.207")
+asmlib.SetOpVar("TOOL_VERSION","5.208")
 asmlib.SetIndexes("V",1,2,3)
 asmlib.SetIndexes("A",1,2,3)
 asmlib.SetIndexes("S",4,5,6,7)
@@ -45,18 +47,19 @@ asmlib.SetLogControl(asmlib.GetAsmVar("logsmax","INT"),asmlib.GetAsmVar("logfile
 asmlib.SettingsLogs("SKIP"); asmlib.SettingsLogs("ONLY")
 
 ------ CONFIGURE NON-REPLICATED CVARS ----- Client's got a mind of its own
-asmlib.MakeAsmVar("modedb"   , "SQL"         , nil, gnIndependentUsed, "Database operating mode")
-asmlib.MakeAsmVar("timermode", "CQT@3600@1@1", nil, gnIndependentUsed, "Cache management setting when DB mode is SQL")
+asmlib.MakeAsmVar("modedb"   , "LUA",    nil  , gnIndependentUsed, "Database operating mode")
+asmlib.MakeAsmVar("devmode"  , "0"  , {0, 1  }, gnIndependentUsed, "Toggle developer mode on/off server side")
+asmlib.MakeAsmVar("maxtrmarg", "0.02",{0.0001}, gnIndependentUsed, "Maximum time to avoid performing new traces")
+asmlib.MakeAsmVar("timermode", "CQT@1800@1@1" , nil, gnIndependentUsed, "Cache management setting when DB mode is SQL")
 
 ------ CONFIGURE REPLICATED CVARS ----- Server tells the client what value to use
-asmlib.MakeAsmVar("enwiremod", "1"  , {0, 1 }, gnServerControled, "Toggle the wire extension on/off server side")
-asmlib.MakeAsmVar("devmode"  , "0"  , {0, 1 }, gnServerControled, "Toggle developer mode on/off server side")
 asmlib.MakeAsmVar("maxmass"  , "50000" ,  {1}, gnServerControled, "Maximum mass to be applied on a piece")
-asmlib.MakeAsmVar("maxlinear", "250"   ,  {1}, gnServerControled, "Maximum linear offset available")
+asmlib.MakeAsmVar("maxlinear", "250"   ,  {1}, gnServerControled, "Maximum linear offset of the piece")
 asmlib.MakeAsmVar("maxfrict" , "100000",  {0}, gnServerControled, "Maximum friction limit when creating constraints")
 asmlib.MakeAsmVar("maxforce" , "100000",  {0}, gnServerControled, "Maximum force limit when creating constraints")
 asmlib.MakeAsmVar("maxtorque", "100000",  {0}, gnServerControled, "Maximum torque limit when creating constraints")
 asmlib.MakeAsmVar("maxstcnt" , "200", {1,400}, gnServerControled, "Maximum pieces to spawn in stack mode")
+
 if(SERVER) then
   CreateConVar("sbox_max"..asmlib.GetOpVar("CVAR_LIMITNAME"), "1500", gnServerControled, "Maximum number of gears to be spawned")
   asmlib.MakeAsmVar("bnderrmod", "LOG", nil    , gnServerControled, "Unreasonable position error handling mode")
@@ -64,7 +67,8 @@ if(SERVER) then
 end
 
 ------ CONFIGURE INTERNALS -----
-asmlib.SetOpVar("MODE_DATABASE" , asmlib.GetAsmVar("modedb","STR"))
+asmlib.SetOpVar("MODE_DATABASE", asmlib.GetAsmVar("modedb"   ,"STR"))
+asmlib.SetOpVar("TRACE_MARGIN" , asmlib.GetAsmVar("maxtrmarg","FLT"))
 
 ------ GLOBAL VARIABLES -------
 local gsLimitName = asmlib.GetOpVar("CVAR_LIMITNAME")
@@ -87,8 +91,17 @@ local conPalette  = asmlib.MakeContainer("Colours"); asmlib.SetOpVar("CONTAINER_
       conPalette:Insert("an",Color(180,255,150,255)) -- Selected anchor
       conPalette:Insert("tx",Color(161,161,161,255)) -- Panel names color
       conPalette:Insert("db",Color(220,164, 52,255)) -- Database mode
------- CONFIGURE TOOL -----
 
+local gsVarTrMarg = "maxtrmarg"
+local gsMaxTrMarg = asmlib.GetAsmVar(gsVarTrMarg, "NAM")
+cvarsRemoveChangeCallback(gsMaxTrMarg, gsMaxTrMarg.."_call")
+cvarsAddChangeCallback(gsMaxTrMarg, function(sVar, nOld, nNew)
+  local aVal = asmlib.GetAsmVar(gsVarTrMarg, "FLT")
+  asmlib.LogInstance("Callback: <"..sVar.."> = <"..aVal..">")
+  asmlib.SetOpVar("TRACE_MARGIN", aVal)
+end, gsMaxTrMarg.."_call")
+
+------ CONFIGURE TOOL -----
 local SMode = asmlib.GetOpVar("CONTAIN_STACK_MODE")
       SMode:Insert(1,"Forward direction")
       SMode:Insert(2,"Around trace pivot")
