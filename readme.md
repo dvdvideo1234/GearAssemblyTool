@@ -24,10 +24,10 @@ A: Spawn gears by clicking anywhere.
 
 Q: That's nice, but want to mesh ( or stack ) gears for example, how should I do that ?
 A: Set the Stack count to one or more, point to one gear, then
-   hold IN_SPEED ( Def: Shift ) and click IN_ATTACK1 ( Def: Left mouse button ).
+   hold IN_SPEED ( Def: SHIFT ) and click IN_ATTACK1 ( Def: Left mouse button ).
 
 Q: How can I adjust the stacking mode if I want different stacking option for my gearbox?
-A: Press the IN_ATTACK2 ( Def. Right mouse button ) without any additional keys.
+A: Press the IN_ATTACK2 ( Def: Right mouse button ) without any additional keys.
    GA will switch between all stacking options available.
    
 Q: How can I adjust the stack mode of the tool and what is it for?
@@ -70,7 +70,7 @@ A: Easy, see the "[ID]" selection on the toolgun screen next to the trace status
    If it shows for example "[Entity_ID]", then an anchor is selected
    and all gears will be automatically constrained to it if enabled
    ( Constraint type different than "Free spawn" ). You can also clear it any time by pointing
-   to the world and using IN_SPEED ( Def: Shift ) + click IN_ATTACK2 ( Def: Right mouse button ).
+   to the world and using IN_SPEED ( Def: SHIFT ) + click IN_ATTACK2 ( Def: Right mouse button ).
 
 Q: I want to stack a gearbox relative to trace forward, but the gear tooth is directly placed
    on the angle forward vector. This makes the tool stack gears where the teeth are inside each
@@ -82,7 +82,7 @@ A: Ah, this happens when the gear piece has even set of teeth. Adjust the trace 
 
 Q: Do you know how to switch fast the prop to be used as a gear?
 A: Yep, just point to another gear you want to use and press
-   IN_DUCK ( Def: Ctrl ) + click IN_ATTACK2 ( Def: Right mouse button )
+   IN_DUCK ( Def: CTRL ) + click IN_ATTACK2 ( Def: Right mouse button )
    If the gear is valid database model it will be selected normally and if not,
    GA will say that this model is invalid.
 
@@ -98,7 +98,7 @@ A: All the red lines are forward direction and the blues are the up direction ve
    point where the gears mesh. The gear position is displayed on the screen in red. The mass-center is
    used for all internal position calculations and it is proper origin to relate the offset on. The
    world space distances between the mass-centers and positions are displayed with yellow line.
-   The magenta line represents the distance vector between holder and origin the yellow trace and origin.
+   The magenta line represents the distance vector between holder and origin the green trace and origin.
    If you are still confused about this, please take a look at the diagram below:
 ```
 ![GearAssemblyCoordinates](https://raw.githubusercontent.com/dvdvideo1234/GearAssemblyTool/master/data/pictures/coordinates.jpg)

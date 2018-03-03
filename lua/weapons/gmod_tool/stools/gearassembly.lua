@@ -695,9 +695,9 @@ function TOOL:DrawHUD()
     if(not stSpawn) then return end
     local Tp =  trEnt:GetPos():ToScreen()
     local Hp =  stSpawn.SPos:ToScreen()
-    local Mt = self:DrawUCS(hudMonitor, stSpawn.TMas, stSpawn.TAng, plyrad, "g")
+    local Mt = self:DrawUCS(hudMonitor, stSpawn.TMas, stSpawn.TAng, plyrad, "y")
     local Op = self:DrawUCS(hudMonitor, stSpawn.OPos, stSpawn.F:AngleEx(stSpawn.U), plyrad, "y", true)
-    local Mh = self:DrawUCS(hudMonitor, stSpawn.HMas, stSpawn.DAng, plyrad, "m")
+    local Mh = self:DrawUCS(hudMonitor, stSpawn.HMas, stSpawn.DAng, plyrad, "y")
     hudMonitor:DrawCircle(Tp,plyrad,"r")  -- Trace position
     hudMonitor:DrawCircle(Hp,plyrad)      -- Holder position
     hudMonitor:DrawLine(Mh,Hp,"y")        -- Trace position distance
@@ -872,7 +872,7 @@ function TOOL.BuildCPanel(CPanel)
   end
   CPanel:AddItem(pTree)
   CurY = CurY + pTree:GetTall() + 2
-  asmlib.PrintInstance(gsToolNameU.." Found #"..tostring(iCnt-1).." piece items.")
+  asmlib.LogInstance(gsToolNameU.." Found #"..tostring(iCnt-1).." piece items.")
 
   -- http://wiki.garrysmod.com/page/Category:DComboBox
   local ConID = asmlib.GetCorrectID(asmlib.GetAsmVar("contyp","STR"),CType)
