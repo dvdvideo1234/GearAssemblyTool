@@ -861,7 +861,7 @@ function TOOL.BuildCPanel(CPanel)
           end; if(psNam and not asmlib.IsEmptyString(psNam)) then Nam = tostring(psNam) end
         end -- Custom name to override via category
       end
-      -- Register the node asociated with the track piece
+      -- Register the node associated with the track piece
       pNode = pItem:AddNode(Nam)
       pNode.DoRightClick = function() SetClipboardText(Mod) end
       pNode:SetTooltip(languageGetPhrase("tool."..gsToolNameL..".model"))
