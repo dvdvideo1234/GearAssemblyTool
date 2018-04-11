@@ -2,7 +2,7 @@
 
 ---
 
-# Copyright 2015 ME !
+# Copyright 2015 [ME](http://steamcommunity.com/profiles/76561197988124141) !
 
 ## IF YOU HAPPEN TO FIND REUPLOADS WITH DIFFERENT ORIGIN REPORT THEM TO ME IMMIDEATELY !!!
 
@@ -15,34 +15,44 @@ It uses pre-defined radius-vectors to snap the segments the best way there is in
 
 ## General FAQ:
 
-#### Where can I find it in the workshop, so I can subscribe?
+#### How can I install this?
 You can subscribe to it [here](http://steamcommunity.com/sharedfiles/filedetails/?id=384782853)
+or download the latest stable release from [here](https://github.com/dvdvideo1234/GearAssemblyTool/releases)
+after that extract it in `..\GarrysMod\garrysmod\addons` and you are practically done.
 
 #### What kind of features does this script has?
+  * Gear precise alignment relative to the mass-center
+  * Extendable database via [text file](https://raw.githubusercontent.com/dvdvideo1234/GearAssemblyTool/master/gearassembly/dsv/sv_GEARASSEMBLY_PIECES.txt)
+    or a [lua script](https://raw.githubusercontent.com/dvdvideo1234/GearAssemblyTool/master/data/autosave/z_autorun_add_pieces.lua))
+  * Extendable database via text file
+        [load list](https://raw.githubusercontent.com/dvdvideo1234/GearAssemblyTool/master/gearassembly/gearasmlib_dsv.txt)
+    and [list prefixes](https://raw.githubusercontent.com/dvdvideo1234/GearAssemblyTool/master/gearassembly/dsv/clock_GEARASSEMBLY_PIECES.txt)
+        [categories](https://raw.githubusercontent.com/dvdvideo1234/TrackAssemblyTool/master/data/trackassembly/dsv/cl_TRACKASSEMBLY_CATEGORY.txt)
+  * Switching database storage between Lua table and SQL
+  * Spawning pieces on the map
+  * Snapping/spawning at the center if checked
+  * Snapping the first piece yaw to user defined angle
+  * Automatic gear-anchor constraint creation when building
+  * Custom point position angle and orientation adviser
+  * Advanced duplicator can be used on the gearbox created
+  * Custom entity properties ( weld, freeze, no-collide )
+  * User can disable phys-gun grabbing on a piece
+  * Ability to list up the most used pieces on the server ( E + Right )
+  * Ability to search among the most server popular pieces by [Lua patterns](https://www.lua.org/pil/20.2.html)
+  * Ability to export server and client database as a file
+  * Tool-tips for every button are available and can be translated easily
+  * Ability to spawn scripted gear items of other class
+  * Ability to modify the bodygroups and skins of a gear piece ( with duping )
+  * Gear surface behavior automatically set to super-ice ( Optimal performance )
 
-* Gear precise alignment relative to the mass-center
-* Extendable database via [text file](https://raw.githubusercontent.com/dvdvideo1234/GearAssemblyTool/master/gearassembly/dsv/sv_GEARASSEMBLY_PIECES.txt)
-  or a [lua script](https://raw.githubusercontent.com/dvdvideo1234/GearAssemblyTool/master/data/autosave/z_autorun_add_pieces.lua))
-* Extendable database via text file
-      [load list](https://raw.githubusercontent.com/dvdvideo1234/GearAssemblyTool/master/gearassembly/gearasmlib_dsv.txt)
-  and [list prefixes](https://raw.githubusercontent.com/dvdvideo1234/GearAssemblyTool/master/gearassembly/dsv/clock_GEARASSEMBLY_PIECES.txt)
-      [categories](https://raw.githubusercontent.com/dvdvideo1234/TrackAssemblyTool/master/data/trackassembly/dsv/cl_TRACKASSEMBLY_CATEGORY.txt)
-* Switching database storage between Lua table and SQL
-* Spawning pieces on the map
-* Snapping/spawning at the center if checked
-* Snapping the first piece yaw to user defined angle
-* Automatic gear-anchor constraint creation when building
-* Custom point position angle and orientation adviser
-* Advanced duplicator can be used on the gearbox created
-* Custom entity properties ( weld, freeze, no-collide )
-* User can disable phys-gun grabbing on a piece
-* Ability to list up the most used pieces on the server ( E + Right )
-* Ability to search among the most server popular pieces by [Lua patterns](https://www.lua.org/pil/20.2.html)
-* Ability to export server and client database as a file
-* Tool-tips for every button are available and can be translated easily
-* Ability to spawn scripted gear items of other class
-* Ability to modify the bodygroups and skins of a gear piece ( with duping )
-* Gear surface behavior automatically set to super-ice ( Optimal performance )
+#### What addons does this script work with alongside these included in Garry's mod ?
+  * Gmod 10 (spur, racks) (INCLUDED)
+  * PHX spur (spotted, small, medium, big, flat) (INCLUDED)
+  * PHX bevel (regular, vertical) (INCLUDED)
+  * PHX rack (spotted, flat) (INCLUDED)
+  * [Black spur](https://steamcommunity.com/sharedfiles/filedetails/?id=564582559) (small, medium)
+  * [SProps](https://steamcommunity.com/sharedfiles/filedetails/?id=173482196) (small spur, large spur, rack, bevel)
+  * [Propeller pack](https://steamcommunity.com/sharedfiles/filedetails/?id=686701650)
 
 #### Why did you made this script and what is its purpose ?
 I made it, because I am pissed of messing my gears over and over and ... you get the
