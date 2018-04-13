@@ -1667,8 +1667,8 @@ local function SQLCacheStmt(sHash,sStmt,...)
     return StatusLog(nil, "SQLCacheStmt: Store place missing") end
   if(IsExistent(sStmt)) then
     tStore[sHash] = tostring(sStmt); Print(tStore,"SQLCacheStmt: stmt") end
-  local sBase = tStore[sHash]
-  if(not sBase) then return StatusLog(nil, "SQLCacheStmt: Stmt missing <"..sHash..">") end
+  local sBase = tStore[sHash]; if(not IsExistent(sBase)) then
+    return StatusLog(nil, "SQLCacheStmt: Stmt missing <"..sHash..">") end
   return sBase:format(...)
 end
 
