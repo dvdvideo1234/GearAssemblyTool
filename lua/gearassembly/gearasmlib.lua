@@ -2687,14 +2687,33 @@ function ApplySpawnFlat(oEnt,stSpawn,vNorm)
   end; return true
 end
 
-function GetNormalAngle(oPly, stTrace)
-  local aAng, vNorm = Angle(), stTrace.HitNormal
-  if(not IsPlayer(oPly)) then
-    return StatusLog(aAng,"GetNormalAngle: No player <"..tostring(oPly)..">") end
-  aAng:Set(vNorm:Cross(oPly:GetRight()):AngleEx(vNorm)); return aAng
+----------------------------- SNAPPING ------------------------------
+
+local function GetSurfaceAngle(oPly, vNorm)
+  local vF = oPly:GetAimVector()
+  local vR = vF:Cross(vNorm); vF:Set(vNorm:Cross(vR))
+  return vF:AngleEx(vNorm)
 end
 
------------------------------ SNAPPING ------------------------------
+--[[
+ * This function calculates the cross product normal angle of
+ * a player by a given trace. If the trace is missing it takes player trace
+ * It has options for snap to surface and yaw snap
+ * oPly    > The player we need the normal angle from
+ * stTrace > A trace structure if nil, it takes oPly's
+ * bSnap   > Snap to the trace surface flag
+ * nYSnp   > Yaw snap amount
+]]--
+function GetNormalAngle(oPly, stTrace, nYSnp)
+  local nYSn, aAng = (tonumber(nYSnp) or 0), Angle()
+  if(not IsPlayer(oPly)) then
+    return StatusLog(aAng,"GetNormalAngle: No player <"..tostring(oPly)..">", aAng) end
+  aAng:Set(GetSurfaceAngle(oPly, stTrace.HitNormal))
+  if(nYSn and (nYSn > 0) and (nYSn <= GetOpVar("MAX_ROTATION"))) then
+    -- Snap player yaw, pitch and roll are not needed
+    aAng:SnapTo("pitch", nYSn):SnapTo("yaw", nYSn):SnapTo("roll", nYSn)
+  end; return aAng
+end
 
 --[[
  * This function is the backbone of the tool for Trace.Normal

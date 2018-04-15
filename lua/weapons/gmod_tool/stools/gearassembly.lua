@@ -105,6 +105,7 @@ TOOL.ClientConVar = {
   [ "freeze"    ] = "0",
   [ "adviser"   ] = "1",
   [ "igntyp"    ] = "0",
+  [ "angsnap"   ] = "0",
   [ "rotpivt"   ] = "0",
   [ "rotpivh"   ] = "0",
   [ "gravity"   ] = "1",
@@ -231,6 +232,10 @@ function TOOL:GetStackMode()
   return (self:GetClientNumber("stmode") or 1)
 end
 
+function TOOL:GetAngSnap()
+  return mathClamp(self:GetClientNumber("angsnap"),0,gnMaxOffRot)
+end
+
 function TOOL:GetContrType()
   return (self:GetClientNumber("contyp") or 1)
 end
@@ -327,12 +332,16 @@ function TOOL:GetStatus(stTrace,anyMessage,hdEnt)
         sDu = sDu..sSpace.."  HD.File:        <"..tostring(hdModel and hdModel:GetFileFromFilename() or gsNoAV)..">"..sDelim
         sDu = sDu..sSpace.."  HD.Mass:        <"..tostring(self:GetMass())..">"..sDelim
         sDu = sDu..sSpace.."  HD.StackCNT:    <"..tostring(self:GetCount())..">"..sDelim
+        sDu = sDu..sSpace.."  HD.Freeze:      <"..tostring(self:GetFreeze())..">"..sDelim
         sDu = sDu..sSpace.."  HD.Gravity:     <"..tostring(self:GetGravity())..">"..sDelim
         sDu = sDu..sSpace.."  HD.Adviser:     <"..tostring(self:GetAdviser())..">"..sDelim
-        sDu = sDu..sSpace.."  HD.ExportDB:    <"..tostring(self:GetExportDB())..">"..sDelim
+        sDu = sDu..sSpace.."  HD.YawSnap:     <"..tostring(self:GetAngSnap())..">"..sDelim
         sDu = sDu..sSpace.."  HD.Friction:    <"..tostring(self:GetFriction())..">"..sDelim
+        sDu = sDu..sSpace.."  HD.ExportDB:    <"..tostring(self:GetExportDB())..">"..sDelim
         sDu = sDu..sSpace.."  HD.NoCollide:   <"..tostring(self:GetNoCollide())..">"..sDelim
         sDu = sDu..sSpace.."  HD.SpawnFlat:   <"..tostring(self:GetSpawnFlat())..">"..sDelim
+        sDu = sDu..sSpace.."  HD.StkMode:     <"..tostring(self:GetStackMode())..">"..sDelim
+        sDu = sDu..sSpace.."  HD.ConstrType:  <"..tostring(self:GetContrType())..">"..sDelim
         sDu = sDu..sSpace.."  HD.IgnoreType:  <"..tostring(self:GetIgnoreType())..">"..sDelim
         sDu = sDu..sSpace.."  HD.ForceLimit:  <"..tostring(self:GetForceLimit())..">"..sDelim
         sDu = sDu..sSpace.."  HD.TorqueLimit: <"..tostring(self:GetTorqueLimit())..">"..sDelim
@@ -340,6 +349,7 @@ function TOOL:GetStatus(stTrace,anyMessage,hdEnt)
         sDu = sDu..sSpace.."  HD.SkinBG:      <"..tostring(self:GetBodyGroupSkin())..">"..sDelim
         sDu = sDu..sSpace.."  HD.StackAtempt: <"..tostring(self:GetStackAttempts())..">"..sDelim
         sDu = sDu..sSpace.."  HD.IgnorePG:    <"..tostring(self:GetIgnorePhysgun())..">"..sDelim
+        sDu = sDu..sSpace.."  HD.DeltaRot:    <"..tostring(self:GetDeltaRotation())..">"..sDelim
         sDu = sDu..sSpace.."  HD.TrOrgAngle:  <"..tostring(self:GetTraceOriginAngle())..">"..sDelim
         sDu = sDu..sSpace.."  HD.ModDataBase: <"..gsModeDataB..","..tostring(asmlib.GetAsmVar("modedb" ,"STR"))..">"..sDelim
         sDu = sDu..sSpace.."  HD.TimerMode:   <"..tostring(asmlib.GetAsmVar("timermode","STR"))..">"..sDelim
@@ -350,6 +360,7 @@ function TOOL:GetStatus(stTrace,anyMessage,hdEnt)
         sDu = sDu..sSpace.."  HD.MaxStackCnt: <"..tostring(asmlib.GetAsmVar("maxstcnt" ,"INT"))..">"..sDelim
         sDu = sDu..sSpace.."  HD.BoundErrMod: <"..tostring(asmlib.GetAsmVar("bnderrmod","STR"))..">"..sDelim
         sDu = sDu..sSpace.."  HD.MaxFrequent: <"..tostring(asmlib.GetAsmVar("maxfruse" ,"INT"))..">"..sDelim
+        sDu = sDu..sSpace.."  HD.MaxTrMargin: <"..tostring(asmlib.GetAsmVar("maxtrmarg","FLT"))..">"..sDelim
         sDu = sDu..sSpace.."  HD.RotatePivot: {"..tostring(rotpivt)..", "..tostring(rotpivh).."}"..sDelim
         sDu = sDu..sSpace.."  HD.Anchor:      {"..tostring(anEnt or gsNoAV).."}<"..tostring(aninfo)..">"..sDelim
         sDu = sDu..sSpace.."  HD.AngOffsets:  ["..tostring(nextx)..","..tostring(nexty)..","..tostring(nextz).."]"..sDelim
@@ -380,6 +391,7 @@ function TOOL:LeftClick(stTrace)
   local count     = self:GetCount()
   local freeze    = self:GetFreeze()
   local gravity   = self:GetGravity()
+  local angsnap   = self:GetAngSnap()
   local friction  = self:GetFriction()
   local nocollide = self:GetNoCollide()
   local spnflat   = self:GetSpawnFlat()
@@ -404,7 +416,7 @@ function TOOL:LeftClick(stTrace)
   if(not asmlib.CheckButtonPly(ply,IN_SPEED) and not asmlib.CheckButtonPly(ply,IN_DUCK)) then
     if(not (eBase and eBase:IsValid()) and (trEnt and trEnt:IsValid())) then eBase = trEnt end
     local vPos, vAxis = stTrace.HitPos, Vector()
-    local aAng = asmlib.GetNormalAngle(ply, stTrace)
+    local aAng = asmlib.GetNormalAngle(ply, stTrace, angsnap)
     local stSpawn = asmlib.GetNormalSpawn(ply,vPos,aAng,model,rotpivh,trorang,nextx,nexty,nextz,nextpic,nextyaw,nextrol)
     if(not stSpawn) then return asmlib.StatusLog(false,self:GetStatus(stTrace,"TOOL:LeftClick(World): Normal spawn failed")) end
     local ePiece = asmlib.MakePiece(ply,model,stTrace.HitPos,ANG_ZERO,mass,bgskids,conPalette:Select("w"),bnderrmod)
@@ -600,11 +612,12 @@ function TOOL:UpdateGhost(ePiece, oPly)
     end
   else
     local model = self:GetModel()
+    local angsnap = self:GetAngSnap()
     local spnflat = self:GetSpawnFlat()
     local nextx, nexty, nextz = self:GetPosOffsets()
     local nextpic, nextyaw, nextrol = self:GetAngOffsets()
     local vPos = stTrace.HitPos
-    local aAng = asmlib.GetNormalAngle(oPly, stTrace)
+    local aAng = asmlib.GetNormalAngle(oPly, stTrace, angsnap)
     local stSpawn = asmlib.GetNormalSpawn(oPly,vPos,aAng,model,rotpivh,trorang,nextx,nexty,nextz,nextpic,nextyaw,nextrol)
     if(not stSpawn) then return end
     if(spnflat) then asmlib.ApplySpawnFlat(ePiece,stSpawn,stTrace.HitNormal) end
@@ -682,7 +695,7 @@ function TOOL:DrawHUD()
   if(not self:GetAdviser()) then return end
   local trEnt, trHit = stTrace.Entity, stTrace.HitPos
   local spnflat, model = self:GetSpawnFlat(), self:GetModel()
-  local trorang = self:GetTraceOriginAngle()
+  local trorang, angsnap = self:GetTraceOriginAngle(), self:GetAngSnap()
   local rotpivt, rotpivh = self:GetRotatePivot()
   local nextx  , nexty  , nextz   = self:GetPosOffsets()
   local nextpic, nextyaw, nextrol = self:GetAngOffsets()
@@ -707,7 +720,7 @@ function TOOL:DrawHUD()
     if(not self:GetDeveloperMode()) then return end
     self:DrawTextSpawn(hudMonitor, "k","SURF",{"Trebuchet18"})
   else
-    local aAng = asmlib.GetNormalAngle(oPly, stTrace)
+    local aAng = asmlib.GetNormalAngle(oPly, stTrace, angsnap)
     local stSpawn = asmlib.GetNormalSpawn(oPly,trHit,aAng,model,rotpivh,trorang,nextx,nexty,nextz,nextpic,nextyaw,nextrol)
     if(not stSpawn) then return false end
     local Op = self:DrawUCS(hudMonitor, stSpawn.OPos, stSpawn.F:AngleEx(stSpawn.U), plyrad, "y", true)
@@ -917,6 +930,8 @@ function TOOL.BuildCPanel(CPanel)
            pItem:SetTooltip(languageGetPhrase("tool."..gsToolNameL..".mass"))
   pItem = CPanel:NumSlider(languageGetPhrase("tool."..gsToolNameL..".count_con"), gsToolPrefL.."count", 1, asmlib.GetAsmVar("maxstcnt" , "INT"), 0)
            pItem:SetTooltip(languageGetPhrase("tool."..gsToolNameL..".count"))
+  pItem = CPanel:NumSlider(languageGetPhrase ("tool."..gsToolNameL..".angsnap_con"), gsToolPrefL.."angsnap", 0, gnMaxOffRot, 7)
+           pItem:SetTooltip(languageGetPhrase("tool."..gsToolNameL..".angsnap"))
   pItem = CPanel:Button(languageGetPhrase("tool."..gsToolNameL..".resetvars_con"), gsToolPrefL.."resetvars")
            pItem:SetTooltip(languageGetPhrase("tool."..gsToolNameL..".resetvars"))
   pItem = CPanel:NumSlider(languageGetPhrase("tool."..gsToolNameL..".rotpivt_con"), gsToolPrefL.."rotpivt", -gnMaxOffRot, gnMaxOffRot, 3)
