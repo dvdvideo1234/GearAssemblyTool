@@ -37,7 +37,7 @@ after that extract it in `..\GarrysMod\garrysmod\addons` and you are practically
   * Advanced duplicator can be used on the gearbox created
   * Custom entity properties ( weld, freeze, no-collide )
   * User can disable phys-gun grabbing on a piece
-  * Ability to list up the most used pieces on the server ( E + Right )
+  * Ability to list up the most used pieces on the server ( E + MRIGHT ). Close shortcut (ALT + E)
   * Ability to search among the most server popular pieces by [Lua patterns](https://www.lua.org/pil/20.2.html)
   * Ability to export server and client database as a file
   * Tool-tips for every button are available and can be translated easily
@@ -79,9 +79,9 @@ in a [direction](https://en.wikipedia.org/wiki/Direction_vector) selected by the
 
 #### How can I make a planetary gear ?
 Set the stack mode to `Around trace pivot` ( Around the trace prop's blue line ).
-Put some ending angle, if you don't want to stack all-around
-Set the stack count to 2 or more.
-Adjust pivot rotation if you don't want to start at 0 degrees.
+Put some ending angle, if you don't want to stack all-around.
+Set the stack count to two or more.
+Adjust pivot rotation if you don't want to start at zero degrees.
 Use the meshing function, done ;).
 
 #### Dude, how can I make a mighty gear differential, like in the icon?
@@ -92,15 +92,15 @@ and use the meshing function.
 #### How can I stack gears in one particular direction.
 Orient the first gear's forward to point in the desired direction. Freeze it.
 Adjust stack mode to `Forward direction`, set stack count to two or more
-You can also use the used manual offsets like in TA. Now mesh those things !<br><br>
-_*Beware, that some gears have different forward origin related to the mesh angle.
+You can also use the manual offsets like in TA. Now mesh those things !<br><br>
+_*Note: Beware, that some gears have different forward origin related to the mesh angle.
 The bevels for example have mesh angle of 45 degrees and if you stack 3 of them,
 this will result in a created differential with 2 planet gears and two suns gears*_
 
 #### How can I chose the constraint type when I want to automatically constrain a gear?
 Below the gear selection tree, there is a drop-down menu. ( It shows `<Constraint Type>` at first )
 Click on it to select constraint type like Axis, BS, and so on ..<br><br>
-_*The axises and ball-sockets are created in the gear's mass-center for increased precision
+_*Note: The axises and ball-sockets are created in the gear's mass-center for increased precision
 and I can admit no one likes off-centered gears*_
 
 #### How should I chose an anchor prop to constrain the gears to and how can I know what did I select?
@@ -138,9 +138,8 @@ used for all internal position calculations and it is proper origin to relate th
 world space distances between the mass-centers and positions are displayed with yellow lines.
 The magenta line represents the distance vector between holder and origin the green trace and origin.
 If you are still confused about this, please take a look at the diagram below:
+![ref_ga_coords](https://raw.githubusercontent.com/dvdvideo1234/GearAssemblyTool/master/data/pictures/coordinates.jpg)
 
 #### May I put your script in a third-party website?
 *Distribution ownership is like the Track Assembly Tool, so DO NOT UPLOAD THIS TO ANY OTHER SITES !*
 **I mean it !**
-
-![ref_ga_coords](https://raw.githubusercontent.com/dvdvideo1234/GearAssemblyTool/master/data/pictures/coordinates.jpg)
