@@ -627,17 +627,18 @@ end
 
 function TOOL:Think()
   local model = self:GetModel()
-  if(utilIsValidModel(model)) then
+  if(utilIsValidModel(model)) then -- Check model validation
     local ply = self:GetOwner()
     local gho = self.GhostEntity
     if(self:GetGhostHolder()) then
       if (not (gho and gho:IsValid() and gho:GetModel() == model)) then
         self:MakeGhostEntity(model,VEC_ZERO,ANG_ZERO)
-      end; self:UpdateGhost(gho, ply)
-    else
-      self:ReleaseGhostEntity()
-      if(gho and gho:IsValid()) then gho:Remove() end
-    end
+      end; self:UpdateGhost(self.GhostEntity, ply) -- In client single player the ghost is skipped
+    else self:ReleaseGhostEntity() end -- Delete the ghost entity when ghosting is disabled
+    if(CLIENT and inputIsKeyDown(KEY_LALT) and inputIsKeyDown(KEY_E)) then
+      local pnFrame = asmlib.GetOpVar("PANEL_FREQUENT_MODELS")
+      if(pnFrame and IsValid(pnFrame)) then pnFrame.OnClose() end -- That was a /close call/ :D
+    end -- Shortcut for closing the routine pieces
   end
 end
 

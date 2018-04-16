@@ -37,7 +37,7 @@ after that extract it in `..\GarrysMod\garrysmod\addons` and you are practically
   * Advanced duplicator can be used on the gearbox created
   * Custom entity properties ( weld, freeze, no-collide )
   * User can disable phys-gun grabbing on a piece
-  * Ability to list up the most used pieces on the server ( E + Right )
+  * Ability to list up the most used pieces on the server ( E + MRIGHT ). Close shortcut (ALT + E)
   * Ability to search among the most server popular pieces by [Lua patterns](https://www.lua.org/pil/20.2.html)
   * Ability to export server and client database as a file
   * Tool-tips for every button are available and can be translated easily
@@ -92,7 +92,7 @@ and use the meshing function.
 #### How can I stack gears in one particular direction.
 Orient the first gear's forward to point in the desired direction. Freeze it.
 Adjust stack mode to `Forward direction`, set stack count to two or more
-You can also use the used manual offsets like in TA. Now mesh those things !<br><br>
+You can also use the manual offsets like in TA. Now mesh those things !<br><br>
 _*Beware, that some gears have different forward origin related to the mesh angle.
 The bevels for example have mesh angle of 45 degrees and if you stack 3 of them,
 this will result in a created differential with 2 planet gears and two suns gears*_

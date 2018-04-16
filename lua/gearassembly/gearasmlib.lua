@@ -1489,7 +1489,7 @@ end
 function UndoFinishPly(pPly,anyMessage)
   if(not IsPlayer(pPly)) then
     return StatusLog(false,"UndoFinishPly: Player <"..tostring(pPly)"> invalid") end
-  pPly:EmitSound("physics/metal/metal_canister_impact_hard"..mathFloor(mathRandom(3))..".wav")
+  pPly:EmitSound("physics/metal/metal_canister_impact_hard"..mathRandom(1, 3)..".wav")
   undoSetCustomUndoText(GetOpVar("LABEL_UNDO")..tostring(anyMessage or ""))
   undoSetPlayer(pPly)
   undoFinish()
