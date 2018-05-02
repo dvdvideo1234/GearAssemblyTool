@@ -26,7 +26,7 @@ local asmlib = gearasmlib
 
 ------ CONFIGURE ASMLIB ------
 asmlib.InitBase("gear","assembly")
-asmlib.SetOpVar("TOOL_VERSION","5.214")
+asmlib.SetOpVar("TOOL_VERSION","5.215")
 asmlib.SetIndexes("V",1,2,3)
 asmlib.SetIndexes("A",1,2,3)
 asmlib.SetIndexes("S",4,5,6,7)
@@ -451,6 +451,7 @@ else
   asmlib.InsertRecord({"models/props_phx/mechanics/medgear.mdl", "#", "#", 0, "24.173, 0, 0", "-0.01517273113131500,  0.0090782083570957, 3.5684652328491", ""})
   asmlib.InsertRecord({"models/props_phx/mechanics/biggear.mdl", "#", "#", 0, "33.811, 0, 0", "-0.00017268359079026, -0.0035230871289968, 3.5217847824097", ""})
   asmlib.InsertRecord({"models/props_phx/mechanics/slider1.mdl", "#", "#", 0, " 3.000, 0, 0", " 0.17126856744289000, -0.1066822558641400, 3.5165667533875", "@90,-90,180"})
+  asmlib.InsertRecord({"models/props_phx/mechanics/slider2.mdl", "#", "#", 0, " 3.000, 0, 0", " 0.17126856744289000, -0.1066822558641400, 3.5165667533875", "@90,-90,180"})
   asmlib.DefaultType("PHX Spotted Flat")
   asmlib.InsertRecord({"models/props_phx/gears/spur9.mdl" , "#", "#", 0, " 7.467, 0, 0", "-0.0015837327810004,  0.000161714502610270, 2.8354094028473", ""})
   asmlib.InsertRecord({"models/props_phx/gears/spur12.mdl", "#", "#", 0, " 9.703, 0, 0", "-0.0015269597060978,  0.000214137573493640, 2.8405227661133", ""})
