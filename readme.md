@@ -15,6 +15,11 @@ It uses pre-defined radius-vectors to snap the segments the best way there is in
 
 ## General FAQ:
 
+#### Donations
+I am supporting this tool in my free time mostly and it was quite a ride since I already first
+created it. But since my lack of time for playing gmod has been drastically increased some
+people asked me if I accept donations, here is [the link to my PayPal](https://www.paypal.me/DeyanVasilev).
+
 #### How can I install this?
 You can subscribe to it [here](http://steamcommunity.com/sharedfiles/filedetails/?id=384782853)
 or download the latest stable release from [here](https://github.com/dvdvideo1234/GearAssemblyTool/releases)

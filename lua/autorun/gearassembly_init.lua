@@ -26,7 +26,7 @@ local asmlib = gearasmlib
 
 ------ CONFIGURE ASMLIB ------
 asmlib.InitBase("gear","assembly")
-asmlib.SetOpVar("TOOL_VERSION","5.215")
+asmlib.SetOpVar("TOOL_VERSION","5.216")
 asmlib.SetIndexes("V",1,2,3)
 asmlib.SetIndexes("A",1,2,3)
 asmlib.SetIndexes("S",4,5,6,7)
@@ -155,7 +155,7 @@ if(CLIENT) then
       if(not devmode) then
         return asmlib.StatusLog(nil,"RESET_VARIABLES: Developer mode disabled") end
       asmlib.SetLogControl(asmlib.GetAsmVar("logsmax" , "INT"), asmlib.GetAsmVar("logfile" , "STR"))
-      if(bgskids == "reset cvars") then -- Reset the limit also
+      if(bgskids == "reset cvars") then -- Reset also the maximum spawned pieces
         oPly:ConCommand("sbox_max"..asmlib.GetOpVar("CVAR_LIMITNAME").." 1500\n")
         local anchor = asmlib.GetOpVar("MISS_NOID")..
                        asmlib.GetOpVar("OPSYM_REVSIGN")..
@@ -196,8 +196,7 @@ if(CLIENT) then
         asmlib.PrintInstance("RESET_VARIABLES: Variables reset complete")
       elseif(bgskids:sub(1,7) == "delete ") then
         local tPref = (" "):Explode(bgskids:sub(8,-1))
-        for iCnt = 1, #tPref do
-         local vPr = tPref[iCnt]
+        for iCnt = 1, #tPref do local vPr = tPref[iCnt]
          asmlib.RemoveDSV("PIECES",vPr)
          asmlib.LogInstance("RESET_VARIABLES: Match <"..vPr..">")
         end
@@ -209,16 +208,11 @@ if(CLIENT) then
     function(oPly,oCom,oArgs)
       local frUsed, nCount = asmlib.GetFrequentModels(oArgs[1])
       if(not asmlib.IsExistent(frUsed)) then
-        return asmlib.StatusLog(nil,"OPEN_FRAME: Failed to retrieve most frequent models ["..tostring(oArgs[1]).."]")
-      end
-      local defTable = asmlib.GetOpVar("DEFTABLE_PIECES")
-      if(not defTable) then
+        return asmlib.StatusLog(nil,"OPEN_FRAME: Retrieving most frequent models failed ["..tostring(oArgs[1]).."]") end
+      local defTable = asmlib.GetOpVar("DEFTABLE_PIECES"); if(not defTable) then
         return StatusLog(nil,"OPEN_FRAME: Missing definition for table PIECES") end
-      local pnFrame = vguiCreate("DFrame")
-      if(not IsValid(pnFrame)) then
-        pnFrame:Remove()
-        return asmlib.StatusLog(nil,"OPEN_FRAME: Failed to create base frame")
-      end
+      local pnFrame = vguiCreate("DFrame"); if(not IsValid(pnFrame)) then
+        pnFrame:Remove(); return asmlib.StatusLog(nil,"OPEN_FRAME: Failed to create base frame") end
       local pnElements = asmlib.MakeContainer("FREQ_VGUI")
             pnElements:Insert(1,{Label = { "DButton"    ,languageGetPhrase("tool."..gsToolNameL..".pn_export_lb") , languageGetPhrase("tool."..gsToolNameL..".pn_export")}})
             pnElements:Insert(2,{Label = { "DListView"  ,languageGetPhrase("tool."..gsToolNameL..".pn_routine_lb"), languageGetPhrase("tool."..gsToolNameL..".pn_routine")}})
@@ -233,14 +227,12 @@ if(CLIENT) then
         if(not IsValid(vItem.Panel)) then
           asmlib.LogInstance("OPEN_FRAME: Failed to create ID #"..tonumber(iNdex))
           iNdex, vItem = 1, nil
-          while(iNdex <= iSize) do
-            vItem, sItem = pnElements:Select(iNdex), ""
+          while(iNdex <= iSize) do vItem, sItem = pnElements:Select(iNdex), ""
             if(IsValid(vItem.Panel)) then vItem.Panel:Remove(); sItem = "and panel " end
             pnElements:Delete(iNdex)
             asmlib.LogInstance("OPEN_FRAME: Deleted entry "..sItem.."ID #"..tonumber(iNdex))
             iNdex = iNdex + 1
-          end
-          pnFrame:Remove(); collectgarbage()
+          end; pnFrame:Remove(); collectgarbage()
           return StatusLog(nil,"OPEN_FRAME: Invalid panel created. Frame removed")
         end
         vItem.Panel:SetName(vItem.Label[2])
