@@ -17,8 +17,6 @@ local fileExists           = file and file.Exists
 local surfaceScreenWidth   = surface and surface.ScreenWidth
 local surfaceScreenHeight  = surface and surface.ScreenHeight
 local languageGetPhrase    = language and language.GetPhrase
-local cvarsAddChangeCallback = cvars and cvars.AddChangeCallback
-local cvarsRemoveChangeCallback = cvars and cvars.RemoveChangeCallback
 local duplicatorStoreEntityModifier = duplicator and duplicator.StoreEntityModifier
 
 ------ MODULE POINTER -------
@@ -26,7 +24,7 @@ local asmlib = gearasmlib
 
 ------ CONFIGURE ASMLIB ------
 asmlib.InitBase("gear","assembly")
-asmlib.SetOpVar("TOOL_VERSION","5.217")
+asmlib.SetOpVar("TOOL_VERSION","5.218")
 asmlib.SetIndexes("V",1,2,3)
 asmlib.SetIndexes("A",1,2,3)
 asmlib.SetIndexes("S",4,5,6,7)
@@ -92,14 +90,10 @@ local conPalette  = asmlib.MakeContainer("Colours"); asmlib.SetOpVar("CONTAINER_
       conPalette:Insert("tx",Color(161,161,161,255)) -- Panel names color
       conPalette:Insert("db",Color(220,164, 52,255)) -- Database mode
 
-local gsVarTrMarg = "maxtrmarg"
-local gsMaxTrMarg = asmlib.GetAsmVar(gsVarTrMarg, "NAM")
-cvarsRemoveChangeCallback(gsMaxTrMarg, gsMaxTrMarg.."_call")
-cvarsAddChangeCallback(gsMaxTrMarg, function(sVar, nOld, nNew)
-  local aVal = asmlib.GetAsmVar(gsVarTrMarg, "FLT")
-  asmlib.LogInstance("Callback: <"..sVar.."> = <"..aVal..">")
-  asmlib.SetOpVar("TRACE_MARGIN", aVal)
-end, gsMaxTrMarg.."_call")
+-------- CALLBACKS ----------
+asmlib.SetAsmVarCallback("maxtrmarg", "FLT", "TRACE_MARGIN")
+asmlib.SetAsmVarCallback("logsmax"  , "INT", "LOG_MAXLOGS" , function(v) return mathFloor(tonumber(v) or 0) end)
+asmlib.SetAsmVarCallback("logfile"  , "INT", "LOG_LOGFILE" , tobool)
 
 ------ CONFIGURE TOOL -----
 local SMode = asmlib.GetOpVar("CONTAIN_STACK_MODE")
