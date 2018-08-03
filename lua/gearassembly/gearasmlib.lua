@@ -440,11 +440,11 @@ function InitBase(sName,sPurpose)
       {"DAng", "ANG", "Domain angles"},
       {"--- Holder ---"},
       {"HPnt", "VEC", "Radius vector"},
-      {"HMas", "VEC", "Mass center position"},
+      {"HOrg", "VEC", "Mass center position"},
       {"HAng", "ANG", "Custom angles"},
       {"--- Traced ---"},
       {"TPnt", "VEC", "Radius vector"},
-      {"TMas", "VEC", "Mass center position"},
+      {"TOrg", "VEC", "Mass center position"},
       {"TAng", "ANG", "Custom angles"},
       {"--- Offsets ---"},
       {"PNxt", "VEC", "Custom user position"},
@@ -1375,7 +1375,7 @@ end
 function CacheSpawnPly(pPly)
   local stSpot = GetPlayerSpot(pPly)
   if(not IsExistent(stSpot)) then
-    return StatusLog(nil,"CacheSpawnPly: Place missing") end
+    return StatusLog(nil,"CacheSpawnPly: Spot missing") end
   local stData = stSpot["SPAWN"]
   if(not IsExistent(stData)) then
     LogInstance("CacheSpawnPly: Allocate <"..pPly:Nick()..">")
@@ -1385,23 +1385,23 @@ function CacheSpawnPly(pPly)
     stData.U    = Vector() -- Origin up vector
     stData.OPos = Vector() -- Origin position
     stData.OAng = Angle () -- Origin angle
-    stData.SPos = Vector() -- Gear spawn position
-    stData.SAng = Angle () -- Gear spawn angle
+    stData.SPos = Vector() -- Piece spawn position
+    stData.SAng = Angle () -- Piece spawn angle
     stData.DPos = Vector() -- Domain position. Used for decomposition
     stData.DAng = Angle () -- Domain angle. Used for constraints
     --- Holder ---
     stData.HRec = 0        -- Pointer to the holder record
-    stData.HPnt = Vector() -- P
-    stData.HMas = Vector() -- O
-    stData.HAng = Angle () -- A
+    stData.HPnt = Vector() -- P > Local radius vector edge offset
+    stData.HOrg = Vector() -- O > Local piece mass-center center
+    stData.HAng = Angle () -- A > Local piece orientation origin when meshed
     --- Traced ---
     stData.TRec = 0        -- Pointer to the trace record
-    stData.TPnt = Vector() -- P
-    stData.TMas = Vector() -- O
-    stData.TAng = Angle () -- A
+    stData.TPnt = Vector() -- P > Local radius vector edge offset
+    stData.TOrg = Vector() -- O > Local piece mass-center center
+    stData.TAng = Angle () -- A > Local piece orientation origin when meshed
     --- Offsets ---
     stData.ANxt = Angle () -- Origin angle offsets
-    stData.PNxt = Vector() -- Piece  position offsets
+    stData.PNxt = Vector() -- Piece position offsets
   end; return stData
 end
 
@@ -1423,7 +1423,7 @@ end
 function CacheRadiusPly(pPly, vHit, nSca)
   local stSpot = GetPlayerSpot(pPly)
   if(not IsExistent(stSpot)) then
-    return StatusLog(nil,"CacheRadiusPly: Place missing") end
+    return StatusLog(nil,"CacheRadiusPly: Spot missing") end
   local stData = stSpot["RADIUS"]
   if(not IsExistent(stData)) then
     LogInstance("CacheRadiusPly: Allocate <"..pPly:Nick()..">")
@@ -1442,7 +1442,7 @@ end
 function CacheTracePly(pPly)
   local stSpot = GetPlayerSpot(pPly)
   if(not IsExistent(stSpot)) then
-    return StatusLog(nil,"CacheTracePly: Place missing") end
+    return StatusLog(nil,"CacheTracePly: Spot missing") end
   local stData, plyTime = stSpot["TRACE"], Time()
   if(not IsExistent(stData)) then -- Define trace delta margin
     LogInstance("CacheTracePly: Allocate <"..pPly:Nick()..">")
@@ -1500,7 +1500,7 @@ end
 function CachePressPly(pPly)
   local stSpot = GetPlayerSpot(pPly)
   if(not IsExistent(stSpot)) then
-    return StatusLog(false,"CachePressPly: Place missing") end
+    return StatusLog(false,"CachePressPly: Spot missing") end
   local stData = stSpot["PRESS"]
   if(not IsExistent(stData)) then -- Create predicate command
     LogInstance("CachePressPly: Allocate <"..pPly:Nick()..">")
@@ -1515,7 +1515,7 @@ end
 function GetMouseWheelPly(pPly)
   local stSpot = GetPlayerSpot(pPly)
   if(not IsExistent(stSpot)) then
-    return StatusLog(0,"GetMouseWheelPly: Place missing") end
+    return StatusLog(0,"GetMouseWheelPly: Spot missing") end
   local stData = stSpot["PRESS"]
   if(not IsExistent(stData)) then
     return StatusLog(0,"GetMouseWheelPly: Data missing <"..pPly:Nick()..">") end
@@ -1529,7 +1529,7 @@ end
 function GetMouseVectorPly(pPly)
   local stSpot = GetPlayerSpot(pPly)
   if(not IsExistent(stSpot)) then
-    return 0, StatusLog(0,"GetMouseVectorPly: Place missing") end
+    return 0, StatusLog(0,"GetMouseVectorPly: Spot missing") end
   local stData = stSpot["PRESS"]
   if(not IsExistent(stData)) then
     return 0, StatusLog(0,"GetMouseVectorPly: Data missing <"..pPly:Nick()..">") end
@@ -1543,7 +1543,7 @@ end
 function CheckButtonPly(pPly, iInKey)
   local stSpot, iInKey = GetPlayerSpot(pPly), (tonumber(iInKey) or 0)
   if(not IsExistent(stSpot)) then
-    return StatusLog(false,"GetMouseVectorPly: Place missing") end
+    return StatusLog(false,"GetMouseVectorPly: Spot missing") end
   local stData = stSpot["PRESS"]
   if(not IsExistent(stData)) then return pPly:KeyDown(iInKey) end
   local cmdPress = stData["CMD"]
@@ -2670,16 +2670,16 @@ function ApplySpawnFlat(oEnt,stSpawn,vNorm)
           vOBB:Rotate(stSpawn.HAng)
           DecomposeByAngle(vOBB,GetOpVar("ANG_ZERO"))
     local zOffs = mathAbs(vOBB[cvZ])
-    SetVector(stSpawn.HMas, hPOA.O) -- Apply negative rake to the angle to flatten it
+    SetVector(stSpawn.HOrg, hPOA.O) -- Apply negative rake to the angle to flatten it
     stSpawn.SAng:RotateAroundAxis(stSpawn.DAng:Right(), -stSpawn.HRec.Rake)
-    stSpawn.SPos:Set(stSpawn.HMas); NegVector(stSpawn.SPos)
+    stSpawn.SPos:Set(stSpawn.HOrg); NegVector(stSpawn.SPos)
     stSpawn.SPos:Rotate(stSpawn.SAng) -- Make world space mass-center vector
-    stSpawn.HMas:Set(stSpawn.OPos)    -- Calculate mass-center position vector
-    stSpawn.HMas:Add(vNorm * zOffs)
-    stSpawn.HMas:Add(stSpawn.F * stSpawn.PNxt[cvX])
-    stSpawn.HMas:Add(stSpawn.R * stSpawn.PNxt[cvY])
-    stSpawn.HMas:Add(stSpawn.U * stSpawn.PNxt[cvZ])
-    stSpawn.SPos:Add(stSpawn.HMas) -- Add mass-center position origin for spawn
+    stSpawn.HOrg:Set(stSpawn.OPos)    -- Calculate mass-center position vector
+    stSpawn.HOrg:Add(vNorm * zOffs)
+    stSpawn.HOrg:Add(stSpawn.F * stSpawn.PNxt[cvX])
+    stSpawn.HOrg:Add(stSpawn.R * stSpawn.PNxt[cvY])
+    stSpawn.HOrg:Add(stSpawn.U * stSpawn.PNxt[cvZ])
+    stSpawn.SPos:Add(stSpawn.HOrg) -- Add mass-center position origin for spawn
   end; return true
 end
 
@@ -2734,7 +2734,7 @@ function GetNormalSpawn(oPly,ucsPos,ucsAng,hdModel,hdPivot,enOrAngTr,ucsPosX,ucs
   if(not IsExistent(stSpawn)) then
     return StatusLog(nil,"GetNormalSpawn: Cannot obtain spawn data") end
         stSpawn.HRec = hdRec
-  if(ucsPos) then SetVector(stSpawn.OPos,ucsPos); SetVector(stSpawn.TMas, ucsPos) end
+  if(ucsPos) then SetVector(stSpawn.OPos,ucsPos); SetVector(stSpawn.TOrg, ucsPos) end
   if(ucsAng) then SetVector(stSpawn.OAng,ucsAng); SetVector(stSpawn.TAng, ucsAng) end
   SetAnglePYR (stSpawn.ANxt, (tonumber(ucsAngP) or 0), -(tonumber(ucsAngY) or 0), (tonumber(ucsAngR) or 0))
   SetVectorXYZ(stSpawn.PNxt, (tonumber(ucsPosX) or 0),  (tonumber(ucsPosY) or 0), (tonumber(ucsPosZ) or 0))
@@ -2749,7 +2749,7 @@ function GetNormalSpawn(oPly,ucsPos,ucsAng,hdModel,hdPivot,enOrAngTr,ucsPosX,ucs
   stSpawn.R:Set(stSpawn.OAng:Right())
   -- Read holder data
   SetVector(stSpawn.HPnt, hdPOA.P) -- Offset meshing point
-  SetVector(stSpawn.HMas, hdPOA.O) -- Mass center origin
+  SetVector(stSpawn.HOrg, hdPOA.O) -- Mass center origin
   if(hdPOA.A[csD]) then SetAnglePYR(stSpawn.HAng) else SetAngle(stSpawn.HAng,hdPOA.A) end
   -- Local vector from the back meshing point to the mass-center
   stSpawn.DPos:Set(stSpawn.HPnt)
@@ -2768,24 +2768,24 @@ function GetNormalSpawn(oPly,ucsPos,ucsAng,hdModel,hdPivot,enOrAngTr,ucsPosX,ucs
   stSpawn.SAng:RotateAroundAxis(stSpawn.DAng:Right(),stSpawn.HAng[caP] * hdPOA.A[csA])
   stSpawn.SAng:RotateAroundAxis(stSpawn.DAng:Forward(),stSpawn.HAng[caR] * hdPOA.A[csC])
   -- Make sure saving the mass-center world offset vector in the spawn
-  stSpawn.SPos:Set(stSpawn.HMas) ; NegVector(stSpawn.SPos)
+  stSpawn.SPos:Set(stSpawn.HOrg) ; NegVector(stSpawn.SPos)
   stSpawn.SPos:Rotate(stSpawn.SAng) -- World space vector mass-center to position
   -- Calculate the location of the mass-center as a position vector
-  stSpawn.HMas:Set(stSpawn.OPos)
+  stSpawn.HOrg:Set(stSpawn.OPos)
   -- Add the decomposed mass center origin
-  stSpawn.HMas:Add(stSpawn.DPos[cvX] * stSpawn.F)
-  stSpawn.HMas:Add(stSpawn.DPos[cvY] * stSpawn.R)
-  stSpawn.HMas:Add(stSpawn.DPos[cvZ] * stSpawn.U)
+  stSpawn.HOrg:Add(stSpawn.DPos[cvX] * stSpawn.F)
+  stSpawn.HOrg:Add(stSpawn.DPos[cvY] * stSpawn.R)
+  stSpawn.HOrg:Add(stSpawn.DPos[cvZ] * stSpawn.U)
   if(enOrAngTr) then -- Take offsets in consideration
     stSpawn.F:Set(stSpawn.TAng:Forward())
     stSpawn.R:Set(stSpawn.TAng:Right())
     stSpawn.U:Set(stSpawn.TAng:Up())
   end -- Deviate the mass-center location according to the user offsets
-  stSpawn.HMas:Add(stSpawn.PNxt[cvX] * stSpawn.F)
-  stSpawn.HMas:Add(stSpawn.PNxt[cvY] * stSpawn.R)
-  stSpawn.HMas:Add(stSpawn.PNxt[cvZ] * stSpawn.U)
+  stSpawn.HOrg:Add(stSpawn.PNxt[cvX] * stSpawn.F)
+  stSpawn.HOrg:Add(stSpawn.PNxt[cvY] * stSpawn.R)
+  stSpawn.HOrg:Add(stSpawn.PNxt[cvZ] * stSpawn.U)
   -- Calculate the mass-center location as a position vector based on the database
-  stSpawn.SPos:Add(stSpawn.HMas) -- Add the mass-center
+  stSpawn.SPos:Add(stSpawn.HOrg) -- Add the mass-center
   return stSpawn
 end
 
@@ -2829,14 +2829,14 @@ function GetEntitySpawn(oPly,trEnt,trPivot,hdPivot,hdModel,enIgnTyp,enOrAngTr,
     return StatusLog(nil,"GetEntitySpawn: Cannot obtain spawn data") end
   stSpawn.HRec, stSpawn.TRec = hdRec, trRec  -- Save records
   SetVector(stSpawn.TPnt,trPOA.P)            -- Store data in objects
-  SetVector(stSpawn.TMas,trPOA.O)
+  SetVector(stSpawn.TOrg,trPOA.O)
   SetAngle (stSpawn.TAng,trPOA.A) -- Custom angle and trace position
-  stSpawn.TMas:Rotate(trAng); stSpawn.TMas:Add(trPos)        -- Trace mass-center world
+  stSpawn.TOrg:Rotate(trAng); stSpawn.TOrg:Add(trPos)        -- Trace mass-center world
   stSpawn.TAng:Set(trEnt:LocalToWorldAngles(stSpawn.TAng))   -- Initial coordinate system
   stSpawn.TAng:RotateAroundAxis(stSpawn.TAng:Up(),-trPivot)  -- Apply the pivot rotation for trace
   stSpawn.TPnt:Rotate(stSpawn.TAng) -- Non-raked angle must be used for offset origin (yellow)
   -- Calculate the origin based on the center
-  stSpawn.OPos:Set(stSpawn.TPnt); stSpawn.OPos:Add(stSpawn.TMas)
+  stSpawn.OPos:Set(stSpawn.TPnt); stSpawn.OPos:Add(stSpawn.TOrg)
   stSpawn.OAng:Set(stSpawn.TAng); stSpawn.OAng:RotateAroundAxis(stSpawn.TAng:Right(),trRec.Rake)
   return GetNormalSpawn(oPly,nil,nil,hdModel,hdPivot,enOrAngTr,ucsPosX,ucsPosY,ucsPosZ,ucsAngP,ucsAngY,ucsAngR)
 end

@@ -709,9 +709,9 @@ function TOOL:DrawHUD()
     if(not stSpawn) then return end
     local Tp =  trEnt:GetPos():ToScreen()
     local Hp =  stSpawn.SPos:ToScreen()
-    local Mt = self:DrawUCS(hudMonitor, stSpawn.TMas, stSpawn.TAng, plyrad, "y")
+    local Mt = self:DrawUCS(hudMonitor, stSpawn.TOrg, stSpawn.TAng, plyrad, "y")
     local Op = self:DrawUCS(hudMonitor, stSpawn.OPos, stSpawn.F:AngleEx(stSpawn.U), plyrad, "y", true)
-    local Mh = self:DrawUCS(hudMonitor, stSpawn.HMas, stSpawn.DAng, plyrad, "y")
+    local Mh = self:DrawUCS(hudMonitor, stSpawn.HOrg, stSpawn.DAng, plyrad, "y")
     hudMonitor:DrawCircle(Tp,plyrad,"r")  -- Trace position
     hudMonitor:DrawCircle(Hp,plyrad)      -- Holder position
     hudMonitor:DrawLine(Mh,Hp,"y")        -- Trace position distance
@@ -727,7 +727,7 @@ function TOOL:DrawHUD()
     local Op = self:DrawUCS(hudMonitor, stSpawn.OPos, stSpawn.F:AngleEx(stSpawn.U), plyrad, "y", true)
     if(not spnflat) then
       local Hp = stSpawn.SPos:ToScreen()
-      local Mh = self:DrawUCS(hudMonitor, stSpawn.HMas, stSpawn.DAng, plyrad, "g")
+      local Mh = self:DrawUCS(hudMonitor, stSpawn.HOrg, stSpawn.DAng, plyrad, "g")
       hudMonitor:DrawLine(Mh,Hp,"y")       -- Holder position distance
       hudMonitor:DrawCircle(Hp,plyrad,"r") -- Holder spawn position
       hudMonitor:DrawLine(Op,Mh,"m")       -- Holder distance vector
