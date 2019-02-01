@@ -21,6 +21,7 @@ local fileExists            = file and file.Exists
 local utilIsValidModel      = util and util.IsValidModel
 local tableGetKeys          = table and table.GetKeys
 local inputIsKeyDown        = input and input.IsKeyDown
+local stringUpper           = string and string.upper
 local cleanupRegister       = cleanup and cleanup.Register
 local concommandAdd         = concommand and concommand.Add
 local surfaceScreenWidth    = surface and surface.ScreenWidth
@@ -53,7 +54,7 @@ local CType       = asmlib.GetOpVar("CONTAIN_CONSTRAINT_TYPE")
 local gsSymRev    = asmlib.GetOpVar("OPSYM_REVSIGN")
 local gsSymDir    = asmlib.GetOpVar("OPSYM_DIRECTORY")
 local gsLimitName = asmlib.GetOpVar("CVAR_LIMITNAME")
-local gsUndoPrefN = asmlib.GetOpVar("NAME_INIT"):gsub("^%l", string.upper)..": "
+local gsUndoPrefN = asmlib.GetOpVar("NAME_INIT"):gsub("^%l", stringUpper)..": "
 local gnMaxOffRot = asmlib.GetOpVar("MAX_ROTATION")
 local gnMaxErMode = asmlib.GetAsmVar("bnderrmod","STR")
 local gsToolPrefL = asmlib.GetOpVar("TOOLNAME_PL")
@@ -62,35 +63,14 @@ local gsToolPrefU = asmlib.GetOpVar("TOOLNAME_PU")
 local gsToolNameU = asmlib.GetOpVar("TOOLNAME_NU")
 local gsNoAnchor  = gsNoID..gsSymRev..gsNoMD
 local conPalette  = asmlib.GetOpVar("CONTAINER_PALETTE")
+local varLanguage = GetConVar("gmod_language")
+local gtArgsLogs  = {"TOOL"}
 
 if(not asmlib.ProcessDSV()) then -- Default tab delimiter
   asmlib.LogInstance("Processing data list failed <"..gsDataRoot..gsLibName.."_dsv.txt>")
 end
 
-if(CLIENT) then
-  TOOL.Information = {
-    { name = "info",  stage = 1   },
-    { name = "left"         },
-    { name = "right"        },
-    { name = "right_use",   icon2 = "gui/e.png" },
-    { name = "reload"       }
-  }
-  asmlib.InitLocalify(GetConVar("gmod_language"):GetString())
-  languageAdd("tool."..gsToolNameL..".category", "Construction")
-  concommandAdd(gsToolPrefL.."resetvars", asmlib.GetActionCode("RESET_VARIABLES"))
-  concommandAdd(gsToolPrefL.."openframe", asmlib.GetActionCode("OPEN_FRAME"))
-end
-
-if(SERVER) then
-  cleanupRegister(gsLimitName)
-  hookAdd("PlayerDisconnected", gsToolPrefL.."player_quit", asmlib.GetActionCode("PLAYER_QUIT"))
-  duplicatorRegisterEntityModifier(gsToolPrefL.."dupe_phys_set",asmlib.GetActionCode("DUPE_PHYS_SETTINGS"))
-end
-
-TOOL.Category   = languageGetPhrase and languageGetPhrase("tool."..gsToolNameL..".category") -- Name of the category
-TOOL.Name       = languageGetPhrase and languageGetPhrase("tool."..gsToolNameL..".name")     -- Name to display
-TOOL.Command    = nil  -- Command on click ( nil )
-TOOL.ConfigName = nil  -- Configuration file name ( nil )
+cleanupRegister(gsLimitName); asmlib.SetOpVar("REFER_TOOLOBJ", TOOL)
 
 TOOL.ClientConVar = {
   [ "mass"      ] = "250",
@@ -125,6 +105,41 @@ TOOL.ClientConVar = {
   [ "ignphysgn" ] = "0",
   [ "ghosthold" ] = "0"
 }
+
+local gtConvarList = asmlib.GetConvarList(TOOL.ClientConVar)
+
+if(CLIENT) then
+  TOOL.Information = {
+    { name = "info",  stage = 1   },
+    { name = "left"         },
+    { name = "right"        },
+    { name = "right_use",   icon2 = "gui/e.png" },
+    { name = "reload"       }
+  }
+  asmlib.InitLocalify(varLanguage:GetString())
+  languageAdd("tool."..gsToolNameL..".category", "Construction")
+  concommandAdd(gsToolPrefL.."resetvars", asmlib.GetActionCode("RESET_VARIABLES"))
+  concommandAdd(gsToolPrefL.."openframe", asmlib.GetActionCode("OPEN_FRAME"))
+  
+  -- Listen for changes to the localify language and reload the tool's menu to update the localizations
+  cvarsRemoveChangeCallback(varLanguage:GetName(), gsToolPrefL.."lang")
+  cvarsAddChangeCallback(varLanguage:GetName(), function(sNam, vO, vN)
+    asmlib.InitLocalify(vN) -- Initialize the new langauge from the didicated file
+    local oTool  = asmlib.GetOpVar("REFER_TOOLOBJ") -- Take the tool reference
+    local cPanel = controlpanelGet(oTool.Mode); if(not IsValid(cPanel)) then return end
+    cPanel:ClearControls(); oTool.BuildCPanel(cPanel) -- Rebuild the tool panel
+  end, gsToolPrefL.."lang")
+end
+
+if(SERVER) then
+  hookAdd("PlayerDisconnected", gsToolPrefL.."player_quit", asmlib.GetActionCode("PLAYER_QUIT"))
+  duplicatorRegisterEntityModifier(gsToolPrefL.."dupe_phys_set",asmlib.GetActionCode("DUPE_PHYS_SETTINGS"))
+end
+
+TOOL.Category   = languageGetPhrase and languageGetPhrase("tool."..gsToolNameL..".category") -- Name of the category
+TOOL.Name       = languageGetPhrase and languageGetPhrase("tool."..gsToolNameL..".name")     -- Name to display
+TOOL.Command    = nil  -- Command on click ( nil )
+TOOL.ConfigName = nil  -- Configuration file name ( nil )
 
 function TOOL:GetModel()
   return tostring(self:GetClientInfo("model") or "")
@@ -816,15 +831,17 @@ end
 
 local ConVarList = TOOL:BuildConVarList()
 function TOOL.BuildCPanel(CPanel)
+  local sLog = "*TOOL.BuildCPanel"; CPanel:ClearControls()
   local CurY, pItem = 0 -- pItem is the current panel created
           CPanel:SetName(languageGetPhrase("tool."..gsToolNameL..".name"))
   pItem = CPanel:Help   (languageGetPhrase("tool."..gsToolNameL..".desc"));  CurY = CurY + pItem:GetTall() + 2
 
-  pItem = CPanel:AddControl( "ComboBox",{
-              MenuButton = 1,
-              Folder     = gsToolNameL,
-              Options    = {["#Default"] = ConVarList},
-              CVars      = tableGetKeys(ConVarList)}); CurY = CurY + pItem:GetTall() + 2
+  local pComboPresets = vguiCreate("ControlPresets", CPanel)
+        pComboPresets:SetPreset(gsToolNameL)
+        pComboPresets:AddOption("default", gtConvarList)
+        for key, val in pairs(tableGetKeys(gtConvarList)) do
+          pComboPresets:AddConVar(val) end
+  CPanel:AddItem(pComboPresets); CurY = CurY + pItem:GetTall() + 2
 
   local Panel = asmlib.CacheQueryPanel()
   if(not Panel) then return asmlib.StatusPrint(nil,"TOOL:BuildCPanel: Panel population empty") end

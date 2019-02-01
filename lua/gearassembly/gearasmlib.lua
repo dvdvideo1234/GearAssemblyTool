@@ -423,6 +423,7 @@ function InitBase(sName,sPurpose)
   SetOpVar("MISS_NOAV","N/A")  -- Not Available
   SetOpVar("MISS_NOMD","X")    -- No model
   SetOpVar("ARRAY_DECODEPOA",{0,0,0,1,1,1,false})
+  SetOpVar("FORM_LANGPATH","%s"..GetOpVar("TOOLNAME_NL").."/lang/%s")
   if(CLIENT) then
     SetOpVar("LOCALIFY_AUTO","en")
     SetOpVar("LOCALIFY_TABLE",{})
@@ -3143,27 +3144,48 @@ function SetAsmVarCallback(sName, sType, sHash, fHand)
   end
 end
 
-function SetLocalify(sCode, sPhrase, sDetail)
-  if(not IsString(sCode)) then
-    return StatusLog(nil,"SetLocalify: Language code <"..tostring(sCode).."> invalid") end
-  if(not IsString(sPhrase)) then
-    return StatusLog(nil,"SetLocalify: Phrase words <"..tostring(sPhrase).."> invalid") end
-  local tPool = GetOpVar("LOCALIFY_TABLE")
-  if(not IsExistent(tPool[sCode])) then tPool[sCode] = {}; end
-  tPool[sCode][sPhrase] = tostring(sDetail)
+function GetPhrase(sKey)
+  local sDef = GetOpVar("MISS_NOTR")
+  local tSet = GetOpVar("LOCALIFY_TABLE")
+  local sKey = tostring(sKey) if(not IsHere(tSet[sKey])) then
+    LogInstance("Miss <"..sKey..">"); return GetOpVar("MISS_NOTR") end
+  return (tSet[sKey] or GetOpVar("MISS_NOTR")) -- Translation fail safe
 end
 
-function InitLocalify(sCode) -- https://en.wikipedia.org/wiki/List_of_ISO_639-1_codes
-  local tPool = GetOpVar("LOCALIFY_TABLE") -- ( Column "ISO 639-1" )
-  local auCod = GetOpVar("LOCALIFY_AUTO")
-  local suCod = tostring(sCode or "") -- English is used when missing
-  local auLng, suLng = tPool[auCod], tPool[suCod]
-  if(not IsExistent(suLng)) then
-    LogInstance("InitLocalify: Missing code <"..suCod..">")
-    suCod, suLng = auCod, auLng
-  end; LogInstance("InitLocalify: Using code <"..auCod..">")
-  for phrase, default in pairs(auLng) do
-    local abrev = suLng[phrase] or default
-    languageAdd(phrase, abrev)
-  end
+local function GetLocalify(sCode)
+  local sCode = tostring(sCode or GetOpVar("MISS_NOAV"))
+  if(not CLIENT) then LogInstance("("..sCode..") Not client"); return nil end
+  local sTool, sLimit = GetOpVar("TOOLNAME_NL"), GetOpVar("CVAR_LIMITNAME")
+  local sPath = GetOpVar("FORM_LANGPATH"):format("", sCode..".lua") -- Translation file path
+  if(not fileExists("lua/"..sPath, "GAME")) then
+    LogInstance("("..sCode..") Missing"); return nil end
+  local fCode = CompileFile(sPath); if(not fCode) then
+    LogInstance("("..sCode..") No function"); return nil end
+  local bFunc, fFunc = pcall(fCode); if(not bFunc) then
+    LogInstance("("..suCod..")[1] "..fFunc); return nil end
+  local bCode, tCode = pcall(fFunc, sTool, sLimit); if(not bCode) then
+    LogInstance("("..suCod..")[2] "..tCode); return nil end
+  return tCode -- The successfully extracted translations
+end
+
+function InitLocalify(sCode)
+  local cuCod = tostring(sCode or GetOpVar("MISS_NOAV"))
+  if(not CLIENT) then LogInstance("("..cuCod..") Not client"); return nil end
+  local thSet = GetOpVar("LOCALIFY_TABLE"); tableEmpty(thSet)
+  local auCod = GetOpVar("LOCALIFY_AUTO") -- Automatic translation code
+  local auSet = GetLocalify(auCod); if(not auSet) then
+    LogInstance("Base mismatch <"..auCod..">"); return nil end
+  if(cuCod ~= auCod) then local cuSet = GetLocalify(cuCod)
+    if(cuSet) then -- When the language infornation is extracted apply on success
+      for key, val in pairs(auSet) do auSet[key] = (cuSet[key] or auSet[key]) end
+    else LogInstance("Custom skip <"..cuCod..">") end -- Apply auto code
+  end; for key, val in pairs(auSet) do thSet[key] = auSet[key]; languageAdd(key, val) end
+end
+
+function GetConvarList(tC)
+  local sT = GetOpVar("TOOLNAME_PL")
+  local tI = GetOpVar("TABLE_CONVARLIST")
+  if(IsTable(tC)) then tableEmpty(tI)
+    for key, val in pairs(tC) do tI[sT..key] = val end
+  end; return tI
 end
