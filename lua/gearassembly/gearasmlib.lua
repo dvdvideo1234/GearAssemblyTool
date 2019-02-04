@@ -1,26 +1,15 @@
---- Because Vec[1] is actually faster than Vec.X
-
---- Vector Component indexes ---
-local cvX -- Vector X component
-local cvY -- Vector Y component
-local cvZ -- Vector Z component
-
---- Angle Component indexes ---
-local caP -- Angle Pitch component
-local caY -- Angle Yaw   component
-local caR -- Angle Roll  component
-
---- Component Status indexes ---
-local csA -- Sign of the first component
-local csB -- Sign of the second component
-local csC -- Sign of the third component
-local csD -- Flag for disabling the point
+local cvX, cvY, cvZ -- Vector Component indexes
+local caP, caY, caR -- Angle Component indexes
+local wvX, wvY, wvZ -- Wire vector Component indexes
+local waP, waY, waR -- Wire angle Component indexes
 
 ---------------- Localizing instances ------------------
+
 local SERVER = SERVER
 local CLIENT = CLIENT
 
 ---------------- Localizing Player keys ----------------
+
 local IN_ALT1      = IN_ALT1
 local IN_ALT2      = IN_ALT2
 local IN_ATTACK    = IN_ATTACK
@@ -41,13 +30,17 @@ local IN_WALK      = IN_WALK
 local IN_ZOOM      = IN_ZOOM
 
 ---------------- Localizing ENT Properties ----------------
+
 local MASK_SOLID            = MASK_SOLID
 local SOLID_VPHYSICS        = SOLID_VPHYSICS
+local SOLID_NONE            = SOLID_NONE
 local MOVETYPE_VPHYSICS     = MOVETYPE_VPHYSICS
+local MOVETYPE_NONE         = MOVETYPE_NONE
 local COLLISION_GROUP_NONE  = COLLISION_GROUP_NONE
 local RENDERMODE_TRANSALPHA = RENDERMODE_TRANSALPHA
 
 ---------------- Localizing needed functions ----------------
+
 local next                    = next
 local type                    = type
 local pcall                   = pcall
@@ -57,12 +50,13 @@ local pairs                   = pairs
 local print                   = print
 local tobool                  = tobool
 local Vector                  = Vector
+local Matrix                         = Matrix
 local unpack                  = unpack
 local include                 = include
 local IsValid                 = IsValid
 local Material                = Material
 local require                 = require
-local Time                    = SysTime
+local Time                           = CurTime
 local tonumber                = tonumber
 local tostring                = tostring
 local GetConVar               = GetConVar
@@ -70,6 +64,7 @@ local LocalPlayer             = LocalPlayer
 local CreateConVar            = CreateConVar
 local SetClipboardText        = SetClipboardText
 local CompileString           = CompileString
+local CompileFile                    = CompileFile
 local getmetatable            = getmetatable
 local setmetatable            = setmetatable
 local collectgarbage          = collectgarbage
@@ -85,6 +80,7 @@ local utilIsInWorld           = util and util.IsInWorld
 local utilIsValidModel        = util and util.IsValidModel
 local utilGetPlayerTrace      = util and util.GetPlayerTrace
 local entsCreate              = ents and ents.Create
+local entsCreateClientProp           = ents and ents.CreateClientProp
 local fileOpen                = file and file.Open
 local fileExists              = file and file.Exists
 local fileAppend              = file and file.Append
@@ -99,7 +95,11 @@ local mathModf                = math and math.modf
 local mathSqrt                = math and math.sqrt
 local mathFloor               = math and math.floor
 local mathClamp               = math and math.Clamp
+local mathAtan2                      = math and math.atan2
+local mathRound                      = math and math.Round
 local mathRandom              = math and math.random
+local mathNormalizeAngle             = math and math.NormalizeAngle
+local vguiCreate                     = vgui and vgui.Create
 local undoCreate              = undo and undo.Create
 local undoFinish              = undo and undo.Finish
 local undoAddEntity           = undo and undo.AddEntity
@@ -115,7 +115,9 @@ local tableEmpty              = table and table.Empty
 local tableMaxn               = table and table.maxn
 local tableGetKeys            = table and table.GetKeys
 local tableInsert             = table and table.insert
+local tableCopy                      = table and table.Copy
 local debugGetinfo            = debug and debug.getinfo
+local debugTrace                     = debug and debug.Trace
 local renderDrawLine          = render and render.DrawLine
 local renderDrawSphere        = render and render.DrawSphere
 local renderSetMaterial       = render and render.SetMaterial
@@ -129,7 +131,10 @@ local surfaceGetTextSize      = surface and surface.GetTextSize
 local surfaceGetTextureID     = surface and surface.GetTextureID
 local surfaceSetDrawColor     = surface and surface.SetDrawColor
 local surfaceSetTextColor     = surface and surface.SetTextColor
+local surfaceScreenWidth             = surface and surface.ScreenWidth
+local surfaceScreenHeight            = surface and surface.ScreenHeight
 local surfaceDrawTexturedRect = surface and surface.DrawTexturedRect
+local surfaceDrawTexturedRectRotated = surface and surface.DrawTexturedRectRotated
 local languageAdd             = language and language.Add
 local constructSetPhysProp    = construct and construct.SetPhysProp
 local constraintWeld          = constraint and constraint.Weld
@@ -140,21 +145,16 @@ local cvarsRemoveChangeCallback = cvars and cvars.RemoveChangeCallback
 local duplicatorStoreEntityModifier = duplicator and duplicator.StoreEntityModifier
 
 ---------------- CASHES SPACE --------------------
+
 local libCache  = {} -- Used to cache stuff in a pool
 local libAction = {} -- Used to attach external function to the lib
 local libOpVars = {} -- Used to Store operational variable values
 local libPlayer = {} -- Used to allocate personal space for players
+local libQTable = {} -- Used to allocate SQL table builder objects
 
 module( "gearasmlib" )
 
 ---------------------------- PRIMITIVES ----------------------------
-function Delay(nAdd)
-  local nAdd = tonumber(nAdd) or 0
-  if(nAdd > 0) then
-    local tmEnd = osClock() + nAdd
-    while(osClock() < tmEnd) do end
-  end
-end
 
 function GetInstPref()
   if    (CLIENT) then return "cl_"
@@ -166,42 +166,60 @@ function GetOpVar(sName)
   return libOpVars[sName]
 end
 
-function SetOpVar(sName, anyValue)
-  libOpVars[sName] = anyValue
+function SetOpVar(sName, vVal)
+  libOpVars[sName] = vVal
 end
 
-function IsExistent(anyValue)
-  return (anyValue ~= nil)
+function IsHere(vVal)
+  return (vVal ~= nil)
 end
 
-function IsString(anyValue)
-  return (getmetatable(anyValue) == GetOpVar("TYPEMT_STRING"))
+function IsString(vVal)
+  return (getmetatable(vVal) == GetOpVar("TYPEMT_STRING"))
 end
 
-function IsEmptyString(anyValue)
-  if(not IsString(anyValue)) then return false end
-  return (anyValue == "")
+function IsBlank(vVal)
+  if(not IsString(vVal)) then return false end
+  return (vVal == "")
 end
 
-function IsBool(anyValue)
-  if    (anyValue == true ) then return true
-  elseif(anyValue == false) then return true end
+function IsNull(vVal)
+  if(not IsString(vVal)) then return false end
+  return (vVal == GetOpVar("MISS_NOSQL"))
+end
+
+function IsExact(vVal)
+  if(not IsString(vVal)) then return false end
+  return (vVal:sub(1,1) == "*")
+end
+
+function IsBool(vVal)
+  if    (vVal == true ) then return true
+  elseif(vVal == false) then return true end
   return false
 end
 
-function IsNumber(anyValue)
-  return ((tonumber(anyValue) and true) or false)
+function IsNumber(vVal)
+  return ((tonumber(vVal) and true) or false)
+end
+
+function IsTable(vVal)
+  return (type(vVal) == "table")
+end
+
+function IsFunction(vVal)
+  return (type(vVal) == "function")
 end
 
 function IsPlayer(oPly)
-  if(not IsExistent(oPly)) then return false end
+  if(not IsHere(oPly)) then return false end
   if(not oPly:IsValid  ()) then return false end
   if(not oPly:IsPlayer ()) then return false end
   return true
 end
 
 function IsOther(oEnt)
-  if(not IsExistent(oEnt)) then return true end
+  if(not IsHere(oEnt))   then return true end
   if(not oEnt:IsValid())   then return true end
   if(oEnt:IsPlayer())      then return true end
   if(oEnt:IsVehicle())     then return true end
@@ -212,117 +230,140 @@ function IsOther(oEnt)
   return false
 end
 
+-- Returns the sign of a number [-1,0,1]
+function GetSign(nVal)
+  return (nVal / mathAbs(nVal))
+end
+
 -- Gets the date according to the specified format
 function GetDate()
   return (osDate(GetOpVar("DATE_FORMAT"))
    .." "..osDate(GetOpVar("TIME_FORMAT")))
 end
 
+-- Strips a string from quotes
+function GetStrip(vV, vQ)
+  local sV = tostring(vV or ""):Trim()
+  local sQ = tostring(vQ or "\""):sub(1,1)
+  if(sV:sub( 1, 1) == sQ) then sV = sV:sub(2,-1) end
+  if(sV:sub(-1,-1) == sQ) then sV = sV:sub(1,-2) end
+  return sV:Trim()
+end
+
 ------------------ LOGS ------------------------
 
-local function FormatNumberMax(nNum,nMax)
-  local nNum, nMax = tonumber(nNum), tonumber(nMax)
+local function GetLogID()
+  local nNum, nMax = GetOpVar("LOG_CURLOGS"), GetOpVar("LOG_MAXLOGS")
   if(not (nNum and nMax)) then return "" end
   return ("%"..(tostring(mathFloor(nMax))):len().."d"):format(nNum)
 end
 
-local function Log(anyStuff)
-  local nMaxLogs = GetOpVar("LOG_MAXLOGS")
-  if(nMaxLogs <= 0) then return end
-  local logLast  = GetOpVar("LOG_LOGLAST")
-  local logData  = tostring(anyStuff)
-  local nCurLogs = GetOpVar("LOG_CURLOGS") + 1
-  if(logLast == logData) then SetOpVar("LOG_CURLOGS",nCurLogs); return end
-  SetOpVar("LOG_LOGLAST",logData)
-  if(GetOpVar("LOG_LOGFILE")) then
+local function Log(vMsg, bCon)
+  local iMax = GetOpVar("LOG_MAXLOGS")
+  if(iMax <= 0) then return end
+  local iCur = GetOpVar("LOG_CURLOGS") + 1
+  local sData = tostring(vMsg); SetOpVar("LOG_CURLOGS",iCur)
+  if(GetOpVar("LOG_LOGFILE") and not bCon) then
     local lbNam = GetOpVar("NAME_LIBRARY")
     local fName = GetOpVar("DIRPATH_BAS")..lbNam.."_log.txt"
-    if(nCurLogs > nMaxLogs) then nCurLogs = 0; fileDelete(fName) end
-    fileAppend(fName,FormatNumberMax(nCurLogs,nMaxLogs).." ["..GetDate().."] "..logData.."\n")
+    if(iCur > iMax) then iCur = 0; fileDelete(fName) end
+    fileAppend(fName,GetLogID().." ["..GetDate().."] "..sData.."\n")
   else -- The current has values 1..nMaxLogs(0)
-    if(nCurLogs > nMaxLogs) then nCurLogs = 0 end
-    print(FormatNumberMax(nCurLogs,nMaxLogs).." >> "..logData)
-  end; SetOpVar("LOG_CURLOGS",nCurLogs)
-end
-
-function PrintInstance(anyStuff)
-  local sModeDB = GetOpVar("MODE_DATABASE")
-  if(SERVER) then
-    print("["..GetDate().."] SERVER > "..GetOpVar("TOOLNAME_NU").." ["..sModeDB.."] "..tostring(anyStuff))
-  elseif(CLIENT) then
-    print("["..GetDate().."] CLIENT > "..GetOpVar("TOOLNAME_NU").." ["..sModeDB.."] "..tostring(anyStuff))
-  else
-    print("["..GetDate().."] NOINST > "..GetOpVar("TOOLNAME_NU").." ["..sModeDB.."] "..tostring(anyStuff))
+    if(iCur > iMax) then iCur = 0 end
+    print(GetLogID().." ["..GetDate().."] "..sData)
   end
 end
 
-function LogInstance(anyStuff)
-  local logMax = (tonumber(GetOpVar("LOG_MAXLOGS")) or 0)
-  if(logMax and (logMax <= 0)) then return end
-  local anyStuff, logStats = tostring(anyStuff), GetOpVar("LOG_SKIP")
-  if(logStats and logStats[1]) then
-    local iNdex = 1; while(logStats[iNdex]) do
-      if(anyStuff:find(tostring(logStats[iNdex]))) then return end; iNdex = iNdex + 1 end
-  end; logStats = GetOpVar("LOG_ONLY") -- Should the current log being skipped
-  if(logStats and logStats[1]) then
-    local iNdex, logMe = 1, false; while(logStats[iNdex]) do
-      if(anyStuff:find(tostring(logStats[iNdex]))) then logMe = true end; iNdex = iNdex + 1 end
-    if(not logMe) then return end
-  end; local sSors = "" -- Only the chosen messages are processed
+--[[
+  sMsg > Message being displayed
+  sKey > SKIP / ONLY
+  Return: exist, found
+]]
+local function IsLogFound(sMsg, sKey)
+  local sMsg = tostring(sMsg or "")
+  local sKey = tostring(sKey or "")
+  if(IsBlank(sKey)) then return nil end
+  local oStat = GetOpVar("LOG_"..sKey)
+  if(IsTable(oStat) and oStat[1]) then
+    local iCnt = 1; while(oStat[iCnt]) do
+      if(sMsg:find(tostring(oStat[iCnt]))) then
+        return true, true
+      end; iCnt = iCnt + 1
+    end; return true, false
+  else return false, false end
+end
+
+--[[
+  vMsg > Message being displayed
+  vSrc > Name of the sub-routine call (string) or parameter stack (table)
+  bCon > Force output in console flag
+  iDbg > Debug table overrive depth
+  tDbg > Debug table overrive
+]]
+function LogInstance(vMsg, vSrc, bCon, iDbg, tDbg)
+  local nMax = (tonumber(GetOpVar("LOG_MAXLOGS")) or 0)
+  if(nMax and (nMax <= 0)) then return end
+  local vSrc, bCon, iDbg, tDbg = vSrc, bCon, iDbg, tDbg
+  if(vSrc and IsTable(vSrc)) then -- Recieve the stack as table
+    vSrc, bCon, iDbg, tDbg = vSrc[1], vSrc[2], vSrc[3], vSrc[4] end
+  iDbg = mathFloor(tonumber(iDbg) or 0); iDbg = ((iDbg > 0) and iDbg or nil)
+  local tInfo = (iDbg and debugGetinfo(iDbg) or nil) -- Pass stack index
+        tInfo = (tInfo or (tDbg and tDbg or nil))    -- Override debug information
+        tInfo = (tInfo or debugGetinfo(2))           -- Default value
+  local sDbg, sFunc = "", tostring(sFunc or (tInfo.name and tInfo.name or "Incognito"))
   if(GetOpVar("LOG_DEBUGEN")) then
-    local sInfo = debugGetinfo(3) or {}
-    sSors = sSors..(sInfo.linedefined and "["..sInfo.linedefined.."]" or "[n/a]")
-    sSors = sSors..(sInfo.name and sInfo.name or "Main")
-    sSors = sSors..(sInfo.currentline and ("["..sInfo.currentline.."]") or "[n/a]")
-    sSors = sSors..(sInfo.nparams and (" #"..sInfo.nparams) or " #N")
-    sSors = sSors..(sInfo.source and (" "..sInfo.source) or " @N")
-  end
+    local snID, snAV = GetOpVar("MISS_NOID"), GetOpVar("MISS_NOAV")
+    sDbg = sDbg.." "..(tInfo.linedefined and "["..tInfo.linedefined.."]" or snAV)
+    sDbg = sDbg..(tInfo.currentline and ("["..tInfo.currentline.."]") or snAV)
+    sDbg = sDbg.."@"..(tInfo.source and (tInfo.source:gsub("^%W+", ""):gsub("\\","/")) or snID)
+  end; local sSrc, bF, bL = tostring(vSrc or "")
+  if(IsExact(sSrc)) then sSrc = sSrc:sub(2,-1); sFunc = "" else
+    if(not IsBlank(sSrc)) then sSrc = sSrc.."." end end
   local sInst   = ((SERVER and "SERVER" or nil) or (CLIENT and "CLIENT" or nil) or "NOINST")
-  local sModeDB = GetOpVar("MODE_DATABASE")
-  Log(sInst.." > "..sSors..GetOpVar("TOOLNAME_NU").." ["..sModeDB.."] "..anyStuff)
+  local sMoDB, sToolMD = tostring(GetOpVar("MODE_DATABASE")), tostring(GetOpVar("TOOLNAME_NU"))
+  local sLast, sData = GetOpVar("LOG_LOGLAST"), (sSrc..sFunc..": "..tostring(vMsg))
+  bF, bL = IsLogFound(sData, "SKIP"); if(bF and bL) then return end
+  bF, bL = IsLogFound(sData, "ONLY"); if(bF and not bL) then return end
+  if(sLast == sData) then return end; SetOpVar("LOG_LOGLAST",sData)
+  Log(sInst.." > "..sToolMD.." ["..sMoDB.."]"..sDbg.." "..sData, bCon)
 end
 
-function StatusPrint(anyStatus,sError)
-  PrintInstance(sError); return anyStatus
-end
-
-function StatusLog(anyStatus,sError)
-  LogInstance(sError); return anyStatus
-end
-
-function Print(tT,sS,tP)
-  local vS, vT, vK, sS = type(sS), type(tT), "", tostring(sS or "Data")
+local function PrintCeption(tT,sS,tP)
+  local vS, vT = type(sS), type(tT)
+  local vK, sS = "", tostring(sS or "Data")
   if(vT ~= "table") then
-    return StatusLog(nil,"{"..vT.."}["..tostring(sS or "Data").."] = <"..tostring(tT)..">") end
+    LogInstance("{"..vT.."}["..sS.."] = <"..tostring(tT)..">",tP); return nil end
   if(next(tT) == nil) then
-    return StatusLog(nil,sS.." = {}") end; LogInstance(sS.." = {}")
+    LogInstance(sS.." = {}",tP); return nil end; LogInstance(sS.." = {}",tP)
   for k,v in pairs(tT) do
     if(type(k) == "string") then
       vK = sS.."[\""..k.."\"]"
-    else sK = tostring(k)
-      if(tP and tP[k]) then sK = tostring(tP[k]) end
-      vK = sS.."["..sK.."]"
-    end
+    else vK = sS.."["..tostring(k).."]" end
     if(type(v) ~= "table") then
       if(type(v) == "string") then
-        LogInstance(vK.." = \""..v.."\"")
-      else sK = tostring(v)
-        if(tP and tP[v]) then sK = tostring(tP[v]) end
-        LogInstance(vK.." = "..sK)
-      end
+        LogInstance(vK.." = \""..v.."\"",tP)
+      else LogInstance(vK.." = "..tostring(v),tP) end
     else
-      if(v == tT) then LogInstance(vK.." = "..sS)
-      else Print(v,vK,tP) end
+      if(v == tT) then LogInstance(vK.." = "..sS,tP)
+      else PrintCeption(v,vK,tP) end
     end
   end
 end
 
+function LogTable(tT, sS, vSrc, bCon, iDbg, tDbg)
+  local vSrc, bCon, iDbg, tDbg = vSrc, bCon, iDbg, tDbg
+  if(vSrc and IsTable(vSrc)) then -- Recieve the stack as table
+    vSrc, bCon, iDbg, tDbg = vSrc[1], vSrc[2], vSrc[3], vSrc[4] end
+  local tP = {vSrc, bCon, iDbg, tDbg} -- Normalize parameters
+  tP[1], tP[2] = tostring(vSrc or ""), tobool(bCon)
+  tP[3], tP[4] = (nil), debugGetinfo(2); PrintCeption(tT,sS,tP)
+end
 ----------------- INITAIALIZATION -----------------
 
 -- Golden retriever. Retrieves file line as string
 -- But seriously returns the sting line and EOF flag
 local function GetStringFile(pFile)
-  if(not pFile) then return StatusLog("", "GetStringFile: No file"), true end
+  if(not pFile) then LogInstance("No file"); return "", true end
   local sCh, sLine = "X", "" -- Use a value to start cycle with
   while(sCh) do sCh = pFile:Read(1); if(not sCh) then break end
     if(sCh == "\n") then return sLine:Trim(), false else sLine = sLine..sCh end
@@ -333,45 +374,48 @@ function SetLogControl(nLines,bFile)
   SetOpVar("LOG_CURLOGS",0)
   SetOpVar("LOG_LOGFILE",tobool(bFile))
   SetOpVar("LOG_MAXLOGS",mathFloor(tonumber(nLines) or 0))
-  if(not fileExists(GetOpVar("DIRPATH_BAS"),"DATA") and
-     not IsEmptyString(GetOpVar("LOG_LOGFILE"))) then
-    fileCreateDir(GetOpVar("DIRPATH_BAS"))
-  end
-  PrintInstance("SetLogControl("..tostring(GetOpVar("LOG_MAXLOGS"))..","..tostring(GetOpVar("LOG_LOGFILE"))..")")
+  local sBas = GetOpVar("DIRPATH_BAS")
+  local sMax = tostring(GetOpVar("LOG_MAXLOGS"))
+  local sNam = tostring(GetOpVar("LOG_LOGFILE"))
+  if(sBas and not fileExists(sBas,"DATA") and
+     not IsBlank(GetOpVar("LOG_LOGFILE"))) then fileCreateDir(sBas)
+  end; LogInstance("("..sMax..","..sNam..")")
 end
 
 function SettingsLogs(sHash)
   local sKey = tostring(sHash or ""):upper():Trim()
   if(not (sKey == "SKIP" or sKey == "ONLY")) then
-    return StatusLog(false,"SettingsLogs("..sKey.."): Invalid hash") end
+    LogInstance("Invalid <"..sKey..">"); return false end
   local tLogs, lbNam = GetOpVar("LOG_"..sKey), GetOpVar("NAME_LIBRARY")
-  if(not tLogs) then return StatusLog(true,"SettingsLogs("..sKey.."): Skip table") end
+  if(not tLogs) then LogInstance("Skip <"..sKey..">"); return false end
   local fName = GetOpVar("DIRPATH_BAS")..lbNam.."_sl"..sKey:lower()..".txt"
   local S = fileOpen(fName, "rb", "DATA"); tableEmpty(tLogs)
   if(S) then local sLine, isEOF = "", false
     while(not isEOF) do sLine, isEOF = GetStringFile(S)
-      if(not IsEmptyString(sLine)) then tableInsert(tLogs, sLine) end
-    end; S:Close(); return StatusLog(true,"SettingsLogs("..sKey.."): Success <"..fName..">")
-  else return StatusLog(true,"SettingsLogs("..sKey.."): Missing <"..fName..">") end
+      if(not IsBlank(sLine)) then tableInsert(tLogs, sLine) end
+    end; S:Close(); LogInstance("Success <"..sKey.."@"..fName..">"); return false
+  else LogInstance("Missing <"..sKey.."@"..fName..">"); return false end
 end
 
 function GetIndexes(sType)
   if(not IsString(sType)) then
-    return StatusLog(nil,"GetIndexes: Type {"..type(sType).."}<"..tostring(sType).."> not string") end
-  if    (sType == "V") then return cvX, cvY, cvZ
-  elseif(sType == "A") then return caP, caY, caR
-  elseif(sType == "S") then return csA, csB, csC, csD
-  else return StatusLog(nil,"GetIndexes: Type <"..sType.."> not found") end
+    LogInstance("Type {"..type(sType).."}<"..tostring(sType).."> not string"); return nil end
+  if    (sType == "V")  then return cvX, cvY, cvZ
+  elseif(sType == "A")  then return caP, caY, caR
+  else LogInstance("Type <"..sType.."> not found"); return nil end
 end
 
 function SetIndexes(sType,...)
   if(not IsString(sType)) then
-    return StatusLog(false,"SetIndexes: Type {"..type(sType).."}<"..tostring(sType).."> not string") end
-  if    (sType == "V") then cvX, cvY, cvZ      = ...
-  elseif(sType == "A") then caP, caY, caR      = ...
-  elseif(sType == "S") then csA, csB, csC, csD = ...
-  else return StatusLog(false,"SetIndexes: Type <"..sType.."> not found") end
-  return StatusLog(true,"SetIndexes["..sType.."]: Success")
+    LogInstance("Type {"..type(sType).."}<"..tostring(sType).."> not string"); return false end
+  if    (sType == "V")  then cvX, cvY, cvZ = ...
+  elseif(sType == "A")  then caP, caY, caR = ...
+  else LogInstance("Type <"..sType.."> not found"); return false end
+  LogInstance("Success"); return true
+end
+
+function UseIndexes(pB1,pB2,pB3,pD1,pD2,pD3)
+  return (pB1 or pD1), (pB2 or pD2), (pB3 or pD3)
 end
 
 function InitBase(sName,sPurpose)
@@ -379,13 +423,13 @@ function InitBase(sName,sPurpose)
   SetOpVar("TYPEMT_SCREEN",{})
   SetOpVar("TYPEMT_CONTAINER",{})
   if(not IsString(sName)) then
-    return StatusPrint(false,"InitBase: Name <"..tostring(sName).."> not string") end
+    LogInstance("Name <"..tostring(sName).."> not string", true); return false end
   if(not IsString(sPurpose)) then
-    return StatusPrint(false,"InitBase: Purpose <"..tostring(sPurpose).."> not string") end
-  if(IsEmptyString(sName) or tonumber(sName:sub(1,1))) then
-    return StatusPrint(false,"InitBase: Name invalid <"..sName..">") end
-  if(IsEmptyString(sPurpose) or tonumber(sPurpose:sub(1,1))) then
-    return StatusPrint(false,"InitBase: Purpose invalid <"..sPurpose..">") end
+    LogInstance("Purpose <"..tostring(sPurpose).."> not string", true); return false end
+  if(IsBlank(sName) or tonumber(sName:sub(1,1))) then
+    LogInstance("Name invalid <"..sName..">", true); return false end
+  if(IsBlank(sPurpose) or tonumber(sPurpose:sub(1,1))) then
+    LogInstance("Purpose invalid <"..sPurpose..">", true); return false end
   SetOpVar("TIME_INIT",Time())
   SetOpVar("LOG_MAXLOGS",0)
   SetOpVar("LOG_CURLOGS",0)
@@ -397,15 +441,20 @@ function InitBase(sName,sPurpose)
   SetOpVar("DELAY_FREEZE",0.01)
   SetOpVar("ANG_ZERO",Angle())
   SetOpVar("VEC_ZERO",Vector())
+  SetOpVar("ANG_REV",Angle(0,180,0))
   SetOpVar("VEC_FW",Vector(1,0,0))
   SetOpVar("VEC_RG",Vector(0,-1,1))
   SetOpVar("VEC_UP",Vector(0,0,1))
   SetOpVar("OPSYM_DISABLE","#")
-  SetOpVar("OPSYM_REVSIGN","@")
+  SetOpVar("OPSYM_REVISION","@")
   SetOpVar("OPSYM_DIVIDER","_")
   SetOpVar("OPSYM_DIRECTORY","/")
   SetOpVar("OPSYM_SEPARATOR",",")
+  SetOpVar("OPSYM_ENTPOSANG","!")
+  SetOpVar("DEG_RAD", mathPi / 180)
+  SetOpVar("SIZX_CPANEL", 281)
   SetOpVar("EPSILON_ZERO", 1e-5)
+  SetOpVar("COLOR_CLAMP", {0, 255})
   SetOpVar("GOLDEN_RATIO",1.61803398875)
   SetOpVar("DATE_FORMAT","%d-%m-%y")
   SetOpVar("TIME_FORMAT","%H:%M:%S")
@@ -419,12 +468,18 @@ function InitBase(sName,sPurpose)
   SetOpVar("DIRPATH_BAS",GetOpVar("TOOLNAME_NL")..GetOpVar("OPSYM_DIRECTORY"))
   SetOpVar("DIRPATH_INS","exp"..GetOpVar("OPSYM_DIRECTORY"))
   SetOpVar("DIRPATH_DSV","dsv"..GetOpVar("OPSYM_DIRECTORY"))
-  SetOpVar("MISS_NOID","N")    -- No ID selected
-  SetOpVar("MISS_NOAV","N/A")  -- Not Available
-  SetOpVar("MISS_NOMD","X")    -- No model
-  SetOpVar("ARRAY_DECODEPOA",{0,0,0,1,1,1,false})
+  SetOpVar("MISS_NOID","N")     -- No ID selected
+  SetOpVar("MISS_NOAV","N/A")   -- Not Available
+  SetOpVar("MISS_NOMD","X")     -- No model
+  SetOpVar("MISS_NOTP","TYPE")  -- No track type
+  SetOpVar("MISS_NOSQL","NULL") -- No SQL value
+  SetOpVar("MISS_NOTR","Oops, missing ?") -- No translation found
+  SetOpVar("FORM_KEYSTMT","%s(%s)")
+  SetOpVar("FORM_LOGSOURCE","%s.%s(%s)")
+  SetOpVar("ARRAY_DECODEPOA",{0,0,0,Size=3})
   SetOpVar("FORM_LANGPATH","%s"..GetOpVar("TOOLNAME_NL").."/lang/%s")
   if(CLIENT) then
+    SetOpVar("ARRAY_GHOST",{Size=0, Slot=GetOpVar("MISS_NOMD")})
     SetOpVar("LOCALIFY_AUTO","en")
     SetOpVar("LOCALIFY_TABLE",{})
     SetOpVar("TABLE_CATEGORIES",{})
@@ -455,76 +510,128 @@ function InitBase(sName,sPurpose)
   SetOpVar("MODELNAM_FUNC",function(x) return " "..x:sub(2,2):upper() end)
   SetOpVar("QUERY_STORE", {})
   SetOpVar("TABLE_BORDERS",{})
+  SetOpVar("TABLE_CONVARLIST",{})
+  SetOpVar("ENTITY_DEFCLASS", "prop_physics")
   SetOpVar("TABLE_FREQUENT_MODELS",{})
   SetOpVar("OOP_DEFAULTKEY","(!@<#_$|%^|&>*)DEFKEY(*>&|^%|$_#<@!)")
   SetOpVar("CVAR_LIMITNAME","asm"..GetOpVar("NAME_INIT").."s")
   SetOpVar("MODE_DATABASE",GetOpVar("MISS_NOAV"))
   SetOpVar("HASH_USER_PANEL",GetOpVar("TOOLNAME_PU").."USER_PANEL")
-  SetOpVar("HASH_QUERY_STORE",GetOpVar("TOOLNAME_PU").."QHASH_QUERY")
-  SetOpVar("NAV_PIECE",{})
-  SetOpVar("NAV_PANEL",{})
-  return StatusPrint(true,"InitBase: Success")
+  LogInstance("Success"); return true
+end
+
+------------- VALUE ---------------
+--[[
+ * When requested wraps the first value according to
+ * the interval described by the other two values
+ * Inp: -6 -5 -4 -3 -2 -1 0 1 2 3 4 5 6 7 8 9 10
+ * Out:  3  1  2  3  1  2 3 1 2 3 1 2 3 1 2 3  1
+ * This is an example call for the input between 1 and 3
+]]
+function GetWrap(nVal,nMin,nMax) local nVal = nVal
+  while(nVal < nMin or nVal > nMax) do
+    nVal = ((nVal < nMin) and (nMax - (nMin - nVal) + 1) or nVal)
+    nVal = ((nVal > nMax) and (nMin + (nVal - nMax) - 1) or nVal)
+  end; return nVal -- Returns the N-stepped value
+end
+
+--[[
+ * Applies border if existent to the input value
+ * according to the given gorder name. Basicly
+ * custom version of a clamp with vararg border limits
+]]
+local function BorderValue(nsVal, vKey)
+  if(not IsHere(vKey)) then return nsVal end
+  if(not (IsString(nsVal) or IsNumber(nsVal))) then
+    LogInstance("Value not comparable"); return nsVal end
+  local tB = GetOpVar("TABLE_BORDERS")[vKey]; if(not IsHere(tB)) then
+    LogInstance("Missing <"..tostring(vKey)..">"); return nsVal end
+  if(tB[1] and nsVal < tB[1]) then return tB[1] end
+  if(tB[2] and nsVal > tB[2]) then return tB[2] end
+  return nsVal
+end
+
+------------- COLOR ---------------
+
+function FixColor(nC)
+  local tC = GetOpVar("COLOR_CLAMP")
+  return mathFloor(mathClamp((tonumber(nC) or 0), tC[1], tC[2]))
+end
+
+function GetColor(xR, xG, xB, xA)
+  local nR, nG = FixColor(xR), FixColor(xG)
+  local nB, nA = FixColor(xB), FixColor(xA)
+  return Color(nR, nG, nB, nA)
+end
+
+function ToColor(vBase, pX, pY, pZ, vA)
+  if(not vBase) then LogInstance("Base invalid"); return nil end
+  local iX, iY, iZ = UseIndexes(pX, pY, pZ, cvX, cvY, cvZ)
+  return GetColor(vBase[iX], vBase[iY], vBase[iZ], vA)
 end
 
 ------------- ANGLE ---------------
-function ToAngle(aBase)
-  if(not aBase) then return StatusLog(nil,"ToAngle: Base invalid") end
-  return Angle((tonumber(aBase[caP]) or 0), (tonumber(aBase[caY]) or 0), (tonumber(aBase[caR]) or 0))
+
+function ToAngle(aBase, pP, pY, pR)
+  if(not aBase) then LogInstance("Base invalid"); return nil end
+  local aP, aY, aR = UseIndexes(pP, pY, pR, caP, caY, caR)
+  return Angle((tonumber(aBase[aP]) or 0), (tonumber(aBase[aY]) or 0), (tonumber(aBase[aR]) or 0))
 end
 
-function ExpAngle(aBase)
-  if(not aBase) then return StatusLog(nil,"ExpAngle: Base invalid") end
-  return (tonumber(aBase[caP]) or 0), (tonumber(aBase[caY]) or 0), (tonumber(aBase[caR]) or 0)
+function ExpAngle(aBase, pP, pY, pR)
+  if(not aBase) then LogInstance("Base invalid"); return nil end
+  local aP, aY, aR = UseIndexes(pP, pY, pR, caP, caY, caR)
+  return (tonumber(aBase[aP]) or 0), (tonumber(aBase[aY]) or 0), (tonumber(aBase[aR]) or 0)
 end
 
 function AddAngle(aBase, aUnit)
-  if(not aBase) then return StatusLog(nil,"AddAngle: Base invalid") end
-  if(not aUnit) then return StatusLog(nil,"AddAngle: Unit invalid") end
+  if(not aBase) then LogInstance("Base invalid"); return nil end
+  if(not aUnit) then LogInstance("Unit invalid"); return nil end
   aBase[caP] = (tonumber(aBase[caP]) or 0) + (tonumber(aUnit[caP]) or 0)
   aBase[caY] = (tonumber(aBase[caY]) or 0) + (tonumber(aUnit[caY]) or 0)
   aBase[caR] = (tonumber(aBase[caR]) or 0) + (tonumber(aUnit[caR]) or 0)
 end
 
 function AddAnglePYR(aBase, nP, nY, nR)
-  if(not aBase) then return StatusLog(nil,"AddAnglePYR: Base invalid") end
+  if(not aBase) then LogInstance("Base invalid"); return nil end
   aBase[caP] = (tonumber(aBase[caP]) or 0) + (tonumber(nP) or 0)
   aBase[caY] = (tonumber(aBase[caY]) or 0) + (tonumber(nY) or 0)
   aBase[caR] = (tonumber(aBase[caR]) or 0) + (tonumber(nR) or 0)
 end
 
 function SubAngle(aBase, aUnit)
-  if(not aBase) then return StatusLog(nil,"SubAngle: Base invalid") end
-  if(not aUnit) then return StatusLog(nil,"SubAngle: Unit invalid") end
+  if(not aBase) then LogInstance("Base invalid"); return nil end
+  if(not aUnit) then LogInstance("Unit invalid"); return nil end
   aBase[caP] = (tonumber(aBase[caP]) or 0) - (tonumber(aUnit[caP]) or 0)
   aBase[caY] = (tonumber(aBase[caY]) or 0) - (tonumber(aUnit[caY]) or 0)
   aBase[caR] = (tonumber(aBase[caR]) or 0) - (tonumber(aUnit[caR]) or 0)
 end
 
 function SubAnglePYR(aBase, nP, nY, nR)
-  if(not aBase) then return StatusLog(nil,"SubAnglePYR: Base invalid") end
+  if(not aBase) then LogInstance("Base invalid"); return nil end
   aBase[caP] = (tonumber(aBase[caP]) or 0) - (tonumber(nP) or 0)
   aBase[caY] = (tonumber(aBase[caY]) or 0) - (tonumber(nY) or 0)
   aBase[caR] = (tonumber(aBase[caR]) or 0) - (tonumber(nR) or 0)
 end
 
 function NegAngle(vBase, bP, bY, bR)
-  if(not vBase) then return StatusLog(nil,"NegVector: Base invalid") end
-  local P = (tonumber(vBase[caP]) or 0); P = (IsExistent(bP) and (bP and -P or P) or -P)
-  local Y = (tonumber(vBase[caY]) or 0); Y = (IsExistent(bY) and (bY and -Y or Y) or -Y)
-  local R = (tonumber(vBase[caR]) or 0); R = (IsExistent(bR) and (bR and -R or R) or -R)
+  if(not vBase) then LogInstance("Base invalid"); return nil end
+  local P = (tonumber(vBase[caP]) or 0); P = (IsHere(bP) and (bP and -P or P) or -P)
+  local Y = (tonumber(vBase[caY]) or 0); Y = (IsHere(bY) and (bY and -Y or Y) or -Y)
+  local R = (tonumber(vBase[caR]) or 0); R = (IsHere(bR) and (bR and -R or R) or -R)
   vBase[caP], vBase[caY], vBase[caR] = P, Y, R
 end
 
 function SetAngle(aBase, aUnit)
-  if(not aBase) then return StatusLog(nil,"SetAngle: Base invalid") end
-  if(not aUnit) then return StatusLog(nil,"SetAngle: Unit invalid") end
+  if(not aBase) then LogInstance("Base invalid"); return nil end
+  if(not aUnit) then LogInstance("Unit invalid"); return nil end
   aBase[caP] = (tonumber(aUnit[caP]) or 0)
   aBase[caY] = (tonumber(aUnit[caY]) or 0)
   aBase[caR] = (tonumber(aUnit[caR]) or 0)
 end
 
 function SetAnglePYR(aBase, nP, nY, nR)
-  if(not aBase) then return StatusLog(nil,"SetAnglePYR: Base invalid") end
+  if(not aBase) then LogInstance("Base invalid"); return nil end
   aBase[caP] = (tonumber(nP) or 0)
   aBase[caY] = (tonumber(nY) or 0)
   aBase[caR] = (tonumber(nR) or 0)
@@ -532,128 +639,236 @@ end
 
 ------------- VECTOR ---------------
 
-function ToVector(vBase)
-  if(not vBase) then return StatusLog(nil,"ToVector: Base invalid") end
-  return Vector((tonumber(vBase[cvX]) or 0), (tonumber(vBase[cvY]) or 0), (tonumber(vBase[cvZ]) or 0))
+function ToVector(vBase, pX, pY, pZ)
+  if(not vBase) then LogInstance("Base invalid"); return nil end
+  local vX, vY, vZ = UseIndexes(pX, pY, pZ, cvX, cvY, cvZ)
+  return Vector((tonumber(vBase[vX]) or 0), (tonumber(vBase[vY]) or 0), (tonumber(vBase[vZ]) or 0))
 end
 
-function ExpVector(vBase)
-  if(not vBase) then return StatusLog(nil,"ExpVector: Base invalid") end
-  return (tonumber(vBase[cvX]) or 0), (tonumber(vBase[cvY]) or 0), (tonumber(vBase[cvZ]) or 0)
+function ExpVector(vBase, pX, pY, pZ)
+  if(not vBase) then LogInstance("Base invalid"); return nil end
+  local vX, vY, vZ = UseIndexes(pX, pY, pZ, cvX, cvY, cvZ)
+  return (tonumber(vBase[vX]) or 0), (tonumber(vBase[vY]) or 0), (tonumber(vBase[vZ]) or 0)
 end
 
-function AbsVector(vBase)
-  if(not vBase) then return StatusLog(nil,"AbsVector: Base invalid") end
-  local X, Y, Z = ExpVector(vBase); X, Y, Z = (X * X), (Y * Y), (Z * Z)
+function GetLengthVector(vBase)
+  if(not vBase) then LogInstance("Base invalid"); return nil end
+  local X = (tonumber(vBase[cvX]) or 0); X = X * X
+  local Y = (tonumber(vBase[cvY]) or 0); Y = Y * Y
+  local Z = (tonumber(vBase[cvZ]) or 0); Z = Z * Z
   return mathSqrt(X + Y + Z)
 end
 
-function RoundVector(vBase,nvAcc)
-  if(not vBase) then return StatusLog(nil,"Round: Base invalid") end
-  local nAcc = tonumber(nvAcc)
-  if(not IsExistent(nAcc)) then
-    return StatusLog(nil,"RoundVector: Round NAN {"..type(nvAcc).."}<"..tostring(nvAcc)..">") end
-  local X, Y, Z = ExpVector(vBase)
-  X, Y, Z = RoundValue(X,nAcc), RoundValue(Y,nAcc), RoundValue(Z,nAcc)
-  vBase[cvX], vBase[cvY], vBase[cvZ] = X, Y, Z
+function RoundVector(vBase,nvDec)
+  if(not vBase) then LogInstance("Base invalid"); return nil end
+  local D = tonumber(nvDec); if(not IsHere(R)) then
+    LogInstance("Round NAN {"..type(nvDec).."}<"..tostring(nvDec)..">"); return nil end
+  local X = (tonumber(vBase[cvX]) or 0); X = mathRound(X,D); vBase[cvX] = X
+  local Y = (tonumber(vBase[cvY]) or 0); Y = mathRound(Y,D); vBase[cvY] = Y
+  local Z = (tonumber(vBase[cvZ]) or 0); Z = mathRound(Z,D); vBase[cvZ] = Z
 end
 
 function AddVector(vBase, vUnit)
-  if(not vBase) then return StatusLog(nil,"AddVector: Base invalid") end
-  if(not vUnit) then return StatusLog(nil,"AddVector: Unit invalid") end
+  if(not vBase) then LogInstance("Base invalid"); return nil end
+  if(not vUnit) then LogInstance("Unit invalid"); return nil end
   vBase[cvX] = (tonumber(vBase[cvX]) or 0) + (tonumber(vUnit[cvX]) or 0)
   vBase[cvY] = (tonumber(vBase[cvY]) or 0) + (tonumber(vUnit[cvY]) or 0)
   vBase[cvZ] = (tonumber(vBase[cvZ]) or 0) + (tonumber(vUnit[cvZ]) or 0)
 end
 
 function AddVectorXYZ(vBase, nX, nY, nZ)
-  if(not vBase) then return StatusLog(nil,"AddVectorXYZ: Base invalid") end
+  if(not vBase) then LogInstance("Base invalid"); return nil end
   vBase[cvX] = (tonumber(vBase[cvX]) or 0) + (tonumber(nX) or 0)
   vBase[cvY] = (tonumber(vBase[cvY]) or 0) + (tonumber(nY) or 0)
   vBase[cvZ] = (tonumber(vBase[cvZ]) or 0) + (tonumber(nZ) or 0)
 end
 
 function SubVector(vBase, vUnit)
-  if(not vBase) then return StatusLog(nil,"SubVector: Base invalid") end
-  if(not vUnit) then return StatusLog(nil,"SubVector: Unit invalid") end
+  if(not vBase) then LogInstance("Base invalid"); return nil end
+  if(not vUnit) then LogInstance("Unit invalid"); return nil end
   vBase[cvX] = (tonumber(vBase[cvX]) or 0) - (tonumber(vUnit[cvX]) or 0)
   vBase[cvY] = (tonumber(vBase[cvY]) or 0) - (tonumber(vUnit[cvY]) or 0)
   vBase[cvZ] = (tonumber(vBase[cvZ]) or 0) - (tonumber(vUnit[cvZ]) or 0)
 end
 
 function SubVectorXYZ(vBase, nX, nY, nZ)
-  if(not vBase) then return StatusLog(nil,"SubVectorXYZ: Base invalid") end
+  if(not vBase) then LogInstance("Base invalid"); return nil end
   vBase[cvX] = (tonumber(vBase[cvX]) or 0) - (tonumber(nX) or 0)
   vBase[cvY] = (tonumber(vBase[cvY]) or 0) - (tonumber(nY) or 0)
   vBase[cvZ] = (tonumber(vBase[cvZ]) or 0) - (tonumber(nZ) or 0)
 end
 
 function NegVector(vBase, bX, bY, bZ)
-  if(not vBase) then return StatusLog(nil,"NegVector: Base invalid") end
-  local X = (tonumber(vBase[cvX]) or 0); X = (IsExistent(bX) and (bX and -X or X) or -X)
-  local Y = (tonumber(vBase[cvY]) or 0); Y = (IsExistent(bY) and (bY and -Y or Y) or -Y)
-  local Z = (tonumber(vBase[cvZ]) or 0); Z = (IsExistent(bZ) and (bZ and -Z or Z) or -Z)
+  if(not vBase) then LogInstance("Base invalid"); return nil end
+  local X = (tonumber(vBase[cvX]) or 0); X = (IsHere(bX) and (bX and -X or X) or -X)
+  local Y = (tonumber(vBase[cvY]) or 0); Y = (IsHere(bY) and (bY and -Y or Y) or -Y)
+  local Z = (tonumber(vBase[cvZ]) or 0); Z = (IsHere(bZ) and (bZ and -Z or Z) or -Z)
   vBase[cvX], vBase[cvY], vBase[cvZ] = X, Y, Z
 end
 
 function SetVector(vBase, vUnit)
-  if(not vBase) then return StatusLog(nil,"SetVector: Base invalid") end
-  if(not vUnit) then return StatusLog(nil,"SetVector: Unit invalid") end
+  if(not vBase) then LogInstance("Base invalid"); return nil end
+  if(not vUnit) then LogInstance("Unit invalid"); return nil end
   vBase[cvX] = (tonumber(vUnit[cvX]) or 0)
   vBase[cvY] = (tonumber(vUnit[cvY]) or 0)
   vBase[cvZ] = (tonumber(vUnit[cvZ]) or 0)
 end
 
 function SetVectorXYZ(vBase, nX, nY, nZ)
-  if(not vBase) then return StatusLog(nil,"SetVectorXYZ: Base invalid") end
+  if(not vBase) then LogInstance("Base invalid"); return nil end
   vBase[cvX] = (tonumber(nX or 0))
   vBase[cvY] = (tonumber(nY or 0))
   vBase[cvZ] = (tonumber(nZ or 0))
 end
 
-function DecomposeByAngle(vBase,aUnit)
-  if(not vBase) then return StatusLog(nil,"DecomposeByAngle: Base invalid") end
-  if(not aUnit) then return StatusLog(nil,"DecomposeByAngle: Unit invalid") end
+function MulVectorXYZ(vBase, nX, nY, nZ)
+  if(not vBase) then LogInstance("Base invalid"); return nil end
+  vBase[cvX] = vBase[cvX] * (tonumber(nX or 0))
+  vBase[cvY] = vBase[cvY] * (tonumber(nY or 0))
+  vBase[cvZ] = vBase[cvZ] * (tonumber(nZ or 0))
+end
+
+function DecomposeByAngle(vBase, aUnit)
+  if(not vBase) then LogInstance("Base invalid"); return nil end
+  if(not aUnit) then LogInstance("Unit invalid"); return nil end
   local X = vBase:Dot(aUnit:Forward())
   local Y = vBase:Dot(aUnit:Right())
   local Z = vBase:Dot(aUnit:Up())
   SetVectorXYZ(vBase,X,Y,Z)
 end
 
----------- OOP -----------------
+-------------- 2DVECTOR ----------------
+
+function NewXY(nX, nY)
+  return {x=(tonumber(nX) or 0), y=(tonumber(nY) or 0)}
+end
+
+function SetXY(xyR, vA, vB) local xA, yA
+  if(not xyR) then LogInstance("Base R invalid"); return nil end
+  if(not vA ) then LogInstance("Base A invalid"); return nil end
+  if(vB) then xA, yA = (tonumber(vA) or 0), (tonumber(vB) or 0)
+  else xA, yA = (tonumber(vA.x) or 0), (tonumber(vA.y) or 0) end
+  xyR.x, xyR.y = xA, yA; return xyR
+end
+
+function NegXY(xyR)
+  if(not xyR) then LogInstance("Base invalid"); return nil end
+  xyR.x, xyR.y = -xyR.x, -xyR.y; return xyR
+end
+
+function NegX(xyR)
+  if(not xyR) then LogInstance("Base invalid"); return nil end
+  xyR.x = -xyR.x; return xyR
+end
+
+function NegY(xyR)
+  if(not xyR) then LogInstance("Base invalid"); return nil end
+  xyR.y = -xyR.y; return xyR
+end
+
+function MulXY(xyR, vM)
+  if(not xyR) then LogInstance("Base invalid"); return nil end
+  local nM = (tonumber(vM) or 0)
+  xyR.x, xyR.y = (xyR.x * nM), (xyR.y * nM); return xyR
+end
+
+function DivXY(xyR, vD)
+  if(not xyR) then LogInstance("Base invalid"); return nil end
+  local nD = (tonumber(vM) or 0)
+  xyR.x, xyR.y = (xyR.x / nD), (xyR.y / nD); return xyR
+end
+
+function AddXY(xyR, xyA, xyB)
+  if(not xyR) then LogInstance("Base R invalid"); return nil end
+  if(not xyA) then LogInstance("Base A invalid"); return nil end
+  if(not xyB) then LogInstance("Base B invalid"); return nil end
+  local xA, yA = (tonumber(xyA.x) or 0), (tonumber(xyA.y) or 0)
+  local xB, yB = (tonumber(xyB.x) or 0), (tonumber(xyB.y) or 0)
+  xyR.x, xyR.y = (xA + xB), (yA + yB); return xyR
+end
+
+function SubXY(xyR, xyA, xyB)
+  if(not xyR) then LogInstance("Base R invalid"); return nil end
+  if(not xyA) then LogInstance("Base A invalid"); return nil end
+  if(not xyB) then LogInstance("Base B invalid"); return nil end
+  local xA, yA = (tonumber(xyA.x) or 0), (tonumber(xyA.y) or 0)
+  local xB, yB = (tonumber(xyB.x) or 0), (tonumber(xyB.y) or 0)
+  xyR.x, xyR.y = (xA - xB), (yA - yB); return xyR
+end
+
+function LenXY(xyR)
+  if(not xyR) then LogInstance("Base invalid"); return nil end
+  local xA, yA = (tonumber(xyR.x) or 0), (tonumber(xyR.y) or 0)
+  return mathSqrt(xA * xA + yA * yA)
+end
+
+function ExpXY(xyR)
+  if(not xyR) then LogInstance("Base invalid"); return nil end
+  return (tonumber(xyR.x) or 0), (tonumber(xyR.y) or 0)
+end
+
+function UnitXY(xyR)
+  if(not xyR) then LogInstance("Base invalid"); return nil end
+  local nL = LenXY(xyR); if(nL == nL ) then
+    LogInstance("Length A invalid"); return nil end
+  xyR.xm, xyR.y = (tonumber(xyR.x) / nL), (tonumber(xyR.y) / nL)
+  return xyR -- Return scaled unit vector
+end
+
+function MidXY(xyR, xyA, xyB)
+  if(not xyR) then LogInstance("Base R invalid"); return nil end
+  if(not xyA) then LogInstance("Base A invalid"); return nil end
+  if(not xyB) then LogInstance("Base B invalid"); return nil end
+  local xA, yA = (tonumber(xyA.x) or 0), (tonumber(xyA.y) or 0)
+  local xB, yB = (tonumber(xyB.x) or 0), (tonumber(xyB.y) or 0)
+  xyR.x, xyR.y = ((xA + xB) / 2), ((yA + yB) / 2); return xyR
+end
+
+function RotateXY(xyR, nR)
+  if(not xyR) then LogInstance("Base invalid"); return nil end
+  local nA = (tonumber(nR) or 0)
+  if(nA == 0) then return xyR end
+  local nX = (tonumber(xyR.x) or 0)
+  local nY = (tonumber(xyR.y) or 0)
+  local nS, nC = mathSin(nA), mathCos(nA)
+  xyR.x = (nX * nC - nY * nS)
+  xyR.y = (nX * nS + nY * nC); return xyR
+end
+
+function GetAngleXY(xyR)
+  if(not xyR) then LogInstance("Base V invalid"); return nil end
+  return mathAtan2(xyR.y, xyR.x)
+end
+
+----------------- OOP ------------------
 
 function MakeContainer(sInfo,sDefKey)
-  local Curs, Data = 0, {}
+  local Curs, Data, self = 0, {}, {}
   local sSel, sIns, sDel, sMet = "", "", "", ""
   local Info = tostring(sInfo or "Storage container")
   local Key  = sDefKey or GetOpVar("OOP_DEFAULTKEY")
-  local self = {}
   function self:GetInfo() return Info end
   function self:GetSize() return Curs end
   function self:GetData() return Data end
-  function self:Insert(nsKey,anyValue)
+  function self:Insert(nsKey,vVal)
     sIns = nsKey or Key; sMet = "I"
-    if(not IsExistent(Data[sIns])) then Curs = Curs + 1; end
-    Data[sIns] = anyValue
+    if(not IsHere(Data[sIns])) then Curs = Curs + 1; end
+    Data[sIns] = vVal
   end
   function self:Select(nsKey)
     sSel = nsKey or Key; return Data[sSel]
   end
   function self:Delete(nsKey,fnDel)
     sDel = nsKey or Key; sMet = "D"
-    if(IsExistent(Data[sDel])) then
-      if(IsExistent(fnDel)) then
-        fnDel(Data[sDel])
-      end
-      Data[sDel] = nil
-      Curs = Curs - 1
+    if(IsHere(Data[sDel])) then
+      if(IsHere(fnDel)) then fnDel(Data[sDel]) end
+      Curs, Data[sDel] = (Curs - 1), nil
     end
   end
   function self:GetHistory()
-    return tostring(sMet)..GetOpVar("OPSYM_REVSIGN")..
+    return tostring(sMet)..GetOpVar("OPSYM_REVISION")..
            tostring(sSel)..GetOpVar("OPSYM_DIRECTORY")..
-           tostring(sIns)..GetOpVar("OPSYM_DIRECTORY")..
-           tostring(sDel)
+           tostring(sIns)..GetOpVar("OPSYM_DIRECTORY")..tostring(sDel)
   end
   setmetatable(self,GetOpVar("TYPEMT_CONTAINER"))
   return self
@@ -672,23 +887,24 @@ end
  * CIR - Drawing a circle
 ]]--
 function MakeScreen(sW,sH,eW,eH,conColors)
-  if(SERVER) then return nil end
+  if(SERVER) then return nil end; local tLogs = {"MakeScreen"}
   local sW, sH = (tonumber(sW) or 0), (tonumber(sH) or 0)
   local eW, eH = (tonumber(eW) or 0), (tonumber(eH) or 0)
-  if(sW < 0 or sH < 0) then return StatusLog(nil,"MakeScreen: Start dimension invalid") end
-  if(eW < 0 or eH < 0) then return StatusLog(nil,"MakeScreen: End dimension invalid") end
-  local Colors = {List = conColors, Key = GetOpVar("OOP_DEFAULTKEY"), Default = Color(255,255,255,255)}
+  if(sW < 0 or sH < 0) then LogInstance("Start dimension invalid", tLogs); return nil end
+  if(eW < 0 or eH < 0) then LogInstance("End dimension invalid", tLogs); return nil end
+  local xyS, xyE, self = NewXY(sW, sH), NewXY(eW, eH), {}
+  local Colors = {List = conColors, Key = GetOpVar("OOP_DEFAULTKEY"), Default = GetColor(255,255,255,255)}
   if(Colors.List) then -- Container check
     if(getmetatable(Colors.List) ~= GetOpVar("TYPEMT_CONTAINER"))
-      then return StatusLog(nil,"MakeScreen: Color list not container") end
+      then LogInstance("Color list not container", tLogs); return nil end
   else -- Color list is not present then create one
     Colors.List = MakeContainer("Colors")
   end
-  local DrawMeth, DrawArgs, Text = {}, {}, {}
+  local DrawMeth, DrawArgs, Text, TxID = {}, {}, {}, {}
   Text.DrwX, Text.DrwY = 0, 0
   Text.ScrW, Text.ScrH = 0, 0
   Text.LstW, Text.LstH = 0, 0
-  local self = {}
+  function self:GetCorners() return xyS, xyE end
   function self:GetSize() return (eW-sW), (eH-sH) end
   function self:GetCenter(nX,nY)
     local nW, nH = self:GetSize()
@@ -696,27 +912,32 @@ function MakeScreen(sW,sH,eW,eH,conColors)
     local nY = (nH / 2) + (tonumber(nY) or 0)
     return nX, nY
   end
-  function self:SetColor(keyColor,sMeth)
-    if(not IsExistent(keyColor) and not IsExistent(sMeth)) then
-      Colors.Key = GetOpVar("OOP_DEFAULTKEY")
-      return StatusLog(nil,"MakeScreen.SetColor: Color reset") end
-    local keyColor = keyColor or Colors.Key
-    if(not IsExistent(keyColor)) then
-      return StatusLog(nil,"MakeScreen.SetColor: Indexing skipped") end
-    if(not IsString  (   sMeth)) then
-      return StatusLog(nil,"MakeScreen.SetColor: Method <"..tostring(method).."> invalid") end
-    local rgbColor = Colors.List:Select(keyColor)
-    if(not IsExistent(rgbColor)) then rgbColor = Colors.Default end
-    if(tostring(Colors.Key) ~= tostring(keyColor)) then -- Update the color only on change
-      surfaceSetDrawColor(rgbColor.r, rgbColor.g, rgbColor.b, rgbColor.a)
-      surfaceSetTextColor(rgbColor.r, rgbColor.g, rgbColor.b, rgbColor.a)
-      Colors.Key = keyColor;
-    end -- The drawing color for these two methods uses surface library
-    return rgbColor, keyColor
+  function self:GetMaterial(fC, sP) local tS = TxID[fC]
+    if(not tS) then TxID[fC] = {} end; tS = TxID[fC]
+    if(not tS[sP]) then bS, vV = pcall(fC, sP)
+      if(not bS) then LogInstance("Call fail <"..vV..">", tLogs); return nil end
+      tS[sP] = vV -- Store the value in the cache
+    end; return tS[sP] -- Return cached material or texture
   end
-  function self:SetDrawParam(sMeth,tArgs,sKey)
+  function self:GetColor(keyCl,sMeth)
+    if(not IsHere(keyCl) and not IsHere(sMeth)) then
+      Colors.Key = GetOpVar("OOP_DEFAULTKEY")
+      LogInstance("Color reset", tLogs); return self end
+    local keyCl = (keyCl or Colors.Key); if(not IsHere(keyCl)) then
+      LogInstance("Indexing skipped", tLogs); return self end
+    if(not IsString(sMeth)) then
+      LogInstance("Method <"..tostring(method).."> invalid", tLogs); return self end
+    local rgbCl = Colors.List:Select(keyCl)
+    if(not IsHere(rgbCl)) then rgbCl = Colors.Default end
+    if(tostring(Colors.Key) ~= tostring(keyCl)) then -- Update the color only on change
+      surfaceSetDrawColor(rgbCl.r, rgbCl.g, rgbCl.b, rgbCl.a)
+      surfaceSetTextColor(rgbCl.r, rgbCl.g, rgbCl.b, rgbCl.a)
+      Colors.Key = keyCl; -- The drawing color for these two methods uses surface library
+    end; return rgbCl, keyCl
+  end
+  function self:GetDrawParam(sMeth,tArgs,sKey)
+    tArgs = (tArgs or DrawArgs[sKey])
     sMeth = tostring(sMeth or DrawMeth[sKey])
-    tArgs =         (tArgs or DrawArgs[sKey])
     if(sMeth == "SURF") then
       if(sKey == "TXT" and tArgs ~= DrawArgs[sKey]) then
         surfaceSetFont(tostring(tArgs[1] or "Default")) end -- Time to set the font again
@@ -726,27 +947,29 @@ function MakeScreen(sW,sH,eW,eH,conColors)
     Text.ScrW, Text.ScrH = 0, 0
     Text.LstW, Text.LstH = 0, 0
     Text.DrwX = (tonumber(nX) or 0)
-    Text.DrwY = (tonumber(nY) or 0)
+    Text.DrwY = (tonumber(nY) or 0); return self
   end
   function self:GetTextState(nX,nY,nW,nH)
     return (Text.DrwX + (nX or 0)), (Text.DrwY + (nY or 0)),
-           (Text.ScrW  + (nW or 0)), (Text.ScrH  + (nH or 0)),
+           (Text.ScrW + (nW or 0)), (Text.ScrH + (nH or 0)),
             Text.LstW, Text.LstH
   end
-  function self:DrawText(sText,keyColor,sMeth,tArgs)
-    local sMeth, tArgs = self:SetDrawParam(sMeth,tArgs,"TXT")
-    self:SetColor(keyColor, sMeth)
+  function self:DrawText(sText,keyCl,sMeth,tArgs)
+    local sMeth, tArgs = self:GetDrawParam(sMeth,tArgs,"TXT")
+    self:GetColor(keyCl, sMeth)
     if(sMeth == "SURF") then
       surfaceSetTextPos(Text.DrwX,Text.DrwY); surfaceDrawText(sText)
       Text.LstW, Text.LstH = surfaceGetTextSize(sText)
       Text.DrwY = Text.DrwY + Text.LstH
       if(Text.LstW > Text.ScrW) then Text.ScrW = Text.LstW end
       Text.ScrH = Text.DrwY
-    else return StatusLog(nil,"MakeScreen.DrawText: Draw method <"..sMeth.."> invalid") end
+    else
+      LogInstance("Draw method <"..sMeth.."> invalid", tLogs)
+    end; return self
   end
-  function self:DrawTextAdd(sText,keyColor,sMeth,tArgs)
-    local sMeth, tArgs = self:SetDrawParam(sMeth,tArgs,"TXT")
-    self:SetColor(keyColor, sMeth)
+  function self:DrawTextAdd(sText,keyCl,sMeth,tArgs)
+    local sMeth, tArgs = self:GetDrawParam(sMeth,tArgs,"TXT")
+    self:GetColor(keyCl, sMeth)
     if(sMeth == "SURF") then
       surfaceSetTextPos(Text.DrwX + Text.LstW,Text.DrwY - Text.LstH)
       surfaceDrawText(sText)
@@ -754,144 +977,154 @@ function MakeScreen(sW,sH,eW,eH,conColors)
       Text.LstW, Text.LstH = (Text.LstW + LstW), LstH
       if(Text.LstW > Text.ScrW) then Text.ScrW = Text.LstW end
       Text.ScrH = Text.DrwY
-    else return StatusLog(nil,"MakeScreen.DrawTextAdd: Draw method <"..sMeth.."> invalid") end
+    else
+      LogInstance("Draw method <"..sMeth.."> invalid", tLogs)
+    end; return self
   end
-  function self:Enclose(xyPnt)
-    if(xyPnt.x < sW) then return -1 end
-    if(xyPnt.x > eW) then return -1 end
-    if(xyPnt.y < sH) then return -1 end
-    if(xyPnt.y > eH) then return -1 end; return 1
+  function self:DrawTextCenter(xyP,sText,keyCl,sMeth,tArgs)
+    local sMeth, tArgs = self:GetDrawParam(sMeth,tArgs,"TXT")
+    self:GetColor(keyCl, sMeth)
+    if(sMeth == "SURF") then
+      local LstW, LstH = surfaceGetTextSize(sText)
+      LstW, LstH = (LstW / 2), (LstH / 2)
+      surfaceSetTextPos(xyP.x - LstW, xyP.y - LstH)
+      surfaceDrawText(sText)
+    end; return self
+  end
+  function self:Enclose(xyP)
+    if(xyP.x < sW) then return -1 end
+    if(xyP.x > eW) then return -1 end
+    if(xyP.y < sH) then return -1 end
+    if(xyP.y > eH) then return -1 end; return 1
   end
   function self:GetDistance(pS, pE)
     if(self:Enclose(pS) == -1) then
-      return StatusLog(nil,"MakeScreen.GetDistance: Start out of border") end
+      LogInstance("Start out of border", tLogs); return nil end
     if(self:Enclose(pE) == -1) then
-      return StatusLog(nil,"MakeScreen.GetDistance: End out of border") end
+      LogInstance("End out of border", tLogs); return nil end
     return mathSqrt((pE.x - pS.x)^2 + (pE.y - pS.y)^2)
   end
-  function self:DrawLine(pS,pE,keyColor,sMeth,tArgs)
-    if(not (pS and pE)) then return end
-    local sMeth, tArgs = self:SetDrawParam(sMeth,tArgs,"LIN")
-    local rgbCl, keyCl = self:SetColor(keyColor, sMeth)
+  function self:DrawLine(pS,pE,keyCl,sMeth,tArgs)
+    if(not (pS and pE)) then return self end
+    local sMeth, tArgs = self:GetDrawParam(sMeth,tArgs,"LIN")
+    local rgbCl, keyCl = self:GetColor(keyCl, sMeth)
     if(sMeth == "SURF") then
       if(self:Enclose(pS) == -1) then
-        return StatusLog(nil,"MakeScreen.DrawLine: Start out of border") end
+        LogInstance("Start out of border", tLogs); return self end
       if(self:Enclose(pE) == -1) then
-        return StatusLog(nil,"MakeScreen.DrawLine: End out of border") end
+        LogInstance("End out of border", tLogs); return self end
       surfaceDrawLine(pS.x,pS.y,pE.x,pE.y)
     elseif(sMeth == "SEGM") then
       if(self:Enclose(pS) == -1) then
-        return StatusLog(nil,"MakeScreen.DrawLine: Start out of border") end
+        LogInstance("Start out of border", tLogs); return self end
       if(self:Enclose(pE) == -1) then
-        return StatusLog(nil,"MakeScreen.DrawLine: End out of border") end
-      local nIter = mathClamp((tonumber(tArgs[1]) or 1),1,200)
-      if(nIter <= 0) then return end
-      local nLx, nLy = (pE.x - pS.x), (pE.y - pS.y)
-      local xyD = {x = (nLx / nIter), y = (nLy / nIter)}
-      local xyOld, xyNew = {x = pS.x, y = pS.y}, {x = 0,y = 0}
-      while(nIter > 0) do
-        xyNew.x = xyOld.x + xyD.x
-        xyNew.y = xyOld.y + xyD.y
+        LogInstance("End out of border", tLogs); return self end
+      local nItr = mathClamp((tonumber(tArgs[1]) or 1),1,200)
+      if(nIter <= 0) then return self end
+      local xyD = NewXY((pE.x - pS.x) / nItr, (pE.y - pS.y) / nItr)
+      local xyOld, xyNew = NewXY(pS.x, pS.y), NewXY()
+      while(nItr > 0) do AddXY(xyNew, xyOld, xyD)
         surfaceDrawLine(xyOld.x,xyOld.y,xyNew.x,xyNew.y)
-        xyOld.x, xyOld.y = xyNew.x, xyNew.y
-        nIter = nIter - 1;
+        SetXY(xyOld, xyNew); nItr = nItr - 1
       end
     elseif(sMeth == "CAM3") then
       renderDrawLine(pS,pE,rgbCl,(tArgs[1] and true or false))
-    else return StatusLog(nil,"MakeScreen.DrawLine: Draw method <"..sMeth.."> invalid") end
+    else LogInstance("Draw method <"..sMeth.."> invalid", tLogs); return self end
   end
-  function self:DrawRect(pS,pE,keyColor,sMeth,tArgs)
-    local sMeth, tArgs = self:SetDrawParam(sMeth,tArgs,"REC")
-    self:SetColor(keyColor,sMeth)
+  function self:DrawRect(pO,pS,keyCl,sMeth,tArgs)
+    local sMeth, tArgs = self:GetDrawParam(sMeth,tArgs,"REC")
+    self:GetColor(keyCl,sMeth)
     if(sMeth == "SURF") then
+      if(self:Enclose(pO) == -1) then
+        LogInstance("Start out of border", tLogs); return self end
       if(self:Enclose(pS) == -1) then
-        return StatusLog(nil,"MakeScreen.DrawRect: Start out of border") end
-      if(self:Enclose(pE) == -1) then
-        return StatusLog(nil,"MakeScreen.DrawRect: End out of border") end
-      surfaceSetTexture(surfaceGetTextureID(tostring(tArgs[1])))
-      surfaceDrawTexturedRect(pS.x,pS.y,pE.x-pS.x,pE.y-pS.y)
-    else return StatusLog(nil,"MakeScreen.DrawRect: Draw method <"..sMeth.."> invalid") end
+        LogInstance("End out of border", tLogs); return self end
+      local nR = tonumber(tArgs[2])
+      surfaceSetTexture(self:GetMaterial(surfaceGetTextureID, tArgs[1]))
+      if(nR) then local nD = (nR / GetOpVar("DEG_RAD"))
+        surfaceDrawTexturedRectRotated(pO.x,pO.y,pS.x,pS.y,nD)
+      else -- Use the regular rectangle function without sin/cos rotation
+        surfaceDrawTexturedRect(pO.x,pO.y,pS.x,pS.y)
+      end
+    else -- Unsuppoerted method
+      LogInstance("Draw method <"..sMeth.."> invalid", tLogs)
+    end; return self
   end
-  function self:DrawCircle(pC,nRad,keyColor,sMeth,tArgs)
-    local sMeth, tArgs = self:SetDrawParam(sMeth,tArgs,"CIR")
-    local rgbCl, keyCl = self:SetColor(keyColor,sMeth)
+  function self:DrawCircle(pC,nRad,keyCl,sMeth,tArgs)
+    local sMeth, tArgs = self:GetDrawParam(sMeth,tArgs,"CIR")
+    local rgbCl, keyCl = self:GetColor(keyCl,sMeth)
     if(sMeth == "SURF") then surfaceDrawCircle(pC.x, pC.y, nRad, rgbCl)
     elseif(sMeth == "SEGM") then
       local nItr = mathClamp((tonumber(tArgs[1]) or 1),1,200)
-      local nMax = (GetOpVar("MAX_ROTATION") * mathPi / 180)
-      local nStp, nAng = (nMax / nItr), 0
-      local xyOld, xyNew, xyRad = {x=0,y=0}, {x=0,y=0}, {x=nRad,y=0}
-            xyOld.x = pC.x + xyRad.x
-            xyOld.y = pC.y + xyRad.y
-      while(nItr > 0) do
-        nAng = nAng + nStp
-        local nSin, nCos = mathSin(nAng), mathCos(nAng)
-        xyNew.x = pC.x + (xyRad.x * nCos - xyRad.y * nSin)
-        xyNew.y = pC.y + (xyRad.x * nSin + xyRad.y * nCos)
+      local nMax = (GetOpVar("MAX_ROTATION") * GetOpVar("DEG_RAD"))
+      local xyOld, xyNew, xyRad = NewXY(), NewXY(), NewXY(nRad, 0)
+      local nStp, nAng = (nMax / nItr), 0; AddXY(xyOld, xyRad, pC)
+      while(nItr > 0) do nAng = nAng + nStp
+        SetXY(xyNew, xyRad); RotateXY(xyNew, nAng); AddXY(xyNew, xyNew, pC)
         surfaceDrawLine(xyOld.x,xyOld.y,xyNew.x,xyNew.y)
-        xyOld.x, xyOld.y = xyNew.x, xyNew.y
-        nItr = nItr - 1;
+        SetXY(xyOld, xyNew); nItr = (nItr - 1)
       end
     elseif(sMeth == "CAM3") then -- It is a projection of a sphere
-      renderSetMaterial(Material(tostring(tArgs[1] or "color")))
+      renderSetMaterial(self:GetMaterial(Material, (tArgs[1] or "color")))
       renderDrawSphere (pC,nRad,mathClamp(tArgs[2] or 1,1,200),
                                 mathClamp(tArgs[3] or 1,1,200),rgbCl)
-    else return StatusLog(nil,"MakeScreen.DrawCircle: Draw method <"..sMeth.."> invalid") end
-  end
-  setmetatable(self,GetOpVar("TYPEMT_SCREEN"))
-  return self
+    else LogInstance("Draw method <"..sMeth.."> invalid", tLogs); return nil end
+  end; setmetatable(self, GetOpVar("TYPEMT_SCREEN")); return self
 end
 
 function SetAction(sKey,fAct,tDat)
   if(not (sKey and IsString(sKey))) then
-    return StatusLog(nil,"SetAction: Key {"..type(sKey).."}<"..tostring(sKey).."> not string") end
+    LogInstance("Key {"..type(sKey).."}<"..tostring(sKey).."> not string"); return nil end
   if(not (fAct and type(fAct) == "function")) then
-    return StatusLog(nil,"SetAction: Act {"..type(fAct).."}<"..tostring(fAct).."> not function") end
+    LogInstance("Act {"..type(fAct).."}<"..tostring(fAct).."> not function"); return nil end
   if(not libAction[sKey]) then libAction[sKey] = {} end
-  libAction[sKey].Act, libAction[sKey].Dat = fAct, tDat
-  return true
+  libAction[sKey].Act, libAction[sKey].Dat = fAct, {}
+  if(IsTable(tDat)) then for key, val in pairs(tDat) do
+    libAction[sKey].Dat[key] = tDat[key] end
+  else libAction[sKey].Dat[1] = tDat end
+  libAction[sKey].Dat.Slot = sKey; return true
 end
 
 function GetActionCode(sKey)
   if(not (sKey and IsString(sKey))) then
-    return StatusLog(nil,"GetActionCode: Key {"..type(sKey).."}<"..tostring(sKey).."> not string") end
+    LogInstance("Key {"..type(sKey).."}<"..tostring(sKey).."> not string"); return nil end
   if(not (libAction and libAction[sKey])) then
-    return StatusLog(nil,"GetActionCode: Key missing <"..sKey..">") end
+    LogInstance("Missing key <"..sKey..">"); return nil end
   return libAction[sKey].Act
 end
 
 function GetActionData(sKey)
   if(not (sKey and IsString(sKey))) then
-    return StatusLog(nil,"GetActionData: Key {"..type(sKey).."}<"..tostring(sKey).."> not string") end
+    LogInstance("Key {"..type(sKey).."}<"..tostring(sKey).."> not string"); return nil end
   if(not (libAction and libAction[sKey])) then
-    return StatusLog(nil,"GetActionData: Key not located") end
+    LogInstance("Missing key <"..sKey..">"); return nil end
   return libAction[sKey].Dat
 end
 
 function CallAction(sKey,...)
   if(not (sKey and IsString(sKey))) then
-    return StatusLog(nil,"CallAction: Key {"..type(sKey).."}<"..tostring(sKey).."> not string") end
+    LogInstance("Key {"..type(sKey).."}<"..tostring(sKey).."> not string"); return nil end
   if(not (libAction and libAction[sKey])) then
-    return StatusLog(nil,"CallAction: Key not located") end
-  return libAction[sKey].Act(libAction[sKey].Dat,...)
+    LogInstance("Missing key <"..sKey..">"); return nil end
+  local fAct, tDat = libAction[sKey].Act, libAction[sKey].Dat
+  return pcall(fAct, tDat, ...)
 end
 
 local function AddLineListView(pnListView,frUsed,ivNdex)
-  if(not IsExistent(pnListView)) then
-    return StatusLog(false,"LineAddListView: Missing panel") end
+  if(not IsHere(pnListView)) then
+    LogInstance("Missing panel"); return false end
   if(not IsValid(pnListView)) then
-    return StatusLog(false,"LineAddListView: Invalid panel") end
-  if(not IsExistent(frUsed)) then
-    return StatusLog(false,"LineAddListView: Missing data") end
-  local iNdex = tonumber(ivNdex)
-  if(not IsExistent(iNdex)) then
-    return StatusLog(false,"LineAddListView: Index NAN {"..type(ivNdex).."}<"..tostring(ivNdex)..">") end
-  local tValue = frUsed[iNdex]
-  if(not IsExistent(tValue)) then
-    return StatusLog(false,"LineAddListView: Missing data on index #"..tostring(iNdex)) end
-  local defTable = GetOpVar("DEFTABLE_PIECES")
-  if(not IsExistent(defTable)) then
-    return StatusLog(false,"LineAddListView: Missing table definition") end
+    LogInstance("Invalid panel"); return false end
+  if(not IsHere(frUsed)) then
+    LogInstance("Missing data"); return false end
+  local iNdex = tonumber(ivNdex); if(not IsHere(iNdex)) then
+    LogInstance("Index NAN {"..type(ivNdex).."}<"..tostring(ivNdex)..">"); return false end
+  local tValue = frUsed[iNdex]; if(not IsHere(tValue)) then
+    LogInstance("Missing data on index #"..tostring(iNdex)); return false end
+  local makTab = libQTable["PIECES"]; if(not IsHere(makTab)) then
+    LogInstance("Missing table builder"); return nil end
+  local defTab = makTab:GetDefinition(); if(not IsHere(defTab)) then
+    LogInstance("Missing table definition"); return false end
   local sModel = tValue.Table[defTable[1][1]]
   local sType  = tValue.Table[defTable[2][1]]
   local sName  = tValue.Table[defTable[3][1]]
@@ -904,59 +1137,57 @@ end
 
 --[[
  * Updates a VGUI pnListView with a search preformed in the already generated
- * frequently used pieces "frUsed" for the pattern "sPattern" given by the user
- * and a field name selected "sField".
+ * frequently used pieces "frUsed" for the pattern "sPat" given by the user
+ * and a column name selected `sCol`.
  * On success populates "pnListView" with the search preformed
  * On fail a parameter is not valid or missing and returns non-success
 ]]--
-function UpdateListView(pnListView,frUsed,nCount,sField,sPattern)
-  if(not (IsExistent(frUsed) and IsExistent(frUsed[1]))) then
-    return StatusLog(false,"UpdateListView: Missing data") end
+function UpdateListView(pnListView,frUsed,nCount,sCol,sPat)
+  if(not (IsHere(frUsed) and IsHere(frUsed[1]))) then
+    LogInstance("Missing data"); return false end
   local nCount = tonumber(nCount) or 0
   if(nCount <= 0) then
-    return StatusLog(false,"UpdateListView: Count not applicable") end
-  if(IsExistent(pnListView)) then
+    LogInstance("Count not applicable"); return false end
+  if(IsHere(pnListView)) then
     if(not IsValid(pnListView)) then
-      return StatusLog(false,"UpdateListView: Invalid ListView") end
+      LogInstance("Invalid ListView"); return false end
     pnListView:SetVisible(false)
     pnListView:Clear()
-  else return StatusLog(false,"UpdateListView: Missing ListView") end
-  local sField   = tostring(sField   or "")
-  local sPattern = tostring(sPattern or "")
-  local iNdex, pnRec, sData = 1, nil, nil
-  while(frUsed[iNdex]) do
-    if(IsEmptyString(sPattern)) then
-      if(not AddLineListView(pnListView,frUsed,iNdex)) then
-        return StatusLog(false,"UpdateListView: Failed to add line on #"..tostring(iNdex)) end
+  else LogInstance("Missing ListView"); return false end
+  local sCol, sPat = tostring(sCol or ""), tostring(sPat or "")
+  local iCnt, sDat = 1, nil
+  while(frUsed[iCnt]) do
+    if(IsBlank(sPat)) then
+      if(not AddLineListView(pnListView,frUsed,iCnt)) then
+        LogInstance("Failed to add line on #"..tostring(iCnt)); return false end
     else
-      sData = tostring(frUsed[iNdex].Table[sField] or "")
-      if(sData:find(sPattern)) then
-        if(not AddLineListView(pnListView,frUsed,iNdex)) then
-          return StatusLog(false,"UpdateListView: Failed to add line <"
-                   ..sData.."> pattern <"..sPattern.."> on <"..sField.."> #"..tostring(iNdex)) end
+      sDat = tostring(frUsed[iCnt].Table[sCol] or "")
+      if(sDat:find(sPat)) then
+        if(not AddLineListView(pnListView,frUsed,iCnt)) then
+          LogInstance("Failed to add line <"..sDat.."> pattern <"..sPat.."> on <"..sCol.."> #"..tostring(iCnt)); return false end
       end
-    end; iNdex = iNdex + 1
+    end; iCnt = iCnt + 1
   end; pnListView:SetVisible(true)
-  return StatusLog(true,"UpdateListView: Crated #"..tostring(iNdex-1))
+  LogInstance("Crated #"..tostring(iCnt-1)); return true
 end
 
 function GetDirectoryObj(pCurr, vName)
   if(not pCurr) then
-    return StatusLog(nil,"GetDirectoryObj: Location invalid") end
+    LogInstance("Location invalid"); return nil end
   local sName = tostring(vName or "")
-        sName = IsEmptyString(sName) and "Other" or sName
+        sName = IsBlank(sName) and "Other" or sName
   if(not pCurr[sName]) then
-    return StatusLog(nil,"GetDirectoryObj: Name missing <"..sName..">") end
+    LogInstance("Name missing <"..sName..">"); return nil end
   return pCurr[sName], pCurr[sName].__ObjPanel__
 end
 
 function SetDirectoryObj(pnBase, pCurr, vName, sImage, txCol)
   if(not IsValid(pnBase)) then
-    return StatusLog(nil,"SetDirectoryObj: Base panel invalid") end
+    LogInstance("Base panel invalid"); return nil end
   if(not pCurr) then
-    return StatusLog(nil,"SetDirectoryObj: Location invalid") end
+    LogInstance("Location invalid"); return nil end
   local sName = tostring(vName or "")
-        sName = IsEmptyString(sName) and "Other" or sName
+        sName = IsBlank(sName) and "Other" or sName
   local pItem = pnBase:AddNode(sName)
   pCurr[sName] = {}; pCurr[sName].__ObjPanel__ = pItem
   pItem.Icon:SetImage(tostring(sImage or "icon16/folder.png"))
@@ -964,85 +1195,48 @@ function SetDirectoryObj(pnBase, pCurr, vName, sImage, txCol)
   pItem.DoClick         = function() return false end
   pItem.DoRightClick    = function() SetClipboardText(pItem:GetText()) end
   pItem.Label.UpdateColours = function(pSelf)
-    return pSelf:SetTextStyleColor(txCol or Color(0,0,0,255)) end
+    return pSelf:SetTextStyleColor(txCol or GetColor(0,0,0,255)) end
   return pCurr[sName], pItem
 end
 
 local function PushSortValues(tTable,snCnt,nsValue,tData)
-  local iCnt = mathFloor(tonumber(snCnt) or 0)
+  local iCnt, iInd = mathFloor(tonumber(snCnt) or 0), 1
   if(not (tTable and (type(tTable) == "table") and (iCnt > 0))) then return 0 end
-  local iInd  = 1
   if(not tTable[iInd]) then
-    tTable[iInd] = {Value = nsValue, Table = tData }
-    return iInd
+    tTable[iInd] = {Value = nsValue, Table = tData }; return iInd
   else
-    while(tTable[iInd] and (tTable[iInd].Value < nsValue)) do
-      iInd = iInd + 1
-    end
+    while(tTable[iInd] and (tTable[iInd].Value < nsValue)) do iInd = iInd + 1 end
     if(iInd > iCnt) then return iInd end
     while(iInd < iCnt) do
       tTable[iCnt] = tTable[iCnt - 1]
       iCnt = iCnt - 1
-    end
-    tTable[iInd] = { Value = nsValue, Table = tData }
-    return iInd
+    end; tTable[iInd] = { Value = nsValue, Table = tData }; return iInd
   end
 end
 
 function GetFrequentModels(snCount)
-  local snCount = tonumber(snCount) or 0
-  if(snCount < 1) then
-    return StatusLog(nil,"GetFrequentModels: Count not applicable") end
-  local defTable = GetOpVar("DEFTABLE_PIECES")
-  if(not IsExistent(defTable)) then
-    return StatusLog(nil,"GetFrequentModels: Missing table definition") end
-  local tCache = libCache[defTable.Name]
-  if(not IsExistent(tCache)) then
-    return StatusLog(nil,"GetFrequentModels: Missing table cache space") end
-  local iInd, tmNow = 1, Time()
-  local frUsed = GetOpVar("TABLE_FREQUENT_MODELS")
-  tableEmpty(frUsed)
+  local snCount = (tonumber(snCount) or 0); if(snCount < 1) then
+    LogInstance("Count not applicable"); return nil end
+  local makTab = libQTable["PIECES"]; if(not IsHere(makTab)) then
+    LogInstance("Missing table builder"); return nil end
+  local defTab = makTab:GetDefinition(); if(not IsHere(defTab)) then
+    LogInstance("Missing table definition"); return nil end
+  local tCache = libCache[defTab.Name]; if(not IsHere(tCache)) then
+    LogInstance("Missing table cache space"); return nil end
+  local iInd, tmNow, frUsed = 1, Time(), GetOpVar("TABLE_FREQUENT_MODELS"); tableEmpty(frUsed)
   for mod, rec in pairs(tCache) do
-    if(IsExistent(rec.Used) and IsExistent(rec.Kept) and rec.Kept > 0) then
+    if(IsHere(rec.Used) and IsHere(rec.Size) and rec.Size > 0) then
       iInd = PushSortValues(frUsed,snCount,tmNow-rec.Used,{
-               [defTable[1][1]] = mod,
-               [defTable[2][1]] = rec.Type,
-               [defTable[3][1]] = rec.Name,
-               [defTable[4][1]] = rec.Rake
+               [defTab[1][1]] = mod,
+               [defTab[2][1]] = rec.Type,
+               [defTab[3][1]] = rec.Name,
+               [defTab[4][1]] = rec.Rake
              })
       if(iInd < 1) then return StatusLog(nil,"GetFrequentModels: Array index out of border") end
     end
   end
   if(IsExistent(frUsed) and IsExistent(frUsed[1])) then return frUsed, snCount end
   return StatusLog(nil,"GetFrequentModels: Array is empty or not available")
-end
-
-function RoundValue(nvExact, nFrac)
-  local nExact = tonumber(nvExact)
-  if(not IsExistent(nExact)) then
-    return StatusLog(nil,"RoundValue: Cannot round NAN {"..type(nvExact).."}<"..tostring(nvExact)..">") end
-  local nFrac = tonumber(nFrac) or 0
-  if(nFrac == 0) then
-    return StatusLog(nil,"RoundValue: Fraction must be <> 0") end
-  local q, f = mathModf(nExact/nFrac)
-  return nFrac * (q + (f > 0.5 and 1 or 0))
-end
-
-function SnapValue(nvVal, nvSnap)
-  if(not nvVal) then return 0 end
-  local nVal = tonumber(nvVal)
-  if(not IsExistent(nVal)) then
-    return StatusLog(0,"SnapValue: Convert value NAN {"..type(nvVal).."}<"..tostring(nvVal)..">") end
-  if(not IsExistent(nvSnap)) then return nVal end
-  local nSnap = tonumber(nvSnap)
-  if(not IsExistent(nSnap)) then
-    return StatusLog(0,"SnapValue: Convert snap NAN {"..type(nvSnap).."}<"..tostring(nvSnap)..">") end
-  if(nSnap == 0) then return nVal end
-  local nvSnp, nvVal = mathAbs(nSnap), mathAbs(nVal)
-  local nRst, nRez = (nvVal % nvSnp), 0
-  if((nvSnp - nRst) < nRst) then nRez = nvVal + nvSnp - nRst else nRez = nvVal - nRst end
-  if(nVal < 0) then return -nRez; end
-  return nRez;
 end
 
 function GetCorrectID(anyValue,oContainer)
@@ -1072,314 +1266,307 @@ function IsPhysTrace(stTrace)
   return true
 end
 
-local function BorderValue(nsVal,sName)
-  if(not IsString(sName)) then return nsVal end
-  if(not (IsString(nsVal) or tonumber(nsVal))) then
-    return StatusLog(nsVal,"BorderValue: Value not comparable") end
-  local Border = GetOpVar("TABLE_BORDERS")
-        Border = Border[sName]
-  if(IsExistent(Border)) then
-    if(Border[1] and nsVal < Border[1]) then return Border[1] end
-    if(Border[2] and nsVal > Border[2]) then return Border[2] end
-  end; return nsVal
-end
-
 function ModelToName(sModel,bNoSettings)
   if(not IsString(sModel)) then
-    return StatusLog("","ModelToName: Argument {"..type(sModel).."}<"..tostring(sModel)..">") end
-  if(IsEmptyString(sModel)) then return StatusLog("","ModelToName: Empty string") end
+    LogInstance("Argument {"..type(sModel).."}<"..tostring(sModel)..">"); return "" end
+  if(IsBlank(sModel)) then LogInstance("Empty string"); return "" end
   local sSymDiv, sSymDir = GetOpVar("OPSYM_DIVIDER"), GetOpVar("OPSYM_DIRECTORY")
   local sModel = (sModel:sub(1, 1) ~= sSymDir) and (sSymDir..sModel) or sModel
-        sModel =  sModel:GetFileFromFilename():gsub(GetOpVar("MODELNAM_FILE"),"")
-  local gModel =  sModel:sub(1,-1) -- Create a copy so we can select cut-off parts later
-  if(not bNoSettings) then local Cnt = 1
-    local tCut, tSub, tApp = SettingsModelToName("GET")
-    if(tCut and tCut[1]) then
-      while(tCut[Cnt] and tCut[Cnt+1]) do
-        local fCh, bCh = tonumber(tCut[Cnt]), tonumber(tCut[Cnt+1])
-        if(not (IsExistent(fCh) and IsExistent(bCh))) then
-          return StatusLog("","ModelToName: Cannot cut the model in {"
-                   ..tostring(tCut[Cnt])..","..tostring(tCut[Cnt+1]).."} for "..sModel) end
-        gModel = gModel:gsub(sModel:sub(fCh,bCh),"")
-        LogInstance("ModelToName[CUT]: {"..tostring(tCut[Cnt])..", "..tostring(tCut[Cnt+1]).."} >> "..gModel)
-        Cnt = Cnt + 2
-      end; Cnt = 1
-    end
-    -- Replace the unneeded parts by finding an in-string gModel
-    if(tSub and tSub[1]) then
-      while(tSub[Cnt]) do
-        local fCh, bCh = tostring(tSub[Cnt] or ""), tostring(tSub[Cnt+1] or "")
-        gModel = gModel:gsub(fCh,bCh)
-        LogInstance("ModelToName[SUB]: {"..tostring(tSub[Cnt])..", "..tostring(tSub[Cnt+1]).."} >> "..gModel)
-        Cnt = Cnt + 2
-      end; Cnt = 1
-    end
-    -- Append something if needed
+        sModel = (sModel:GetFileFromFilename():gsub(GetOpVar("MODELNAM_FILE"),""))
+  local gModel = (sModel:sub(1,-1)) -- Create a copy so we can select cut-off parts later
+  if(not bNoSet) then local iCnt, iNxt
+    local tCut, tSub, tApp = ModelToNameRule("GET")
+    if(tCut and tCut[1]) then iCnt, iNxt = 1, 2
+      while(tCut[iCnt] and tCut[iNxt]) do
+        local fNu, bNu = tonumber(tCut[iCnt]), tonumber(tCut[iNxt])
+        local fCh, bCh = tostring(tCut[iCnt]), tostring(tCut[iNxt])
+        if(not (IsHere(fNu) and IsHere(bNu))) then
+          LogInstance("Cut mismatch{"..fCh..","..bCh.."}@"..sModel); return "" end
+        gModel = gModel:gsub(sModel:sub(fNu, bNu),""); iCnt, iNxt = (iCnt + 2), (iNxt + 2)
+        LogInstance("Cut{"..fCh..","..bCh.."}@"..gModel)
+      end
+    end -- Replace the unneeded parts by finding an in-string gModel
+    if(tSub and tSub[1]) then iCnt, iNxt = 1, 2
+      while(tSub[iCnt]) do
+        local fCh, bCh = tostring(tSub[iCnt] or ""), tostring(tSub[iNxt] or "")
+        gModel = gModel:gsub(fCh,bCh); LogInstance("Sub{"..fCh..","..bCh.."}@"..gModel)
+        iCnt, iNxt = (iCnt + 2), (iNxt + 2)
+      end
+    end -- Append something if needed
     if(tApp and tApp[1]) then
-      gModel = tostring(tApp[1] or "")..gModel..tostring(tApp[2] or "")
-      LogInstance("ModelToName[APP]: {"..tostring(tSub[Cnt])..", "..tostring(tSub[Cnt+1]).."} >> "..gModel)
+      local fCh, bCh = tostring(tApp[1] or ""), tostring(tApp[2] or "")
+      gModel = (fCh..gModel..bCh); LogInstance("App{"..fCh..","..bCh.."}@"..gModel)
     end
-  end
-  -- Trigger the capital spacing using the divider
+  end -- Trigger the capital spacing using the divider ( _aaaaa_bbbb_ccccc )
   if(gModel:sub(1,1) ~= sSymDiv) then gModel = sSymDiv..gModel end
-  -- Here in gModel we have: _aaaaa_bbbb_ccccc
   return gModel:gsub(sSymDiv.."%w",GetOpVar("MODELNAM_FUNC")):sub(2,-1)
 end
 
-local function ReloadPOA(nXP,nYY,nZR,nSX,nSY,nSZ,nSD)
+--[[
+ * Creates a basis instance for entity-related operations
+ * The instance is invisible and cannot be hit by traces
+ * By default spawns at origin  and angle {0,0,0}
+ * sModel --> The model to use for creating the entity
+]]
+local function MakeEntityNone(sModel) local eNone
+  if(SERVER) then eNone = entsCreate(GetOpVar("ENTITY_DEFCLASS"))
+  elseif(CLIENT) then eNone = entsCreateClientProp(sModel) end
+  if(not (eNone and eNone:IsValid())) then
+    LogInstance("Entity invalid @"..sModel); return nil end
+  eNone:SetCollisionGroup(COLLISION_GROUP_NONE)
+  eNone:SetSolid(SOLID_NONE); eNone:SetMoveType(MOVETYPE_NONE)
+  eNone:SetNotSolid(true); eNone:SetNoDraw(true); eNone:SetModel(sModel)
+  LogInstance("{"..tostring(eNone).."}@"..sModel); return eNone
+end
+
+--[[
+ * Locates an active point on the piece offset record.
+ * This function is used to check the correct offset and return it.
+ * It also returns the normalized active point ID if needed
+ * oRec   --> Record structure of a track piece
+ * ivPoID --> The POA offset ID to check and locate
+]]--
+function LocatePOA(oRec, ivPoID)
+  if(not oRec) then
+    LogInstance("Missing record"); return nil end
+  if(not oRec.Offs) then
+    LogInstance("Missing offsets for <"..tostring(oRec.Slot)..">"); return nil end
+  local iPoID = mathFloor(tonumber(ivPoID) or 0)
+  local stPOA = oRec.Offs[iPoID]; if(not IsHere(stPOA)) then
+    LogInstance("Missing ID #"..tostring(iPoID)..tostring(ivPoID).."> for <"..tostring(oRec.Slot)..">"); return nil end
+  return stPOA, iPoID
+end
+
+function ReloadPOA(nXP,nYY,nZR)
   local arPOA = GetOpVar("ARRAY_DECODEPOA")
-        arPOA[1] = tonumber(nXP) or 0
-        arPOA[2] = tonumber(nYY) or 0
-        arPOA[3] = tonumber(nZR) or 0
-        arPOA[4] = tonumber(nSX) or 1
-        arPOA[5] = tonumber(nSY) or 1
-        arPOA[6] = tonumber(nSZ) or 1
-        arPOA[7] = tobool(nSD) or false
+        arPOA[1] = (tonumber(nXP) or 0)
+        arPOA[2] = (tonumber(nYY) or 0)
+        arPOA[3] = (tonumber(nZR) or 0)
   return arPOA
 end
 
-local function IsEqualPOA(staPOA,stbPOA)
-  if(not IsExistent(staPOA)) then
-    return StatusLog(false,"EqualPOA: Missing offset A") end
-  if(not IsExistent(stbPOA)) then
-    return StatusLog(false,"EqualPOA: Missing offset B") end
+function IsEqualPOA(staPOA,stbPOA)
+  if(not IsHere(staPOA)) then
+    LogInstance("Missing offset A"); return false end
+  if(not IsHere(stbPOA)) then
+    LogInstance("Missing offset B"); return false end
   for kKey, vComp in pairs(staPOA) do
-    if(kKey ~= csD and stbPOA[kKey] ~= vComp) then return false end
+    if(stbPOA[kKey] ~= vComp) then return false end
   end; return true
 end
 
-local function IsZeroPOA(stPOA,sOffs)
-  if(not IsString(sOffs)) then
-    return StatusLog(nil,"IsZeroPOA: Mode {"..type(sOffs).."}<"..tostring(sOffs).."> not string") end
-  if(not IsExistent(stPOA)) then
-    return StatusLog(nil,"IsZeroPOA: Missing offset") end
-  local ctA, ctB, ctC
-  if    (sOffs == "V") then ctA, ctB, ctC = cvX, cvY, cvZ
-  elseif(sOffs == "A") then ctA, ctB, ctC = caP, caY, caR
-  else return StatusLog(nil,"IsZeroPOA: Missed offset mode "..sOffs) end
-  if(stPOA[ctA] == 0 and stPOA[ctB] == 0 and stPOA[ctC] == 0) then return true end
-  return false
-end
-
-local function StringPOA(stPOA,sOffs)
-  if(not IsString(sOffs)) then
-    return StatusLog(nil,"StringPOA: Mode {"..type(sOffs).."}<"..tostring(sOffs).."> not string") end
-  if(not IsExistent(stPOA)) then
-    return StatusLog(nil,"StringPOA: Missing Offsets") end
-  local symRevs = GetOpVar("OPSYM_REVSIGN")
-  local symDisa = GetOpVar("OPSYM_DISABLE")
-  local symSepa = GetOpVar("OPSYM_SEPARATOR")
-  local sModeDB = GetOpVar("MODE_DATABASE")
-  if    (sOffs == "V") then ctA, ctB, ctC = cvX, cvY, cvZ
-  elseif(sOffs == "A") then ctA, ctB, ctC = caP, caY, caR
-  else return StatusLog(nil,"StringPOA: Missed offset mode "..sOffs) end
-  return ((stPOA[csD] and symDisa or "")  -- Get rid of the spaces
-       ..((stPOA[csA] == -1) and symRevs or "")..tostring(stPOA[ctA])..symSepa
-       ..((stPOA[csB] == -1) and symRevs or "")..tostring(stPOA[ctB])..symSepa
-       ..((stPOA[csC] == -1) and symRevs or "")..tostring(stPOA[ctC])):gsub(" ","")
-end
-
-local function TransferPOA(stOffset,sMode)
-  if(not IsExistent(stOffset)) then
-    return StatusLog(nil,"TransferPOA: Destination needed") end
+function IsZeroPOA(stPOA,sMode)
   if(not IsString(sMode)) then
-    return StatusLog(nil,"TransferPOA: Mode {"..type(sMode).."}<"..tostring(sMode).."> not string") end
+    LogInstance("Mode {"..type(sMode).."}<"..tostring(sMode).."> not string"); return nil end
+  if(not IsHere(stPOA)) then LogInstance("Missing offset"); return nil end
+  local ctA, ctB, ctC = GetIndexes(sMode); if(not (ctA and ctB and ctC)) then
+    LogInstance("Missed offset mode "..sMode); return nil end
+  return (stPOA[ctA] == 0 and stPOA[ctB] == 0 and stPOA[ctC] == 0)
+end
+
+function StringPOA(stPOA,sMode)
+  if(not IsString(sMode)) then
+    LogInstance("Mode {"..type(sMode).."}<"..tostring(sMode).."> not string"); return nil end
+  if(not IsHere(stPOA)) then
+    LogInstance("Missing Offsets"); return nil end
+  local ctA, ctB, ctC = GetIndexes(sMode); if(not (ctA and ctB and ctC)) then
+    LogInstance("Missed offset mode "..sMode); return nil end
+  local symSep, sNo = GetOpVar("OPSYM_SEPARATOR"), ""
+  local svA = tostring(stPOA[ctA] or sNo)
+  local svB = tostring(stPOA[ctB] or sNo)
+  local svC = tostring(stPOA[ctC] or sNo)
+  return (svA..symSep..svB..symSep..svC):gsub("%s","")
+end
+
+function TransferPOA(tData,sMode)
+  if(not IsHere(tData)) then
+    LogInstance("Destination needed"); return nil end
+  if(not IsString(sMode)) then
+    LogInstance("Mode {"..type(sMode).."}<"..tostring(sMode).."> not string"); return nil end
   local arPOA = GetOpVar("ARRAY_DECODEPOA")
-  if    (sMode == "V") then stOffset[cvX] = arPOA[1]; stOffset[cvY] = arPOA[2]; stOffset[cvZ] = arPOA[3]
-  elseif(sMode == "A") then stOffset[caP] = arPOA[1]; stOffset[caY] = arPOA[2]; stOffset[caR] = arPOA[3]
-  else return StatusLog(nil,"TransferPOA: Missed mode "..sMode) end
-  stOffset[csA] = arPOA[4]; stOffset[csB] = arPOA[5]; stOffset[csC] = arPOA[6]; stOffset[csD] = arPOA[7]
-  return arPOA
+  local ctA, ctB, ctC = GetIndexes(sMode); if(not (ctA and ctB and ctC)) then
+    LogInstance("Missed offset mode <"..sMode..">"); return nil end
+  tData[ctA], tData[ctB], tData[ctC] = arPOA[1], arPOA[2], arPOA[3]; return arPOA
 end
 
-local function DecodePOA(sStr)
+function DecodePOA(sStr)
   if(not IsString(sStr)) then
-    return StatusLog(nil,"DecodePOA: Argument {"..type(sStr).."}<"..tostring(sStr).."> not string") end
-  local strLen = sStr:len(); ReloadPOA()
-  local symOff, symRev = GetOpVar("OPSYM_DISABLE"), GetOpVar("OPSYM_REVSIGN")
+    LogInstance("Argument {"..type(sStr).."}<"..tostring(sStr).."> not string"); return nil end
+  if(sStr:len() == 0) then return ReloadPOA() end; ReloadPOA()
   local symSep, arPOA = GetOpVar("OPSYM_SEPARATOR"), GetOpVar("ARRAY_DECODEPOA")
-  local S, E, iCnt, dInd, iSep, sCh = 1, 1, 1, 1, 0, ""
-  if(sStr:sub(iCnt,iCnt) == symOff) then
-    arPOA[7] = true; iCnt = iCnt + 1; S = S + 1 end
-  while(iCnt <= strLen) do
-    sCh = sStr:sub(iCnt,iCnt)
-    if(sCh == symRev) then
-      arPOA[3+dInd] = -arPOA[3+dInd]; S = S + 1
-    elseif(sCh == symSep) then
-      iSep = iSep + 1; E = iCnt - 1
-      if(iSep > 2) then break end
-      arPOA[dInd] = tonumber(sStr:sub(S,E)) or 0
-      dInd = dInd + 1; S = iCnt + 1; E = S
-    else E = E + 1 end
-    iCnt = iCnt + 1
-  end; arPOA[dInd] = (tonumber(sStr:sub(S,E)) or 0); return arPOA
+  local atPOA = symSep:Explode(sStr)
+  for iD = 1, arPOA.Size do local nCom = tonumber(atPOA[iD])
+    if(not IsHere(nCom)) then nCom = 0
+      LogInstance("Mismatch <"..sStr..">") end; arPOA[iD] = nCom
+  end; return arPOA
 end
 
-local function RegisterPOA(stPiece, sP, sO, sA)
+function GetTransformPOA(sModel,sKey)
+  if(not IsString(sModel)) then
+    LogInstance("Model mismatch <"..tostring(sModel)..">"); return nil end
+  if(not IsString(sKey)) then
+    LogInstance("Key mismatch <"..tostring(sKey)..">@"..sModel); return nil end
+  local ePiece = GetOpVar("ENTITY_TRANSFORMPOA")
+  if(ePiece and ePiece:IsValid()) then -- There is basis entity then update and extract
+    if(ePiece:GetModel() ~= sModel) then ePiece:SetModel(sModel)
+      LogInstance("Update {"..tostring(ePiece).."}@"..sModel) end
+  else -- If there is no basis need to create one for attachment extraction
+    ePiece = MakeEntityNone(sModel); if(not ePiece) then
+      LogInstance("Basis invalid @"..sModel); return nil end
+    SetOpVar("ENTITY_TRANSFORMPOA", ePiece) -- Register the entity transform basis
+  end -- Transfer the data from the transform attachment location
+  local mOA = ePiece:GetAttachment(ePiece:LookupAttachment(sKey)); if(not mOA) then
+    LogInstance("Attachment missing <"..sKey..">@"..sModel); return nil end
+  local vtPos, atAng = mOA[sKey].Pos, mOA[sKey].Ang -- Extract transform data
+  LogInstance("Extract <"..sKey.."><"..tostring(vtPos).."><"..tostring(atAng)..">")
+  return vtPos, atAng -- The function must return transform position and angle
+end
+
+function RegisterPOA(stPiece, sP, sO, sA)
   if(not stPiece) then
-    return StatusLog(nil,"RegisterPOA: Cache record invalid") end
-  local sP, sO, sA = (sP or "NULL"), (sO or "NULL"), (sA or "NULL")
-  if(not IsString(sP)) then
-    return StatusLog(nil,"RegisterPOA: Point  {"..type(sP).."}<"..tostring(sP)..">") end
-  if(not IsString(sO)) then
-    return StatusLog(nil,"RegisterPOA: Origin {"..type(sO).."}<"..tostring(sO)..">") end
-  if(not IsString(sA)) then
-    return StatusLog(nil,"RegisterPOA: Angle  {"..type(sA).."}<"..tostring(sA)..">") end
+    LogInstance("Cache record invalid"); return nil end
+  local iID = tonumber(ivID); if(not IsHere(iID)) then
+    LogInstance("OffsetID NAN {"..type(ivID).."}<"..tostring(ivID)..">"); return nil end
+  local sP = (sP or sNull); if(not IsString(sP)) then
+    LogInstance("Point  {"..type(sP).."}<"..tostring(sP)..">"); return nil end
+  local sO = (sO or sNull); if(not IsString(sO)) then
+    LogInstance("Origin {"..type(sO).."}<"..tostring(sO)..">"); return nil end
+  local sA = (sA or sNull); if(not IsString(sA)) then
+    LogInstance("Angle  {"..type(sA).."}<"..tostring(sA)..">"); return nil end
   local tOffs = stPiece.Offs; if(not tOffs) then
     stPiece.Offs = {}; tOffs = stPiece.Offs
     tOffs.P = {}; tOffs.O = {}; tOffs.A = {}
-  else return StatusLog(nil,"RegisterPOA: Hash <"..tostring(stPiece.Slot).."> exists") end
-  ---------------- Origin ----------------
-  if((sO ~= "NULL") and not IsEmptyString(sO)) then DecodePOA(sO) else ReloadPOA() end
-  if(not IsExistent(TransferPOA(tOffs.O,"V"))) then
-    return StatusLog(nil,"RegisterPOA: Cannot transfer origin") end
-  ---------------- Point ----------------
-  if((sP ~= "NULL") and not IsEmptyString(sP)) then DecodePOA(sP) else ReloadPOA() end
-  if(not IsExistent(TransferPOA(tOffs.P,"V"))) then
-    return StatusLog(nil,"RegisterPOA: Cannot transfer point") end
-  ---------------- Angle ----------------
-  if((sA ~= "NULL") and not IsEmptyString(sA)) then DecodePOA(sA) else ReloadPOA() end
-  if(not IsExistent(TransferPOA(tOffs.A,"A"))) then
-    return StatusLog(nil,"RegisterPOA: Cannot transfer angle") end
+  else LogInstance("Hash <"..tostring(stPiece.Slot).."> exists"); return nil end
+  local sE, sD = GetOpVar("OPSYM_ENTPOSANG"), GetOpVar("OPSYM_DISABLE")
+  ---------- Origin ----------
+  if(sO:sub(1,1) == sD) then ReloadPOA() else
+    if(IsNull(sO) or IsBlank(sO)) then ReloadPOA() else
+      if(not DecodePOA(sO)) then LogInstance("Origin mismatch ["..iID.."]@"..stPiece.Slot) end  
+    end
+  end; if(not IsHere(TransferPOA(tOffs.O, "V"))) then LogInstance("Origin mismatch"); return nil end
+  ---------- Angle ----------
+  if(sA:sub(1,1) == sD) then ReloadPOA() else
+    if(sA:sub(1,1) == sE) then tOffs.A.Slot = sA; sA = sA:sub(2,-1)
+      local vtPos, atAng = GetTransformPOA(stPiece.Slot, sA)
+      if(IsHere(atAng)) then ReloadPOA(atAng[caP], atAng[caY], atAng[caR]) else
+        if(IsNull(sA) or IsBlank(sA)) then ReloadPOA() else
+          if(not DecodePOA(sA)) then LogInstance("Angle mismatch ["..iID.."]@"..stPiece.Slot) end
+      end end -- Reload the transformation when is not null or empty string
+    elseif(IsNull(sA) or IsBlank(sA)) then ReloadPOA() else
+      if(not DecodePOA(sA)) then LogInstance("Angle mismatch ["..iID.."]@"..stPiece.Slot) end
+    end
+  end; if(not IsHere(TransferPOA(tOffs.A, "A"))) then LogInstance("Angle mismatch"); return nil end
+  ---------- Point ----------
+  if(sP:sub(1,1) == sD) then ReloadPOA() else
+    if(sP:sub(1,1) == sE) then tOffs.P.Slot = sP; sP = sP:sub(2,-1)
+      local vtPos, atAng = GetTransformPOA(stPiece.Slot, sP)
+      if(IsHere(vtPos)) then ReloadPOA(vtPos[cvX], vtPos[cvY], vtPos[cvZ]) else
+        if(IsNull(sP) or IsBlank(sP)) then ReloadPOA() else
+          if(not DecodePOA(sP)) then LogInstance("Origin mismatch ["..iID.."]@"..stPiece.Slot) end
+      end end -- Reload the transformation when is not null or empty string
+    elseif(IsNull(sP) or IsBlank(sP)) then ReloadPOA() else
+      if(not DecodePOA(sP)) then LogInstance("Origin mismatch ["..iID.."]@"..stPiece.Slot) end  
+    end
+  end; if(not IsHere(TransferPOA(tOffs.P, "V"))) then LogInstance("Origin mismatch"); return nil end
   return tOffs
 end
 
-local function Sort(tTable,tKeys,tFields)
-
-  local function QuickSort(Data,Lo,Hi)
-    if(not (Lo and Hi and (Lo > 0) and (Lo < Hi))) then
-      return StatusLog(nil,"QuickSort: Data dimensions mismatch") end
-    local iMid = mathRandom(Hi-(Lo-1))+Lo-1
-    Data[Lo], Data[iMid] = Data[iMid], Data[Lo]; iMid = Lo
-    local vMid, iCnt = Data[Lo].Val, (Lo + 1)
-    while(iCnt <= Hi)do
-      if(Data[iCnt].Val < vMid) then iMid = iMid + 1
-        Data[iMid], Data[iCnt] = Data[iCnt], Data[iMid]
-      end
-      iCnt = iCnt + 1
-    end
-    Data[Lo], Data[iMid] = Data[iMid], Data[Lo]
-    QuickSort(Data,Lo,iMid-1)
-    QuickSort(Data,iMid+1,Hi)
-  end
-
-  local Match = {}
-  local tKeys = tKeys or {}
-  local tFields = tFields or {}
-  local iCnt, iInd, sKey, vRec, sFld = 1, nil, nil, nil, nil
-  if(not tKeys[1]) then
-    for k,v in pairs(tTable) do
-      tKeys[iCnt] = k; iCnt = iCnt + 1
-    end; iCnt = 1
-  end
-  while(tKeys[iCnt]) do
-    sKey = tKeys[iCnt]; vRec = tTable[sKey]
-    if(not vRec) then
-      return StatusLog(nil,"Sort: Key <"..sKey.."> does not exist in the primary table") end
-    Match[iCnt] = {}
-    Match[iCnt].Key = sKey
-    if(type(vRec) == "table") then
-      Match[iCnt].Val, iInd = "", 1
-      while(tFields[iInd]) do
-        sFld = tFields[iInd]
-        if(not IsExistent(vRec[sFld])) then
-          return StatusLog(nil,"Sort: Field <"..sFld.."> not found on the current record") end
-        Match[iCnt].Val = Match[iCnt].Val..tostring(vRec[sFld])
-        iInd = iInd + 1
-      end
-    else Match[iCnt].Val = vRec end
-    iCnt = iCnt + 1
-  end; QuickSort(Match,1,iCnt-1)
-  return Match
+local function QuickSort(tD, iL, iH)
+  if(not (iL and iH and (iL > 0) and (iL < iH))) then
+    LogInstance("Data dimensions mismatch"); return nil end
+  local iM = mathRandom(iH-iL-1)+iL-1
+  tD[iL], tD[iM] = tD[iM], tD[iL]; iM = iL
+  local vM, iC = tD[iL].Val, (iL + 1)
+  while(iC <= iH)do
+    if(tD[iC].Val < vM) then iM = iM + 1
+      tD[iM], tD[iC] = tD[iC], tD[iM]
+    end; iC = iC + 1
+  end; tD[iL], tD[iM] = tD[iM], tD[iL]
+  QuickSort(tD,iL,iM-1)
+  QuickSort(tD,iM+1,iH)
 end
 
---------------------- STRING -----------------------
-
-function DisableString(sBase, anyDisable, anyDefault)
-  if(IsString(sBase)) then
-    local sFirst = sBase:sub(1,1)
-    if(sFirst ~= GetOpVar("OPSYM_DISABLE") and not IsEmptyString(sBase)) then
-      return sBase
-    elseif(sFirst == GetOpVar("OPSYM_DISABLE")) then
-      return anyDisable
-    end
-  end; return anyDefault
-end
-
-function DefaultString(sBase, sDefault)
-  if(IsString(sBase)) then
-    if(not IsEmptyString(sBase)) then return sBase end
-  end
-  if(IsString(sDefault)) then return sDefault end
-  return ""
+function Sort(tTable, tCols)
+  local tS, iS = {Size = 0}, 0
+  local tC = tCols or {}; tC.Size = #tC
+  for key, rec in pairs(tTable) do
+    iS = (iS + 1); tS[iS] = {}; tS[iS].Key = key
+    if(type(rec) == "table") then tS[iS].Val = ""
+      if(tC.Size > 0) then
+        for iI = 1, tC.Size do local sC = tC[iI]; if(not IsHere(rec[sC])) then
+          LogInstance("Col <"..sC.."> not found on the current record"); return nil end
+            tS[iS].Val = tS[iS].Val..tostring(rec[sC])
+        end -- When no sort columns are provided use keys instead
+      else tS[iS].Val = key end -- Use the table key
+    else tS[iS].Val = rec end -- Use the actual value
+  end; tS.Size = iS; QuickSort(tS,1,iS); return tS
 end
 
 ------------- VARIABLE INTERFACES --------------
 
-function SettingsModelToName(sMode, gCut, gSub, gApp)
-  if(not IsString(sMode)) then
-    return StatusLog(false,"SettingsModelToName: Mode {"..type(sMode).."}<"..tostring(sMode).."> not string") end
-  if(sMode == "SET") then
+function GetTerm(sBas, vDef, vDsb)
+  local sM, sS = GetOpVar("MISS_NOAV"), GetOpVar("MISS_NOSQL")
+  if(IsString(sBas)) then local sD = GetOpVar("OPSYM_DISABLE")
+    if(sBas:sub(1,1) == sD) then return tostring(vDsb or sM)
+    elseif(not (IsNull(sBas) or IsBlank(sBas))) then return sBas end
+  end; if(IsString(vDef)) then return vDef end; return sM
+end
+
+function ModelToNameRule(sRule, gCut, gSub, gApp)
+  if(not IsString(sRule)) then
+    LogInstance("Rule {"..type(sRule).."}<"..tostring(sRule).."> not string"); return false end
+  if(sRule == "SET") then
     if(gCut and gCut[1]) then SetOpVar("TABLE_GCUT_MODEL",gCut) else SetOpVar("TABLE_GCUT_MODEL",{}) end
     if(gSub and gSub[1]) then SetOpVar("TABLE_GSUB_MODEL",gSub) else SetOpVar("TABLE_GSUB_MODEL",{}) end
     if(gApp and gApp[1]) then SetOpVar("TABLE_GAPP_MODEL",gApp) else SetOpVar("TABLE_GAPP_MODEL",{}) end
-  elseif(sMode == "GET") then
+  elseif(sRule == "GET") then
     return GetOpVar("TABLE_GCUT_MODEL"), GetOpVar("TABLE_GSUB_MODEL"), GetOpVar("TABLE_GAPP_MODEL")
-  elseif(sMode == "CLR") then
-    SetOpVar("TABLE_GCUT_MODEL",{})
-    SetOpVar("TABLE_GSUB_MODEL",{})
-    SetOpVar("TABLE_GAPP_MODEL",{})
-  else return StatusLog(false,"SettingsModelToName: Wrong mode name "..sMode) end
+  elseif(sRule == "CLR") then
+    SetOpVar("TABLE_GCUT_MODEL",{}); SetOpVar("TABLE_GSUB_MODEL",{}); SetOpVar("TABLE_GAPP_MODEL",{})
+  elseif(sRule == "REM") then
+    SetOpVar("TABLE_GCUT_MODEL",nil); SetOpVar("TABLE_GSUB_MODEL",nil); SetOpVar("TABLE_GAPP_MODEL",nil)
+  else LogInstance("Wrong mode name "..sRule); return false end
 end
 
-function DefaultType(anyType,fCat)
-  if(not IsExistent(anyType)) then
+function GetCategory(oTyp,fCat)
+  local tCat = GetOpVar("TABLE_CATEGORIES")
+  if(not IsHere(oTyp)) then
     local sTyp = tostring(GetOpVar("DEFAULT_TYPE") or "")
-    local tCat = GetOpVar("TABLE_CATEGORIES")
-          tCat = tCat and tCat[sTyp] or nil
-    return sTyp, (tCat and tCat.Txt), (tCat and tCat.Cmp)
-  end; SettingsModelToName("CLR")
-  SetOpVar("DEFAULT_TYPE", tostring(anyType))
-  if(CLIENT) then
-    local sTyp = GetOpVar("DEFAULT_TYPE")
-    if(IsString(fCat)) then -- Categories for the panel
-      local tCat = GetOpVar("TABLE_CATEGORIES")
-      tCat[sTyp] = {}; tCat[sTyp].Txt = fCat
+    local tTyp = (tCat and tCat[sTyp] or nil)
+    return sTyp, (tTyp and tTyp.Txt), (tTyp and tTyp.Cmp)
+  end; ModelToNameRule("CLR"); SetOpVar("DEFAULT_TYPE", tostring(oTyp))
+  if(CLIENT) then local tTyp -- Categories for the panel
+    local sTyp = tostring(GetOpVar("DEFAULT_TYPE") or "")
+    if(IsString(fCat)) then tCat[sTyp] = {}
+      local fsLog = GetOpVar("FORM_LOGSOURCE") -- The actual format value
+      local ssLog = "*"..fsLog:format("TYPE","GetCategory",tostring(oTyp))
+      tCat[sTyp].Txt = fCat; tTyp = (tCat and tCat[sTyp] or nil)
       tCat[sTyp].Cmp = CompileString("return ("..fCat..")", sTyp)
-      local suc, out = pcall(tCat[sTyp].Cmp)
-      if(not suc) then
-        return StatusLog(nil, "DefaultType: Compilation failed <"..fCat.."> ["..sTyp.."]") end
-      tCat[sTyp].Cmp = out
-    else return StatusLog(nil,"DefaultType: Avoided "..type(fCat).." <"..tostring(fCat).."> ["..sTyp.."]") end
+      local suc, out = pcall(tCat[sTyp].Cmp); if(not suc) then
+        LogInstance("Compilation failed <"..fCat.."> ["..sTyp.."]", ssLog); return nil end
+      tCat[sTyp].Cmp = out; tTyp = tCat[sTyp]
+      return sTyp, (tTyp and tTyp.Txt), (tTyp and tTyp.Cmp)
+    else LogInstance("Avoided "..type(fCat).." <"..tostring(fCat).."> ["..sTyp.."]", ssLog) end
   end
-end
-
-function DefaultTable(anyTable)
-  if(not IsExistent(anyTable)) then
-    return (GetOpVar("DEFAULT_TABLE") or "") end
-  SetOpVar("DEFAULT_TABLE",anyTable)
-  SettingsModelToName("CLR")
 end
 
 ------------------------- PLAYER -----------------------------------
 
 local function GetPlayerSpot(pPly)
   if(not IsPlayer(pPly)) then
-    return StatusLog(nil,"GetPlayerSpot: Player <"..tostring(pPly)"> invalid") end
-  local stSpot = libPlayer[pPly]
-  if(not IsExistent(stSpot)) then
-    LogInstance("GetPlayerSpot: Cached <"..pPly:Nick()..">")
+    LogInstance("Player <"..tostring(pPly)"> invalid"); return nil end
+  local stSpot = libPlayer[pPly]; if(not IsHere(stSpot)) then
+    LogInstance("Cached <"..pPly:Nick()..">")
     libPlayer[pPly] = {}; stSpot = libPlayer[pPly]
   end; return stSpot
 end
 
 function CacheSpawnPly(pPly)
-  local stSpot = GetPlayerSpot(pPly)
-  if(not IsExistent(stSpot)) then
-    return StatusLog(nil,"CacheSpawnPly: Spot missing") end
+  local stSpot = GetPlayerSpot(pPly); if(not IsHere(stSpot)) then
+    LogInstance("Spot missing"); return nil end
   local stData = stSpot["SPAWN"]
-  if(not IsExistent(stData)) then
-    LogInstance("CacheSpawnPly: Allocate <"..pPly:Nick()..">")
+  if(not IsHere(stData)) then
+    LogInstance("Allocate <"..pPly:Nick()..">")
     stSpot["SPAWN"] = {}; stData = stSpot["SPAWN"]
     stData.F    = Vector() -- Origin forward vector
     stData.R    = Vector() -- Origin right vector
@@ -1408,26 +1595,24 @@ end
 
 function CacheClearPly(pPly)
   if(not IsPlayer(pPly)) then
-    return StatusLog(false,"CacheClearPly: Player <"..tostring(pPly)"> invalid") end
-  local stSpot = libPlayer[pPly]
-  if(not IsExistent(stSpot)) then
-    return StatusLog(true,"CacheClearPly: Clean") end
+    LogInstance("Player <"..tostring(pPly)"> invalid"); return false end
+  local stSpot = libPlayer[pPly]; if(not IsHere(stSpot)) then
+    LogInstance("Clean"); return true end
   libPlayer[pPly] = nil; collectgarbage(); return true
 end
 
 function GetDistanceHitPly(pPly, vHit)
   if(not IsPlayer(pPly)) then
-    return StatusLog(nil,"GetDistanceHitPly: Player <"..tostring(pPly)"> invalid") end
+    LogInstance("Player <"..tostring(pPly)"> invalid"); return nil end
   return (vHit - pPly:GetPos()):Length()
 end
 
 function CacheRadiusPly(pPly, vHit, nSca)
-  local stSpot = GetPlayerSpot(pPly)
-  if(not IsExistent(stSpot)) then
-    return StatusLog(nil,"CacheRadiusPly: Spot missing") end
+  local stSpot = GetPlayerSpot(pPly); if(not IsHere(stSpot)) then
+    LogInstance("Spot missing"); return nil end
   local stData = stSpot["RADIUS"]
-  if(not IsExistent(stData)) then
-    LogInstance("CacheRadiusPly: Allocate <"..pPly:Nick()..">")
+  if(not IsHere(stData)) then
+    LogInstance("Allocate <"..pPly:Nick()..">")
     stSpot["RADIUS"] = {}; stData = stSpot["RADIUS"]
     stData["MAR"] =  (GetOpVar("GOLDEN_RATIO") * 1000)
     stData["LIM"] = ((GetOpVar("GOLDEN_RATIO") - 1) * 100)
@@ -1441,12 +1626,11 @@ function CacheRadiusPly(pPly, vHit, nSca)
 end
 
 function CacheTracePly(pPly)
-  local stSpot = GetPlayerSpot(pPly)
-  if(not IsExistent(stSpot)) then
-    return StatusLog(nil,"CacheTracePly: Spot missing") end
+  local stSpot = GetPlayerSpot(pPly); if(not IsHere(stSpot)) then
+    LogInstance("Spot missing"); return nil end
   local stData, plyTime = stSpot["TRACE"], Time()
-  if(not IsExistent(stData)) then -- Define trace delta margin
-    LogInstance("CacheTracePly: Allocate <"..pPly:Nick()..">")
+  if(not IsHere(stData)) then -- Define trace delta margin
+    LogInstance("Allocate <"..pPly:Nick()..">")
     stSpot["TRACE"] = {}; stData = stSpot["TRACE"]
     stData["NXT"] = plyTime + GetOpVar("TRACE_MARGIN") -- Define next trace pending
     stData["DAT"] = utilGetPlayerTrace(pPly)      -- Get out trace data
@@ -1461,19 +1645,19 @@ end
 
 function ConCommandPly(pPly,sCvar,snValue)
   if(not IsPlayer(pPly)) then
-    return StatusLog(nil,"ConCommandPly: Player <"..tostring(pPly).."> invalid") end
+    LogInstance("Player <"..tostring(pPly).."> invalid"); return nil end
   if(not IsString(sCvar)) then -- Make it like so the space will not be forgotten
-    return StatusLog(nil,"ConCommandPly: Convar {"..type(sCvar).."}<"..tostring(sCvar).."> not string") end
+    LogInstance("Convar {"..type(sCvar).."}<"..tostring(sCvar).."> not string"); return nil end
   return pPly:ConCommand(GetOpVar("TOOLNAME_PL")..sCvar.." "..tostring(snValue).."\n")
 end
 
 function PrintNotifyPly(pPly,sText,sNotifType)
   if(not IsPlayer(pPly)) then
-    return StatusLog(false,"PrintNotifyPly: Player <"..tostring(pPly)"> invalid") end
+    LogInstance("Player <"..tostring(pPly)"> invalid"); return false end
   if(SERVER) then -- Send notification to client that something happened
     pPly:SendLua("GAMEMODE:AddNotify(\""..sText.."\", NOTIFY_"..sNotifType..", 6)")
     pPly:SendLua("surface.PlaySound(\"ambient/water/drip"..mathRandom(1, 4)..".wav\")")
-  end; return StatusLog(true,"PrintNotifyPly: Success")
+  end; LogInstance("Success"); return true
 end
 
 function UndoCratePly(anyMessage)
@@ -1484,13 +1668,13 @@ end
 
 function UndoAddEntityPly(oEnt)
   if(not (oEnt and oEnt:IsValid())) then
-    return StatusLog(false,"UndoAddEntityPly: Entity invalid") end
+    LogInstance("Entity invalid"); return false end
   undoAddEntity(oEnt); return true
 end
 
 function UndoFinishPly(pPly,anyMessage)
   if(not IsPlayer(pPly)) then
-    return StatusLog(false,"UndoFinishPly: Player <"..tostring(pPly)"> invalid") end
+    LogInstance("Player <"..tostring(pPly)"> invalid"); return false end
   pPly:EmitSound("physics/metal/metal_canister_impact_hard"..mathRandom(1, 3)..".wav")
   undoSetCustomUndoText(GetOpVar("LABEL_UNDO")..tostring(anyMessage or ""))
   undoSetPlayer(pPly)
@@ -1498,759 +1682,640 @@ function UndoFinishPly(pPly,anyMessage)
   return true
 end
 
-function CachePressPly(pPly)
-  local stSpot = GetPlayerSpot(pPly)
-  if(not IsExistent(stSpot)) then
-    return StatusLog(false,"CachePressPly: Spot missing") end
-  local stData = stSpot["PRESS"]
-  if(not IsExistent(stData)) then -- Create predicate command
-    LogInstance("CachePressPly: Allocate <"..pPly:Nick()..">")
-    stSpot["PRESS"] = {}; stData = stSpot["PRESS"]
-    stData["CMD"] = pPly:GetCurrentCommand()
-    if(not IsExistent(stData["CMD"])) then
-      return StatusLog(false,"CachePressPly: Command incorrect") end
-  end; return true
-end
-
--- https://wiki.garrysmod.com/page/CUserCmd/GetMouseWheel
-function GetMouseWheelPly(pPly)
-  local stSpot = GetPlayerSpot(pPly)
-  if(not IsExistent(stSpot)) then
-    return StatusLog(0,"GetMouseWheelPly: Spot missing") end
-  local stData = stSpot["PRESS"]
-  if(not IsExistent(stData)) then
-    return StatusLog(0,"GetMouseWheelPly: Data missing <"..pPly:Nick()..">") end
-  local cmdPress = stData["CMD"]
-  if(not IsExistent(cmdPress)) then
-    return StatusLog(0,"GetMouseWheelPly: Command missing <"..pPly:Nick()..">") end
-  return (cmdPress and cmdPress:GetMouseWheel() or 0)
-end
-
--- https://wiki.garrysmod.com/page/CUserCmd/GetMouse(XY)
-function GetMouseVectorPly(pPly)
-  local stSpot = GetPlayerSpot(pPly)
-  if(not IsExistent(stSpot)) then
-    return 0, StatusLog(0,"GetMouseVectorPly: Spot missing") end
-  local stData = stSpot["PRESS"]
-  if(not IsExistent(stData)) then
-    return 0, StatusLog(0,"GetMouseVectorPly: Data missing <"..pPly:Nick()..">") end
-  local cmdPress = stData["CMD"]
-  if(not IsExistent(stData)) then
-    return 0, StatusLog(0,"GetMouseVectorPly: Command missing <"..pPly:Nick()..">") end
-  return cmdPress:GetMouseX(), cmdPress:GetMouseY()
-end
-
--- https://wiki.garrysmod.com/page/Enums/IN
-function CheckButtonPly(pPly, iInKey)
-  local stSpot, iInKey = GetPlayerSpot(pPly), (tonumber(iInKey) or 0)
-  if(not IsExistent(stSpot)) then
-    return StatusLog(false,"GetMouseVectorPly: Spot missing") end
-  local stData = stSpot["PRESS"]
-  if(not IsExistent(stData)) then return pPly:KeyDown(iInKey) end
-  local cmdPress = stData["CMD"]
-  if(not IsExistent(cmdPress)) then return pPly:KeyDown(iInKey) end
-  return (bitBand(cmdPress:GetButtons(),iInKey) ~= 0) -- Read the cache
-end
-
 -------------------------- BUILDSQL ------------------------------
 
-local function MatchType(defTable,snValue,ivIndex,bQuoted,sQuote,bStopRevise,bStopEmpty)
-  if(not defTable) then
-    return StatusLog(nil,"MatchType: Missing table definition") end
-  local nIndex = tonumber(ivIndex); if(not IsExistent(nIndex)) then
-    return StatusLog(nil,"MatchType: Field NAN {"..type(ivIndex)"}<"
-             ..tostring(ivIndex).."> invalid on table "..defTable.Name) end
-  local defCol = defTable[nIndex]; if(not IsExistent(defCol)) then
-    return StatusLog(nil,"MatchType: Invalid field #"
-             ..tostring(nIndex).." on table "..defTable.Name) end
-  local tipCol, sModeDB, snOut = tostring(defCol[2]), GetOpVar("MODE_DATABASE")
-  if(tipCol == "TEXT") then snOut = tostring(snValue or "")
-    if(not bStopEmpty and IsEmptyString(snOut)) then
-      if    (sModeDB == "SQL") then snOut = "NULL"
-      elseif(sModeDB == "LUA") then snOut = "NULL"
-      else return StatusLog(nil,"MatchType: Wrong database empty mode <"..sModeDB..">") end
-    end
-    if    (defCol[3] == "LOW") then snOut = snOut:lower()
-    elseif(defCol[3] == "CAP") then snOut = snOut:upper() end
-    if(not bStopRevise and sModeDB == "SQL" and defCol[4] == "QMK") then
-      snOut = snOut:gsub("'","''") end
-    if(bQuoted) then local sqChar
-      if(sQuote) then
-        sqChar = tostring(sQuote or ""):sub(1,1)
-      else
-        if    (sModeDB == "SQL") then sqChar = "'"
-        elseif(sModeDB == "LUA") then sqChar = "\""
-        else return StatusLog(nil,"MatchType: Wrong database quote mode <"..sModeDB..">") end
-      end; snOut = sqChar..snOut..sqChar
-    end
-  elseif(tipCol == "REAL" or tipCol == "INTEGER") then
-    snOut = tonumber(snValue)
-    if(IsExistent(snOut)) then
-      if(tipCol == "INTEGER") then
-        if    (defCol[3] == "FLR") then snOut = mathFloor(snOut)
-        elseif(defCol[3] == "CEL") then snOut = mathCeil (snOut) end
-      end
-    else return StatusLog(nil,"MatchType: Failed converting {"
-      ..type(snValue).."}<"..tostring(snValue).."> to NUMBER for table "
-      ..defTable.Name.." field #"..nIndex) end
-  else return StatusLog(nil,"MatchType: Invalid field type <"
-    ..tipCol.."> on table "..defTable.Name)
-  end; return snOut
-end
-
-local function SQLBuildCreate(defTable)
-  if(not defTable) then
-    return StatusLog(nil, "SQLBuildCreate: Missing table definition") end
-  local indTable = defTable.Index
-  if(not defTable[1]) then
-    return StatusLog(nil, "SQLBuildCreate: Missing table definition is empty for "..defTable.Name) end
-  if(not (defTable[1][1] and defTable[1][2])) then
-    return StatusLog(nil, "SQLBuildCreate: Missing table "..defTable.Name.." field definitions") end
-  local Command, iInd = {}, 1
-  Command.Drop   = "DROP TABLE "..defTable.Name..";"
-  Command.Delete = "DELETE FROM "..defTable.Name..";"
-  Command.Create = "CREATE TABLE "..defTable.Name.." ( "
-  while(defTable[iInd]) do
-    local v = defTable[iInd]
-    if(not v[1]) then
-      return StatusLog(nil, "SQLBuildCreate: Missing Table "..defTable.Name
-                          .."'s field #"..tostring(iInd)) end
-    if(not v[2]) then
-      return StatusLog(nil, "SQLBuildCreate: Missing Table "..defTable.Name
-                                  .."'s field type #"..tostring(iInd)) end
-    Command.Create = Command.Create..(v[1]):upper().." "..(v[2]):upper()
-    if(defTable[iInd+1]) then Command.Create = Command.Create ..", " end
-    iInd = iInd + 1
-  end
-  Command.Create = Command.Create.." );"
-  if(indTable and
-     indTable[1] and
-     type(indTable[1]) == "table" and
-     indTable[1][1] and
-     type(indTable[1][1]) == "number"
-   ) then
-    Command.Index = {}
-    iInd, iCnt = 1, 1
-    while(indTable[iInd]) do
-      local vI = indTable[iInd]
-      if(type(vI) ~= "table") then
-        return StatusLog(nil, "SQLBuildCreate: Index creator mismatch on "
-          ..defTable.Name.." value "..vI.." is not a table for index ["..tostring(iInd).."]") end
-      local FieldsU = ""
-      local FieldsC = ""
-      Command.Index[iInd] = "CREATE INDEX IND_"..defTable.Name
-      iCnt = 1
-      while(vI[iCnt]) do
-        local vF = vI[iCnt]
-        if(type(vF) ~= "number") then
-          return StatusLog(nil, "SQLBuildCreate: Index creator mismatch on "
-            ..defTable.Name.." value "..vF.." is not a number for index ["
-            ..tostring(iInd).."]["..tostring(iCnt).."]") end
-        if(not defTable[vF]) then
-          return StatusLog(nil, "SQLBuildCreate: Index creator mismatch on "
-            ..defTable.Name..". The table does not have field index #"
-            ..vF..", max is #"..Table.Size) end
-        FieldsU = FieldsU.."_" ..(defTable[vF][1]):upper()
-        FieldsC = FieldsC..(defTable[vF][1]):upper()
-        if(vI[iCnt+1]) then FieldsC = FieldsC ..", " end
-        iCnt = iCnt + 1
-      end
-      Command.Index[iInd] = Command.Index[iInd]..FieldsU.." ON "..defTable.Name.." ( "..FieldsC.." );"
-      iInd = iInd + 1
-    end
-  end; return Command
-end
-
-local function SQLCacheStmt(sHash,sStmt,...)
-  if(not IsExistent(sHash)) then
-    return StatusLog(nil, "SQLCacheStmt: Store hash missing") end
+local function CacheStmt(sHash,sStmt,...)
+  if(not IsHere(sHash)) then LogInstance("Missing hash"); return nil end
   local sHash, tStore = tostring(sHash), GetOpVar("QUERY_STORE")
-  if(not IsExistent(tStore)) then
-    return StatusLog(nil, "SQLCacheStmt: Store place missing") end
-  if(IsExistent(sStmt)) then
-    tStore[sHash] = tostring(sStmt); Print(tStore,"SQLCacheStmt: stmt") end
-  local sBase = tStore[sHash]; if(not IsExistent(sBase)) then
-    return StatusLog(nil, "SQLCacheStmt: Stmt missing <"..sHash..">") end
+  if(not IsHere(tStore)) then LogInstance("Missing storage"); return nil end
+  if(IsHere(sStmt)) then -- If the key is located return the query
+    tStore[sHash] = tostring(sStmt); LogTable(tStore,"STMT") end
+  local sBase = tStore[sHash]; if(not IsHere(sBase)) then
+    LogInstance("("..sHash..") Mismatch"); return nil end
   return sBase:format(...)
 end
 
-local function SQLBuildSelect(defTable,tFields,tWhere,tOrderBy)
-  if(not defTable) then
-    return StatusLog(nil, "SQLBuildSelect: Missing table definition") end
-  if(not (defTable[1][1] and defTable[1][2])) then
-    return StatusLog(nil, "SQLBuildSelect: Missing table "..defTable.Name.." field definitions") end
-  local Command, Cnt = "SELECT ", 1
-  if(tFields) then
-    while(tFields[Cnt]) do
-      local v = tonumber(tFields[Cnt])
-      if(not IsExistent(v)) then
-        return StatusLog(nil, "SQLBuildSelect: Index NAN {"
-             ..type(tFields[Cnt]).."}<"..tostring(tFields[Cnt])
-             .."> type mismatch in "..defTable.Name) end
-      if(not defTable[v]) then
-        return StatusLog(nil, "SQLBuildSelect: Missing field by index #"
-          ..v.." in the table "..defTable.Name) end
-      if(defTable[v][1]) then Command = Command..defTable[v][1]
-      else return StatusLog(nil, "SQLBuildSelect: Missing field name by index #"
-        ..v.." in the table "..defTable.Name) end
-      if(tFields[Cnt+1]) then Command = Command ..", " end
-      Cnt = Cnt + 1
-    end
-  else Command = Command.."*" end
-  Command = Command .." FROM "..defTable.Name
-  if(tWhere and
-     type(tWhere == "table") and
-     type(tWhere[1]) == "table" and
-     tWhere[1][1] and
-     tWhere[1][2] and
-     type(tWhere[1][1]) == "number" and
-     (type(tWhere[1][2]) == "string" or type(tWhere[1][2]) == "number")
-  ) then
-    Cnt = 1
-    while(tWhere[Cnt]) do
-      local k = tonumber(tWhere[Cnt][1])
-      local v = tWhere[Cnt][2]
-      local t = defTable[k][2]
-      if(not (k and v and t) ) then
-        return StatusLog(nil, "SQLBuildSelect: Where clause inconsistent on "
-          ..defTable.Name.." field index, {"..tostring(k)..","..tostring(v)..","..tostring(t)
-          .."} value or type in the table definition") end
-      if(not IsExistent(v)) then
-        return StatusLog(nil, "SQLBuildSelect: Data matching failed on "
-          ..defTable.Name.." field index #"..Cnt.." value <"..tostring(v)..">") end
-      if(Cnt == 1) then Command = Command.." WHERE "..defTable[k][1].." = "..tostring(v)
-      else              Command = Command.." AND "  ..defTable[k][1].." = "..tostring(v) end
-      Cnt = Cnt + 1
-    end
-  end
-  if(tOrderBy and (type(tOrderBy) == "table")) then
-    local Dire = ""
-    Command, Cnt = Command.." ORDER BY ", 1
-    while(tOrderBy[Cnt]) do
-      local v = tOrderBy[Cnt]
-      if(v ~= 0) then
-        if(v > 0) then Dire = " ASC"
-        else Dire, tOrderBy[Cnt] = " DESC", -v end
-      else return StatusLog(nil, "SQLBuildSelect: Order wrong for "
-        ..defTable.Name .." field index #"..Cnt) end
-      Command = Command..defTable[v][1]..Dire
-      if(tOrderBy[Cnt+1]) then Command = Command..", " end
-      Cnt = Cnt + 1
-    end
-  end; return Command..";"
-end
-
-local function SQLBuildInsert(defTable,tInsert,tValues)
-  if(not defTable) then
-    return StatusLog(nil, "SQLBuildInsert: Missing Table definition") end
-  if(not tValues) then
-    return StatusLog(nil, "SQLBuildInsert: Missing Table value fields") end
-  if(not defTable[1]) then
-    return StatusLog(nil, "SQLBuildInsert: The table and the chosen fields must not be empty") end
-  if(not (defTable[1][1] and defTable[1][2])) then
-    return StatusLog(nil, "SQLBuildInsert: Missing table "..defTable.Name.." field definition") end
-  local tInsert = tInsert or {}
-  if(not tInsert[1]) then
-    local iCnt = 1
-    while(defTable[iCnt]) do
-      tInsert[iCnt] = iCnt; iCnt = iCnt + 1 end
-  end
-  local iCnt, qVal = 1, " VALUES ( "
-  local qIns = "INSERT INTO "..defTable.Name.." ( "
-  while(tInsert[iCnt]) do
-    local iIns = tInsert[iCnt]; local tIns = defTable[iIns]
-    if(not IsExistent(tIns)) then
-      return StatusLog(nil, "SQLBuildInsert: No such field #"..iIns.." on table "..defTable.Name) end
-    qIns, qVal = qIns..tIns[1], qVal..tostring(tValues[iCnt])
-    if(tInsert[iCnt+1]) then qIns, qVal = qIns ..", " , qVal ..", "
-    else qIns, qVal = qIns .." ) ", qVal .." );" end; iCnt = iCnt + 1
-  end; return qIns..qVal
-end
-
-function CreateTable(sTable,defTable,bDelete,bReload)
+function GetBuilderNick(sTable)
   if(not IsString(sTable)) then
-    return StatusLog(false,"CreateTable: Table key {"..type(sTable).."}<"..tostring(sTable).."> not string") end
-  if(not (type(defTable) == "table")) then
-    return StatusLog(false,"CreateTable: Table definition missing for "..sTable) end
-  if(#defTable <= 0) then
-    return StatusLog(false,"CreateTable: Record definition missing for "..sTable) end
-  if(#defTable ~= tableMaxn(defTable)) then
-    return StatusLog(false,"CreateTable: Record definition mismatch for "..sTable) end
-  local sTable  = sTable:upper()
-  local sModeDB = GetOpVar("MODE_DATABASE")
-  local symDis  = GetOpVar("OPSYM_DISABLE")
-  local iCnt, defCol = 1, nil
-  SetOpVar("DEFTABLE_"..sTable,defTable)
-  defTable.Size = #defTable
-  defTable.Name = GetOpVar("TOOLNAME_PU")..sTable
-  while(defTable[iCnt]) do
-    defCol    = defTable[iCnt]
-    defCol[3] = DefaultString(tostring(defCol[3] or symDis), symDis)
-    defCol[4] = DefaultString(tostring(defCol[4] or symDis), symDis)
-    iCnt = iCnt + 1
-  end; libCache[defTable.Name] = {}
-  if(sModeDB == "SQL") then
-    local tQ = SQLBuildCreate(defTable)
-    if(not IsExistent(tQ)) then return StatusLog(false,"CreateTable: Build statement failed") end
-    if(bDelete and sqlTableExists(defTable.Name)) then
-      local qRez = sqlQuery(tQ.Delete)
-      if(not qRez and IsBool(qRez)) then
-        LogInstance("CreateTable: Table "..sTable.." is not present. Skipping delete !")
-      else
-        LogInstance("CreateTable: Table "..sTable.." deleted !")
-      end
-    end
-    if(bReload) then
-      local qRez = sqlQuery(tQ.Drop)
-      if(not qRez and IsBool(qRez)) then
-        LogInstance("CreateTable: Table "..sTable.." is not present. Skipping drop !")
-      else
-        LogInstance("CreateTable: Table "..sTable.." dropped !")
-      end
-    end
-    if(sqlTableExists(defTable.Name)) then
-      return StatusLog(true,"CreateTable: Table "..sTable.." exists!")
-    else
-      local qRez = sqlQuery(tQ.Create)
-      if(not qRez and IsBool(qRez)) then
-        return StatusLog(false,"CreateTable: Table "..sTable
-          .." failed to create because of "..sqlLastError()) end
-      if(sqlTableExists(defTable.Name)) then
-        for k, v in pairs(tQ.Index) do
-          qRez = sqlQuery(v)
-          if(not qRez and IsBool(qRez)) then
-            return StatusLog(false,"CreateTable: Table "..sTable..
-              " failed to create index ["..k.."] > "..v .." > because of "..sqlLastError()) end
-        end return StatusLog(true,"CreateTable: Indexed Table "..sTable.." created !")
-      else
-        return StatusLog(false,"CreateTable: Table "..sTable..
-          " failed to create because of "..sqlLastError().." Query ran > "..tQ.Create) end
-    end
-  elseif(sModeDB == "LUA") then
-    LogInstance("CreateTable: Created "..defTable.Name)
-  else return StatusLog(false,"CreateTable: Wrong database mode <"..sModeDB..">") end
+    LogInstance("Key {"..type(sTable).."}<"..tostring(sTable).."> not string"); return nil end
+  local makTab = libQTable[sTable]; if(not IsHere(makTab)) then
+    LogInstance("Missing table builder for <"..sTable..">"); return nil end
+  if(not makTab:IsValid()) then
+    LogInstance("Builder object invalid <"..sTable..">"); return nil end
+  return makTab -- Return the dedicated table builder object
 end
 
-function InsertRecord(sTable,arLine)
-  if(not IsExistent(sTable)) then
-    return StatusLog(false,"InsertRecord: Missing table name/values")
-  end
-  if(type(sTable) == "table") then
-    arLine = sTable
-    sTable = DefaultTable()
-    if(not (IsExistent(sTable) and sTable ~= "")) then
-      return StatusLog(false,"InsertRecord: Missing table default name for "..sTable) end
-  end
+function CreateTable(sTable,defTab,bDelete,bReload)
   if(not IsString(sTable)) then
-    return StatusLog(false,"InsertRecord: Table name {"..type(sTable).."}<"..tostring(sTable).."> not string") end
-  local defTable = GetOpVar("DEFTABLE_"..sTable)
-  if(not defTable) then
-    return StatusLog(false,"InsertRecord: Missing table definition for "..sTable) end
-  if(not defTable[1])  then
-    return StatusLog(false,"InsertRecord: Missing table definition is empty for "..sTable) end
-  if(not arLine)      then
-    return StatusLog(false,"InsertRecord: Missing data table for "..sTable) end
-  if(not arLine[1])   then
-    for key, val in pairs(arLine) do
-      LogInstance("PK data ["..tostring(key).."] = <"..tostring(val)..">") end
-    return StatusLog(false,"InsertRecord: Missing PK for "..sTable)
+    LogInstance("Table key {"..type(sTable).."}<"..tostring(sTable).."> not string"); return false end
+  if(IsBlank(sTable)) then
+    LogInstance("Table name must not be empty"); return false end
+  if(not (type(defTab) == "table")) then
+    LogInstance("Table definition missing for "..sTable); return false end
+  defTab.Size = #defTab; if(defTab.Size <= 0) then
+    LogInstance("Record definition missing for "..sTable); return false end
+  for iCnt = 1, defTab.Size do
+    local sN = tostring(defTab[iCnt][1] or ""); if(IsBlank(sN)) then
+      LogInstance("Missing table "..sTable.." col ["..tostring(iCnt).."] name"); return false end
+    local sT = tostring(defTab[iCnt][2] or ""); if(IsBlank(sT)) then
+      LogInstance("Missing table "..sTable.." col ["..tostring(iCnt).."] type"); return false end
+    defTab[iCnt][1], defTab[iCnt][2] = sN, sT
   end
-
-  if(sTable == "PIECES") then
-    local trClass = GetOpVar("TRACE_CLASS")
-    arLine[2] = DisableString(arLine[2],DefaultType(),"TYPE")
-    arLine[3] = DisableString(arLine[3],ModelToName(arLine[1]),"MODEL")
-    arLine[8] = DisableString(arLine[8],nil,nil)
-    if(IsString(arLine[8]) and (arLine[8] ~= "NULL")
-       and not trClass[arLine[8]] and not IsEmptyString(arLine[8])) then
-      trClass[arLine[8]] = true -- Register the class provided
-      LogInstance("InsertRecord: Register trace <"..tostring(arLine[8])..">")
-    end -- Add the special class to the trace list
+  if(defTab.Size ~= tableMaxn(defTab)) then
+    LogInstance("Record definition mismatch for "..sTable); return false end
+  defTab.Nick = sTable:upper(); defTab.Name = GetOpVar("TOOLNAME_PU")..defTab.Nick
+  local self, tabDef, tabCmd = {}, defTab, {}
+  local symDis, sMoDB = GetOpVar("OPSYM_DISABLE"), GetOpVar("MODE_DATABASE")
+  for iCnt = 1, defTab.Size do local defCol = defTab[iCnt]
+    defCol[3] = GetTerm(tostring(defCol[3] or symDis), symDis)
+    defCol[4] = GetTerm(tostring(defCol[4] or symDis), symDis)
+  end; libCache[defTab.Name] = {}; libQTable[defTab.Nick] = self
+  -- Read table definition
+  function self:GetDefinition(vK)
+    if(vK) then return tabDef[vK] end; return tabDef
   end
-
-  local sModeDB = GetOpVar("MODE_DATABASE")
-  if(sModeDB == "SQL") then local Q
-    for iID = 1, defTable.Size, 1 do
-      arLine[iID] = MatchType(defTable,arLine[iID],iID,true) end
-    Q = SQLCacheStmt("stmtInsertPieces", nil, unpack(arLine))
-    if(not Q) then
-      local Stmt = SQLBuildInsert(defTable,nil,{"%s","%s","%s","%f","%s","%s","%s","%s"})
-      if(not IsExistent(Stmt)) then
-        return StatusLog(nil,"InsertRecord: Build statement <"..sTable.."> failed") end
-      Q = SQLCacheStmt("stmtInsertPieces", Stmt, unpack(arLine)) end
-    if(not IsExistent(Q)) then
-      return StatusLog(false, "InsertRecord: Internal cache error <"..sTable..">")end
-    local qRez = sqlQuery(Q)
-    if(not qRez and IsBool(qRez)) then
-       return StatusLog(false,"InsertRecord: Failed to insert a record because of <"
-              ..sqlLastError().."> Query ran <"..Q..">") end
-    return true
-  elseif(sModeDB == "LUA") then
-    local snPrimaryKey = MatchType(defTable,arLine[1],1)
-    if(not IsExistent(snPrimaryKey)) then -- If primary key becomes a number
-      return StatusLog(nil,"InsertRecord: Cannot match primary key "
-                          ..sTable.." <"..tostring(arLine[1]).."> to "
-                          ..defTable[1][1].." for "..tostring(snPrimaryKey)) end
-    local tCache = libCache[defTable.Name]
-    if(not IsExistent(tCache)) then
-      return StatusLog(false,"InsertRecord: Cache not allocated for "..defTable.Name) end
-    if(sTable == "PIECES") then
-      local stData = tCache[snPrimaryKey]
-      if(not stData) then
-        tCache[snPrimaryKey] = {}; stData = tCache[snPrimaryKey] end
-      if(not IsExistent(stData.Kept)) then stData.Kept = 1        end
-      if(not IsExistent(stData.Type)) then stData.Type = arLine[2] end
-      if(not IsExistent(stData.Name)) then stData.Name = arLine[3] end
-      if(not IsExistent(stData.Unit)) then stData.Unit = arLine[8] end
-      if(not IsExistent(stData.Slot)) then stData.Slot = snPrimaryKey end
-      if(not IsExistent(stData.Rake)) then stData.Rake = MatchType(defTable,arLine[4],4) end
-      if(not IsExistent(stData.Rake)) then
-        return StatusLog(nil,"InsertRecord: Cannot match "
-                            ..sTable.." <"..tostring(arLine[4]).."> to "
-                            ..defTable[4][1].." for "..tostring(snPrimaryKey))
+  -- Reads the requested command or returns the whole list
+  function self:GetCommand(vK)
+    if(vK) then return tabCmd[vK] end; return tabCmd
+  end
+  -- Alias for reading the last created SQL statement
+  function self:Get(vK)
+    local qtCmd = self:GetCommand()
+    local iK = (vK or qtCmd.STMT); return qtCmd[iK]
+  end
+  -- Returns ID of the found column
+  function self:GetColumnID(sN)
+    local sN, qtDef = tostring(sN or ""), self:GetDefinition()
+    for iD = 1, qtDef.Size do if(qtDef[iD][1] == sN) then return iD end
+    end; LogInstance("Mismatch <"..tostring(sN)..">"); return 0
+  end
+  -- Removes the object from the list
+  function self:Remove(vRet)
+    local qtDef = self:GetDefinition()
+    libQTable[qtDef.Nick]  = nil
+    collectgarbage(); return vRet
+  end
+  -- Generates a timer settings table and keeps the defaults
+  function self:TimerSetup(vTim)
+    local qtCmd = self:GetCommand()
+    local qtDef = self:GetDefinition()
+    local sTm = (vTim and tostring(vTim or "") or qtDef.Timer)
+    local tTm = GetOpVar("OPSYM_REVISION"):Explode(sTm)
+    tTm[1] =   tostring(tTm[1]  or "CQT")                     -- Timer mode
+    tTm[2] =  (tonumber(tTm[2]) or 0)                         -- Record life
+    tTm[3] = ((tonumber(tTm[3]) or 0) ~= 0) and true or false -- Kill command
+    tTm[4] = ((tonumber(tTm[4]) or 0) ~= 0) and true or false -- Collect garbage call
+    qtCmd.Timer = tTm; return self
+  end
+  -- Navigates the reference in the cache
+  function self:GetNavigate(...)
+    local tKey = {...}; if(not IsHere(tKey[1])) then
+      LogInstance("Missing keys",tabDef.Nick); return nil end
+    local oSpot, kKey, iCnt = libCache, tKey[1], 1
+    while(tKey[iCnt]) do kKey = tKey[iCnt]; iCnt = iCnt + 1
+      if(tKey[iCnt]) then oSpot = oSpot[kKey]; if(not IsHere(oSpot)) then
+        LogTable(tKey,"Diverge("..tostring(kKey)..")",tabDef.Nick); return nil
+    end; end; end; if(not oSpot[kKey]) then
+      LogTable(tKey,"Missing",tabDef.Nick); return nil end
+    return oSpot, kKey, tKey
+  end
+  -- Attaches timer to a record related in the table cache
+  function self:TimerAttach(vMsg, ...)
+    local sMoDB, oSpot, kKey, tKey = GetOpVar("MODE_DATABASE"), self:GetNavigate(...)
+    if(not (IsHere(oSpot) and IsHere(kKey))) then
+      LogInstance("Navigation failed",tabDef.Nick); return nil end
+    LogInstance("Called by <"..tostring(vMsg).."> for ["..tostring(kKey).."]",tabDef.Nick)
+    if(sMoDB == "SQL") then local qtCmd = self:GetCommand() -- Read the command and current time
+      local nNow, tTim = Time(), qtCmd.Timer; if(not IsHere(tTim)) then
+        LogInstance("Missing timer settings",tabDef.Nick); return oSpot[kKey] end
+      oSpot[kKey].Used = nNow -- Make the first selected deletable to avoid phantom records
+      local smTM, tmLif, tmDie, tmCol = tTim[1], tTim[2], tTim[3], tTim[4]; if(tmLif <= 0) then
+        LogInstance("Timer attachment ignored",tabDef.Nick); return oSpot[kKey] end
+      LogInstance("["..smTM.."] ("..tmLif..") "..tostring(tmDie)..", "..tostring(tmCol),tabDef.Nick)
+      if(smTM == "CQT") then
+        for k, v in pairs(oSpot) do
+          if(IsHere(v.Used) and ((nNow - v.Used) > tmLif)) then
+            LogInstance("("..tostring(mathRound(nNow - v.Used,2)).." > "..tmLif..") > Dead",tabDef.Nick)
+            if(tmDie) then oSpot[k] = nil; LogInstance("Killed <"..tostring(k)..">",tabDef.Nick) end
+          end
+        end
+        if(tmCol) then collectgarbage(); LogInstance("Garbage collected",tabDef.Nick) end
+        LogInstance("["..tostring(kKey).."] @"..tostring(mathRound(nNow,2)),tabDef.Nick); return oSpot[kKey]
+      elseif(smTM == "OBJ") then
+        local tmID = GetOpVar("OPSYM_DIVIDER"):Implode(tKey)
+        LogInstance("TimID <"..tmID..">",tabDef.Nick)
+        if(timerExists(tmID)) then LogInstance("Timer exists",tabDef.Nick); return oSpot[kKey] end
+        timerCreate(tmID, tmLif, 1, function()
+          LogInstance("["..tmID.."]("..tmLif..") > Dead",tabDef.Nick)
+          if(tmDie) then oSpot[kKey] = nil; LogInstance("Killed <"..kKey..">",tabDef.Nick) end
+          timerStop(tmID); timerDestroy(tmID)
+          if(tmCol) then collectgarbage(); LogInstance("Garbage collected",tabDef.Nick) end
+        end); timerStart(tmID); return oSpot[kKey]
+      else LogInstance("Mode mismatch <"..smTM..">",tabDef.Nick); return oSpot[kKey] end
+    elseif(sMoDB == "LUA") then
+      LogInstance("Memory manager impractical",tabDef.Nick); return oSpot[kKey]
+    else LogInstance("Wrong database mode",tabDef.Nick); return nil end
+  end
+  -- Restarts timer to a record related in the table cache
+  function self:TimerRestart(vMsg, ...)
+    local sMoDB, oSpot, kKey, tKey = GetOpVar("MODE_DATABASE"), self:GetNavigate(...)
+    if(not (IsHere(oSpot) and IsHere(kKey))) then
+      LogInstance("Navigation failed",tabDef.Nick); return nil end
+    LogInstance("Called by <"..tostring(vMsg).."> for ["..tostring(kKey).."]",tabDef.Nick)
+    if(sMoDB == "SQL") then local qtCmd = self:GetCommand()
+      local tTim = qtCmd.Timer; if(not IsHere(tTim)) then
+        LogInstance("Missing timer settings",tabDef.Nick); return oSpot[kKey] end
+      oSpot[kKey].Used = Time() -- Mark the current caching time stamp
+      local smTM, tmLif = tTim[1], tTim[2]; if(tmLif <= 0) then
+        LogInstance("Timer life ignored",tabDef.Nick); return oSpot[kKey] end
+      if(smTM == "CQT") then smTM = "CQT"
+      elseif(smTM == "OBJ") then -- Just for something to do here and to be known that this is mode CQT
+        local kID = GetOpVar("OPSYM_DIVIDER"):Implode(tKeys); if(not timerExists(kID)) then
+          LogInstance("Timer missing <"..kID..">",tabDef.Nick); return nil end
+        timerStart(kID)
+      else LogInstance("Mode mismatch <"..smTM..">",tabDef.Nick); return nil end
+    elseif(sMoDB == "LUA") then oSpot[kKey].Used = Time()
+    else LogInstance("Wrong database mode",tabDef.Nick); return nil end
+    return oSpot[kKey]
+  end
+  -- Object internal data validation
+  function self:IsValid() local bStat = true
+    local qtCmd = self:GetCommand(); if(not qtCmd) then
+      LogInstance("Missing commands <"..defTab.Nick..">",tabDef.Nick); bStat = false end
+    local qtDef = self:GetDefinition(); if(not qtDef) then
+      LogInstance("Missing definition",tabDef.Nick); bStat = false end
+    if(qtDef.Size ~= #qtDef) then
+      LogInstance("Mismatch count",tabDef.Nick); bStat = false end
+    if(qtDef.Size ~= tableMaxn(qtDef)) then
+      LogInstance("Mismatch maxN",tabDef.Nick); bStat = false end
+    if(defTab.Nick:upper() ~= defTab.Nick) then
+      LogInstance("Nick lower",tabDef.Nick); bStat = false end
+    if(defTab.Name:upper() ~= defTab.Name) then
+      LogInstance("Name lower <"..defTab.Name..">",tabDef.Nick); bStat = false end
+    local nS, nE = defTab.Name:find(defTab.Nick); if(not (nS and nE and nS > 1 and nE == defTab.Name:len())) then
+      LogInstance("Mismatch <"..defTab.Name..">",tabDef.Nick); bStat = false end
+    for iD = 1, qtDef.Size do local tCol = qtDef[iD] if(type(tCol) ~= "table") then
+        LogInstance("Mismatch type ["..iD.."]",tabDef.Nick); bStat = false end
+      if(not IsString(tCol[1])) then
+        LogInstance("Mismatch name ["..iD.."]",tabDef.Nick); bStat = false end
+      if(not IsString(tCol[2])) then
+        LogInstance("Mismatch type ["..iD.."]",tabDef.Nick); bStat = false end
+      if(tCol[3] and not IsString(tCol[3])) then
+        LogInstance("Mismatch ctrl ["..iD.."]",tabDef.Nick); bStat = false end
+      if(tCol[4] and not IsString(tCol[4])) then
+        LogInstance("Mismatch conv ["..iD.."]",tabDef.Nick); bStat = false end
+    end; return bStat -- Succesfully validated the builder table
+  end
+  -- Creates table column list as string
+  function self:GetColumnList(sD)
+    if(not IsHere(sD)) then return "" end
+    local qtDef, sRes, iCnt = self:GetDefinition(), "", 1
+    local sD = tostring(sD or "\t"):sub(1,1); if(IsBlank(sD)) then
+      LogInstance("Missing delimiter",tabDef.Nick); return "" end
+    while(iCnt <= qtDef.Size) do
+      sRes, iCnt = (sRes..qtDef[iCnt][1]), (iCnt + 1)
+      if(qtDef[iCnt]) then sRes = sRes..sD end
+    end; return sRes
+  end
+  -- Internal type matching
+  function self:Match(snValue,ivID,bQuoted,sQuote,bNoRev,bNoNull)
+    local qtDef, sNull = self:GetDefinition(), GetOpVar("MISS_NOSQL")
+    local nvInd = tonumber(ivID); if(not IsHere(nvInd)) then
+      LogInstance("Col NAN {"..type(ivID)..tostring(ivID).."> invalid",tabDef.Nick); return nil end
+    local defCol = qtDef[nvInd]; if(not IsHere(defCol)) then
+      LogInstance("Invalid col #"..tostring(nvInd),tabDef.Nick); return nil end
+    local tipCol, sMoDB, snOut = tostring(defCol[2]), GetOpVar("MODE_DATABASE")
+    if(tipCol == "TEXT") then snOut = tostring(snValue or "")
+      if(not bNoNull and IsBlank(snOut)) then
+        if    (sMoDB == "SQL") then snOut = sNull
+        elseif(sMoDB == "LUA") then snOut = sNull
+        else LogInstance("Wrong database empty mode <"..sMoDB..">",tabDef.Nick); return nil end
       end
-      local stPOA = RegisterPOA(stData,arLine[5],arLine[6],arLine[7])
-      if(not IsExistent(stPOA)) then
-        return StatusLog(nil,"InsertRecord: Cannot process offset for "..tostring(snPrimaryKey)) end
-    else
-      return StatusLog(false,"InsertRecord: No settings for table "..sTable)
-    end
+      if    (defCol[3] == "LOW") then snOut = snOut:lower()
+      elseif(defCol[3] == "CAP") then snOut = snOut:upper() end
+      if(not bNoRev and sMoDB == "SQL" and defCol[4] == "QMK") then
+        snOut = snOut:gsub("'","''") end
+      if(bQuoted) then local sqChar
+        if(sQuote) then
+          sqChar = tostring(sQuote or ""):sub(1,1)
+        else
+          if    (sMoDB == "SQL") then sqChar = "'"
+          elseif(sMoDB == "LUA") then sqChar = "\""
+          else LogInstance("Wrong database quote mode <"..sMoDB..">",tabDef.Nick); return nil end
+        end; snOut = sqChar..snOut..sqChar
+      end
+    elseif(tipCol == "REAL" or tipCol == "INTEGER") then
+      snOut = tonumber(snValue)
+      if(IsHere(snOut)) then
+        if(tipCol == "INTEGER") then
+          if    (defCol[3] == "FLR") then snOut = mathFloor(snOut)
+          elseif(defCol[3] == "CEL") then snOut = mathCeil (snOut) end
+        end
+      else LogInstance("Failed converting {"..type(snValue).."}<"..tostring(snValue).."> to NUMBER col #"..nvInd,tabDef.Nick); return nil end
+    else LogInstance("Invalid col type <"..tipCol..">",tabDef.Nick); return nil
+    end; return snOut
   end
+  -- Build drop statment
+  function self:Drop()
+    local qtDef = self:GetDefinition()
+    local qtCmd = self:GetCommand(); qtCmd.STMT = "Drop"
+    qtCmd.Drop  = "DROP TABLE "..qtDef.Name..";"; return self
+  end
+  -- Build delete statment
+  function self:Delete()
+    local qtDef = self:GetDefinition()
+    local qtCmd = self:GetCommand(); qtCmd.STMT = "Delete"
+    qtCmd.Delete = "DELETE FROM "..qtDef.Name..";"; return self
+  end
+  -- Bhttps://wiki.garrysmod.com/page/sql/Begin
+  function self:Begin()
+    local qtCmd = self:GetCommand()
+    qtCmd.Begin = "BEGIN;"; return self
+  end
+  -- https://wiki.garrysmod.com/page/sql/Commit
+  function self:Commit()
+    local qtCmd = self:GetCommand()
+    qtCmd.Commit = "COMMIT;"; return self
+  end
+  -- Build create/drop/delete statment table of statemenrts
+  function self:Create()
+    local qtDef = self:GetDefinition()
+    local qtCmd, iInd = self:GetCommand(), 1; qtCmd.STMT = "Create"
+    qtCmd.Create = "CREATE TABLE "..qtDef.Name.." ( "
+    while(qtDef[iInd]) do local v = qtDef[iInd]
+      if(not v[1]) then
+        LogInstance("Missing col name #"..tostring(iInd),tabDef.Nick); return nil end
+      if(not v[2]) then
+        LogInstance("Missing col type #"..tostring(iInd),tabDef.Nick); return nil end
+      qtCmd.Create = qtCmd.Create..(v[1]):upper().." "..(v[2]):upper()
+      iInd = (iInd + 1); if(qtDef[iInd]) then qtCmd.Create = qtCmd.Create ..", " end
+    end
+    qtCmd.Create = qtCmd.Create.." );"; return self
+  end
+  -- Build SQL table indexes
+  function self:Index(...) local tIndex = {...}
+    local qtCmd, qtDef = self:GetCommand(), self:GetDefinition()
+    if(not (IsTable(tIndex) and tIndex[1])) then
+      tIndex = qtDef.Index end -- Empty stack use table definition
+    if(IsTable(qtCmd.Index)) then tableEmpty(qtCmd.Index)
+      else qtCmd.Index = {} end; local iCnt, iInd = 1, 1
+    while(tIndex[iInd]) do -- Build index query and reload index commands
+      local vI = tIndex[iInd]; if(type(vI) ~= "table") then
+        LogInstance("Mismatch value ["..tostring(vI).."] not table for ID ["..tostring(iInd).."]",tabDef.Nick); return nil end
+      local cU, cC = "", ""; qtCmd.Index[iInd], iCnt = "CREATE INDEX IND_"..qtDef.Name, 1
+      while(vI[iCnt]) do local vF = tonumber(vI[iCnt]); if(not vF) then
+          LogInstance("Mismatch value ["..tostring(vI[iCnt]).."] NaN for ID ["..tostring(iInd).."]["..tostring(iCnt).."]",tabDef.Nick); return nil end
+        if(not qtDef[vF]) then
+          LogInstance("Mismatch. The col ID #"..tostring(vF).." missing, max is #"..Table.Size,tabDef.Nick); return nil end
+        cU, cC = (cU.."_" ..(qtDef[vF][1]):upper()), (cC..(qtDef[vF][1]):upper()); vI[iCnt] = vF
+        iCnt = iCnt + 1; if(vI[iCnt]) then cC = cC ..", " end
+      end
+      qtCmd.Index[iInd] = qtCmd.Index[iInd]..cU.." ON "..qtDef.Name.." ( "..cC.." );"
+      iInd = iInd + 1
+    end; return self
+  end
+  -- Build SQL select statement
+  function self:Select(...)
+    local qtCmd = self:GetCommand()
+    local qtDef = self:GetDefinition(); qtCmd.STMT = "Select"
+    local sStmt, iCnt, tCols = "SELECT ", 1, {...}
+    if(tCols[1]) then
+      while(tCols[iCnt]) do
+        local v = tonumber(tCols[iCnt]); if(not IsHere(v)) then
+          LogInstance("Index NAN {"..type(tCols[iCnt]).."}<"..tostring(tCols[iCnt]).."> type mismatch",tabDef.Nick); return nil end
+        if(not qtDef[v]) then
+          LogInstance("Missing col by index #"..tostring(v),tabDef.Nick); return nil end
+        if(qtDef[v][1]) then sStmt = sStmt..qtDef[v][1]
+        else LogInstance("Missing col name by index #"..tostring(v),tabDef.Nick); return nil end
+        iCnt = (iCnt + 1); if(tCols[iCnt]) then sStmt = sStmt ..", " end
+      end
+    else sStmt = sStmt.."*" end
+    qtCmd.Select = sStmt .." FROM "..qtDef.Name..";"; return self
+  end
+  -- Add where clause to the select statement
+  function self:Where(...) local tWhere = {...}
+    if(not tWhere[1]) then return self end
+    local iCnt, qtDef, qtCmd = 1, self:GetDefinition(), self:GetCommand()
+    qtCmd.Select = qtCmd.Select:Trim("%s"):Trim(";")
+    while(tWhere[iCnt]) do local k = tonumber(tWhere[iCnt][1])
+      local v, t = tWhere[iCnt][2], qtDef[k][2]; if(not (k and v and t) ) then
+        LogInstance("Where clause inconsistent col index, {"..tostring(k)..","..tostring(v)..","..tostring(t).."}",tabDef.Nick); return nil end
+      if(not IsHere(v)) then
+        LogInstance("Data matching failed index #"..tostring(iCnt).." value <"..tostring(v)..">",tabDef.Nick); return nil end
+      if(iCnt == 1) then qtCmd.Select = qtCmd.Select.." WHERE "..qtDef[k][1].." = "..tostring(v)
+      else               qtCmd.Select = qtCmd.Select.." AND "  ..qtDef[k][1].." = "..tostring(v) end
+      iCnt = iCnt + 1
+    end; qtCmd.Select = qtCmd.Select..";"; return self
+  end
+  -- Add order by clause to the select statement
+  function self:Order(...) local tOrder = {...}
+    if(not tOrder[1]) then return self end
+    local qtCmd, qtDef = self:GetCommand(), self:GetDefinition()
+    local sDir, sStmt, iCnt = "", " ORDER BY ", 1
+    qtCmd.Select = qtCmd.Select:Trim("%s"):Trim(";")
+    while(tOrder[iCnt]) do local v = tOrder[iCnt]
+      if(v ~= 0) then if(v > 0) then sDir = " ASC"
+        else sDir, tOrder[iCnt] = " DESC", -v; v = -v end
+      else LogInstance("Mismatch col index #"..tostring(iCnt),tabDef.Nick); return nil end
+      sStmt, iCnt = (sStmt..qtDef[v][1]..sDir), (iCnt + 1)
+      if(tOrder[iCnt]) then sStmt = sStmt..", " end
+    end; qtCmd.Select = qtCmd.Select..sStmt..";" return self
+  end
+  -- Build SQL insert statement
+  function self:Insert(...)
+    local qtCmd, iCnt, qIns = self:GetCommand(), 1, ""
+    local tInsert, qtDef = {...}, self:GetDefinition(); qtCmd.STMT = "Insert"
+    qtCmd.Insert = "INSERT INTO "..qtDef.Name.." ( "
+    if(not tInsert[1]) then
+      for iCnt = 1, qtDef.Size do qIns = qIns..qtDef[iCnt][1]
+        if(iCnt < qtDef.Size) then qIns = qIns..", " else qIns = qIns.." ) " end end
+    else
+      while(tInsert[iCnt]) do local vInd = tInsert[iCnt]
+        local iIns = tonumber(vInd); if(not IsHere(iIns)) then
+          LogInstance("Column ID ["..tostring(vInd).."] NaN",tabDef.Nick); return nil end
+        local cIns = qtDef[iIns]; if(not IsHere(cIns)) then
+          LogInstance("Column ID ["..tostring(iIns).."] mismatch",tabDef.Nick); return nil end
+        iCnt, qIns = (iCnt + 1), qIns..cIns[1]
+        if(tInsert[iCnt]) then qIns = qIns..", " else qIns = qIns.." ) " end
+      end
+    end; qtCmd.Insert = qtCmd.Insert..qIns; return self
+  end
+  -- Build SQL values statement
+  function self:Values(...)
+    local qtDef, tValues = self:GetDefinition(), {...}
+    local qtCmd, iCnt, qVal = self:GetCommand(), 1, ""
+    qtCmd.Insert = qtCmd.Insert.." VALUES ( "
+    while(tValues[iCnt]) do
+      iCnt, qVal = (iCnt + 1), qVal..tostring(tValues[iCnt])
+      if(tValues[iCnt]) then qVal = qVal..", " else qVal = qVal.." )" end
+    end; qtCmd.Insert = qtCmd.Insert..qVal..";"; return self
+  end
+  -- Uses the given array to create a record in the table
+  function self:Record(arLine)
+    local qtDef, sMoDB, sFunc = self:GetDefinition(), GetOpVar("MODE_DATABASE"), "Record"
+    if(not arLine) then LogInstance("Missing data table",tabDef.Nick); return false end
+    if(not arLine[1]) then LogInstance("Missing PK",tabDef.Nick)
+      for key, val in pairs(arLine) do
+        LogInstance("PK data ["..tostring(key).."] = <"..tostring(val)..">",tabDef.Nick) end
+      return false -- Print all other values when the model is missing
+    end -- Read the log source format and reduce the number of concatenations
+    local fsLog = GetOpVar("FORM_LOGSOURCE") -- The actual format value
+    local ssLog = "*"..fsLog:format(qtDef.Nick,sFunc,"%s")
+    -- Call the trigger when provided
+    if(IsTable(qtDef.Trigs)) then local bS, sR = pcall(qtDef.Trigs[sFunc], arLine, ssLog:format("Trigs"))
+      if(not bS) then LogInstance("Trigger manager fail "..sR,tabDef.Nick); return false end
+      if(not sR) then LogInstance("Trigger routine fail",tabDef.Nick); return false end
+    end -- Populate the data after the trigger does its thing
+    if(sMoDB == "SQL") then local qsKey = GetOpVar("FORM_KEYSTMT")
+      for iD = 1, qtDef.Size do arLine[iD] = self:Match(arLine[iD],iD,true) end
+      local Q = CacheStmt(qsKey:format(sFunc, qtDef.Nick), nil, unpack(arLine))
+      if(not Q) then local sStmt = self:Insert():Values(unpack(qtDef.Query[sFunc])):Get()
+        if(not IsHere(sStmt)) then LogInstance("Build statement failed",tabDef.Nick); return nil end
+        Q = CacheStmt(qsKey:format(sFunc, qtDef.Nick), sStmt, unpack(arLine))
+      end -- The query is built based on table definition
+      if(not IsHere(Q)) then
+        LogInstance("Internal cache error",tabDef.Nick); return false end
+      local qRez = sqlQuery(Q); if(not qRez and IsBool(qRez)) then
+         LogInstance("Execution error <"..sqlLastError().."> Query ran <"..Q..">",tabDef.Nick); return false end
+      return true -- The dynamic statement insertion was successful
+    elseif(sMoDB == "LUA") then local snPK = self:Match(arLine[1],1)
+      if(not IsHere(snPK)) then -- If primary key becomes a number
+        LogInstance("Primary key mismatch <"..tostring(arLine[1]).."> to "..qtDef[1][1].." for "..tostring(snPK),tabDef.Nick); return nil end
+      local tCache = libCache[qtDef.Name]; if(not IsHere(tCache)) then
+        LogInstance("Cache missing",tabDef.Nick); return false end
+      if(not IsTable(qtDef.Cache)) then
+        LogInstance("Cache manager missing",tabDef.Nick); return false end
+      local bS, sR = pcall(qtDef.Cache[sFunc], self, tCache, snPK, arLine, ssLog:format("Cache"))
+      if(not bS) then LogInstance("Cache manager fail "..sR,tabDef.Nick); return false end
+      if(not sR) then LogInstance("Cache routine fail",tabDef.Nick); return false end
+    else LogInstance("Wrong database mode <"..sMoDB..">",tabDef.Nick); return false end
+    return true -- The dynamic cache population was successful
+  end
+  -- When database mode is SQL create a table in sqlite
+  if(sMoDB == "SQL") then local makTab
+    makTab = self:Create(); if(not IsHere(makTab)) then
+      LogInstance("Build create failed"); return self:Remove(false) end
+    makTab = self:Index(); if(not IsHere(makTab)) then
+      LogInstance("Build index failed"); return self:Remove(false) end
+    makTab = self:Drop(); if(not IsHere(makTab)) then
+      LogInstance("Build drop failed"); return self:Remove(false) end
+    makTab = self:Delete(); if(not IsHere(makTab)) then
+      LogInstance("Build delete failed"); return self:Remove(false) end
+    makTab = self:Begin(); if(not IsHere(makTab)) then
+      LogInstance("Build begin failed"); return self:Remove(false) end
+    makTab = self:Commit(); if(not IsHere(makTab)) then
+      LogInstance("Build commit failed"); return self:Remove(false) end
+    makTab = self:TimerSetup(); if(not IsHere(makTab)) then
+      LogInstance("Build timer failed"); return self:Remove(false) end
+    local tQ = self:GetCommand(); if(not IsHere(tQ)) then
+      LogInstance("Build statement failed"); return self:Remove(false) end
+    -- When the table is present delete all records
+    if(bDelete and sqlTableExists(defTab.Name)) then
+      local qRez = sqlQuery(tQ.Delete); if(not qRez and IsBool(qRez)) then
+        LogInstance("Table delete error <"..sqlLastError()..">",tabDef.Nick)
+      else LogInstance("Table delete skip",tabDef.Nick) end
+    end
+    -- When enabled forces a table drop
+    if(bReload) then local qRez = sqlQuery(tQ.Drop)
+      if(not qRez and IsBool(qRez)) then
+        LogInstance("Table drop error <"..sqlLastError()..">",tabDef.Nick)
+      else LogInstance("Table drop skip",tabDef.Nick) end
+    end
+    if(sqlTableExists(defTab.Name)) then
+      LogInstance("Table exists",tabDef.Nick); return self:IsValid()
+    else local qRez = sqlQuery(tQ.Create); if(not qRez and IsBool(qRez)) then
+        LogInstance("Table create fail because of "..sqlLastError(),tabDef.Nick); return self:Remove(false) end
+      if(sqlTableExists(defTab.Name)) then
+        for k, v in pairs(tQ.Index) do qRez = sqlQuery(v); if(not qRez and IsBool(qRez)) then
+          LogInstance("Table index create fail ["..k.."] > "..v .." > because of "..sqlLastError(),tabDef.Nick); return self:Remove(false) end
+        end; LogInstance("Indexed table created",tabDef.Nick); return self:IsValid()
+      else LogInstance("Table create fail because of "..sqlLastError().." Query ran > "..tQ.Create,tabDef.Nick); return self:Remove(false) end
+    end
+  elseif(sMoDB == "LUA") then LogInstance("Created",tabDef.Nick); return self:IsValid()
+  else LogInstance("Wrong database mode <"..sMoDB..">",tabDef.Nick); return self:Remove(false) end
 end
 
 --------------- TIMER MEMORY MANAGMENT ----------------------------
 
-local function NavigateTable(oArea,tKeys)
-  if(not IsExistent(oArea)) then
-    return nil, StatusLog(nil,"NavigateTable: Location missing") end
-  if(not IsExistent(tKeys)) then
-    return nil, StatusLog(nil,"NavigateTable: Key table missing") end
-  if(not IsExistent(tKeys[1])) then
-    return nil, StatusLog(nil,"NavigateTable: First key missing") end
-  local oSpot, kKey, iCnt = oArea, tKeys[1], 1
-  while(tKeys[iCnt]) do kKey = tKeys[iCnt]
-    if(tKeys[iCnt+1]) then oSpot = oSpot[kKey]
-      if(not IsExistent(oSpot)) then
-        return nil, StatusLog(nil,"NavigateTable: Key #"..tostring(kKey).." irrelevant to location") end
-    end; iCnt = iCnt + 1
-  end; return oSpot, kKey
-end
-
-function TimerSetting(sTimerSet) -- Generates a timer settings table and keeps the defaults
-  if(not IsExistent(sTimerSet)) then
-    return StatusLog(nil,"TimerSetting: Timer set missing for setup") end
-  if(not IsString(sTimerSet)) then
-    return StatusLog(nil,"TimerSetting: Timer set {"..type(sTimerSet).."}<"..tostring(sTimerSet).."> not string") end
-  local tBoom = GetOpVar("OPSYM_REVSIGN"):Explode(sTimerSet)
-  tBoom[1] =   tostring(tBoom[1]  or "CQT")
-  tBoom[2] =  (tonumber(tBoom[2]) or 0)
-  tBoom[3] = ((tonumber(tBoom[3]) or 0) ~= 0) and true or false
-  tBoom[4] = ((tonumber(tBoom[4]) or 0) ~= 0) and true or false
-  return tBoom
-end
-
-local function TimerAttach(oArea,tKeys,defTable,anyMessage)
-  if(not defTable) then
-    return StatusLog(nil,"TimerAttach: Missing table definition") end
-  local Spot, Key = NavigateTable(oArea,tKeys)
-  if(not (IsExistent(Spot) and IsExistent(Key))) then
-    return StatusLog(nil,"TimerAttach: Navigation failed") end
-  if(not IsExistent(Spot[Key])) then
-    return StatusLog(nil,"TimerAttach: Data not found") end
-  local sModeDB = GetOpVar("MODE_DATABASE")
-  LogInstance("TimerAttach: Called by <"..tostring(anyMessage).."> for ["..tostring(Key).."]")
-  if(sModeDB == "SQL") then
-    local nNowTM, tTimer = Time(), defTable.Timer -- See that there is a timer and get "now"
-    if(not IsExistent(tTimer)) then
-      return StatusLog(Spot[Key],"TimerAttach: Missing timer settings") end
-    Spot[Key].Used = nNowTM -- Make the first selected deletable to avoid phantom records
-    local nLifeTM = tTimer[2]
-    if(nLifeTM <= 0) then
-      return StatusLog(Spot[Key],"TimerAttach: Timer attachment ignored") end
-    local sModeTM, bKillRC, bCollGB = tTimer[1], tTimer[3], tTimer[4]
-    LogInstance("TimerAttach: ["..sModeTM.."] ("..tostring(nLifeTM)..") "..tostring(bKillRC)..", "..tostring(bCollGB))
-    if(sModeTM == "CQT") then
-      for k, v in pairs(Spot) do
-        if(IsExistent(v.Used) and ((nNowTM - v.Used) > nLifeTM)) then
-          LogInstance("TimerAttach: ("..tostring(RoundValue(nNowTM - v.Used,0.01)).." > "..tostring(nLifeTM)..") > Dead")
-          if(bKillRC) then -- Look for others that are gonna meet their doom
-            Spot[k] = nil; LogInstance("TimerAttach: Killed <"..tostring(k)..">") end
-        end
-      end
-      if(bCollGB) then
-        collectgarbage(); LogInstance("TimerAttach: Garbage collected") end
-      return StatusLog(Spot[Key],"TimerAttach: ["..tostring(Key).."] @"..tostring(RoundValue(nNowTM,0.01)))
-    elseif(sModeTM == "OBJ") then
-      local TimerID = GetOpVar("OPSYM_DIVIDER"):Implode(tKeys)
-      LogInstance("TimerAttach: TimID <"..TimerID..">")
-      if(timerExists(TimerID)) then return StatusLog(Spot[Key],"TimerAttach: Timer exists") end
-      timerCreate(TimerID, nLifeTM, 1, function()
-        LogInstance("TimerAttach["..TimerID.."]("..nLifeTM..") > Dead")
-        if(bKillRC) then
-          Spot[Key] = nil; LogInstance("TimerAttach: Killed <"..Key..">") end
-        timerStop(TimerID); timerDestroy(TimerID)
-        if(bCollGB) then
-          collectgarbage(); LogInstance("TimerAttach: Garbage collected") end
-      end); timerStart(TimerID); return Spot[Key]
-    else return StatusLog(Spot[Key],"TimerAttach: Timer mode not found <"..sModeTM..">") end
-  elseif(sModeDB == "LUA") then
-    return StatusLog(Spot[Key],"TimerAttach: Memory manager not available")
-  else return StatusLog(nil,"TimerAttach: Wrong database mode") end
-end
-
-local function TimerRestart(oArea,tKeys,defTable,anyMessage)
-  if(not defTable) then
-    return StatusLog(nil,"TimerRestart: Missing table definition") end
-  local Spot, Key = NavigateTable(oArea,tKeys)
-  if(not (IsExistent(Spot) and IsExistent(Key))) then
-    return StatusLog(nil,"TimerRestart: Navigation failed") end
-  if(not IsExistent(Spot[Key])) then
-    return StatusLog(nil,"TimerRestart: Spot not found") end
-  local sModeDB = GetOpVar("MODE_DATABASE")
-  if(sModeDB == "SQL") then
-    local tTimer = defTable.Timer; if(not IsExistent(tTimer)) then
-      return StatusLog(Spot[Key],"TimerRestart: Missing timer settings") end
-    Spot[Key].Used = Time() -- Mark the current caching time stamp
-    local nLifeTM = tTimer[2]; if(nLifeTM <= 0) then
-      return StatusLog(Spot[Key],"TimerRestart: Timer life ignored") end
-    local sModeTM = tTimer[1] -- Just for something to do here and to be known that this is mode CQT
-    if(sModeTM == "CQT") then sModeTM = "CQT" 
-    elseif(sModeTM == "OBJ") then
-      local keyTimerID = GetOpVar("OPSYM_DIVIDER"):Implode(tKeys)
-      if(not timerExists(keyTimerID)) then
-        return StatusLog(nil,"TimerRestart: Timer missing <"..keyTimerID..">") end
-      timerStart(keyTimerID)
-    else return StatusLog(nil,"TimerRestart: Timer mode not found <"..sModeTM..">") end
-  elseif(sModeDB == "LUA") then Spot[Key].Used = Time()
-  else return StatusLog(nil,"TimerRestart: Wrong database mode") end
-  return Spot[Key]
-end
-
 function CacheBoxLayout(oEnt,nRot,nCamX,nCamZ)
   if(not (oEnt and oEnt:IsValid())) then
-    return StatusLog(nil,"CacheBoxLayout: Entity invalid <"..tostring(oEnt)..">") end
+    LogInstance("Entity invalid <"..tostring(oEnt)..">"); return nil end
   local sMod = oEnt:GetModel()
-  local oRec = CacheQueryPiece(sMod)
-  if(not IsExistent(oRec)) then
-    return StatusLog(nil,"CacheBoxLayout: Piece record invalid <"..sMod..">") end
-  local Box = oRec.Layout
-  if(not IsExistent(Box)) then
-    local vMin, vMax
-    oRec.Layout = {}; Box = oRec.Layout
+  local oRec = CacheQueryPiece(sMod); if(not IsHere(oRec)) then
+    LogInstance("Piece record invalid <"..sMod..">"); return nil end
+  local stBox = oRec.Layout; if(not IsHere(stBox)) then
+    local vMin, vMax; oRec.Layout = {}; stBox = oRec.Layout
     if    (CLIENT) then vMin, vMax = oEnt:GetRenderBounds()
     elseif(SERVER) then vMin, vMax = oEnt:OBBMins(), oEnt:OBBMaxs()
-    else return StatusLog(nil,"CacheBoxLayout: Wrong instance") end
-    Box.Ang = Angle () -- Layout entity angle
-    Box.Cen = Vector() -- Layout entity centre
-    Box.Cen:Set(vMax); Box.Cen:Add(vMin); Box.Cen:Mul(0.5)
-    Box.Eye = oEnt:LocalToWorld(Box.Cen) -- Layout camera eye
-    Box.Len = ((vMax - vMin):Length() / 2) -- Layout border sphere radius
-    Box.Cam = Vector(); Box.Cam:Set(Box.Eye)  -- Layout camera position
-    AddVectorXYZ(Box.Cam,Box.Len*(tonumber(nCamX) or 0),0,Box.Len*(tonumber(nCamZ) or 0))
-    LogInstance("CacheBoxLayout: "..tostring(Box.Cen).." # "..tostring(Box.Len))
-  end; Box.Ang[caY] = (tonumber(nRot) or 0) * Time(); return Box
+    else LogInstance("Wrong instance"); return nil end
+    stBox.Ang = Angle () -- Layout entity angle
+    stBox.Cen = Vector() -- Layout entity center
+    stBox.Cen:Set(vMax); stBox.Cen:Add(vMin); stBox.Cen:Mul(0.5)
+    stBox.Eye = oEnt:LocalToWorld(stBox.Cen) -- Layout camera eye
+    stBox.Len = (((vMax - stBox.Cen):Length() + (vMin - stBox.Cen):Length()) / 2)
+    stBox.Cam = Vector(); stBox.Cam:Set(stBox.Eye)  -- Layout camera position
+    AddVectorXYZ(stBox.Cam,stBox.Len*(tonumber(nCamX) or 0),0,stBox.Len*(tonumber(nCamZ) or 0))
+    LogInstance("<"..tostring(stBox.Cen).."><"..tostring(stBox.Len)..">")
+  end; stBox.Ang[caY] = (tonumber(nRot) or 0) * Time(); return stBox
 end
 
 --------------------------- PIECE QUERY -----------------------------
 
 function CacheQueryPiece(sModel)
-  if(not IsExistent(sModel)) then
-    return StatusLog(nil,"CacheQueryPiece: Model does not exist") end
+  if(not IsHere(sModel)) then
+    LogInstance("Model does not exist"); return nil end
   if(not IsString(sModel)) then
-    return StatusLog(nil,"CacheQueryPiece: Model {"..type(sModel).."}<"..tostring(sModel).."> not string") end
-  if(IsEmptyString(sModel)) then
-    return StatusLog(nil,"CacheQueryPiece: Model empty string") end
+    LogInstance("Model {"..type(sModel).."}<"..tostring(sModel).."> not string"); return nil end
+  if(IsBlank(sModel)) then
+    LogInstance("Model empty string"); return nil end
   if(not utilIsValidModel(sModel)) then
-    return StatusLog(nil,"CacheQueryPiece: Model invalid <"..sModel..">") end
-  local defTable = GetOpVar("DEFTABLE_PIECES")
-  if(not defTable) then
-    return StatusLog(nil,"CacheQueryPiece: Table definition missing") end
-  local tCache = libCache[defTable.Name] -- Match the model casing
-  local sModel = MatchType(defTable,sModel,1,false,"",true,true)
-  if(not IsExistent(tCache)) then
-    return StatusLog(nil,"CacheQueryPiece: Cache not allocated for <"..defTable.Name..">") end
-  local caInd    = GetOpVar("NAV_PIECE")
-  if(not IsExistent(caInd[1])) then caInd[1] = defTable.Name end caInd[2] = sModel
-  local stPiece  = tCache[sModel]
-  if(IsExistent(stPiece) and IsExistent(stPiece.Kept)) then
-    if(stPiece.Kept > 0) then
-      return TimerRestart(libCache,caInd,defTable,"CacheQueryPiece") end
-    return nil
+    LogInstance("Model invalid <"..sModel..">"); return nil end
+  local makTab = libQTable["PIECES"]; if(not IsHere(makTab)) then
+    LogInstance("Missing table builder"); return nil end
+  local defTab = makTab:GetDefinition(); if(not IsHere(defTab)) then
+    LogInstance("Missing table definition"); return nil end
+  local tCache = libCache[defTab.Name]; if(not IsHere(tCache)) then
+    LogInstance("Cache missing for <"..defTab.Name..">"); return nil end
+  local sModel, qsKey = makTab:Match(sModel,1,false,"",true,true), GetOpVar("FORM_KEYSTMT")
+  local stPiece, sFunc = tCache[sModel], "CacheQueryPiece"
+  if(IsHere(stPiece) and IsHere(stPiece.Size)) then
+    if(stPiece.Size <= 0) then stPiece = nil else
+      stPiece = makTab:TimerRestart(sFunc, defTab.Name, sModel) end
+    return stPiece
   else
-    local sModeDB = GetOpVar("MODE_DATABASE")
-    if(sModeDB == "SQL") then
-      local qModel = MatchType(defTable,sModel,1,true)
-      LogInstance("CacheQueryPiece: Model >> Pool <"..sModel:GetFileFromFilename()..">")
-      tCache[sModel] = {}; stPiece = tCache[sModel]; stPiece.Kept = 0
-      local Q = SQLCacheStmt("stmtSelectPiece", nil, qModel)
+    local sMoDB = GetOpVar("MODE_DATABASE")
+    if(sMoDB == "SQL") then
+      local qModel = makTab:Match(sModel,1,true)
+      LogInstance("Model >> Pool <"..sModel:GetFileFromFilename()..">")
+      tCache[sModel] = {}; stPiece = tCache[sModel]; stPiece.Size = 0
+      local Q = CacheStmt(qsKey:format(sFunc, ""), nil, qModel)
       if(not Q) then
-        local sStmt = SQLBuildSelect(defTable,nil,{{1,"%s"}},{4})
-        if(not IsExistent(sStmt)) then
-          return StatusLog(nil,"CacheQueryPiece: Build statement failed") end
-        Q = SQLCacheStmt("stmtSelectPiece", sStmt, qModel)
+        local sStmt = makTab:Select():Where({1,"%s"}):Order(4):Get()
+        if(not IsHere(sStmt)) then
+          LogInstance("Build statement failed"); return nil end
+        Q = CacheStmt(qsKey:format(sFunc, ""), sStmt, qModel)
       end
-      local qData = sqlQuery(Q)
-      if(not qData and IsBool(qData)) then
-        return StatusLog(nil,"CacheQueryPiece: SQL exec error <"..sqlLastError()..">") end
+      local qData = sqlQuery(Q); if(not qData and IsBool(qData)) then
+        LogInstance("SQL exec error <"..sqlLastError()..">"); return nil end
       if(not (qData and qData[1])) then
-        return StatusLog(nil,"CacheQueryPiece: No data found <"..Q..">") end
-      stPiece.Kept = 0; local iCnt = 1 --- Nothing registered yet
-      stPiece.Slot = sModel
-      stPiece.Type = qData[1][defTable[2][1]]
-      stPiece.Name = qData[1][defTable[3][1]]
-      stPiece.Rake = qData[1][defTable[4][1]]
-      stPiece.Unit = qData[1][defTable[8][1]]
-      while(qData[iCnt]) do
-        local qRec = qData[iCnt]
-        if(not IsExistent(RegisterPOA(stPiece,
-                                      qRec[defTable[5][1]],
-                                      qRec[defTable[6][1]],
-                                      qRec[defTable[7][1]]))) then
-          return StatusLog(nil,"CacheQueryPiece: Cannot process offset #"..tostring(stPiece.Kept).." for <"..sModel..">") end
-        stPiece.Kept, iCnt = iCnt, (iCnt + 1)
-      end; return TimerAttach(libCache,caInd,defTable,"CacheQueryPiece")
-    elseif(sModeDB == "LUA") then return StatusLog(nil,"CacheQueryPiece: Record not located")
-    else return StatusLog(nil,"CacheQueryPiece: Wrong database mode <"..sModeDB..">") end
+        LogInstance("No data found <"..Q..">"); return nil end
+      local iCnt = 1 --- Nothing registered. Start from the beginning
+      stPiece.Slot, stPiece.Size = sModel, 0
+      stPiece.Type = qData[1][defTab[2][1]]
+      stPiece.Name = qData[1][defTab[3][1]]
+      stPiece.Rake = qData[1][defTab[4][1]]
+      stPiece.Unit = qData[1][defTab[8][1]]
+      while(qData[iCnt]) do local qRec = qData[iCnt]
+        if(not IsHere(RegisterPOA(stPiece,iCnt,
+          qRec[defTab[5][1]], qRec[defTab[6][1]], qRec[defTab[7][1]]))) then
+          LogInstance("Cannot process offset #"..tostring(iCnt).." for <"..sModel..">"); return nil
+        end; stPiece.Size, iCnt = iCnt, (iCnt + 1)
+      end; stPiece = makTab:TimerAttach(sFunc, defTab.Name, sModel); return stPiece
+    elseif(sMoDB == "LUA") then LogInstance("Record not located"); return nil
+    else LogInstance("Wrong database mode <"..sMoDB..">"); return nil end
   end
 end
 
 ----------------------- PANEL QUERY -------------------------------
+
 --[[
  * Caches the date needed to populate the CPanel tree
 ]]--
 function CacheQueryPanel()
-  local defTable = GetOpVar("DEFTABLE_PIECES")
-  if(not defTable) then
-    return StatusLog(false,"CacheQueryPanel: Missing table definition") end
-  if(not IsExistent(libCache[defTable.Name])) then
-    return StatusLog(nil,"CacheQueryPanel: Cache not allocated for <"..defTable.Name..">") end
-  local caInd  = GetOpVar("NAV_PANEL")
-  local keyPan = GetOpVar("HASH_USER_PANEL")
-  if(not IsExistent(caInd[1])) then caInd[1] = keyPan end
-  local stPanel  = libCache[keyPan]
-  if(IsExistent(stPanel) and IsExistent(stPanel.Kept)) then
-    LogInstance("CacheQueryPanel: From Pool")
-    if(stPanel.Kept > 0) then
-      return TimerRestart(libCache,caInd,defTable,"CacheQueryPanel") end
-    return nil
+  local makTab = libQTable["PIECES"]; if(not IsHere(makTab)) then
+    LogInstance("Missing table builder"); return nil end
+  local defTab = makTab:GetDefinition(); if(not IsHere(defTab)) then
+    LogInstance("Missing table definition"); return nil end
+  if(not IsHere(libCache[defTab.Name])) then
+    LogInstance("Missing cache allocated <"..defTab.Name..">"); return nil end
+  local keyPan , sFunc = GetOpVar("HASH_USER_PANEL"), "CacheQueryPanel"
+  local stPanel, qsKey = libCache[keyPan], GetOpVar("FORM_KEYSTMT")
+  if(IsHere(stPanel) and IsHere(stPanel.Size)) then LogInstance("From Pool")
+    if(stPanel.Size <= 0) then stPanel = nil else
+      stPanel = makTab:TimerRestart(sFunc, keyPan) end
+    return stPanel
   else
     libCache[keyPan] = {}; stPanel = libCache[keyPan]
-    local sModeDB = GetOpVar("MODE_DATABASE")
-    if(sModeDB == "SQL") then
-      local Q = SQLCacheStmt("stmtSelectPanel", nil)
+    local sMoDB = GetOpVar("MODE_DATABASE")
+    if(sMoDB == "SQL") then
+      local Q = CacheStmt(qsKey:format(sFunc,""), nil, 1)
       if(not Q) then
-        local sStmt = SQLBuildSelect(defTable,{1,2,3},nil,{2,3})
-        if(not IsExistent(sStmt)) then
-          return StatusLog(nil,"CacheQueryPanel: Build statement failed") end
-        Q = SQLCacheStmt("stmtSelectPanel", sStmt)
+        local sStmt = makTab:Select(1,2,3):Order(2,3):Get()
+        if(not IsHere(sStmt)) then
+          LogInstance("Build statement failed"); return nil end
+        Q = CacheStmt(qsKey:format(sFunc,""), sStmt, 1)
       end
-      local qData = sqlQuery(Q)
-      if(not qData and IsBool(qData)) then
-        return StatusLog(nil,"CacheQueryPanel: SQL exec error <"..sqlLastError()..">") end
+      local qData = sqlQuery(Q); if(not qData and IsBool(qData)) then
+        LogInstance("SQL exec error <"..sqlLastError()..">"); return nil end
       if(not (qData and qData[1])) then
-        return StatusLog(nil,"CacheQueryPanel: No data found <"..Q..">") end
-      stPanel.Kept = 1; local iCnt = 1
+        LogInstance("No data found <"..Q..">"); return nil end
+      local iCnt = 1; stPanel.Size = 1
       while(qData[iCnt]) do
-        stPanel[iCnt] = qData[iCnt]
-        stPanel.Kept, iCnt = iCnt, (iCnt + 1)
-      end
-      return TimerAttach(libCache,caInd,defTable,"CacheQueryPanel")
-    elseif(sModeDB == "LUA") then
-      local tCache  = libCache[defTable.Name]
-      local tSorted = Sort(tCache,nil,{"Type","Name"})
-      if(not tSorted) then
-        return StatusLog(nil,"CacheQueryPanel: Cannot sort cache data") end
-      stPanel.Kept = 0; local iCnt = 1
-      while(tSorted[iCnt]) do
-        local vSort = tSorted[iCnt]
-        stPanel[iCnt] = {
-          [defTable[1][1]] = vSort.Key,
-          [defTable[2][1]] = tCache[vSort.Key].Type,
-          [defTable[3][1]] = tCache[vSort.Key].Name
-        }; stPanel.Kept, iCnt = iCnt, (iCnt + 1)
-      end
-      return stPanel
-    else return StatusLog(nil,"CacheQueryPanel: Wrong database mode <"..sModeDB..">") end
-    LogInstance("CacheQueryPanel: To Pool")
+        stPanel[iCnt] = qData[iCnt]; stPanel.Size, iCnt = iCnt, (iCnt + 1)
+      end; stPanel = makTab:TimerAttach(sFunc, keyPan); return stPanel
+    elseif(sMoDB == "LUA") then
+      local tCache = libCache[defTab.Name]
+      local tSort  = Sort(tCache,{"Type","Name"}); if(not tSort) then
+        LogInstance("Cannot sort cache data"); return nil end; stPanel.Size = 0
+      for iCnt = 1, tSort.Size do stPanel[iCnt] = {}
+        local vSort, vPanel = tSort[iCnt], stPanel[iCnt]
+        vPanel[defTab[1][1]] = vSort.Key
+        vPanel[defTab[2][1]] = tCache[vSort.Key].Type
+        vPanel[defTab[3][1]] = tCache[vSort.Key].Name; stPanel.Size = iCnt
+      end; return stPanel
+    else LogInstance("Wrong database mode <"..sMoDB..">"); return nil end
   end
 end
 
 ---------------------- EXPORT --------------------------------
 
-local function StripValue(vVal)
-  local sVal = tostring(vVal or ""):Trim()
-  if(sVal:sub( 1, 1) == "\"") then sVal = sVal:sub(2,-1) end
-  if(sVal:sub(-1,-1) == "\"") then sVal = sVal:sub(1,-2) end
-  return sVal:Trim()
-end
-
-local function GetColumns(defTable, sDelim)
-  if(not IsExistent(sDelim)) then return "" end
-  local sDelim  = tostring(sDelim or "\t"):sub(1,1)
-  local sResult = ""
-  if(IsEmptyString(sDelim)) then
-    return StatusLog("","GetColumns: Invalid delimiter for <"..defTable.Name..">") end
-  local iCount  = 1
-  local namField
-  while(defTable[iCount]) do
-    namField = defTable[iCount][1]
-    if(not IsString(namField)) then
-      return StatusLog("","GetColumns: Field #"..iCount
-               .." {"..type(namField).."}<"..tostring(namField).."> not string") end
-    sResult = sResult..namField
-    if(defTable[iCount + 1]) then sResult = sResult..sDelim end
-    iCount = iCount + 1
-  end
-  return sResult
-end
-
 --[[
- * Save/Load the DB Using Excel or
- * anything that supports delimiter separated digital tables
- * sTable > Definition KEY to export
+ * Save/Load the category generation
+ * vEq    > Amount of intenal comment depth
  * tData  > The local data table to be exported ( if given )
  * sPref  > Prefix used on exporting ( if not uses instance prefix)
 ]]--
 function ExportCategory(vEq, tData, sPref)
-  if(SERVER) then return StatusLog(true, "ExportCategory: Working on server") end
-  local nEq   = tonumber(vEq) or 0; if(nEq <= 0) then
-    return StatusLog(false, "ExportCategory: Wrong equality <"..tostring(vEq)..">") end
-  local sPref = tostring(sPref or GetInstPref())
-  local fName = GetOpVar("DIRPATH_BAS")
+  if(SERVER) then LogInstance("Working on server"); return true end
+  local nEq   = (tonumber(vEq) or 0); if(nEq <= 0) then
+    LogInstance("Wrong equality <"..tostring(vEq)..">"); return false end
+  local fPref = tostring(sPref or GetInstPref()); if(IsBlank(sPref)) then
+    LogInstance("("..fPref..") Prefix empty"); return false end
+  local fName, sFunc = GetOpVar("DIRPATH_BAS"), "ExportCategory"
   if(not fileExists(fName,"DATA")) then fileCreateDir(fName) end
   fName = fName..GetOpVar("DIRPATH_DSV")
   if(not fileExists(fName,"DATA")) then fileCreateDir(fName) end
-  fName = fName..sPref..GetOpVar("TOOLNAME_PU").."CATEGORY.txt"
+  fName = fName..fPref..GetOpVar("TOOLNAME_PU").."CATEGORY.txt"
   local F = fileOpen(fName, "wb", "DATA")
-  if(not F) then return StatusLog(false,"ExportCategory("..sPref.."): fileOpen("..fName..") failed from") end
-  local sEq, nLen, sMod = ("="):rep(nEq), (nEq+2), GetOpVar("MODE_DATABASE")
+  if(not F) then LogInstance("("..fPref..") fileOpen("..fName..") failed from"); return false end
+  local sEq, nLen, sMoDB = ("="):rep(nEq), (nEq+2), GetOpVar("MODE_DATABASE")
   local tCat = (type(tData) == "table") and tData or GetOpVar("TABLE_CATEGORIES")
-  F:Write("# ExportCategory( "..tostring(nEq).." )("..sPref.."): "..GetDate().." [ "..sMod.." ]".."\n")
+  F:Write("# "..sFunc..":("..tostring(nEq).."@"..fPref..") "..GetDate().." [ "..sMoDB.." ]\n")
   for cat, rec in pairs(tCat) do
     if(IsString(rec.Txt)) then
       local exp = "["..sEq.."["..cat..sEq..rec.Txt:Trim().."]"..sEq.."]"
       if(not rec.Txt:find("\n")) then F:Flush(); F:Close()
-        return StatusLog(false, "ExportCategory("..sPref.."): Category one-liner <"..cat..">") end
+        LogInstance("("..fPref.."):("..fPref..") Category one-liner <"..cat..">"); return false end
       F:Write(exp.."\n")
-    else F:Flush(); F:Close(); StatusLog(false, "ExportCategory("..sPref.."): Category <"..cat.."> code <"..tostring(rec.Txt).."> invalid from") end
-  end; F:Flush(); F:Close(); return StatusLog(true, "ExportCategory("..sPref.."): Success")
+    else F:Flush(); F:Close(); LogInstance("("..fPref..") Category <"..cat.."> code <"..tostring(rec.Txt).."> mismatch"); return false end
+  end; F:Flush(); F:Close(); LogInstance("("..fPref..") Success"); return true
 end
 
 function ImportCategory(vEq, sPref)
-  if(SERVER) then return StatusLog(true, "ImportCategory: Working on server") end
-  local nEq = tonumber(vEq) or 0; if(nEq <= 0) then
-    return StatusLog(false,"ImportCategory: Wrong equality <"..tostring(vEq)..">") end
+  if(SERVER) then LogInstance("Working on server"); return true end
+  local nEq = (tonumber(vEq) or 0); if(nEq <= 0) then
+    LogInstance("Wrong equality <"..tostring(vEq)..">"); return false end
   local fName = GetOpVar("DIRPATH_BAS")..GetOpVar("DIRPATH_DSV")
         fName = fName..tostring(sPref or GetInstPref())
         fName = fName..GetOpVar("TOOLNAME_PU").."CATEGORY.txt"
   local F = fileOpen(fName, "rb", "DATA")
-  if(not F) then return StatusLog(false,"ImportCategory: fileOpen("..fName..") failed") end
+  if(not F) then LogInstance("fileOpen("..fName..") failed"); return false end
   local sEq, sLine, nLen = ("="):rep(nEq), "", (nEq+2)
   local cFr, cBk = "["..sEq.."[", "]"..sEq.."]"
   local tCat, symOff = GetOpVar("TABLE_CATEGORIES"), GetOpVar("OPSYM_DISABLE")
   local sPar, isPar, isEOF = "", false, false
   while(not isEOF) do sLine, isEOF = GetStringFile(F)
-    if(not IsEmptyString(sLine)) then
+    if(not IsBlank(sLine)) then
       local sFr, sBk = sLine:sub(1,nLen), sLine:sub(-nLen,-1)
       if(sFr == cFr and sBk == cBk) then
         sLine, isPar, sPar = sLine:sub(nLen+1,-1), true, "" end
@@ -2260,42 +2325,44 @@ function ImportCategory(vEq, sPref)
         sPar, isPar = sPar..sLine:sub(1,-nLen-1), false
         local tBoo = sEq:Explode(sPar)
         local key, txt = tBoo[1]:Trim(), tBoo[2]
-        if(not IsEmptyString(key)) then
+        if(not IsBlank(key)) then
           if(txt:find("function")) then
             if(key:sub(1,1) ~= symOff) then
               tCat[key] = {}; tCat[key].Txt = txt:Trim()
               tCat[key].Cmp = CompileString("return ("..tCat[key].Txt..")",key)
               local suc, out = pcall(tCat[key].Cmp)
-              if(suc) then tCat[key].Cmp = out else
-                tCat[key].Cmp = StatusLog(nil, "ImportCategory: Compilation fail <"..key..">") end
-            else LogInstance("ImportCategory: Key skipped <"..key..">") end
-          else LogInstance("ImportCategory: Function missing <"..key..">") end
-        else LogInstance("ImportCategory: Name missing <"..txt..">") end
+              if(suc) then tCat[key].Cmp = out else tCat[key].Cmp = nil
+                LogInstance("Compilation fail <"..key..">")
+              end
+            else LogInstance("Key skipped <"..key..">") end
+          else LogInstance("Function missing <"..key..">") end
+        else LogInstance("Name missing <"..txt..">") end
       else sPar = sPar..sLine.."\n" end
     end
-  end; F:Close(); return StatusLog(true, "ImportCategory: Success")
+  end; F:Close(); LogInstance("Success"); return true
 end
 
 --[[
  * This function removes DSV associated with a given prefix
- * sTable > External table database to export
+ * sTable > Extremal table nickname database to export
  * sPref  > Prefix used on exporting ( if any ) else instance is used
 ]]--
 function RemoveDSV(sTable, sPref)
-  local sPref = tostring(sPref or GetInstPref())
-  if(not IsString(sTable)) then
-    return StatusLog(false,"RemoveDSV("
-      ..sPref.."): Table {"..type(sTable).."}<"..tostring(sTable).."> not string") end
-  local defTable = GetOpVar("DEFTABLE_"..sTable)
-  if(not defTable) then
-    return StatusLog(false,"RemoveDSV("..sPref
-      .."): Missing table definition for <"..sTable..">") end
-  local fName = GetOpVar("DIRPATH_BAS")
-        fName = fName..GetOpVar("DIRPATH_DSV")
-        fName = fName..sPref..defTable.Name..".txt"
-  if(not fileExists(fName,"DATA")) then
-    return StatusLog(true,"RemoveDSV("..sPref.."): File <"..fName.."> missing") end
-  fileDelete(fName); return StatusLog(true,"RemoveDSV("..sPref.."): Success")
+  local sPref = tostring(sPref or GetInstPref()); if(IsBlank(sPref)) then
+    LogInstance("("..sPref..") Prefix empty"); return false end
+  if(not IsString(sTable)) then LogInstance("("..sPref..") Table {"
+    ..type(sTable).."}<"..tostring(sTable).."> not string"); return false end
+  local fName = GetOpVar("DIRPATH_BAS")..GetOpVar("DIRPATH_DSV")
+        fName = fName..sPref..GetOpVar("TOOLNAME_PU").."%s"..".txt"
+  local makTab, syRev, sName = libQTable[sTable], GetOpVar("OPSYM_REVISION")
+  if(IsHere(makTab)) then sName = fName:format(defTab.Nick)
+  else sName = fName:format(sTable:upper())
+    LogInstance("("..sTable..syRev..sPref..") Missing table builder")
+  end; local defTab = makTab:GetDefinition(); if(not IsHere(defTab)) then
+    LogInstance("("..sPref..") Missing table definition for <"..sTable..">"); return false end
+  if(fileExists(sName,"DATA")) then fileDelete(sName)
+    LogInstance("("..sPref..") File <"..sName.."> deleted")
+  else LogInstance("("..sPref..") File <"..sName.."> skipped") end; return true
 end
 
 --[[
@@ -2308,105 +2375,88 @@ end
 ]]--
 function ExportDSV(sTable, sPref, sDelim)
   if(not IsString(sTable)) then
-    return StatusLog(false,"StoreExternalDatabase: Table {"..type(sTable).."}<"..tostring(sTable).."> not string") end
-  local defTable = GetOpVar("DEFTABLE_"..sTable)
-  if(not defTable) then
-    return StatusLog(false,"ExportDSV: Missing table definition for <"..sTable..">") end
-  local fName, sPref = GetOpVar("DIRPATH_BAS"), tostring(sPref or GetInstPref())
+    LogInstance("Table {"..type(sTable).."}<"..tostring(sTable).."> not string"); return false end
+  local makTab = libQTable[sTable]; if(not IsHere(makTab)) then
+    LogInstance("Missing table builder",sTable); return false end
+  local defTab = makTab:GetDefinition(); if(not IsHere(defTab)) then
+    LogInstance("Missing table definition",defTab.Nick); return nil end
+  local fName, fPref = GetOpVar("DIRPATH_BAS"), tostring(sPref or GetInstPref())
   if(not fileExists(fName,"DATA")) then fileCreateDir(fName) end
   fName = fName..GetOpVar("DIRPATH_DSV")
   if(not fileExists(fName,"DATA")) then fileCreateDir(fName) end
-  fName = fName..sPref..defTable.Name..".txt"
-  local F = fileOpen(fName, "wb", "DATA" )
-  if(not F) then
-    return StatusLog(false,"ExportDSV("..sPref
-      .."): fileOpen("..fName..") failed") end
-  local sDelim = tostring(sDelim or "\t"):sub(1,1)
-  local sModeDB, symOff = GetOpVar("MODE_DATABASE"), GetOpVar("OPSYM_DISABLE")
-  F:Write("# ExportDSV: "..GetDate().." [ "..sModeDB.." ]".."\n")
-  F:Write("# Data settings:\t"..GetColumns(defTable,sDelim).."\n")
-  if(sModeDB == "SQL") then local Q = ""
-    if(sTable == "PIECES") then Q = SQLBuildSelect(defTable,nil,nil,{2,3,1,4})
-    else                        Q = SQLBuildSelect(defTable,nil,nil,nil) end
-    if(not IsExistent(Q)) then F:Flush(); F:Close()
-      return StatusLog(false,"ExportDSV("..sPref.."): Build statement failed") end
+  fName = fName..fPref..defTab.Name..".txt"
+  local F = fileOpen(fName, "wb", "DATA"); if(not F) then
+    LogInstance("("..fPref..") fileOpen("..fName..") failed",defTab.Nick); return false end
+  local sDelim, sFunc = tostring(sDelim or "\t"):sub(1,1), "ExportDSV"
+  local fsLog = GetOpVar("FORM_LOGSOURCE") -- read the log source format
+  local ssLog = "*"..fsLog:format(defTab.Nick,sFunc,"%s")
+  local sMoDB, symOff = GetOpVar("MODE_DATABASE"), GetOpVar("OPSYM_DISABLE")
+  F:Write("# "..sFunc..":("..fPref.."@"..sTable..") "..GetDate().." [ "..sMoDB.." ]\n")
+  F:Write("# Data settings:("..makTab:GetColumnList(sDelim)..")\n")
+  if(sMoDB == "SQL") then
+    local Q = makTab:Select():Order(unpack(defTab.Query[sFunc])):Get()
+    if(not IsHere(Q)) then F:Flush(); F:Close()
+      LogInstance("("..fPref..") Build statement failed",defTab.Nick); return false end
     F:Write("# Query ran: <"..Q..">\n")
-    local qData = sqlQuery(Q)
-    if(not qData and IsBool(qData)) then F:Flush(); F:Close()
-      return StatusLog(nil,"ExportDSV: SQL exec error <"..sqlLastError()..">") end
+    local qData = sqlQuery(Q); if(not qData and IsBool(qData)) then F:Flush(); F:Close()
+      LogInstance("("..fPref..") SQL exec error <"..sqlLastError()..">",defTab.Nick); return nil end
     if(not (qData and qData[1])) then F:Flush(); F:Close()
-      return StatusLog(false,"ExportDSV: No data found <"..Q..">") end
-    local sData, sTab = "", defTable.Name
-    for iCnt = 1, #qData do
-      local qRec  = qData[iCnt]; sData = sTab
-      for iInd = 1, defTable.Size do
-        local sHash = defTable[iInd][1]
-        sData = sData..sDelim..MatchType(defTable,qRec[sHash],iInd,true,"\"",true)
+      LogInstance("("..fPref..") No data found <"..Q..">",defTab.Nick); return false end
+    local sData, sTab = "", defTab.Name
+    for iCnt = 1, #qData do local qRec = qData[iCnt]; sData = sTab
+      for iInd = 1, defTab.Size do local sHash = defTab[iInd][1]
+        sData = sData..sDelim..makTab:Match(qRec[sHash],iInd,true,"\"",true)
       end; F:Write(sData.."\n"); sData = ""
     end -- Matching will not crash as it is matched during insertion
-  elseif(sModeDB == "LUA") then
-    local tCache = libCache[defTable.Name]
-    if(not IsExistent(tCache)) then F:Flush(); F:Close()
-      return StatusLog(false,"ExportDSV("..sPref
-              .."): Table <"..defTable.Name.."> cache not allocated") end
-    if(sTable == "PIECES") then
-      local tData = {}
-      for sModel, tRecord in pairs(tCache) do
-        local sSort   = (tRecord.Type..tRecord.Name..sModel)
-        tData[sModel] = {[defTable[1][1]] = sSort}
-      end
-      local tSorted = Sort(tData,nil,{defTable[1][1]})
-      if(not tSorted) then F:Flush(); F:Close()
-        return StatusLog(false,"ExportDSV("..sPref.."): Cannot sort cache data") end
-      for iIdx = 1, #tSorted do
-        local stRec = tSorted[iIdx]
-        local tData = tCache[stRec.Key]
-        local sData = defTable.Name
-              sData = sData..sDelim..MatchType(defTable,stRec.Key,1,true,"\"",true)..
-                             sDelim..MatchType(defTable,tData.Type,2,true,"\"",true)..
-                             sDelim..MatchType(defTable,((ModelToName(stRec.Key) == tData.Name) and symOff or tData.Name),3,true,"\"",true)
-        -- Matching crashes only for numbers. The number is already inserted, so there will be no crash
-        local stPOA = tData.Offs
-        F:Write(sData..sDelim..MatchType(defTable,tData.Rake,4,true,"\"")..
-                       sDelim.."\""..(IsZeroPOA(stPOA.P,"V") and "" or StringPOA(stPOA.P,"V")).."\""..
-                       sDelim.."\""..(IsZeroPOA(stPOA.O,"V") and "" or StringPOA(stPOA.O,"V")).."\""..
-                       sDelim.."\""..(IsZeroPOA(stPOA.A,"A") and "" or StringPOA(stPOA.A,"A")).."\""..
-                       sDelim.."\""..(tData.Unit and tostring(tData.Unit or "") or "").."\"\n")
-      end
-    end
-  end; F:Flush(); F:Close()
+  elseif(sMoDB == "LUA") then
+    local tCache = libCache[defTab.Name]
+    if(not IsHere(tCache)) then F:Flush(); F:Close()
+      LogInstance("("..fPref..") Cache missing",defTab.Nick); return false end
+    local bS, sR = pcall(defTab.Cache[sFunc], F, makTab, tCache, fPref, sDelim, ssLog:format("Cache"))
+    if(not bS) then LogInstance("Cache manager fail for "..sR,defTab.Nick); return false end
+    if(not sR) then LogInstance("Cache routine fail",defTab.Nick); return false end
+  else LogInstance("Wrong database mode <"..sMoDB..">",defTab.Nick); return false end
+  -- The dynamic cache population was successful then send a message
+  F:Flush(); F:Close(); LogInstance("("..fPref.."@"..defTab.Nick.."): Success"); return true
 end
 
 --[[
  * Import table data from DSV database created earlier
  * sTable > Definition KEY to import
- * bComm  > Calls @InsertRecord(sTable,arLine) when set to true
+ * bComm  > Calls TABLE:Record(arLine) when set to true
  * sPref  > Prefix used on importing ( if any )
  * sDelim > Delimiter separating the values
 ]]--
 function ImportDSV(sTable, bComm, sPref, sDelim)
-  local fPref = tostring(sPref or GetInstPref())
-  if(not IsString(sTable)) then
-    return StatusLog(false,"ImportDSV("..fPref.."): Table {"..type(sTable).."}<"..tostring(sTable).."> not string") end
-  local defTable = GetOpVar("DEFTABLE_"..sTable)
-  if(not defTable) then
-    return StatusLog(false,"ImportDSV("..fPref.."): Missing table definition for <"..sTable..">") end
-  local fName = GetOpVar("DIRPATH_BAS")..GetOpVar("DIRPATH_DSV")
-        fName = fName..fPref..defTable.Name..".txt"
-  local F = fileOpen(fName, "rb", "DATA")
-  if(not F) then return StatusLog(false,"ImportDSV("..fPref.."): fileOpen("..fName..") failed") end
+  local fPref = tostring(sPref or GetInstPref()); if(not IsString(sTable)) then
+    LogInstance("("..fPref..") Table {"..type(sTable).."}<"..tostring(sTable).."> not string"); return false end
+  local makTab = libQTable[sTable]; if(not IsHere(makTab)) then
+    LogInstance("("..fPref..") Missing table builder"); return nil end
+  local defTab = makTab:GetDefinition(); if(not IsHere(defTab)) then
+    LogInstance("("..fPref..") Missing table definition for <"..sTable..">"); return false end
+  local cmdTab = makTab:GetCommand(); if(not IsHere(cmdTab)) then
+    LogInstance("("..fPref..") Missing table command for <"..sTable..">"); return false end
+  local fName, sMoDB = (GetOpVar("DIRPATH_BAS")..GetOpVar("DIRPATH_DSV")), GetOpVar("MODE_DATABASE")
+        fName = fName..fPref..defTab.Name..".txt"
+  local F = fileOpen(fName, "rb", "DATA"); if(not F) then
+    LogInstance("("..fPref..") fileOpen("..fName..") failed"); return false end
   local symOff, sDelim = GetOpVar("OPSYM_DISABLE"), tostring(sDelim or "\t"):sub(1,1)
-  local sLine, isEOF, nLen = "", false, defTable.Name:len()
+  local sLine, isEOF, nLen = "", false, defTab.Name:len()
+  if(sMoDB == "SQL") then sqlQuery(cmdTab.Begin)
+    LogInstance("("..fPref.."@"..sTable.."): Begin") end
   while(not isEOF) do sLine, isEOF = GetStringFile(F)
-    if((not IsEmptyString(sLine)) and (sLine:sub(1,1) ~= symOff)) then
-      if(sLine:sub(1,nLen) == defTable.Name) then
+    if((not IsBlank(sLine)) and (sLine:sub(1,1) ~= symOff)) then
+      if(sLine:sub(1,nLen) == defTab.Name) then
         local tData = sDelim:Explode(sLine:sub(nLen+2,-1))
-        for iCnt = 1, defTable.Size do
-          tData[iCnt] = StripValue(tData[iCnt]) end
-        if(bComm) then InsertRecord(sTable, tData) end
+        for iCnt = 1, defTab.Size do
+          tData[iCnt] = GetStrip(tData[iCnt]) end
+        if(bComm) then makTab:Record(tData) end
       end
     end
-  end; F:Close(); return StatusLog(true, "ImportDSV("..fPref.."@"..sTable.."): Success")
+  end; F:Close()
+  if(sMoDB == "SQL") then sqlQuery(cmdTab.Commit)
+    LogInstance("("..fPref.."@"..sTable.."): Commit")
+  end; LogInstance("("..fPref.."@"..sTable.."): Success"); return true
 end
 
 --[[
@@ -2419,95 +2469,81 @@ end
  * sDelim > What delimiter is the server using
 ]]--
 function SynchronizeDSV(sTable, tData, bRepl, sPref, sDelim)
-  local fPref = tostring(sPref or GetInstPref())
-  if(not IsString(sTable)) then
-    return StatusLog(false,"SynchronizeDSV("..fPref.."): Table {"..type(sTable).."}<"..tostring(sTable).."> not string") end
-  local defTable = GetOpVar("DEFTABLE_"..sTable)
-  if(not defTable) then
-    return StatusLog(false,"SynchronizeDSV("..fPref.."): Missing table definition for <"..sTable..">") end
+  local fPref = tostring(sPref or GetInstPref()); if(not IsString(sTable)) then
+    LogInstance("("..fPref..") Table {"..type(sTable).."}<"..tostring(sTable).."> not string"); return false end
+  local makTab = libQTable[sTable]; if(not IsHere(makTab)) then
+    LogInstance("("..fPref..") Missing table builder for <"..sTable..">"); return false end
+  local defTab = makTab:GetDefinition()
   local fName, sDelim = GetOpVar("DIRPATH_BAS"), tostring(sDelim or "\t"):sub(1,1)
   if(not fileExists(fName,"DATA")) then fileCreateDir(fName) end
   fName = fName..GetOpVar("DIRPATH_DSV")
   if(not fileExists(fName,"DATA")) then fileCreateDir(fName) end
-  fName = fName..fPref..defTable.Name..".txt"
-  local I, fData, smOff = fileOpen(fName, "rb", "DATA"), {}, GetOpVar("OPSYM_DISABLE")
+  fName = fName..fPref..defTab.Name..".txt"
+  local sFunc, sMoDB = "SynchronizeDSV", GetOpVar("MODE_DATABASE")
+  local I, fData, symOff = fileOpen(fName, "rb", "DATA"), {}, GetOpVar("OPSYM_DISABLE")
   if(I) then local sLine, isEOF = "", false
     while(not isEOF) do sLine, isEOF = GetStringFile(I)
-      if((not IsEmptyString(sLine)) and (sLine:sub(1,1) ~= smOff)) then
-        sLine = sLine:gsub(defTable.Name,""):Trim()
+      if((not IsBlank(sLine)) and (sLine:sub(1,1) ~= symOff)) then
         local tLine = sDelim:Explode(sLine)
-        if(tLine[1] == defTable.Name) then
-          for i = 1, #tLine do tLine[i] = StripValue(tLine[i]) end
-          local sKey = tLine[2]
-          if(not fData[sKey]) then fData[sKey] = {Kept = 0} end
-            tKey = fData[sKey]
-          local nRake, vRake = 0 -- The raking angle
-          if(sTable == "PIECES") then
-            vRake = tLine[5]; nRake = tonumber(vRake) or 0 end
-          tKey.Kept = 1; tKey[tKey.Kept] = {}
-          local kKey, nCnt = tKey[tKey.Kept], 3
+        if(tLine[1] == defTab.Name) then
+          for iCnt = 1, #tLine do tLine[iCnt] = GetStrip(tLine[iCnt]) end
+          local sKey = tLine[2]; if(not fData[sKey]) then fData[sKey] = {Size = 0} end
+          -- Where the lime ID must be read from
+          local tKey, vID, nID = fData[sKey], tLine[iD+1]; nID = (tonumber(vID) or 0)
+          if((tKey.Size < 0) or (nID <= tKey.Size) or ((nID - tKey.Size) ~= 1)) then
+            I:Close(); LogInstance("("..fPref..") Read point ID #"..
+              tostring(vID).." desynchronized <"..sKey.."> of <"..sTable..">"); return false end
+          tKey.Size = nID; tKey[tKey.Size] = {}
+          local kKey, nCnt = tKey[tKey.Size], 3
           while(tLine[nCnt]) do -- Do a value matching without quotes
-            local vMatch = MatchType(defTable,tLine[nCnt],nCnt-1)
-            if(not IsExistent(vMatch)) then
-              I:Close(); return StatusLog(false,"SynchronizeDSV("..fPref.."): Read matching failed <"
+            local vM = makTab:Match(tLine[nCnt],nCnt-1); if(not IsHere(vM)) then
+              I:Close(); LogInstance("("..fPref..") Read matching failed <"
                 ..tostring(tLine[nCnt]).."> to <"..tostring(nCnt-1).." # "
-                  ..defTable[nCnt-1][1].."> of <"..sTable..">")
-            end; kKey[nCnt-2] = vMatch; nCnt = nCnt + 1
+                  ..defTab[nCnt-1][1].."> of <"..sTable..">"); return false
+            end; kKey[nCnt-2] = vM; nCnt = nCnt + 1
           end
         else I:Close()
-          return StatusLog(false,"SynchronizeDSV("..fPref.."): Read table name mismatch <"..sTable..">") end
+          LogInstance("("..fPref..") Read table name mismatch <"..sTable..">"); return false end
       end
     end; I:Close()
-  else LogInstance("SynchronizeDSV("..fPref.."): Creating file <"..fName..">") end
+  else LogInstance("("..fPref..") Creating file <"..fName..">") end
   for key, rec in pairs(tData) do -- Check the given table
-    for pnID = 1, #rec do
-      local tRec = rec[pnID]
-      local nRake, vRake = 0 -- Where the lime ID must be read from
-      if(sTable == "PIECES") then
-        vRake = tRec[3]; nRake = tonumber(vRake) or 0
-        if(not fileExists(key, "GAME")) then
-          LogInstance("SynchronizeDSV("..fPref.."): Missing piece <"..key..">") end
-      end
+    for pnID = 1, #rec do -- Where the line ID must be read from
+      local tRec, vID, nID = rec[pnID]; vID = tRec[iD-1]
+      nID = (tonumber(vID) or 0); if(pnID ~= nID) then
+          LogInstance("("..fPref..") Given point ID #"..
+            tostring(vID).." desynchronized <"..key.."> of "..sTable); return false end
       for nCnt = 1, #tRec do -- Do a value matching without quotes
-        local vMatch = MatchType(defTable,tRec[nCnt],nCnt+1)
-        if(not IsExistent(vMatch)) then
-          return StatusLog(false,"SynchronizeDSV("..fPref.."): Given matching failed <"
+        local vM = makTab:Match(tRec[nCnt],nCnt+1); if(not IsHere(vM)) then
+          LogInstance("("..fPref..") Given matching failed <"
             ..tostring(tRec[nCnt]).."> to <"..tostring(nCnt+1).." # "
-              ..defTable[nCnt+1][1].."> of "..sTable)
+              ..defTab[nCnt+1][1].."> of "..sTable); return false
         end
       end
     end -- Register the read line to the output file
     if(bRepl) then
       if(tData[key]) then -- Update the file with the new data
-        fData[key] = rec
-        fData[key].Kept = #rec
-      end
+        fData[key] = rec; fData[key].Size = #rec end
     else --[[ Do not modify fData ]] end
   end
-  local tSort = Sort(tableGetKeys(fData))
-  if(not tSort) then
-    return StatusLog(false,"SynchronizeDSV("..fPref.."): Sorting failed") end
-  local O = fileOpen(fName, "wb" ,"DATA")
-  if(not O) then return StatusLog(false,"SynchronizeDSV("..fPref.."): Write fileOpen("..fName..") failed") end
-  O:Write("# SynchronizeDSV("..fPref.."): "..GetDate().." ["..GetOpVar("MODE_DATABASE").."]\n")
-  O:Write("# Data settings:\t"..GetColumns(defTable,sDelim).."\n")
-  for rcID = 1, #tSort do
-    local key = tSort[rcID].Val
-    local rec = fData[key]
-    local sCash, sData = defTable.Name..sDelim..key, ""
-    for pnID = 1, rec.Kept do
-      local tItem = rec[pnID]
+  local tSort = Sort(tableGetKeys(fData)); if(not tSort) then
+    LogInstance("("..fPref..") Sorting failed"); return false end
+  local O = fileOpen(fName, "wb" ,"DATA"); if(not O) then
+    LogInstance("("..fPref..") Write fileOpen("..fName..") failed"); return false end
+  O:Write("# "..sFunc..":("..fPref.."@"..sTable..") "..GetDate().." [ "..sMoDB.." ]\n")
+  O:Write("# Data settings:("..makTab:GetColumnList(sDelim)..")\n")
+  for rcID = 1, tSort.Size do local key = tSort[rcID].Val
+    local vRec, sCash, sData = fData[key], defTab.Name..sDelim..key, ""
+    for pnID = 1, vRec.Size do local tItem = vRec[pnID]
       for nCnt = 1, #tItem do
-        local vMatch = MatchType(defTable,tItem[nCnt],nCnt+1,true,"\"",true)
-        if(not IsExistent(vMatch)) then
-          O:Flush(); O:Close()
-          return StatusLog(false,"SynchronizeDSV("..fPref.."): Write matching failed <"
-            ..tostring(tItem[nCnt]).."> to <"..tostring(nCnt+1).." # "..defTable[nCnt+1][1].."> of "..sTable)
-        end; sData = sData..sDelim..tostring(vMatch)
+        local vM = makTab:Match(tItem[nCnt],nCnt+1,true,"\"",true); if(not IsHere(vM)) then
+          O:Flush(); O:Close(); LogInstance("("..fPref..") Write matching failed <"
+            ..tostring(tItem[nCnt]).."> to <"..tostring(nCnt+1).." # "..defTab[nCnt+1][1].."> of "..sTable); return false
+        end; sData = sData..sDelim..tostring(vM)
       end; O:Write(sCash..sData.."\n"); sData = ""
     end
   end O:Flush(); O:Close()
-  return StatusLog(true,"SynchronizeDSV("..fPref.."): Success")
+  LogInstance("("..fPref..") Success"); return true
 end
 
 function TranslateDSV(sTable, sPref, sDelim)
