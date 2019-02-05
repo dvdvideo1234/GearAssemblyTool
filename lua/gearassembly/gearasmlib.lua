@@ -328,7 +328,7 @@ function LogInstance(vMsg, vSrc, bCon, iDbg, tDbg)
   Log(sInst.." > "..sToolMD.." ["..sMoDB.."]"..sDbg.." "..sData, bCon)
 end
 
-local function PrintCeption(tT,sS,tP)
+local function LogCeption(tT,sS,tP)
   local vS, vT = type(sS), type(tT)
   local vK, sS = "", tostring(sS or "Data")
   if(vT ~= "table") then
@@ -345,7 +345,7 @@ local function PrintCeption(tT,sS,tP)
       else LogInstance(vK.." = "..tostring(v),tP) end
     else
       if(v == tT) then LogInstance(vK.." = "..sS,tP)
-      else PrintCeption(v,vK,tP) end
+      else LogCeption(v,vK,tP) end
     end
   end
 end
@@ -356,7 +356,7 @@ function LogTable(tT, sS, vSrc, bCon, iDbg, tDbg)
     vSrc, bCon, iDbg, tDbg = vSrc[1], vSrc[2], vSrc[3], vSrc[4] end
   local tP = {vSrc, bCon, iDbg, tDbg} -- Normalize parameters
   tP[1], tP[2] = tostring(vSrc or ""), tobool(bCon)
-  tP[3], tP[4] = (nil), debugGetinfo(2); PrintCeption(tT,sS,tP)
+  tP[3], tP[4] = (nil), debugGetinfo(2); LogCeption(tT,sS,tP)
 end
 ----------------- INITAIALIZATION -----------------
 
@@ -1232,11 +1232,11 @@ function GetFrequentModels(snCount)
                [defTab[3][1]] = rec.Name,
                [defTab[4][1]] = rec.Rake
              })
-      if(iInd < 1) then return StatusLog(nil,"GetFrequentModels: Array index out of border") end
+      if(iInd < 1) then LogInstance("Array index out of border"); return nil end
     end
   end
   if(IsExistent(frUsed) and IsExistent(frUsed[1])) then return frUsed, snCount end
-  return StatusLog(nil,"GetFrequentModels: Array is empty or not available")
+  LogInstance("Array is empty or not available") return nil
 end
 
 function GetCorrectID(anyValue,oContainer)
@@ -2694,9 +2694,9 @@ end
 
 function ApplySpawnFlat(oEnt,stSpawn,vNorm)
   if(not (oEnt and oEnt:IsValid())) then
-    return StatusLog(false,"ApplyFlatSpawn: Entity invalid <"..tostring(oEnt)..">") end
+    LogInstance("Entity invalid <"..tostring(oEnt)..">"); return false end
   if(not (stSpawn and stSpawn.HRec)) then
-    return StatusLog(false,"ApplyFlatSpawn: Holder missing") end
+    LogInstance("Holder missing"); return false end
   local hPOA = stSpawn.HRec.Offs
   if(hPOA) then
     if(hPOA.A[csD]) then SetAnglePYR(stSpawn.HAng) else SetAngle(stSpawn.HAng,hPOA.A) end
@@ -2762,15 +2762,13 @@ end
 function GetNormalSpawn(oPly,ucsPos,ucsAng,hdModel,hdPivot,enOrAngTr,ucsPosX,ucsPosY,ucsPosZ,ucsAngP,ucsAngY,ucsAngR)
   local hdRec = CacheQueryPiece(hdModel)
   if(not IsExistent(hdRec)) then
-    return StatusLog(nil,"GetNormalSpawn: Holder is not a piece <"..tostring(hdModel)..">") end
+    LogInstance("Holder is not a piece <"..tostring(hdModel)..">"); return nil end
   if(not (IsExistent(hdRec.Kept) and (hdRec.Kept == 1))) then
-    return StatusLog(nil,"GetNormalSpawn: Line count <"..tostring(hdRec.Kept).."> mismatch for <"..tostring(hdModel)..">") end
-  local hdPOA   = hdRec.Offs
-  if(not IsExistent(hdPOA)) then
-    return StatusLog(nil,"GetNormalSpawn: Offsets missing <"..tostring(hdModel)..">") end
-  local stSpawn = CacheSpawnPly(oPly)
-  if(not IsExistent(stSpawn)) then
-    return StatusLog(nil,"GetNormalSpawn: Cannot obtain spawn data") end
+    LogInstance("Line count <"..tostring(hdRec.Kept).."> mismatch for <"..tostring(hdModel)..">"); return nil end
+  local hdPOA = hdRec.Offs; if(not IsExistent(hdPOA)) then
+    LogInstance("Offsets missing <"..tostring(hdModel)..">"); return nil end
+  local stSpawn = CacheSpawnPly(oPly); if(not IsExistent(stSpawn)) then
+    LogInstance("Cannot obtain spawn data"); return nil end
         stSpawn.HRec = hdRec
   if(ucsPos) then SetVector(stSpawn.OPos,ucsPos); SetVector(stSpawn.TOrg, ucsPos) end
   if(ucsAng) then SetVector(stSpawn.OAng,ucsAng); SetVector(stSpawn.TAng, ucsAng) end
@@ -2845,26 +2843,25 @@ end
 function GetEntitySpawn(oPly,trEnt,trPivot,hdPivot,hdModel,enIgnTyp,enOrAngTr,
                         ucsPosX,ucsPosY,ucsPosZ,ucsAngP,ucsAngY,ucsAngR)
   if(not (trEnt and trEnt:IsValid())) then
-    return StatusLog(nil,"GetEntitySpawn: Entity origin invalid") end
+    LogInstance("Entity origin invalid"); return nil end
   local trRec, hdRec = CacheQueryPiece(trEnt:GetModel()), CacheQueryPiece(hdModel)
   if(not IsExistent(trRec)) then
-    return StatusLog(nil,"GetEntitySpawn: Trace not a piece <"..trEnt:GetModel()..">") end
+    LogInstance("Trace not a piece <"..trEnt:GetModel()..">"); return nil end
   if(not IsExistent(hdRec)) then
-    return StatusLog(nil,"GetEntitySpawn: Holder not a piece <"..hdModel..">") end
+    LogInstance("Holder not a piece <"..hdModel..">"); return nil end
   if(not (IsExistent(trRec.Type) and IsString(trRec.Type))) then
-    return StatusLog(nil,"GetEntitySpawn: Trace not grouped <"..tostring(trRec.Type)..">") end
+    LogInstance("Trace not grouped <"..tostring(trRec.Type)..">"); return nil end
   if(not (IsExistent(hdRec.Type) and IsString(hdRec.Type))) then
-    return StatusLog(nil,"GetEntitySpawn: Holder not grouped <"..tostring(hdRec.Type)..">") end
+     LogInstance("Holder not grouped <"..tostring(hdRec.Type)..">"); return nil end
   if((not enIgnTyp) and trRec.Type ~= hdRec.Type ) then
-    return StatusLog(nil,"GetEntitySpawn: Types different <"..tostring(trRec.Type)..","..tostring(hdRec.Type)..">") end
-  local trPOA = trRec.Offs
-  if(not IsExistent(trPOA)) then return StatusLog(nil,"GetEntitySpawn: Offsets missing <"..trRec.Slot..">") end
+    LogInstance("Types different <"..tostring(trRec.Type)..","..tostring(hdRec.Type)..">"); return nil end
+  local trPOA = trRec.Offs; if(not IsExistent(trPOA)) then
+    LogInstance("Offsets missing <"..trRec.Slot..">"); return nil end
   local trPos  , trAng    = trEnt:GetPos(), trEnt:GetAngles()
   local trPivot, hdPivot  = (tonumber(trPivot) or  0), (tonumber(hdPivot ) or 0)
   local hdModel, enIgnTyp =  tostring(hdModel  or ""), (tonumber(enIgnTyp) or 0)
-  local stSpawn = CacheSpawnPly(oPly)        -- Get cached spawn
-  if(not IsExistent(stSpawn)) then
-    return StatusLog(nil,"GetEntitySpawn: Cannot obtain spawn data") end
+  local stSpawn = CacheSpawnPly(oPly); if(not IsExistent(stSpawn)) then
+    LogInstance("Cannot obtain spawn data"); return nil end
   stSpawn.HRec, stSpawn.TRec = hdRec, trRec  -- Save records
   SetVector(stSpawn.TPnt,trPOA.P)            -- Store data in objects
   SetVector(stSpawn.TOrg,trPOA.O)
@@ -3017,42 +3014,39 @@ function ApplyPhysicalSettings(ePiece,bPi,bFr,bGr,sPh)
   LogInstance("Success"); return true
 end
 
-function HookOnRemove(oBas,oEnt,cnTab,nMax)
-  if(not (oBas and oBas:IsValid())) then return StatusLog(nil,"HookOnRemove: Base invalid") end
-  if(not (oEnt and oEnt:IsValid())) then return StatusLog(nil,"HookOnRemove: Prop invalid") end
-  if(not (cnTab and cnTab[1])) then return StatusLog(nil,"HookOnRemove: Constraint list empty") end
-  local ID = 1 while(ID <= nMax) do
-    if(not cnTab[ID]) then
-      StatusLog(nil,"HookOnRemove: Empty constraint <"..tostring(ID)..">")
+function HookOnRemove(oBas,oEnt,cnTab)
+  if(not (oBas and oBas:IsValid())) then LogInstance("Base invalid"); return nil end
+  if(not (oEnt and oEnt:IsValid())) then LogInstance("Prop invalid"); return nil end
+  if(not (cnTab and cnTab[1])) then LogInstance("Constraint list empty"); return nil end
+  local ID = 1 while(ID <= #cnTab) do
+    if(not cnTab[ID]) then LogInstance("Empty constraint <"..tostring(ID)..">")
     else oEnt:DeleteOnRemove(cnTab[ID]); oBas:DeleteOnRemove(cnTab[ID]); ID = ID + 1 end
-  end; LogInstance("HookOnRemove: Done")
+  end; LogInstance("Done")
 end
 
 function ApplyPhysicalAnchor(ePiece,eBase,vPos,vNorm,nCID,nNoC,nFoL,nToL,nFri)
-  local ConstrDB = GetOpVar("CONTAIN_CONSTRAINT_TYPE")
   local CID, NoC = (tonumber(nCID) or 1), (tonumber(nNoC) or 0)
   local FrL, ToL = (tonumber(nFoL) or 0), (tonumber(nToL) or 0)
   local Fri, SID = (tonumber(nFri) or 0)
-  local ConstrInfo = ConstrDB:Select(CID)
-  if(not IsExistent(ConstrInfo)) then
-    return StatusLog(false,"ApplyPhysicalAnchor: Constraint not available") end
+  local ConstrInfo = GetOpVar("CONTAIN_CONSTRAINT_TYPE"):Select(CID); if(not IsExistent(ConstrInfo)) then
+    return LogInstance(false,"ApplyPhysicalAnchor: Constraint not available") end
   LogInstance("ApplyPhysicalAnchor: ["..ConstrInfo.Name.."] {"..CID..","..NoC..","..FrL..","..ToL..","..Fri.."}")
   if(not (ePiece and ePiece:IsValid())) then
-    return StatusLog(false,"ApplyPhysicalAnchor: Piece not valid") end
+    return LogInstance(false,"ApplyPhysicalAnchor: Piece not valid") end
   if(IsOther(ePiece)) then
-    return StatusLog(false,"ApplyPhysicalAnchor: Piece is other object") end
+    return LogInstance(false,"ApplyPhysicalAnchor: Piece is other object") end
   if(not constraintCanConstrain(ePiece,0)) then
-    return StatusLog(false,"ApplyPhysicalAnchor: Cannot constrain Piece") end
+    return LogInstance(false,"ApplyPhysicalAnchor: Cannot constrain Piece") end
   local pyPiece = ePiece:GetPhysicsObject()
   if(not (pyPiece and pyPiece:IsValid())) then
-    return StatusLog(false,"ApplyPhysicalAnchor: Phys Piece not valid") end
+    return LogInstance(false,"ApplyPhysicalAnchor: Phys Piece not valid") end
   if(not SID and CID == 1) then SID = CID end
   if(not (eBase and eBase:IsValid())) then
-    return StatusLog(0,"ApplyPhysicalAnchor: Base not valid") end
+    return LogInstance(0,"ApplyPhysicalAnchor: Base not valid") end
   if(not constraintCanConstrain(eBase,0)) then
-    return StatusLog(false,"ApplyPhysicalAnchor: Cannot constrain Base") end
+    return LogInstance(false,"ApplyPhysicalAnchor: Cannot constrain Base") end
   if(IsOther(eBase)) then
-    return StatusLog(false,"ApplyPhysicalAnchor: Base is other object") end
+    return LogInstance(false,"ApplyPhysicalAnchor: Base is other object") end
   if(not SID and CID == 2) then
     -- http://wiki.garrysmod.com/page/Entity/SetParent
     ePiece:SetParent(eBase); SID = CID
@@ -3064,8 +3058,7 @@ function ApplyPhysicalAnchor(ePiece,eBase,vPos,vNorm,nCID,nNoC,nFoL,nToL,nFri)
   if(not SID and CID == 4 and vNorm) then
     -- http://wiki.garrysmod.com/page/constraint/Axis
     local LPos1 = pyPiece:GetMassCenter()
-    local LPos2 = ePiece:LocalToWorld(LPos1)
-          LPos2:Add(vNorm)
+    local LPos2 = ePiece:LocalToWorld(LPos1); LPos2:Add(vNorm)
           LPos2:Set(eBase:WorldToLocal(LPos2))
     local C = ConstrInfo.Make(ePiece,eBase,0,0,LPos1,LPos2,FrL,ToL,Fri,NoC)
      HookOnRemove(eBase,ePiece,{C},1); SID = CID
@@ -3082,7 +3075,7 @@ function ApplyPhysicalAnchor(ePiece,eBase,vPos,vNorm,nCID,nNoC,nFoL,nToL,nFri)
   -- http://wiki.garrysmod.com/page/constraint/AdvBallsocket
   local pyBase = eBase:GetPhysicsObject()
   if(not (pyBase and pyBase:IsValid())) then
-    return StatusLog(false,"ApplyPhysicalAnchor: Phys Base not valid") end
+    return LogInstance(false,"ApplyPhysicalAnchor: Phys Base not valid") end
   local Min, Max = 0.01, 180
   local LPos1 = pyBase:GetMassCenter()
   local LPos2 = pyPiece:GetMassCenter()
@@ -3108,7 +3101,7 @@ function ApplyPhysicalAnchor(ePiece,eBase,vPos,vNorm,nCID,nNoC,nFoL,nToL,nFri)
     local C2 = ConstrInfo.Make(ePiece,eBase,0,0,LPos1,LPos2,FrL,0, Min, Min,-Max,-Min,-Min,Max,Fri,Fri,Fri,1,NoC)
     HookOnRemove(eBase,ePiece,{C1,C2},2); SID = CID
   end
-  return StatusLog(true,"ApplyPhysicalAnchor: Status <"..tostring(SID)..">")
+  return LogInstance(true,"ApplyPhysicalAnchor: Status <"..tostring(SID)..">")
 end
 
 function MakeAsmVar(sName, vVal, vBord, vFlg, vInf)
