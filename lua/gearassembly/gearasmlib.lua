@@ -1249,24 +1249,18 @@ function GetCorrectID(anyValue,oContainer)
   return Value
 end
 
-function IsPhysTrace(stTrace)
-  if(not stTrace) then
-    return StatusLog(false,"IsPhysTrace: Trace missing") end
-  if(not stTrace.Hit) then
-    return StatusLog(false,"IsPhysTrace: Trace not hit") end
-  if(stTrace.HitWorld) then
-    return StatusLog(false,"IsPhysTrace: Trace is world") end
-  local trEnt = stTrace.Entity
-  if(not IsExistent(trEnt)) then
-    return StatusLog(false,"IsPhysTrace: Entity missing") end
-  if(not trEnt:IsValid()) then
-    return StatusLog(false,"IsPhysTrace: Entity <"..tostring(trEnt).."> not valid") end
-  if(not trEnt:GetPhysicsObject():IsValid()) then
-    return StatusLog(false,"IsPhysTrace: Entity <"..tostring(trEnt).."> no physics") end
+function IsPhysTrace(Trace)
+  if(not Trace) then return false end
+  if(not Trace.Hit) then return false end
+  if(Trace.HitWorld) then return false end
+  local eEnt = Trace.Entity
+  if(not eEnt) then return false end
+  if(not eEnt:IsValid()) then return false end
+  if(not eEnt:GetPhysicsObject():IsValid()) then return false end
   return true
 end
 
-function ModelToName(sModel,bNoSettings)
+function ModelToName(sModel, bNoSet)
   if(not IsString(sModel)) then
     LogInstance("Argument {"..type(sModel).."}<"..tostring(sModel)..">"); return "" end
   if(IsBlank(sModel)) then LogInstance("Empty string"); return "" end
@@ -2113,13 +2107,13 @@ function CreateTable(sTable,defTab,bDelete,bReload)
     if(bDelete and sqlTableExists(defTab.Name)) then
       local qRez = sqlQuery(tQ.Delete); if(not qRez and IsBool(qRez)) then
         LogInstance("Table delete error <"..sqlLastError()..">",tabDef.Nick)
-      else LogInstance("Table delete skip",tabDef.Nick) end
+      else LogInstance("Table delete skipped",tabDef.Nick) end
     end
     -- When enabled forces a table drop
     if(bReload) then local qRez = sqlQuery(tQ.Drop)
       if(not qRez and IsBool(qRez)) then
         LogInstance("Table drop error <"..sqlLastError()..">",tabDef.Nick)
-      else LogInstance("Table drop skip",tabDef.Nick) end
+      else LogInstance("Table drop skipped",tabDef.Nick) end
     end
     if(sqlTableExists(defTab.Name)) then
       LogInstance("Table exists",tabDef.Nick); return self:IsValid()
@@ -2344,7 +2338,7 @@ end
 
 --[[
  * This function removes DSV associated with a given prefix
- * sTable > Extremal table nickname database to export
+ * sTable > Extremal table nickname database to remove
  * sPref  > Prefix used on exporting ( if any ) else instance is used
 ]]--
 function RemoveDSV(sTable, sPref)
@@ -2547,42 +2541,40 @@ function SynchronizeDSV(sTable, tData, bRepl, sPref, sDelim)
 end
 
 function TranslateDSV(sTable, sPref, sDelim)
-  local fPref  = tostring(sPref or GetInstPref())
-  if(not IsString(sTable)) then
-    return StatusLog(false,"TranslateDSV("..fPref.."): Table {"..type(sTable).."}<"..tostring(sTable).."> not string") end
-  local defTable = GetOpVar("DEFTABLE_"..sTable)
-  if(not defTable) then
-    return StatusLog(false,"TranslateDSV("..fPref.."): Missing table definition for <"..sTable..">") end
+  local fPref = tostring(sPref or GetInstPref()); if(not IsString(sTable)) then
+    LogInstance("("..fPref..") Table {"..type(sTable).."}<"..tostring(sTable).."> not string"); return false end
+  local makTab = libQTable[sTable]; if(not IsHere(makTab)) then
+    LogInstance("("..fPref..") Missing table builder for <"..sTable..">"); return false end
+  local defTab, sFunc, sMoDB = makTab:GetDefinition(), "TranslateDSV", GetOpVar("MODE_DATABASE")
   local sNdsv, sNins = GetOpVar("DIRPATH_BAS"), GetOpVar("DIRPATH_BAS")
   if(not fileExists(sNins,"DATA")) then fileCreateDir(sNins) end
   sNdsv, sNins = sNdsv..GetOpVar("DIRPATH_DSV"), sNins..GetOpVar("DIRPATH_INS")
   if(not fileExists(sNins,"DATA")) then fileCreateDir(sNins) end
-  sNdsv, sNins = sNdsv..fPref..defTable.Name..".txt", sNins..fPref..defTable.Name..".txt"
+  sNdsv, sNins = sNdsv..fPref..defTab.Name..".txt", sNins..fPref..defTab.Name..".txt"
   local sDelim = tostring(sDelim or "\t"):sub(1,1)
-  local D = fileOpen(sNdsv, "rb", "DATA")
-  if(not D) then return StatusLog(false,"TranslateDSV("..fPref.."): fileOpen("..sNdsv..") failed") end
-  local I = fileOpen(sNins, "wb", "DATA")
-  if(not I) then return StatusLog(false,"TranslateDSV("..fPref.."): fileOpen("..sNins..") failed") end
-  I:Write("# TranslateDSV("..fPref.."@"..sTable.."): "..GetDate().." ["..GetOpVar("MODE_DATABASE").."]\n")
-  I:Write("# Data settings:\t"..GetColumns(defTable, sDelim).."\n")
-  local pfLib = GetOpVar("NAME_LIBRARY"):gsub(GetOpVar("NAME_INIT"),"")
+  local D = fileOpen(sNdsv, "rb", "DATA"); if(not D) then
+    LogInstance("("..fPref..") fileOpen("..sNdsv..") failed"); return false end
+  local I = fileOpen(sNins, "wb", "DATA"); if(not I) then
+    LogInstance("("..fPref..") fileOpen("..sNins..") failed"); return false end
+  I:Write("# "..sFunc..":("..fPref.."@"..sTable..") "..GetDate().." [ "..sMoDB.." ]\n")
+  I:Write("# Data settings:("..makTab:GetColumnList(sDelim)..")\n")
   local sLine, isEOF, symOff = "", false, GetOpVar("OPSYM_DISABLE")
-  local sFr, sBk, sHs = pfLib..".InsertRecord(\""..sTable.."\", {", "})\n", (fPref.."@"..sTable)
+  local sFr, sBk, sHs = sTable:upper()..":Record({", "})\n", (fPref.."@"..sTable)
   while(not isEOF) do sLine, isEOF = GetStringFile(D)
-    if((not IsEmptyString(sLine)) and (sLine:sub(1,1) ~= symOff)) then
-      sLine = sLine:gsub(defTable.Name,""):Trim()
+    if((not IsBlank(sLine)) and (sLine:sub(1,1) ~= symOff)) then
+      sLine = sLine:gsub(defTab.Name,""):Trim()
       local tBoo, sCat = sDelim:Explode(sLine), ""
       for nCnt = 1, #tBoo do
-        local vMatch = MatchType(defTable,StripValue(tBoo[nCnt]),nCnt,true,"\"",true)
-        if(not IsExistent(vMatch)) then D:Close(); I:Flush(); I:Close()
-          return StatusLog(false,"TranslateDSV("..sHs.."): Given matching failed <"
+        local vMatch = makTab:Match(GetStrip(tBoo[nCnt]),nCnt,true,"\"",true)
+        if(not IsHere(vMatch)) then D:Close(); I:Flush(); I:Close()
+          LogInstance("("..sHs..") Given matching failed <"
             ..tostring(tBoo[nCnt]).."> to <"..tostring(nCnt).." # "
-              ..defTable[nCnt][1].."> of "..sTable) end
+              ..defTab[nCnt][1].."> of "..sTable); return false end
         sCat = sCat..", "..tostring(vMatch)
       end; I:Write(sFr..sCat:sub(3,-1)..sBk)
     end
   end; D:Close(); I:Flush(); I:Close()
-  return StatusLog(true,"TranslateDSV("..sHs.."): Success")
+  LogInstance("("..sHs..") Success"); return true
 end
 
 --[[
@@ -2595,10 +2587,9 @@ end
 ]]--
 function RegisterDSV(sProg, sPref, sDelim, bSkip)
   if(CLIENT and gameSinglePlayer()) then
-    return StatusLog(true,"RegisterDSV: Single client") end
-  local sPref = tostring(sPref or GetInstPref())
-  if(IsEmptyString(sPref)) then
-    return StatusLog(false,"RegisterDSV("..sPref.."): Prefix empty") end
+    LogInstance("Single client"); return true end
+  local sPref = tostring(sPref or GetInstPref()); if(IsBlank(sPref)) then
+    LogInstance("("..sPref..") Prefix empty"); return false end
   local sBas = GetOpVar("DIRPATH_BAS")
   if(not fileExists(sBas,"DATA")) then fileCreateDir(sBas) end
   local lbNam = GetOpVar("NAME_LIBRARY")
@@ -2608,10 +2599,9 @@ function RegisterDSV(sProg, sPref, sDelim, bSkip)
     local symOff = GetOpVar("OPSYM_DISABLE")
     local fPool, isEOF, isAct = {}, false, true
     local F, sLine = fileOpen(fName, "rb" ,"DATA"), ""
-    if(not F) then return StatusLog(false,"RegisterDSV("
-      ..sPref.."): fileOpen("..fName..") read failed") end
+    if(not F) then LogInstance("("..sPref..") fileOpen("..fName..") read failed"); return false end
     while(not isEOF) do sLine, isEOF = GetStringFile(F)
-      if(not IsEmptyString(sLine)) then
+      if(not IsBlank(sLine)) then
         if(sLine:sub(1,1) == symOff) then
           isAct, sLine = false, sLine:sub(2,-1) else isAct = true end
         local tab = sDelim:Explode(sLine)
@@ -2628,14 +2618,14 @@ function RegisterDSV(sProg, sPref, sDelim, bSkip)
     end; F:Close()
     if(fPool[sPref]) then local inf = fPool[sPref]
       for ID = 1, inf.Cnt do local tab = inf[ID]
-        LogInstance("RegisterDSV("..sPref.."): "..(tab[2] and "On " or "Off").." <"..tab[1]..">") end
-      return StatusLog(true,"RegisterDSV("..sPref.."): Skip <"..sProg..">")
+        LogInstance("("..sPref..") "..(tab[2] and "On " or "Off").." <"..tab[1]..">") end
+      LogInstance("("..sPref..") Skip <"..sProg..">"); return true
     end
-  end; local F = fileOpen(fName, "ab" ,"DATA")
-  if(not F) then return StatusLog(false,"RegisterDSV("
-    ..sPref.."): fileOpen("..fName..") append failed") end
+  end
+  local F = fileOpen(fName, "ab" ,"DATA"); if(not F) then
+    LogInstance("("..sPref..") fileOpen("..fName..") append failed"); return false end
   F:Write(sPref..sDelim..tostring(sProg or sMiss).."\n"); F:Flush(); F:Close()
-  return StatusLog(true,"RegisterDSV("..sPref.."): Register")
+  LogInstance("("..sPref..") Register"); return true
 end
 
 --[[
@@ -2650,18 +2640,18 @@ function ProcessDSV(sDelim)
   local lbNam = GetOpVar("NAME_LIBRARY")
   local fName = GetOpVar("DIRPATH_BAS")..lbNam.."_dsv.txt"
   local F = fileOpen(fName, "rb" ,"DATA")
-  if(not F) then return StatusLog(false,"ProcessDSV: fileOpen("..fName..") failed") end
+  if(not F) then LogInstance("fileOpen("..fName..") failed"); return false end
   local sLine, isEOF, symOff = "", false, GetOpVar("OPSYM_DISABLE")
   local sNt, tProc = GetOpVar("TOOLNAME_PU"), {}
   local sDelim = tostring(sDelim or "\t"):sub(1,1)
   local sDv = GetOpVar("DIRPATH_BAS")..GetOpVar("DIRPATH_DSV")
   while(not isEOF) do sLine, isEOF = GetStringFile(F)
-    if(not IsEmptyString(sLine)) then
+    if(not IsBlank(sLine)) then
       if(sLine:sub(1,1) ~= symOff) then
         local tInf = sDelim:Explode(sLine)
-        local fPrf = StripValue(tostring(tInf[1] or ""):Trim())
-        local fSrc = StripValue(tostring(tInf[2] or ""):Trim())
-        if(not IsEmptyString(fPrf)) then -- Is there something
+        local fPrf = GetStrip(tostring(tInf[1] or ""):Trim())
+        local fSrc = GetStrip(tostring(tInf[2] or ""):Trim())
+        if(not IsBlank(fPrf)) then -- Is there something
           if(not tProc[fPrf]) then
             tProc[fPrf] = {Cnt = 1, [1] = {Prog = fSrc, File = (sDv..fPrf..sNt)}}
           else -- Prefix is processed already
@@ -2670,28 +2660,36 @@ function ProcessDSV(sDelim)
             tStore[tStore.Cnt] = {Prog = fSrc, File = (sDv..fPrf..sNt)}
           end -- What user puts there is a problem of his own
         end -- If the line is disabled/comment
-      else LogInstance("ProcessDSV: Skipped <"..sLine..">") end
+      else LogInstance("Skipped <"..sLine..">") end
     end
   end; F:Close()
   for prf, tab in pairs(tProc) do
     if(tab.Cnt > 1) then
-      PrintInstance("ProcessDSV: Prefix <"..prf.."> clones #"..tostring(tab.Cnt).." @"..fName)
+      LogInstance("Prefix <"..prf.."> clones #"..tostring(tab.Cnt).." @"..fName)
       for i = 1, tab.Cnt do
-        PrintInstance("ProcessDSV: Prefix <"..prf.."> "..tab[i].Prog)
+        LogInstance("Prefix <"..prf.."> "..tab[i].Prog)
       end
     else local dir = tab[tab.Cnt].File
       if(CLIENT) then
         if(fileExists(dir.."CATEGORY.txt", "DATA")) then
           if(not ImportCategory(3, prf)) then
-            LogInstance("ProcessDSV("..prf.."): Failed CATEGORY") end
+            LogInstance("("..prf..") Failed CATEGORY") end
         end
       end
       if(fileExists(dir.."PIECES.txt", "DATA")) then
         if(not ImportDSV("PIECES", true, prf)) then
-          LogInstance("ProcessDSV("..prf.."): Failed PIECES") end
+          LogInstance("("..prf..") Failed PIECES") end
+      end
+      if(fileExists(dir.."ADDITIONS.txt", "DATA")) then
+        if(not ImportDSV("ADDITIONS", true, prf)) then
+          LogInstance("("..prf..") Failed ADDITIONS") end
+      end
+      if(fileExists(dir.."PHYSPROPERTIES.txt", "DATA")) then
+        if(not ImportDSV("PHYSPROPERTIES", true, prf)) then
+          LogInstance("("..prf..") Failed PHYSPROPERTIES") end
       end
     end
-  end; return StatusLog(true,"ProcessDSV: Success")
+  end; LogInstance("Success"); return true
 end
 
 function ApplySpawnFlat(oEnt,stSpawn,vNorm)
@@ -2732,19 +2730,22 @@ end
  * This function calculates the cross product normal angle of
  * a player by a given trace. If the trace is missing it takes player trace
  * It has options for snap to surface and yaw snap
- * oPly    > The player we need the normal angle from
- * stTrace > A trace structure if nil, it takes oPly's
- * bSnap   > Snap to the trace surface flag
- * nYSnp   > Yaw snap amount
+ * oPly > The player we need the normal angle from
+ * soTr > A trace structure if nil, it takes oPly's
+ * bSnp > Snap to the trace surface flag
+ * nSnp > Yaw snap amount
 ]]--
-function GetNormalAngle(oPly, stTrace, nYSnp)
-  local nYSn, aAng = (tonumber(nYSnp) or 0), Angle()
-  if(not IsPlayer(oPly)) then
-    return StatusLog(aAng,"GetNormalAngle: No player <"..tostring(oPly)..">", aAng) end
-  aAng:Set(GetSurfaceAngle(oPly, stTrace.HitNormal))
-  if(nYSn and (nYSn > 0) and (nYSn <= GetOpVar("MAX_ROTATION"))) then
-    -- Snap player yaw, pitch and roll are not needed
-    aAng:SnapTo("pitch", nYSn):SnapTo("yaw", nYSn):SnapTo("roll", nYSn)
+function GetNormalAngle(oPly, soTr, bSnp, nSnp)
+  local aAng, nAsn = Angle(), (tonumber(nSnp) or 0); if(not IsPlayer(oPly)) then
+    LogInstance("No player <"..tostring(oPly)..">", aAng); return aAng end
+  if(bSnp) then local stTr = soTr -- Snap to the trace surface
+    if(not (stTr and stTr.Hit)) then stTr = CacheTracePly(oPly)
+      if(not (stTr and stTr.Hit)) then return aAng end
+    end; aAng:Set(GetSurfaceAngle(oPly, stTr.HitNormal))
+  else aAng[caY] = oPly:GetAimVector():Angle()[caY] end
+  if(nAsn and (nAsn > 0) and (nAsn <= GetOpVar("MAX_ROTATION"))) then
+    -- Snap player viewing rotation angle for using walls and ceiling
+    aAng:SnapTo("pitch", nAsn):SnapTo("yaw", nAsn):SnapTo("roll", nAsn)
   end; return aAng
 end
 
@@ -2880,157 +2881,140 @@ end
 
 local function GetEntityOrTrace(oEnt)
   if(oEnt and oEnt:IsValid()) then return oEnt end
-  local pPly = LocalPlayer()
-  if(not IsPlayer(pPly)) then
-    return StatusLog(nil,"GetEntityOrTrace: Player <"..type(pPly)"> missing") end
-  local stTrace = CacheTracePly(pPly)
-  if(not IsExistent(stTrace)) then
-    return StatusLog(nil,"GetEntityOrTrace: Trace missing") end
+  local oPly = LocalPlayer(); if(not IsPlayer(oPly)) then
+    LogInstance("Player <"..type(oPly)"> missing"); return nil end
+  local stTrace = CacheTracePly(oPly); if(not IsHere(stTrace)) then
+    LogInstance("Trace missing"); return nil end
   if(not stTrace.Hit) then -- Boolean
-    return StatusLog(nil,"GetEntityOrTrace: Trace not hit") end
+    LogInstance("Trace not hit"); return nil end
   if(stTrace.HitWorld) then -- Boolean
-    return StatusLog(nil,"GetEntityOrTrace: Trace hit world") end
-  local trEnt = stTrace.Entity
-  if(not (trEnt and trEnt:IsValid())) then
-    return StatusLog(nil,"GetEntityOrTrace: Trace entity invalid") end
-  return StatusLog(trEnt,"GetEntityOrTrace: Success "..tostring(trEnt))
+    LogInstance("Trace hit world"); return nil end
+  local trEnt = stTrace.Entity; if(not (trEnt and trEnt:IsValid())) then
+    LogInstance("Trace entity invalid"); return nil end
+  LogInstance("Success "..tostring(trEnt)); return trEnt
 end
 
 function GetPropSkin(oEnt)
-  local skEnt = GetEntityOrTrace(oEnt)
-  if(not IsExistent(skEnt)) then
-    return StatusLog("","GetPropSkin: Failed to gather entity") end
+  local skEnt = GetEntityOrTrace(oEnt); if(not IsHere(skEnt)) then
+    LogInstance("Failed to gather entity"); return "" end
   if(IsOther(skEnt)) then
-    return StatusLog("","GetPropSkin: Entity other type") end
-  local Skin = tonumber(skEnt:GetSkin())
-  if(not IsExistent(Skin)) then return StatusLog("","GetPropSkin: Skin number mismatch") end
-  return StatusLog(tostring(Skin),"GetPropSkin: Success "..tostring(skEn))
+    LogInstance("Entity other type"); return "" end
+  local Skin = tonumber(skEnt:GetSkin()); if(not IsHere(Skin)) then
+    LogInstance("Skin number mismatch"); return "" end
+  LogInstance("Success "..tostring(skEn)); return tostring(Skin)
 end
 
 function GetPropBodyGroup(oEnt)
-  local bgEnt = GetEntityOrTrace(oEnt)
-  if(not IsExistent(bgEnt)) then
-    return StatusLog("","GetPropBodyGrp: Failed to gather entity") end
+  local bgEnt = GetEntityOrTrace(oEnt); if(not IsHere(bgEnt)) then
+    LogInstance("Failed to gather entity"); return "" end
   if(IsOther(bgEnt)) then
-    return StatusLog("","GetPropBodyGrp: Entity other type") end
-  local BGs = bgEnt:GetBodyGroups()
-  if(not (BGs and BGs[1])) then
-    return StatusLog("","GetPropBodyGrp: Bodygroup table empty") end
-  local sRez, iCnt = "", 1
-  local symSep = GetOpVar("OPSYM_SEPARATOR")
-  while(BGs[iCnt]) do
-    sRez = sRez..symSep..tostring(bgEnt:GetBodygroup(BGs[iCnt].id) or 0)
-    iCnt = iCnt + 1
-  end; sRez = sRez:sub(2,-1)
-  Print(BGs,"GetPropBodyGrp: BGs")
-  return StatusLog(sRez,"GetPropBodyGrp: Success <"..sRez..">")
+    LogInstance("Entity other type"); return "" end
+  local BGs = bgEnt:GetBodyGroups(); if(not (BGs and BGs[1])) then
+    LogInstance("Bodygroup table empty"); return "" end
+  local sRez, iCnt, symSep = "", 1, GetOpVar("OPSYM_SEPARATOR")
+  while(BGs[iCnt]) do local sD = bgEnt:GetBodygroup(BGs[iCnt].id)
+    sRez = sRez..symSep..tostring(sD or 0); iCnt = iCnt + 1
+  end; sRez = sRez:sub(2,-1); LogTable(BGs,"BodyGroup")
+  LogInstance("Success <"..sRez..">"); return sRez
 end
 
-function AttachBodyGroups(ePiece,sBgrpIDs)
+function AttachBodyGroups(ePiece,sBgID)
   if(not (ePiece and ePiece:IsValid())) then
-    return StatusLog(false,"AttachBodyGroups: Base entity invalid") end
-  local sBgrpIDs = tostring(sBgrpIDs or "")
-  LogInstance("AttachBodyGroups: <"..sBgrpIDs..">")
-  local iCnt = 1
-  local BGs = ePiece:GetBodyGroups()
-  local IDs = GetOpVar("OPSYM_SEPARATOR"):Explode(sBgrpIDs)
-  while(BGs[iCnt] and IDs[iCnt]) do
-    local itrBG = BGs[iCnt]
+    LogInstance("Base entity invalid"); return false end
+  local sBgID = tostring(sBgID or ""); LogInstance("<"..sBgID..">")
+  local iCnt, BGs = 1, ePiece:GetBodyGroups()
+  local IDs = GetOpVar("OPSYM_SEPARATOR"):Explode(sBgID)
+  while(BGs[iCnt] and IDs[iCnt]) do local itrBG = BGs[iCnt]
     local maxID = (ePiece:GetBodygroupCount(itrBG.id) - 1)
     local itrID = mathClamp(mathFloor(tonumber(IDs[iCnt]) or 0),0,maxID)
-    LogInstance("ePiece:SetBodygroup("..tostring(itrBG.id)..","..tostring(itrID)..") ["..tostring(maxID).."]")
-    ePiece:SetBodygroup(itrBG.id,itrID)
-    iCnt = iCnt + 1
-  end; return StatusLog(true,"AttachBodyGroups: Success")
+    LogInstance("SetBodygroup("..itrBG.id..","..itrID..") ["..maxID.."]")
+    ePiece:SetBodygroup(itrBG.id,itrID); iCnt = iCnt + 1
+  end; LogInstance("Success"); return true
 end
 
 function SetPosBound(ePiece,vPos,oPly,sMode)
   if(not (ePiece and ePiece:IsValid())) then
-    return StatusLog(false,"SetPosBound: Entity invalid") end
-  if(not IsExistent(vPos)) then
-    return StatusLog(false,"SetPosBound: Position missing") end
+    LogInstance("Entity invalid"); return false end
+  if(not IsHere(vPos)) then
+    LogInstance("Position missing"); return false end
   if(not IsPlayer(oPly)) then
-    return StatusLog(false,"SetPosBound: Player <"..tostring(oPly)"> invalid") end
+    LogInstance("Player <"..tostring(oPly)"> invalid"); return false end
   local sMode = tostring(sMode or "LOG") -- Error mode is "LOG" by default
-  if(sMode == "OFF") then
-    ePiece:SetPos(vPos)
-    return StatusLog(true,"SetPosBound("..sMode..") Tuned off")
-  end
-  if(utilIsInWorld(vPos)) then ePiece:SetPos(vPos) else
-    ePiece:Remove()
+  if(sMode == "OFF") then ePiece:SetPos(vPos)
+    LogInstance("("..sMode..") Skip"); return true end
+  if(utilIsInWorld(vPos)) then ePiece:SetPos(vPos) else ePiece:Remove()
     if(sMode == "HINT" or sMode == "GENERIC" or sMode == "ERROR") then
       PrintNotifyPly(oPly,"Position out of map bounds!",sMode) end
-    return StatusLog(false,"SetPosBound("..sMode.."): Position ["..tostring(vPos).."] out of map bounds")
-  end; return StatusLog(true,"SetPosBound("..sMode.."): Success")
+    LogInstance("("..sMode..") Position ["..tostring(vPos).."] out of map bounds"); return false
+  end; LogInstance("("..sMode..") Success"); return true
 end
 
 function MakePiece(pPly,sModel,vPos,aAng,nMass,sBgSkIDs,clColor,sMode)
-  if(CLIENT) then return StatusLog(nil,"MakePiece: Working on client") end
+  if(CLIENT) then LogInstance("Working on client"); return nil end
   if(not IsPlayer(pPly)) then -- If not player we cannot register limit
-    return StatusLog(nil,"MakePiece: Player missing <"..tostring(pPly)..">") end
-  local sLimit = GetOpVar("CVAR_LIMITNAME") -- Get limit name
+    LogInstance("Player missing <"..tostring(pPly)..">"); return nil end
+  local sLimit, sClass = GetOpVar("CVAR_LIMITNAME"), GetOpVar("ENTITY_DEFCLASS")
   if(not pPly:CheckLimit(sLimit)) then -- Check internal limit
-    return StatusLog(nil,"MakePiece: Track limit reached") end
+    LogInstance("Track limit reached"); return nil end
   if(not pPly:CheckLimit("props")) then -- Check the props limit
-    return StatusLog(nil,"MakePiece: Prop limit reached") end
-  local stPiece = CacheQueryPiece(sModel)
-  if(not IsExistent(stPiece)) then -- Not present in the database
-    return StatusLog(nil,"MakePiece: Record missing for <"..sModel..">") end
-  local bcUnit = (IsString(stPiece.Unit) and
-    (stPiece.Unit ~= "NULL") and not IsEmptyString(stPiece.Unit))
-  LogInstance("MakePiece: Unit("..tostring(bcUnit)..") <"..tostring(stPiece.Unit or "")..">")
-  local ePiece = bcUnit and entsCreate(stPiece.Unit) or entsCreate("prop_physics")
-  if(not (ePiece and ePiece:IsValid())) then
-    return StatusLog(nil,"MakePiece: Piece <"..tostring(ePiece).."> invalid") end
+    LogInstance("Prop limit reached"); return nil end
+  local stPiece = CacheQueryPiece(sModel) if(not IsHere(stPiece)) then
+    LogInstance("Record missing for <"..sModel..">"); return nil end
+  local ePiece = entsCreate(GetTerm(stPiece.Unit, sClass, sClass))
+  if(not (ePiece and ePiece:IsValid())) then -- Create the piece unit
+    LogInstance("Piece invalid <"..tostring(ePiece)..">"); return nil end
   ePiece:SetCollisionGroup(COLLISION_GROUP_NONE)
   ePiece:SetSolid(SOLID_VPHYSICS)
   ePiece:SetMoveType(MOVETYPE_VPHYSICS)
   ePiece:SetNotSolid(false)
   ePiece:SetModel(sModel)
   if(not SetPosBound(ePiece,vPos or GetOpVar("VEC_ZERO"),pPly,sMode)) then
-    return StatusLog(nil,"MakePiece: "..pPly:Nick().." spawned <"..sModel.."> outside bounds") end
+    LogInstance(pPly:Nick().." spawned <"..sModel.."> outside"); return nil end
   ePiece:SetAngles(aAng or GetOpVar("ANG_ZERO"))
   ePiece:Spawn()
   ePiece:Activate()
   ePiece:SetRenderMode(RENDERMODE_TRANSALPHA)
-  ePiece:SetColor(clColor or Color(255,255,255,255))
+  ePiece:SetColor(clColor or GetColor(255,255,255,255))
   ePiece:DrawShadow(false)
   ePiece:PhysWake()
   local phPiece = ePiece:GetPhysicsObject()
   if(not (phPiece and phPiece:IsValid())) then ePiece:Remove()
-    return StatusLog(nil,"MakePiece: Entity phys object invalid") end
+    LogInstance("Entity phys object invalid"); return nil end
   phPiece:EnableMotion(false); ePiece.owner = pPly -- Some SPPs actually use this value
   local Mass = (tonumber(nMass) or 1); phPiece:SetMass((Mass >= 1) and Mass or 1)
   local BgSk = GetOpVar("OPSYM_DIRECTORY"):Explode(sBgSkIDs or "")
   ePiece:SetSkin(mathClamp(tonumber(BgSk[2]) or 0,0,ePiece:SkinCount()-1))
-  if(not AttachBodyGroups(ePiece,BgSk[1] or "")) then ePiece:Remove()
-    return StatusLog(nil,"MakePiece: Failed to attach bodygroups") end
+  if(not AttachBodyGroups(ePiece,BgSk[1])) then ePiece:Remove()
+    LogInstance("Failed attaching bodygroups"); return nil end
+  if(not AttachAdditions(ePiece)) then ePiece:Remove()
+    LogInstance("Failed attaching additions"); return nil end
   pPly:AddCount(sLimit , ePiece); pPly:AddCleanup(sLimit , ePiece) -- This sets the ownership
   pPly:AddCount("props", ePiece); pPly:AddCleanup("props", ePiece) -- To be deleted with clearing props
-  return StatusLog(ePiece,"MakePiece: "..tostring(ePiece)..sModel)
+  LogInstance("{"..tostring(ePiece).."}"..sModel); return ePiece
 end
 
-function ApplyPhysicalSettings(ePiece,bPi,bFr,bGr)
-  if(CLIENT) then return StatusLog(true,"ApplyPhysicalSettings: Working on client") end
-  local bPi, bFr, bGr = (tobool(bPi) or false), (tobool(bFr) or false), (tobool(bGr) or false)
-  LogInstance("ApplyPhysicalSettings: {"..tostring(bPi)..","..tostring(bFr)..","..tostring(bGr).."}")
+function ApplyPhysicalSettings(ePiece,bPi,bFr,bGr,sPh)
+  if(CLIENT) then LogInstance("Working on client"); return true end
+  local bPi, bFr = (tobool(bPi) or false), (tobool(bFr) or false)
+  local bGr, sPh = (tobool(bGr) or false),  tostring(sPh or "")
+  LogInstance("{"..tostring(bPi)..","..tostring(bFr)..","..tostring(bGr)..","..sPh.."}")
   if(not (ePiece and ePiece:IsValid())) then   -- Cannot manipulate invalid entities
-    return StatusLog(false,"ApplyPhysicalSettings: Piece entity invalid for <"..tostring(ePiece)..">") end
+    LogInstance("Piece entity invalid <"..tostring(ePiece)..">"); return false end
   local pyPiece = ePiece:GetPhysicsObject()    -- Get the physics object
   if(not (pyPiece and pyPiece:IsValid())) then -- Cannot manipulate invalid physics
-    return StatusLog(false,"ApplyPhysicalSettings: Piece physical object invalid for <"..tostring(ePiece)..">") end
-  local arSettings = {bPi,bFr,bGr}  -- Initialize dupe settings using this array
+    LogInstance("Piece physical object invalid <"..tostring(ePiece)..">"); return false end
+  local arSettings = {bPi,bFr,bGr,sPh}  -- Initialize dupe settings using this array
   ePiece.PhysgunDisabled = bPi          -- If enabled stop the player from grabbing the track piece
   ePiece:SetUnFreezable(bPi)            -- If enabled stop the player from hitting reload to mess it all up
   ePiece:SetMoveType(MOVETYPE_VPHYSICS) -- Moves and behaves like a normal prop
   -- Delay the freeze by a tiny amount because on physgun snap the piece
   -- is unfrozen automatically after physgun drop hook call
   timerSimple(GetOpVar("DELAY_FREEZE"), function() -- If frozen motion is disabled
-    LogInstance("ApplyPhysicalSettings: Freeze");  -- Make sure that the physics are valid
+    LogInstance("Freeze", "*DELAY_FREEZE");  -- Make sure that the physics are valid
     if(pyPiece and pyPiece:IsValid()) then pyPiece:EnableMotion(not bFr) end end )
-  constructSetPhysProp(nil,ePiece,0,pyPiece,{GravityToggle = bGr, Material = "gmod_ice"})
+  constructSetPhysProp(nil,ePiece,0,pyPiece,{GravityToggle = bGr, Material = sPh})
   duplicatorStoreEntityModifier(ePiece,GetOpVar("TOOLNAME_PL").."dupe_phys_set",arSettings)
-  return StatusLog(true,"ApplyPhysicalSettings: Success")
+  LogInstance("Success"); return true
 end
 
 function HookOnRemove(oBas,oEnt,cnTab,nMax)
@@ -3127,54 +3111,52 @@ function ApplyPhysicalAnchor(ePiece,eBase,vPos,vNorm,nCID,nNoC,nFoL,nToL,nFri)
   return StatusLog(true,"ApplyPhysicalAnchor: Status <"..tostring(SID)..">")
 end
 
-function MakeAsmVar(sName, sValue, tBord, nFlag, sInfo)
+function MakeAsmVar(sName, vVal, vBord, vFlg, vInf)
   if(not IsString(sName)) then
-    return StatusLog(nil,"MakeAsmVar: CVar name {"..type(sName).."}<"..tostring(sName).."> not string") end
-  if(not IsExistent(sValue)) then
-    return StatusLog(nil,"MakeAsmVar: Wrong default value <"..tostring(sValue)..">") end
-  if(not IsString(sInfo)) then
-    return StatusLog(nil,"MakeAsmVar: CVar info {"..type(sInfo).."}<"..tostring(sInfo).."> not string") end
-  local sLow = sName:lower()
-  if(tBord and (type(tBord) == "table")) then
-    local mIn, mAx = tostring(tBord[1]), tostring(tBord[2])
-    LogInstance("MakeAsmVar: Border ("..sLow..")<"..mIn.."/"..mAx..">")
-    local tBorder = GetOpVar("TABLE_BORDERS"); tBorder["cvar_"..sLow] = tBord
-  end; return CreateConVar(GetOpVar("TOOLNAME_PL")..sLow, sValue, nFlag, sInfo)
+    LogInstance("CVar name {"..type(sName).."}<"..tostring(sName).."> not string"); return nil end
+  local sLow = (IsExact(sName) and sName:sub(2,-1):lower() or (GetOpVar("TOOLNAME_PL")..sName):lower())
+  local cVal, sInf = (tonumber(vVal) or tostring(vVal)), tostring(vInf or "")
+  local tBrd, nFlg = GetOpVar("TABLE_BORDERS"), mathFloor(tonumber(vFlg) or 0)
+  if(IsHere(tBrd[sLow])) then LogInstance("Exists <"..sLow..">"); return nil end
+  tBrd[sLow] = (vBord or {}); tBrd = tBrd[sLow]; tBrd[3] = cVal
+  local mIn, mAx, dEf = tostring(tBrd[1]), tostring(tBrd[2]), tostring(tBrd[3])
+  LogInstance("("..sLow..")<"..mIn.."/"..mAx..">["..dEf.."]")
+  return CreateConVar(sLow, cVal, nFlg, sInf)
 end
 
 function GetAsmVar(sName, sMode)
   if(not IsString(sName)) then
-    return StatusLog(nil,"GetAsmVar: CVar name {"..type(sName).."}<"..tostring(sName).."> not string") end
+    LogInstance("Nsme {"..type(sName).."}<"..tostring(sName).."> not string"); return nil end
   if(not IsString(sMode)) then
-    return StatusLog(nil,"GetAsmVar: CVar mode {"..type(sMode).."}<"..tostring(sMode).."> not string") end
-  local sLow = sName:lower()
-  local CVar = GetConVar(GetOpVar("TOOLNAME_PL")..sLow)
-  if(not IsExistent(CVar)) then
-    return StatusLog(nil,"GetAsmVar("..sName..", "..sMode.."): Missing CVar object") end
-  if    (sMode == "INT") then return (tonumber(BorderValue(CVar:GetInt()  ,"cvar_"..sLow)) or 0)
-  elseif(sMode == "FLT") then return (tonumber(BorderValue(CVar:GetFloat(),"cvar_"..sLow)) or 0)
-  elseif(sMode == "STR") then return  tostring(CVar:GetString() or "")
+    LogInstance("Mode {"..type(sMode).."}<"..tostring(sMode).."> not string"); return nil end
+  local sLow = (IsExact(sName) and sName:sub(2,-1):lower() or (GetOpVar("TOOLNAME_PL")..sName):lower())
+  local CVar = GetConVar(sLow); if(not IsHere(CVar)) then
+    LogInstance("("..sLow..", "..sMode..") Missing object"); return nil end
+  if    (sMode == "INT") then return (tonumber(BorderValue(CVar:GetInt()   , sLow)) or 0)
+  elseif(sMode == "FLT") then return (tonumber(BorderValue(CVar:GetFloat() , sLow)) or 0)
+  elseif(sMode == "STR") then return (tostring(BorderValue(CVar:GetString(), sLow)) or "")
   elseif(sMode == "BUL") then return (CVar:GetBool() or false)
   elseif(sMode == "DEF") then return  CVar:GetDefault()
   elseif(sMode == "INF") then return  CVar:GetHelpText()
   elseif(sMode == "NAM") then return  CVar:GetName()
   elseif(sMode == "OBJ") then return  CVar
-  end; return StatusLog(nil,"GetAsmVar("..sName..", "..sMode.."): Missed mode")
+  end; LogInstance("("..sName..", "..sMode..") Missed mode"); return nil
 end
 
 function SetAsmVarCallback(sName, sType, sHash, fHand)
+  local sFunc = "*SetAsmVarCallback"
   if(not (sName and IsString(sName))) then
-    return StatusLog(nil,"GetActionData: Key {"..type(sName).."}<"..tostring(sName).."> not string") end
+    LogInstance("Key {"..type(sName).."}<"..tostring(sName).."> not string",sFunc); return nil end
   if(not (sType and IsString(sType))) then
-    return StatusLog(nil,"GetActionData: Key {"..type(sType).."}<"..tostring(sType).."> not string") end
+    LogInstance("Key {"..type(sType).."}<"..tostring(sType).."> not string",sFunc); return nil end
   if(IsString(sHash)) then local sLong = GetAsmVar(sName, "NAM")
     cvarsRemoveChangeCallback(sLong, sLong.."_call")
     cvarsAddChangeCallback(sLong, function(sVar, vOld, vNew)
       local aVal, bS = GetAsmVar(sName, sType), true
       if(type(fHand) == "function") then bS, aVal = pcall(fHand, aVal)
-        if(not bS) then return StatusLog(nil,"GetActionData: "..tostring(aVal)) end
-        LogInstance("SetAsmVarCallback("..sName.."): Converted")
-      end; LogInstance("SetAsmVarCallback("..sName.."): <"..tostring(aVal)..">")
+        if(not bS) then LogInstance("Fail "..tostring(aVal),sFunc); return nil end
+        LogInstance("("..sName..") Converted",sFunc)
+      end; LogInstance("("..sName..") <"..tostring(aVal)..">",sFunc)
       SetOpVar(sHash, aVal) -- Make sure we write down the processed value in the hashes
     end, sLong.."_call")
   end
@@ -3214,8 +3196,98 @@ function InitLocalify(sCode)
   if(cuCod ~= auCod) then local cuSet = GetLocalify(cuCod)
     if(cuSet) then -- When the language infornation is extracted apply on success
       for key, val in pairs(auSet) do auSet[key] = (cuSet[key] or auSet[key]) end
-    else LogInstance("Custom skip <"..cuCod..">") end -- Apply auto code
+    else LogInstance("Custom skipped <"..cuCod..">") end -- Apply auto code
   end; for key, val in pairs(auSet) do thSet[key] = auSet[key]; languageAdd(key, val) end
+end
+
+function HasGhosts()
+  if(SERVER) then return false end -- Ghosting is client side only
+  local tGho = GetOpVar("ARRAY_GHOST")
+  local eGho, nSiz = tGho[1], tGho.Size
+  return (eGho and eGho:IsValid() and nSiz and nSiz > 0)
+end
+
+function InitGhosts(bCol)
+  if(SERVER) then return true end -- Ghosting is client side only
+  local tGho = GetOpVar("ARRAY_GHOST"); tableEmpty(tGho)
+  tGho.Size = 0; tGho.Slot = GetOpVar("MISS_NOMD")
+  if(bCol) then collectgarbage() end; return true
+end
+
+function FadeGhosts(bNoD)
+  if(SERVER) then return true end -- Ghosting is client side only
+  if(not HasGhosts()) then return true end
+  local tGho = GetOpVar("ARRAY_GHOST")
+  local cPal = GetOpVar("CONTAINER_PALETTE")
+  for iD = 1, tGho.Size do local eGho = tGho[iD]
+    if(eGho and eGho:IsValid()) then
+      eGho:SetNoDraw(bNoD); eGho:DrawShadow(false)
+      eGho:SetColor(cPal:Select("gh"))
+    end
+  end; return true
+end
+
+function ClearGhosts(bCol)
+  if(SERVER) then return true end -- Ghosting is client side only
+  if(not HasGhosts()) then return true end
+  local tGho = GetOpVar("ARRAY_GHOST")
+  for iD = 1, tGho.Size do local eGho = tGho[iD]
+    if(eGho and eGho:IsValid()) then
+      eGho:SetNoDraw(true); eGho:Remove()
+    end; eGho, tGho[iD] = nil, nil
+  end; tGho.Size, tGho.Slot = 0, GetOpVar("MISS_NOMD")
+  if(bCol) then collectgarbage() end; return true
+end
+
+function MakeGhosts(nCnt, sModel)
+  if(SERVER) then return true end -- Ghosting is client side only
+  local tGho = GetOpVar("ARRAY_GHOST") -- Read ghosts
+  if(nCnt == 0 and tGho.Size == 0) then return true end -- Skip processing
+  if(nCnt == 0 and tGho.Size ~= 0) then return ClearGhosts() end -- Disabled ghosting
+  local cPal = GetOpVar("CONTAINER_PALETTE"); FadeGhosts(true)
+  local vZero, aZero, iD = GetOpVar("VEC_ZERO"), GetOpVar("ANG_ZERO"), 1
+  while(iD <= nCnt) do local eGho = tGho[iD]
+    if(eGho and eGho:IsValid() and eGho:GetModel() ~= sModel) then
+      eGho:Remove(); tGho[iD] = nil; eGho = tGho[iD] end
+    if(not (eGho and eGho:IsValid())) then
+      tGho[iD] = entsCreateClientProp(sModel); eGho = tGho[iD]
+      if(not (eGho and eGho:IsValid())) then InitGhosts()
+        LogInstance("Invalid ["..iD.."]"..sModel); return false end
+      eGho:SetModel(sModel)
+      eGho:SetPos(vZero)
+      eGho:SetAngles(aZero)
+      eGho:Spawn()
+      eGho:SetSolid(SOLID_NONE)
+      eGho:SetMoveType(MOVETYPE_NONE)
+      eGho:SetNotSolid(true)
+      eGho:SetNoDraw(true)
+      eGho:DrawShadow(false)
+      eGho:SetRenderMode(RENDERMODE_TRANSALPHA)
+      eGho:SetColor(cPal:Select("gh"))
+    end; iD = iD + 1 -- Fade all the ghosts and refresh these that must be drawn
+  end -- Remove all others that must not be drawn to save memory
+  for iK = iD, tGho.Size do -- Executes only when (nCnt < tGho.Size)
+    local eGho = tGho[iD]; if(eGho and eGho:IsValid()) then
+      eGho:SetNoDraw(true); eGho:Remove(); eGho = nil end; tGho[iD] = nil
+  end; tGho.Size, tGho.Slot = nCnt, sModel; return true
+end
+
+function GetHookInfo(tInfo, sW)
+  if(SERVER) then return nil end
+  local sWep = tostring(sW or "gmod_tool")
+  local oPly = LocalPlayer(); if(not IsPlayer(oPly)) then
+    LogInstance("Player invalid",tInfo); return nil end
+  local actSwep = oPly:GetActiveWeapon(); if(not IsValid(actSwep)) then
+    LogInstance("Swep invalid",tInfo); return nil end
+  if(actSwep:GetClass() ~= sWep) then
+    LogInstance("("..sWep..") Swep other",tInfo); return nil end
+  if(sWep ~= "gmod_tool") then return oPly, actSwep end
+  if(actSwep:GetMode()  ~= GetOpVar("TOOLNAME_NL")) then
+    LogInstance("Tool different",tInfo); return nil end
+  -- Here player is holding the track assembly tool
+  local actTool = actSwep:GetToolObject(); if(not actTool) then
+    LogInstance("Tool invalid",tInfo); return nil end
+  return oPly, actSwep, actTool
 end
 
 function GetConvarList(tC)
