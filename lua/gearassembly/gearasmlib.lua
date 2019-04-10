@@ -3021,32 +3021,25 @@ function HookOnRemove(oBas,oEnt,cnTab)
   local ID = 1 while(ID <= #cnTab) do
     if(not cnTab[ID]) then LogInstance("Empty constraint <"..tostring(ID)..">")
     else oEnt:DeleteOnRemove(cnTab[ID]); oBas:DeleteOnRemove(cnTab[ID]); ID = ID + 1 end
-  end; LogInstance("Done")
+  end; LogInstance("Success")
 end
 
 function ApplyPhysicalAnchor(ePiece,eBase,vPos,vNorm,nCID,nNoC,nFoL,nToL,nFri)
   local CID, NoC = (tonumber(nCID) or 1), (tonumber(nNoC) or 0)
   local FrL, ToL = (tonumber(nFoL) or 0), (tonumber(nToL) or 0)
   local Fri, SID = (tonumber(nFri) or 0)
-  local ConstrInfo = GetOpVar("CONTAIN_CONSTRAINT_TYPE"):Select(CID); if(not IsExistent(ConstrInfo)) then
-    return LogInstance(false,"ApplyPhysicalAnchor: Constraint not available") end
-  LogInstance("ApplyPhysicalAnchor: ["..ConstrInfo.Name.."] {"..CID..","..NoC..","..FrL..","..ToL..","..Fri.."}")
-  if(not (ePiece and ePiece:IsValid())) then
-    return LogInstance(false,"ApplyPhysicalAnchor: Piece not valid") end
-  if(IsOther(ePiece)) then
-    return LogInstance(false,"ApplyPhysicalAnchor: Piece is other object") end
-  if(not constraintCanConstrain(ePiece,0)) then
-    return LogInstance(false,"ApplyPhysicalAnchor: Cannot constrain Piece") end
-  local pyPiece = ePiece:GetPhysicsObject()
-  if(not (pyPiece and pyPiece:IsValid())) then
-    return LogInstance(false,"ApplyPhysicalAnchor: Phys Piece not valid") end
+  local ConstrInfo = GetOpVar("CONTAIN_CONSTRAINT_TYPE"):Select(CID)
+  if(not IsExistent(ConstrInfo)) then LogInstance("Constraint not available"); return false end
+  LogInstance("["..ConstrInfo.Name.."] {"..CID..","..NoC..","..FrL..","..ToL..","..Fri.."}")
+  if(not (ePiece and ePiece:IsValid())) then LogInstance("Piece not valid"); return false end
+  if(IsOther(ePiece)) then LogInstance("Piece is other object"); return false  end
+  if(not constraintCanConstrain(ePiece,0)) then LogInstance("Cannot constrain Piece"); return false  end
+  local pyPiece = ePiece:GetPhysicsObject(); if(not (pyPiece and pyPiece:IsValid())) then
+    LogInstance("Phys Piece not valid"); return false  end
   if(not SID and CID == 1) then SID = CID end
-  if(not (eBase and eBase:IsValid())) then
-    return LogInstance(0,"ApplyPhysicalAnchor: Base not valid") end
-  if(not constraintCanConstrain(eBase,0)) then
-    return LogInstance(false,"ApplyPhysicalAnchor: Cannot constrain Base") end
-  if(IsOther(eBase)) then
-    return LogInstance(false,"ApplyPhysicalAnchor: Base is other object") end
+  if(not (eBase and eBase:IsValid())) then return LogInstance(0,"Base skipped") end
+  if(not constraintCanConstrain(eBase,0)) then LogInstance("Cannot constrain Base"); return false  end
+  if(IsOther(eBase)) then LogInstance("Base is other object"); return false  end
   if(not SID and CID == 2) then
     -- http://wiki.garrysmod.com/page/Entity/SetParent
     ePiece:SetParent(eBase); SID = CID
@@ -3075,7 +3068,7 @@ function ApplyPhysicalAnchor(ePiece,eBase,vPos,vNorm,nCID,nNoC,nFoL,nToL,nFri)
   -- http://wiki.garrysmod.com/page/constraint/AdvBallsocket
   local pyBase = eBase:GetPhysicsObject()
   if(not (pyBase and pyBase:IsValid())) then
-    return LogInstance(false,"ApplyPhysicalAnchor: Phys Base not valid") end
+    return LogInstance(false,"Phys Base not valid") end
   local Min, Max = 0.01, 180
   local LPos1 = pyBase:GetMassCenter()
   local LPos2 = pyPiece:GetMassCenter()
@@ -3100,11 +3093,10 @@ function ApplyPhysicalAnchor(ePiece,eBase,vPos,vNorm,nCID,nNoC,nFoL,nToL,nFri)
     local C1 = ConstrInfo.Make(ePiece,eBase,0,0,LPos1,LPos2,FrL,0,-Min,-Min,-Max, Min, Min,Max,Fri,Fri,Fri,1,NoC)
     local C2 = ConstrInfo.Make(ePiece,eBase,0,0,LPos1,LPos2,FrL,0, Min, Min,-Max,-Min,-Min,Max,Fri,Fri,Fri,1,NoC)
     HookOnRemove(eBase,ePiece,{C1,C2},2); SID = CID
-  end
-  return LogInstance(true,"ApplyPhysicalAnchor: Status <"..tostring(SID)..">")
+  end; LogInstance("Status <"..tostring(SID)..">"); return true
 end
 
-function MakeAsmVar(sName, vVal, vBord, vFlg, vInf)
+function MakeAsmConvar(sName, vVal, vBord, vFlg, vInf)
   if(not IsString(sName)) then
     LogInstance("CVar name {"..type(sName).."}<"..tostring(sName).."> not string"); return nil end
   local sLow = (IsExact(sName) and sName:sub(2,-1):lower() or (GetOpVar("TOOLNAME_PL")..sName):lower())
@@ -3117,7 +3109,7 @@ function MakeAsmVar(sName, vVal, vBord, vFlg, vInf)
   return CreateConVar(sLow, cVal, nFlg, sInf)
 end
 
-function GetAsmVar(sName, sMode)
+function GetAsmConvar(sName, sMode)
   if(not IsString(sName)) then
     LogInstance("Nsme {"..type(sName).."}<"..tostring(sName).."> not string"); return nil end
   if(not IsString(sMode)) then
@@ -3136,16 +3128,24 @@ function GetAsmVar(sName, sMode)
   end; LogInstance("("..sName..", "..sMode..") Missed mode"); return nil
 end
 
-function SetAsmVarCallback(sName, sType, sHash, fHand)
-  local sFunc = "*SetAsmVarCallback"
+function SetAsmConvar(pPly,sNam,snVal)
+  if(not IsString(sNam)) then -- Make it like so the space will not be forgotten
+    LogInstance("Convar {"..type(sNam).."}<"..tostring(sNam).."> not string"); return nil end
+  if(not IsPlayer(pPly)) then -- Appl
+    RunConsoleCommand(GetOpVar("TOOLNAME_PL")..sNam, snVal); return nil end
+  return pPly:ConCommand(GetOpVar("FORM_CONCMD"):format(sNam, tostring(snVal)))
+end
+
+function SetAsmCallback(sName, sType, sHash, fHand)
+  local sFunc = "*SetAsmCallback"
   if(not (sName and IsString(sName))) then
     LogInstance("Key {"..type(sName).."}<"..tostring(sName).."> not string",sFunc); return nil end
   if(not (sType and IsString(sType))) then
     LogInstance("Key {"..type(sType).."}<"..tostring(sType).."> not string",sFunc); return nil end
-  if(IsString(sHash)) then local sLong = GetAsmVar(sName, "NAM")
+  if(IsString(sHash)) then local sLong = GetAsmConvar(sName, "NAM")
     cvarsRemoveChangeCallback(sLong, sLong.."_call")
     cvarsAddChangeCallback(sLong, function(sVar, vOld, vNew)
-      local aVal, bS = GetAsmVar(sName, sType), true
+      local aVal, bS = GetAsmConvar(sName, sType), true
       if(type(fHand) == "function") then bS, aVal = pcall(fHand, aVal)
         if(not bS) then LogInstance("Fail "..tostring(aVal),sFunc); return nil end
         LogInstance("("..sName..") Converted",sFunc)
