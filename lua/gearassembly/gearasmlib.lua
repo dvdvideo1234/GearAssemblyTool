@@ -2776,11 +2776,11 @@ function ApplySpawnFlat(oEnt,stSpawn,vNorm)
   if(hPOA) then
     if(hPOA.A[csD]) then SetAnglePYR(stSpawn.HAng) else SetAngle(stSpawn.HAng,hPOA.A) end
     local vOBB = oEnt:OBBMins()
-          SubVector(vOBB,hPOA.O) -- Mass center
+          SubVector(vOBB,hPOA.P) -- Mass center
           vOBB:Rotate(stSpawn.HAng)
           DecomposeByAngle(vOBB,GetOpVar("ANG_ZERO"))
     local zOffs = mathAbs(vOBB[cvZ])
-    SetVector(stSpawn.HOrg, hPOA.O) -- Apply negative rake to the angle to flatten it
+    SetVector(stSpawn.HOrg, hPOA.P) -- Apply negative rake to the angle to flatten it
     stSpawn.SAng:RotateAroundAxis(stSpawn.DAng:Right(), -stSpawn.HRec.Rake)
     stSpawn.SPos:Set(stSpawn.HOrg); NegVector(stSpawn.SPos)
     stSpawn.SPos:Rotate(stSpawn.SAng) -- Make world space mass-center vector
@@ -2859,8 +2859,8 @@ function GetNormalSpawn(oPly,ucsPos,ucsAng,hdModel,hdPivot,enOrAngTr,ucsPosX,ucs
   stSpawn.U:Set(stSpawn.OAng:Up())
   stSpawn.R:Set(stSpawn.OAng:Right())
   -- Read holder data
-  SetVector(stSpawn.HPnt, hdPOA.P) -- Offset meshing point
-  SetVector(stSpawn.HOrg, hdPOA.O) -- Mass center origin
+  SetVector(stSpawn.HPnt, hdPOA.O) -- Offset meshing point
+  SetVector(stSpawn.HOrg, hdPOA.P) -- Mass center origin
   if(hdPOA.A[csD]) then SetAnglePYR(stSpawn.HAng) else SetAngle(stSpawn.HAng,hdPOA.A) end
   -- Local vector from the back meshing point to the mass-center
   stSpawn.DPos:Set(stSpawn.HPnt)
@@ -2938,8 +2938,8 @@ function GetEntitySpawn(oPly,trEnt,trPivot,hdPivot,hdModel,enIgnTyp,enOrAngTr,
   local stSpawn = CacheSpawnPly(oPly); if(not IsExistent(stSpawn)) then
     LogInstance("Cannot obtain spawn data"); return nil end
   stSpawn.HRec, stSpawn.TRec = hdRec, trRec  -- Save records
-  SetVector(stSpawn.TPnt,trPOA.P)            -- Store data in objects
-  SetVector(stSpawn.TOrg,trPOA.O)
+  SetVector(stSpawn.TPnt,trPOA.O)            -- Store data in objects
+  SetVector(stSpawn.TOrg,trPOA.P)
   SetAngle (stSpawn.TAng,trPOA.A) -- Custom angle and trace position
   stSpawn.TOrg:Rotate(trAng); stSpawn.TOrg:Add(trPos)        -- Trace mass-center world
   stSpawn.TAng:Set(trEnt:LocalToWorldAngles(stSpawn.TAng))   -- Initial coordinate system
