@@ -1499,7 +1499,7 @@ function RegisterPOA(stPiece, sP, sO, sA)
   ---------- Point ----------
   if(sP:sub(1,1) == sD) then ReloadPOA() else
     if(IsNull(sP) or IsBlank(sP)) then ReloadPOA() else
-      if(not DecodePOA(sP)) then LogInstance("Point mismatch ["..iID.."]@"..stPiece.Slot) end  
+      if(not DecodePOA(sP)) then LogInstance("Point mismatch ["..iID.."]@"..stPiece.Slot) end
     end -- When the point is empty use a zero vector for the mass center
   end; if(not IsHere(TransferPOA(tOffs.P, "V"))) then LogInstance("Point mismatch"); return nil end
   return tOffs
@@ -3157,13 +3157,15 @@ function ApplyPhysicalSettings(ePiece,bPi,bFr,bGr,sPh)
   LogInstance("Success"); return true
 end
 
-function HookOnRemove(oBas,oEnt,cnTab)
+function HookOnRemove(oBas,oEnt,...)
   if(not (oBas and oBas:IsValid())) then LogInstance("Base invalid"); return nil end
   if(not (oEnt and oEnt:IsValid())) then LogInstance("Prop invalid"); return nil end
-  if(not (cnTab and cnTab[1])) then LogInstance("Constraint list empty"); return nil end
-  local ID = 1 while(ID <= #cnTab) do
-    if(not cnTab[ID]) then LogInstance("Empty constraint <"..tostring(ID)..">")
-    else oEnt:DeleteOnRemove(cnTab[ID]); oBas:DeleteOnRemove(cnTab[ID]); ID = ID + 1 end
+  local cnTab, ID = {...}, 1; if(not (cnTab and cnTab[1])) then
+    LogInstance("Constraint list empty"); return nil end
+  while(cnTab[ID]) do local vCN = cnTab[ID]
+    if(vCN and vCN:IsValid()) then
+      oEnt:DeleteOnRemove(vCN); oBas:DeleteOnRemove(vCN)
+    else LogInstance("Constraint mismatch <"..tostring(ID)..">") end; ID = ID + 1
   end; LogInstance("Success")
 end
 
@@ -3171,9 +3173,9 @@ function ApplyPhysicalAnchor(ePiece,eBase,vPos,vNorm,nCID,nNoC,nFoL,nToL,nFri)
   local CID, NoC = (tonumber(nCID) or 1), (tonumber(nNoC) or 0)
   local FrL, ToL = (tonumber(nFoL) or 0), (tonumber(nToL) or 0)
   local Fri, SID = (tonumber(nFri) or 0)
-  local ConstrInfo = GetOpVar("CONTAIN_CONSTRAINT_TYPE"):Select(CID)
-  if(not IsExistent(ConstrInfo)) then LogInstance("Constraint not available"); return false end
-  LogInstance("["..ConstrInfo.Name.."] {"..CID..","..NoC..","..FrL..","..ToL..","..Fri.."}")
+  local CType = asmlib.MakeContainer("CONSTRAINT_TYPE"):Select(CID)
+  if(not IsExistent(CType)) then LogInstance("Constraint not available"); return false end
+  LogInstance("["..CType.Name.."] {"..CID..","..NoC..","..FrL..","..ToL..","..Fri.."}")
   if(not (ePiece and ePiece:IsValid())) then LogInstance("Piece not valid"); return false end
   if(IsOther(ePiece)) then LogInstance("Piece is other object"); return false  end
   if(not constraintCanConstrain(ePiece,0)) then LogInstance("Cannot constrain Piece"); return false  end
@@ -3188,25 +3190,25 @@ function ApplyPhysicalAnchor(ePiece,eBase,vPos,vNorm,nCID,nNoC,nFoL,nToL,nFri)
     ePiece:SetParent(eBase); SID = CID
   elseif(not SID and CID == 3) then
     -- http://wiki.garrysmod.com/page/constraint/Weld
-    local C = ConstrInfo.Make(ePiece,eBase,0,0,FrL,(NoC ~= 0),false)
-    HookOnRemove(eBase,ePiece,{C},1); SID = CID
+    local C = CType.Make(ePiece,eBase,0,0,FrL,(NoC ~= 0),false)
+    HookOnRemove(eBase,ePiece,C); SID = CID
   end
   if(not SID and CID == 4 and vNorm) then
     -- http://wiki.garrysmod.com/page/constraint/Axis
     local LPos1 = pyPiece:GetMassCenter()
     local LPos2 = ePiece:LocalToWorld(LPos1); LPos2:Add(vNorm)
           LPos2:Set(eBase:WorldToLocal(LPos2))
-    local C = ConstrInfo.Make(ePiece,eBase,0,0,LPos1,LPos2,FrL,ToL,Fri,NoC)
-     HookOnRemove(eBase,ePiece,{C},1); SID = CID
+    local C = CType.Make(ePiece,eBase,0,0,LPos1,LPos2,FrL,ToL,Fri,NoC)
+     HookOnRemove(eBase,ePiece,C); SID = CID
   elseif(not SID and CID == 5) then
     -- http://wiki.garrysmod.com/page/constraint/Ballsocket ( HD )
-    local C = ConstrInfo.Make(eBase,ePiece,0,0,pyPiece:GetMassCenter(),FrL,ToL,NoC)
-    HookOnRemove(eBase,ePiece,{C},1); SID = CID
+    local C = CType.Make(eBase,ePiece,0,0,pyPiece:GetMassCenter(),FrL,ToL,NoC)
+    HookOnRemove(eBase,ePiece,C); SID = CID
   elseif(not SID and CID == 6 and vPos) then
     -- http://wiki.garrysmod.com/page/constraint/Ballsocket ( TR )
     local vLPos2 = eBase:WorldToLocal(vPos)
-    local C = ConstrInfo.Make(ePiece,eBase,0,0,vLPos2,FrL,ToL,NoC)
-    HookOnRemove(eBase,ePiece,{C},1); SID = CID
+    local C = CType.Make(ePiece,eBase,0,0,vLPos2,FrL,ToL,NoC)
+    HookOnRemove(eBase,ePiece,C); SID = CID
   end
   -- http://wiki.garrysmod.com/page/constraint/AdvBallsocket
   local pyBase = eBase:GetPhysicsObject()
@@ -3216,26 +3218,26 @@ function ApplyPhysicalAnchor(ePiece,eBase,vPos,vNorm,nCID,nNoC,nFoL,nToL,nFri)
   local LPos1 = pyBase:GetMassCenter()
   local LPos2 = pyPiece:GetMassCenter()
   if(not SID and CID == 7) then -- Lock X
-    local C = ConstrInfo.Make(ePiece,eBase,0,0,LPos1,LPos2,FrL,0,-Min,-Max,-Max,Min,Max,Max,Fri,Fri,Fri,1,NoC)
-    HookOnRemove(eBase,ePiece,{C},1); SID = CID
+    local C = CType.Make(ePiece,eBase,0,0,LPos1,LPos2,FrL,0,-Min,-Max,-Max,Min,Max,Max,Fri,Fri,Fri,1,NoC)
+    HookOnRemove(eBase,ePiece,C); SID = CID
   elseif(not SID and CID == 8) then -- Lock Y
-    local C = ConstrInfo.Make(ePiece,eBase,0,0,LPos1,LPos2,FrL,0,-Max,-Min,-Max,Max,Min,Max,Fri,Fri,Fri,1,NoC)
-    HookOnRemove(eBase,ePiece,{C},1); SID = CID
+    local C = CType.Make(ePiece,eBase,0,0,LPos1,LPos2,FrL,0,-Max,-Min,-Max,Max,Min,Max,Fri,Fri,Fri,1,NoC)
+    HookOnRemove(eBase,ePiece,C); SID = CID
   elseif(not SID and CID == 9) then -- Lock Z
-    local C = ConstrInfo.Make(ePiece,eBase,0,0,LPos1,LPos2,FrL,0,-Max,-Max,-Min,Max,Max,Min,Fri,Fri,Fri,1,NoC)
-    HookOnRemove(eBase,ePiece,{C},1); SID = CID
+    local C = CType.Make(ePiece,eBase,0,0,LPos1,LPos2,FrL,0,-Max,-Max,-Min,Max,Max,Min,Fri,Fri,Fri,1,NoC)
+    HookOnRemove(eBase,ePiece,C); SID = CID
   elseif(not SID and CID == 10) then -- Spin X
-    local C1 = ConstrInfo.Make(ePiece,eBase,0,0,LPos1,LPos2,FrL,0,-Max,-Min,-Min,Max, Min, Min,Fri,Fri,Fri,1,NoC)
-    local C2 = ConstrInfo.Make(ePiece,eBase,0,0,LPos1,LPos2,FrL,0,-Max, Min, Min,Max,-Min,-Min,Fri,Fri,Fri,1,NoC)
-    HookOnRemove(eBase,ePiece,{C1,C2},2); SID = CID
+    local C1 = CType.Make(ePiece,eBase,0,0,LPos1,LPos2,FrL,0,-Max,-Min,-Min,Max, Min, Min,Fri,Fri,Fri,1,NoC)
+    local C2 = CType.Make(ePiece,eBase,0,0,LPos1,LPos2,FrL,0,-Max, Min, Min,Max,-Min,-Min,Fri,Fri,Fri,1,NoC)
+    HookOnRemove(eBase,ePiece,C1,C2); SID = CID
   elseif(not SID and CID == 11) then -- Spin Y
-    local C1 = ConstrInfo.Make(ePiece,eBase,0,0,LPos1,LPos2,FrL,0,-Min,-Max,-Min, Min,Max, Min,Fri,Fri,Fri,1,NoC)
-    local C2 = ConstrInfo.Make(ePiece,eBase,0,0,LPos1,LPos2,FrL,0, Min,-Max, Min,-Min,Max,-Min,Fri,Fri,Fri,1,NoC)
-    HookOnRemove(eBase,ePiece,{C1,C2},2); SID = CID
+    local C1 = CType.Make(ePiece,eBase,0,0,LPos1,LPos2,FrL,0,-Min,-Max,-Min, Min,Max, Min,Fri,Fri,Fri,1,NoC)
+    local C2 = CType.Make(ePiece,eBase,0,0,LPos1,LPos2,FrL,0, Min,-Max, Min,-Min,Max,-Min,Fri,Fri,Fri,1,NoC)
+    HookOnRemove(eBase,ePiece,C1,C2); SID = CID
   elseif(not SID and CID == 12) then -- Spin Z
-    local C1 = ConstrInfo.Make(ePiece,eBase,0,0,LPos1,LPos2,FrL,0,-Min,-Min,-Max, Min, Min,Max,Fri,Fri,Fri,1,NoC)
-    local C2 = ConstrInfo.Make(ePiece,eBase,0,0,LPos1,LPos2,FrL,0, Min, Min,-Max,-Min,-Min,Max,Fri,Fri,Fri,1,NoC)
-    HookOnRemove(eBase,ePiece,{C1,C2},2); SID = CID
+    local C1 = CType.Make(ePiece,eBase,0,0,LPos1,LPos2,FrL,0,-Min,-Min,-Max, Min, Min,Max,Fri,Fri,Fri,1,NoC)
+    local C2 = CType.Make(ePiece,eBase,0,0,LPos1,LPos2,FrL,0, Min, Min,-Max,-Min,-Min,Max,Fri,Fri,Fri,1,NoC)
+    HookOnRemove(eBase,ePiece,C1,C2); SID = CID
   end; LogInstance("Status <"..tostring(SID)..">"); return true
 end
 

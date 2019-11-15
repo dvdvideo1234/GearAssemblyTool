@@ -21,54 +21,17 @@ local duplicatorStoreEntityModifier = duplicator and duplicator.StoreEntityModif
 
 ------ MODULE POINTER -------
 local asmlib = gearasmlib
+local gtArgsLogs = {"", false, 0}
+local gtInitLogs = {"*Init", false, 0}
 
 ------ CONFIGURE ASMLIB ------
 asmlib.InitBase("gear","assembly")
-asmlib.SetOpVar("TOOL_VERSION","5.227")
+asmlib.SetOpVar("TOOL_VERSION","5.228")
 asmlib.SetIndexes("V",1,2,3)
 asmlib.SetIndexes("A",1,2,3)
 asmlib.SetIndexes("S",4,5,6,7)
-asmlib.SetOpVar("CONTAIN_STACK_MODE",asmlib.MakeContainer("Stack Mode"))
-asmlib.SetOpVar("CONTAIN_CONSTRAINT_TYPE",asmlib.MakeContainer("Constraint Type"))
 
------- VARIABLE FLAGS ------
--- Client and server have independent value
-local gnIndependentUsed = bitBor(FCVAR_ARCHIVE, FCVAR_ARCHIVE_XBOX, FCVAR_NOTIFY, FCVAR_PRINTABLEONLY)
--- Server tells the client what value to use
-local gnServerControled = bitBor(FCVAR_ARCHIVE, FCVAR_ARCHIVE_XBOX, FCVAR_NOTIFY, FCVAR_REPLICATED, FCVAR_PRINTABLEONLY)
-
------- CONFIGURE LOGGING ------
-asmlib.SetOpVar("LOG_DEBUGEN", false)
-asmlib.MakeAsmVar("logsmax"  , 0, {0}  , gnIndependentUsed, "Maximum logging lines to be printed")
-asmlib.MakeAsmVar("logfile"  , 0, {0,1}, gnIndependentUsed, "Output the logs in a dedicated file")
-asmlib.SetLogControl(asmlib.GetAsmVar("logsmax","INT"),asmlib.GetAsmVar("logfile","STR"))
-asmlib.SettingsLogs("SKIP"); asmlib.SettingsLogs("ONLY")
-
------- CONFIGURE NON-REPLICATED CVARS ----- Client's got a mind of its own
-asmlib.MakeAsmVar("modedb"   , "LUA",    nil  , gnIndependentUsed, "Database operating mode")
-asmlib.MakeAsmVar("devmode"  , 0    , {0, 1  }, gnIndependentUsed, "Toggle developer mode on/off server side")
-asmlib.MakeAsmVar("maxtrmarg", 0.02 ,{0.0001}, gnIndependentUsed, "Maximum time to avoid performing new traces")
-asmlib.MakeAsmVar("timermode", "CQT@1800@1@1" , nil, gnIndependentUsed, "Cache management setting when DB mode is SQL")
-
------- CONFIGURE REPLICATED CVARS ----- Server tells the client what value to use
-asmlib.MakeAsmVar("maxmass"  , 50000 ,  {1}, gnServerControled, "Maximum mass to be applied on a piece")
-asmlib.MakeAsmVar("maxlinear", 250   ,  {1}, gnServerControled, "Maximum linear offset of the piece")
-asmlib.MakeAsmVar("maxfrict" , 100000,  {0}, gnServerControled, "Maximum friction limit when creating constraints")
-asmlib.MakeAsmVar("maxforce" , 100000,  {0}, gnServerControled, "Maximum force limit when creating constraints")
-asmlib.MakeAsmVar("maxtorque", 100000,  {0}, gnServerControled, "Maximum torque limit when creating constraints")
-asmlib.MakeAsmVar("maxstcnt" , 200, {1,400}, gnServerControled, "Maximum pieces to spawn in stack mode")
-
-if(SERVER) then
-  CreateConVar("sbox_max"..asmlib.GetOpVar("CVAR_LIMITNAME"), "1500", gnServerControled, "Maximum number of gears to be spawned")
-  asmlib.MakeAsmVar("bnderrmod", "LOG", nil    , gnServerControled, "Unreasonable position error handling mode")
-  asmlib.MakeAsmVar("maxfruse" ,  50  , {1,100}, gnServerControled, "Maximum frequent pieces to be listed")
-end
-
------- CONFIGURE INTERNALS -----
-asmlib.SetOpVar("MODE_DATABASE", asmlib.GetAsmVar("modedb"   ,"STR"))
-asmlib.SetOpVar("TRACE_MARGIN" , asmlib.GetAsmVar("maxtrmarg","FLT"))
-
------- GLOBAL VARIABLES -------
+------ CONFIGURE GLOBAL INIT OPVARS ------
 local gsLimitName = asmlib.GetOpVar("CVAR_LIMITNAME")
 local gsToolPrefL = asmlib.GetOpVar("TOOLNAME_PL")
 local gsToolNameL = asmlib.GetOpVar("TOOLNAME_NL")
@@ -77,6 +40,46 @@ local gsLangForm  = asmlib.GetOpVar("FORM_LANGPATH")
 local gtTransFile = fileFind(gsLangForm:format("lua/", "*.lua"), "GAME")
 local gsFullDSV   = asmlib.GetOpVar("DIRPATH_BAS")..asmlib.GetOpVar("DIRPATH_DSV")..
                     asmlib.GetInstPref()..asmlib.GetOpVar("TOOLNAME_PU")
+
+asmlib.SetOpVar("CONTAIN_CONSTRAINT_TYPE",asmlib.MakeContainer("Constraint Type"))
+
+------ VARIABLE FLAGS ------
+-- Client and server have independent value
+local gnIndependentUsed = bitBor(FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_PRINTABLEONLY)
+-- Server tells the client what value to use
+local gnServerControled = bitBor(FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED, FCVAR_PRINTABLEONLY)
+
+------ CONFIGURE LOGGING ------
+asmlib.SetOpVar("LOG_DEBUGEN", false)
+asmlib.MakeAsmConvar("logsmax"  , 0, {0}  , gnIndependentUsed, "Maximum logging lines to be printed")
+asmlib.MakeAsmConvar("logfile"  , 0, {0,1}, gnIndependentUsed, "Output the logs in a dedicated file")
+asmlib.SetLogControl(asmlib.GetAsmVar("logsmax","INT"),asmlib.GetAsmVar("logfile","STR"))
+asmlib.SettingsLogs("SKIP"); asmlib.SettingsLogs("ONLY")
+
+------ CONFIGURE NON-REPLICATED CVARS ----- Client's got a mind of its own
+asmlib.MakeAsmConvar("modedb"   , "LUA",    nil  , gnIndependentUsed, "Database operating mode")
+asmlib.MakeAsmConvar("devmode"  , 0    , {0, 1  }, gnIndependentUsed, "Toggle developer mode on/off server side")
+asmlib.MakeAsmConvar("maxtrmarg", 0.02 ,{0.0001}, gnIndependentUsed, "Maximum time to avoid performing new traces")
+asmlib.MakeAsmConvar("timermode", "CQT@1800@1@1" , nil, gnIndependentUsed, "Cache management setting when DB mode is SQL")
+
+------ CONFIGURE REPLICATED CVARS ----- Server tells the client what value to use
+asmlib.MakeAsmConvar("maxmass"  , 50000 ,  {1}, gnServerControled, "Maximum mass to be applied on a piece")
+asmlib.MakeAsmConvar("maxlinear", 250   ,  {1}, gnServerControled, "Maximum linear offset of the piece")
+asmlib.MakeAsmConvar("maxfrict" , 100000,  {0}, gnServerControled, "Maximum friction limit when creating constraints")
+asmlib.MakeAsmConvar("maxforce" , 100000,  {0}, gnServerControled, "Maximum force limit when creating constraints")
+asmlib.MakeAsmConvar("maxtorque", 100000,  {0}, gnServerControled, "Maximum torque limit when creating constraints")
+asmlib.MakeAsmConvar("maxstcnt" , 200, {1,400}, gnServerControled, "Maximum pieces to spawn in stack mode")
+
+if(SERVER) then
+  asmlib.MakeAsmConvar("bnderrmod", "LOG", nil    , gnServerControled, "Unreasonable position error handling mode")
+  asmlib.MakeAsmConvar("maxfruse" ,  50  , {1,100}, gnServerControled, "Maximum frequent pieces to be listed")
+  asmlib.MakeAsmConvar("*sbox_max"..gsLimitName, 1500, {0}, gnServerControled, "Maximum number of gears to be spawned")
+end
+
+------ CONFIGURE INTERNALS -----
+asmlib.SetOpVar("MODE_DATABASE", asmlib.GetAsmVar("modedb"   ,"STR"))
+asmlib.SetOpVar("TRACE_MARGIN" , asmlib.GetAsmVar("maxtrmarg","FLT"))
+
 local gaTimerSet  = asmlib.GetOpVar("OPSYM_DIRECTORY"):Explode(asmlib.GetAsmVar("timermode","STR"))
 local conPalette  = asmlib.MakeContainer("Colours"); asmlib.SetOpVar("CONTAINER_PALETTE", conPalette)
       conPalette:Insert("r" ,Color(255, 0 , 0 ,255))
@@ -98,23 +101,23 @@ asmlib.SetAsmVarCallback("logsmax"  , "INT", "LOG_MAXLOGS" , function(v) return 
 asmlib.SetAsmVarCallback("logfile"  , "INT", "LOG_LOGFILE" , tobool)
 
 ------ CONFIGURE TOOL -----
-local SMode = asmlib.GetOpVar("CONTAIN_STACK_MODE")
-      SMode:Insert(1,"Forward direction")
-      SMode:Insert(2,"Around trace pivot")
-
-local CType = asmlib.GetOpVar("CONTAIN_CONSTRAINT_TYPE")
-      CType:Insert(1 ,{Name = "Free Spawn"  , Make = nil                                    })
-      CType:Insert(2 ,{Name = "Parent Piece", Make = nil                                    })
-      CType:Insert(3 ,{Name = "Weld Piece"  , Make = constraint and constraint.Weld         })
-      CType:Insert(4 ,{Name = "Axis Piece"  , Make = constraint and constraint.Axis         })
-      CType:Insert(5 ,{Name = "Ball-Sock HM", Make = constraint and constraint.Ballsocket   })
-      CType:Insert(6 ,{Name = "Ball-Sock TM", Make = constraint and constraint.Ballsocket   })
-      CType:Insert(7 ,{Name = "AdvBS Lock X", Make = constraint and constraint.AdvBallsocket})
-      CType:Insert(8 ,{Name = "AdvBS Lock Y", Make = constraint and constraint.AdvBallsocket})
-      CType:Insert(9 ,{Name = "AdvBS Lock Z", Make = constraint and constraint.AdvBallsocket})
-      CType:Insert(10,{Name = "AdvBS Spin X", Make = constraint and constraint.AdvBallsocket})
-      CType:Insert(11,{Name = "AdvBS Spin Y", Make = constraint and constraint.AdvBallsocket})
-      CType:Insert(12,{Name = "AdvBS Spin Z", Make = constraint and constraint.AdvBallsocket})
+local conElements = asmlib.MakeContainer("LIST_VGUI")
+local conStackMod = asmlib.MakeContainer("STACK_MODE")
+      conStackMod:Push("Forward direction")
+      conStackMod:Push("Around trace pivot")
+local conConstTyp = asmlib.MakeContainer("CONSTRAINT_TYPE")
+      conConstTyp:Push({Name = "Free Spawn"  , Make = nil                                    })
+      conConstTyp:Push({Name = "Parent Piece", Make = nil                                    })
+      conConstTyp:Push({Name = "Weld Piece"  , Make = constraint and constraint.Weld         })
+      conConstTyp:Push({Name = "Axis Piece"  , Make = constraint and constraint.Axis         })
+      conConstTyp:Push({Name = "Ball-Sock HM", Make = constraint and constraint.Ballsocket   })
+      conConstTyp:Push({Name = "Ball-Sock TM", Make = constraint and constraint.Ballsocket   })
+      conConstTyp:Push({Name = "AdvBS Lock X", Make = constraint and constraint.AdvBallsocket})
+      conConstTyp:Push({Name = "AdvBS Lock Y", Make = constraint and constraint.AdvBallsocket})
+      conConstTyp:Push({Name = "AdvBS Lock Z", Make = constraint and constraint.AdvBallsocket})
+      conConstTyp:Push({Name = "AdvBS Spin X", Make = constraint and constraint.AdvBallsocket})
+      conConstTyp:Push({Name = "AdvBS Spin Y", Make = constraint and constraint.AdvBallsocket})
+      conConstTyp:Push({Name = "AdvBS Spin Z", Make = constraint and constraint.AdvBallsocket})
 
 if(SERVER) then
 
@@ -139,26 +142,15 @@ end
 if(CLIENT) then
 
   asmlib.SetAction("RESET_VARIABLES",
-    function(oPly,oCom,oArgs)
-      local devmode = asmlib.GetAsmVar("devmode" ,"BUL")
-      local bgskids = asmlib.GetAsmVar("bgskids", "STR")
-      asmlib.LogInstance("RESET_VARIABLES: {"..tostring(devmode)..asmlib.GetOpVar("OPSYM_DISABLE")..tostring(bgskids).."}")
-      asmlib.ConCommandPly(oPly,"nextx"    , 0)
-      asmlib.ConCommandPly(oPly,"nexty"    , 0)
-      asmlib.ConCommandPly(oPly,"nextz"    , 0)
-      asmlib.ConCommandPly(oPly,"nextpic"  , 0)
-      asmlib.ConCommandPly(oPly,"nextyaw"  , 0)
-      asmlib.ConCommandPly(oPly,"nextrol"  , 0)
-      asmlib.ConCommandPly(oPly,"rotpivt"  , 0)
-      asmlib.ConCommandPly(oPly,"rotpivh"  , 0)
-      asmlib.ConCommandPly(oPly,"deltarot" , 360)
-      if(not devmode) then
-        return asmlib.StatusLog(nil,"RESET_VARIABLES: Developer mode disabled") end
-      asmlib.SetLogControl(asmlib.GetAsmVar("logsmax" , "INT"), asmlib.GetAsmVar("logfile" , "STR"))
-      if(bgskids == "reset cvars") then -- Reset also the maximum spawned pieces
-        oPly:ConCommand("sbox_max"..asmlib.GetOpVar("CVAR_LIMITNAME").." 1500\n")
+    function(oPly,oCom,oArgs) gtArgsLogs[1] = "*RESET_VARIABLES"
+      local devmode = asmlib.GetAsmConvar("devmode", "BUL")
+      asmlib.LogInstance("{"..tostring(devmode).."@"..tostring(command).."}",gtArgsLogs)
+      if(inputIsKeyDown(KEY_LSHIFT)) then
+        if(not devmode) then
+          asmlib.LogInstance("Developer mode disabled",gtArgsLogs); return nil end
+        asmlib.SetAsmConvar(oPly, "*sbox_max"..gsLimitName, 1500)
         for key, val in pairs(asmlib.GetConvarList()) do
-          oPly:ConCommand(key.." "..tostring(val).."\n") end
+          asmlib.SetAsmConvar(oPly, "*"..key, val) end
         asmlib.ConCommandPly(oPly, "logsmax"  , 0)
         asmlib.ConCommandPly(oPly, "logfile"  , 0)
         asmlib.ConCommandPly(oPly, "modedb"   , "LUA")
@@ -173,15 +165,21 @@ if(CLIENT) then
         asmlib.ConCommandPly(oPly, "maxstcnt" , 200)
         asmlib.ConCommandPly(oPly, "bnderrmod", "LOG")
         asmlib.ConCommandPly(oPly, "maxfruse" , 50)
-        asmlib.PrintInstance("RESET_VARIABLES: Variables reset complete")
-      elseif(bgskids:sub(1,7) == "delete ") then
-        local tPref = (" "):Explode(bgskids:sub(8,-1))
-        for iCnt = 1, #tPref do local vPr = tPref[iCnt]
-         asmlib.RemoveDSV("PIECES",vPr)
-         asmlib.LogInstance("RESET_VARIABLES: Match <"..vPr..">")
+      else
+        asmlib.ConCommandPly(oPly,"nextx"    , 0)
+        asmlib.ConCommandPly(oPly,"nexty"    , 0)
+        asmlib.ConCommandPly(oPly,"nextz"    , 0)
+        asmlib.ConCommandPly(oPly,"nextpic"  , 0)
+        asmlib.ConCommandPly(oPly,"nextyaw"  , 0)
+        asmlib.ConCommandPly(oPly,"nextrol"  , 0)
+        asmlib.ConCommandPly(oPly,"rotpivt"  , 0)
+        asmlib.ConCommandPly(oPly,"rotpivh"  , 0)
+        asmlib.ConCommandPly(oPly,"deltarot" , 360)
+        if(devmode) then
+          asmlib.SetLogControl(asmlib.GetAsmConvar("logsmax","INT"),
+                               asmlib.GetAsmConvar("logfile","BUL"))
         end
-      else return asmlib.StatusLog(nil,"RESET_VARIABLES: Command <"..bgskids.."> skipped") end
-      return asmlib.StatusLog(nil,"RESET_VARIABLES: Success")
+      end
     end)
 
   asmlib.SetAction("OPEN_FRAME",
@@ -388,6 +386,293 @@ if(CLIENT) then
     end)
 end
 
+------ INITIALIZE CONTEXT PROPERTIES ------
+local gsOptionsCM = gsToolPrefL.."context_menu"
+local gsOptionsCV = gsToolPrefL.."context_values"
+local gsOptionsLG = gsOptionsCM:gsub(gsToolPrefL, ""):upper()
+local gtOptionsCM = {} -- This stores the context menu configuration
+gtOptionsCM.Order, gtOptionsCM.MenuIcon = 1600, asmlib.ToIcon(gsOptionsCM)
+gtOptionsCM.MenuLabel = asmlib.GetPhrase("tool."..gsToolNameL..".name")
+
+-- [1]: Translation language key
+-- [2]: Flag to transmit the data to the server
+-- [3]: Tells what is to be done with the value
+-- [4]: Display when the data is available on the client
+-- [5]: Network massage or assign the value to a player
+local conContextMenu = asmlib.MakeContainer("CONTEXT_MENU")
+      conContextMenu:Push(
+        {"tool."..gsToolNameL..".model", true,
+          function(ePiece, oPly, oTr, sKey)
+            local model = ePiece:GetModel()
+            asmlib.SetAsmConvar(oPly, "model", model); return true
+          end,
+          function(ePiece, oPly, oTr, sKey)
+            return tostring(ePiece:GetModel())
+          end
+        })
+      conContextMenu:Push(
+        {"tool."..gsToolNameL..".bgskids", true,
+          function(ePiece, oPly, oTr, sKey)
+            local ski = asmlib.GetPropSkin(ePiece)
+            local bgr = asmlib.GetPropBodyGroup(ePiece)
+            asmlib.SetAsmConvar(oPly, "bgskids", bgr..gsSymDir..ski); return true
+          end,
+          function(ePiece, oPly, oTr, sKey)
+            local ski = asmlib.GetPropSkin(ePiece)
+            local bgr = asmlib.GetPropBodyGroup(ePiece)
+            return tostring(bgr..gsSymDir..ski)
+          end
+        })
+      conContextMenu:Push(
+        {"tool."..gsToolNameL..".phyname", true,
+          function(ePiece, oPly, oTr, sKey)
+            local phPiece = ePiece:GetPhysicsObject()
+            local physmater = phPiece:GetMaterial()
+            asmlib.SetAsmConvar(oPly, "physmater", physmater); return true
+          end, nil,
+          function(ePiece)
+            return tostring(ePiece:GetPhysicsObject():GetMaterial())
+          end
+        })
+      conContextMenu:Push(
+        {"tool."..gsToolNameL..".mass", true,
+          function(ePiece, oPly, oTr, sKey)
+            local phPiece = ePiece:GetPhysicsObject()
+            local mass = phPiece:GetMass()
+            asmlib.SetAsmConvar(oPly, "mass", mass); return true
+          end, nil,
+          function(ePiece)
+            return tonumber(ePiece:GetPhysicsObject():GetMass())
+          end
+        })
+      conContextMenu:Push(
+        {"tool."..gsToolNameL..".ignphysgn", true,
+          function(ePiece, oPly, oTr, sKey)
+            local bSuc,bPi,bFr,bGr,sPh = asmlib.UnpackPhysicalSettings(ePiece)
+            if(bSuc) then bPi = (not bPi) else return bSuc end
+            return asmlib.ApplyPhysicalSettings(ePiece,bPi,bFr,bGr,sPh)
+          end, nil,
+          function(ePiece)
+            return tobool(ePiece.PhysgunDisabled)
+          end
+        })
+      conContextMenu:Push(
+        {"tool."..gsToolNameL..".freeze", true,
+          function(ePiece, oPly, oTr, sKey)
+            local bSuc,bPi,bFr,bGr,sPh = asmlib.UnpackPhysicalSettings(ePiece)
+            if(bSuc) then bFr = (not bFr) else return bSuc end
+            return asmlib.ApplyPhysicalSettings(ePiece,bPi,bFr,bGr,sPh)
+          end, nil,
+          function(ePiece)
+            return tobool(not ePiece:GetPhysicsObject():IsMotionEnabled())
+          end
+        })
+      conContextMenu:Push(
+        {"tool."..gsToolNameL..".gravity", true,
+          function(ePiece, oPly, oTr, sKey)
+            local bSuc,bPi,bFr,bGr,sPh = asmlib.UnpackPhysicalSettings(ePiece)
+            if(bSuc) then bGr = (not bGr) else return bSuc end
+            return asmlib.ApplyPhysicalSettings(ePiece,bPi,bFr,bGr,sPh)
+          end, nil,
+          function(ePiece)
+            return tobool(ePiece:GetPhysicsObject():IsGravityEnabled())
+          end
+        })
+      conContextMenu:Push(
+        {"tool."..gsToolNameL..".weld", true,
+          function(ePiece, oPly, oTr, sKey)
+            if(oPly:KeyDown(IN_SPEED)) then
+              local tCn, ID = constraintFindConstraints(ePiece, "Weld"), 1
+              while(tCn and tCn[ID]) do local eCn = tCn[ID].Constraint
+                if(eCn and eCn:IsValid()) then eCn:Remove() end; ID = (ID + 1)
+              end; asmlib.Notify(oPly,"Removed: Welds !","CLEANUP"); return true
+            else
+              local sAnch = oPly:GetInfo(gsToolPrefL.."anchor", gsNoAnchor)
+              local tAnch = gsSymRev:Explode(sAnch)
+              local nAnch = tonumber(tAnch[1]); if(not asmlib.IsHere(nAnch)) then
+                asmlib.Notify(oPly,"Anchor: Mismatch "..sAnch.." !","ERROR") return false end
+              local eBase = entsGetByIndex(nAnch); if(not (eBase and eBase:IsValid())) then
+                asmlib.Notify(oPly,"Entity: Missing "..tostring(nAnch).." !","ERROR") return false end
+              local maxforce = asmlib.GetAsmConvar("maxforce", "FLT")
+              local forcelim = mathClamp(oPly:GetInfoNum(gsToolPrefL.."forcelim", 0), 0, maxforce)
+              local bSuc, cnW, cnN, cnG = asmlib.ApplyPhysicalAnchor(ePiece,eBase,true,false,false,forcelim)
+              if(bSuc and cnW and cnW:IsValid()) then
+                local sIde = ePiece:EntIndex()..gsSymDir..eBase:EntIndex()
+                asmlib.UndoCrate("TA Weld > "..asmlib.GetReport2(sIde,cnW:GetClass()))
+                asmlib.UndoAddEntity(cnW); asmlib.UndoFinish(oPly); return true
+              end; return false
+            end
+          end, nil,
+          function(ePiece)
+            local tCn = constraintFindConstraints(ePiece, "Weld"); return #tCn
+          end
+        })
+      conContextMenu:Push(
+        {"tool."..gsToolNameL..".nocollide", true,
+          function(ePiece, oPly, oTr, sKey)
+            if(oPly:KeyDown(IN_SPEED)) then
+              local tCn, ID = constraintFindConstraints(ePiece, "NoCollide"), 1
+              while(tCn and tCn[ID]) do local eCn = tCn[ID].Constraint
+                if(eCn and eCn:IsValid()) then eCn:Remove() end; ID = (ID + 1)
+              end; asmlib.Notify(oPly,"Removed: NoCollides !","CLEANUP"); return true
+            else -- Get anchor prop
+              local sAnch = oPly:GetInfo(gsToolPrefL.."anchor", gsNoAnchor)
+              local tAnch = gsSymRev:Explode(sAnch)
+              local nAnch = tonumber(tAnch[1]); if(not asmlib.IsHere(nAnch)) then
+                asmlib.Notify(oPly,"Anchor: Mismatch "..sAnch.." !","ERROR") return false end
+              local eBase = entsGetByIndex(nAnch); if(not (eBase and eBase:IsValid())) then
+                asmlib.Notify(oPly,"Entity: Missing "..nAnch.." !","ERROR") return false end
+              local maxforce = asmlib.GetAsmConvar("maxforce", "FLT")
+              local forcelim = mathClamp(oPly:GetInfoNum(gsToolPrefL.."forcelim", 0), 0, maxforce)
+              local bSuc, cnW, cnN, cnG = asmlib.ApplyPhysicalAnchor(ePiece,eBase,false,true,false,forcelim)
+              if(bSuc and cnN and cnN:IsValid()) then
+                local sIde = ePiece:EntIndex()..gsSymDir..eBase:EntIndex()
+                asmlib.UndoCrate("TA NoCollide > "..asmlib.GetReport2(sIde,cnN:GetClass()))
+                asmlib.UndoAddEntity(cnN); asmlib.UndoFinish(oPly); return true
+              end; return false
+            end
+          end, nil,
+          function(ePiece)
+            local tCn = constraintFindConstraints(ePiece, "NoCollide"); return #tCn
+          end
+        })
+      conContextMenu:Push(
+        {"tool."..gsToolNameL..".nocollidew", true,
+          function(ePiece, oPly, oTr, sKey)
+            if(oPly:KeyDown(IN_SPEED)) then
+              local eCn = constraintFind(ePiece, gameGetWorld(), "AdvBallsocket", 0, 0)
+              if(eCn and eCn:IsValid()) then eCn:Remove()
+                asmlib.Notify(oPly,"Removed: NoCollideWorld !","CLEANUP")
+              else asmlib.Notify(oPly,"Missing: NoCollideWorld !","CLEANUP") end
+            else
+              local maxforce = asmlib.GetAsmConvar("maxforce", "FLT")
+              local forcelim = mathClamp(oPly:GetInfoNum(gsToolPrefL.."forcelim", 0), 0, maxforce)
+              local bSuc, cnW, cnN, cnG = asmlib.ApplyPhysicalAnchor(ePiece,nil,false,false,true,forcelim)
+              if(bSuc and cnG and cnG:IsValid()) then
+                asmlib.UndoCrate("TA NoCollideWorld > "..asmlib.GetReport2(ePiece:EntIndex(),cnG:GetClass()))
+                asmlib.UndoAddEntity(cnG); asmlib.UndoFinish(oPly); return true
+              end; return false
+            end
+          end, nil,
+          function(ePiece)
+            local eCn = constraintFind(ePiece, gameGetWorld(), "AdvBallsocket", 0, 0)
+            return tobool(eCn and eCn:IsValid())
+          end
+        })
+
+if(SERVER) then
+  local function PopulateEntity(nLen)
+    local oEnt = netReadEntity(); gtArgsLogs[1] = "*POPULATE_ENTITY"
+    local sNoA = asmlib.GetOpVar("MISS_NOAV") -- Default drawn string
+    asmlib.LogInstance("Entity"..asmlib.GetReport2(oEnt:GetClass(),oEnt:EntIndex()), gtArgsLogs)
+    for iD = 1, conContextMenu:GetSize() do
+      local tLine = conContextMenu:Select(iD) -- Grab the value from the container
+      local sKey, wDraw = tLine[1], tLine[5]  -- Extract the key and handler
+      if(type(wDraw) == "function") then      -- Check when the value is function
+        local bS, vE = pcall(wDraw, oEnt); vE = tostring(vE) -- Always being string
+        if(not bS) then oEnt:SetNWString(sKey, sNoA)
+          asmlib.LogInstance("Request"..asmlib.GetReport2(sKey,iD).." fail: "..vE, gtArgsLogs); return end
+        asmlib.LogInstance("Handler"..asmlib.GetReport2(sKey,iD,vE), gtArgsLogs)
+        oEnt:SetNWString(sKey, vE) -- Write networked value to the hover entity
+      end
+    end
+  end
+  utilAddNetworkString(gsOptionsCV)
+  netReceive(gsOptionsCV, PopulateEntity)
+end
+
+if(CLIENT) then
+  asmlib.SetAction("UPDATE_CONTEXTVAL", -- Must have the same parameters as the hook
+    function() gtArgsLogs[1] = "*UPDATE_CONTEXTVAL"
+      if(not asmlib.IsFlag("tg_context_menu")) then return nil end -- Menu not opened
+      if(not asmlib.GetAsmConvar("enctxmenu", "BUL")) then return nil end -- Menu not enabled
+      local oPly = LocalPlayer(); if(not asmlib.IsPlayer(oPly)) then
+        asmlib.LogInstance("Player invalid "..asmlib.GetReport(oPly)..">", gtArgsLogs); return nil end
+      local vEye, vAim, tTrig = EyePos(), oPly:GetAimVector(), asmlib.GetOpVar("HOVER_TRIGGER")
+      local oEnt = propertiesGetHovered(vEye, vAim); tTrig[2] = tTrig[1]; tTrig[1] = oEnt
+      if(asmlib.IsOther(oEnt) or tTrig[1] == tTrig[2]) then return nil end -- Enity trigger
+      if(not asmlib.GetAsmConvar("enctxmall", "BUL")) then -- Enable for all props
+        local oRec = asmlib.CacheQueryPiece(oEnt:GetModel())
+        if(not asmlib.IsHere(oRec)) then return nil end
+      end -- If the menu is not enabled for all props ged-a-ud!
+      netStart(gsOptionsCV); netWriteEntity(oEnt); netSendToServer() -- Love message
+      asmlib.LogInstance("Entity "..asmlib.GetReport2(oEnt:GetClass(),oEnt:EntIndex()), gtArgsLogs)
+    end) -- Read client configuration
+end
+
+-- This filters what the context menu is available for
+gtOptionsCM.Filter = function(self, ent, ply)
+  if(asmlib.IsOther(ent)) then return false end
+  if(not (ply and ply:IsValid())) then return false end
+  if(not gamemodeCall("CanProperty", ply, gsOptionsCM, ent)) then return false end
+  if(not asmlib.GetAsmConvar("enctxmenu", "BUL")) then return false end
+  if(not asmlib.GetAsmConvar("enctxmall", "BUL")) then
+    local oRec = asmlib.CacheQueryPiece(ent:GetModel())
+    if(not asmlib.IsHere(oRec)) then return false end
+  end -- If the menu is not enabled for all props check for track and ged-a-ud!
+  return true -- The entity is track piece and TA menu is available
+end
+-- The routine which builds the context menu
+gtOptionsCM.MenuOpen = function(self, opt, ent, tr)
+  gtOptionsCM.MenuLabel = asmlib.GetPhrase("tool."..gsToolNameL..".name")
+  local oPly, pnSub = LocalPlayer(), opt:AddSubMenu(); if(not IsValid(pnSub)) then
+    asmlib.LogInstance("Invalid context menu",gsOptionsLG); return end
+  local fHash = (gsToolNameL.."%.(.*)$")
+  for iD = 1, conContextMenu:GetSize() do
+    local tLine = conContextMenu:Select(iD)
+    local sKey , fDraw = tLine[1], tLine[4]
+    local wDraw, sIcon = tLine[5], sKey:match(fHash)
+    local sName = asmlib.GetPhrase(sKey.."_con"):Trim():Trim(":")
+    if(asmlib.IsFunction(fDraw)) then
+      local bS, vE = pcall(fDraw, ent, oPly, tr, sKey); if(not bS) then
+        asmlib.LogInstance("Request "..asmlib.GetReport2(sKey,iD).." fail: "..vE,gsOptionsLG); return end
+      sName = sName..": "..tostring(vE)          -- Attach client value ( CLIENT )
+    elseif(asmlib.IsFunction(wDraw)) then
+      sName = sName..": "..ent:GetNWString(sKey) -- Attach networked value ( SERVER )
+    end; local fEval = function() self:Evaluate(ent,iD,tr,sKey) end
+    local pnOpt = pnSub:AddOption(sName, fEval); if(not IsValid(pnOpt)) then
+      asmlib.LogInstance("Invalid "..asmlib.GetReport2(sKey,iD),gsOptionsLG); return end
+    if(not asmlib.IsBlank(sIcon)) then pnOpt:SetIcon(asmlib.ToIcon(sIcon)) end
+  end
+end
+-- Not used. Use the evaluate function instead
+gtOptionsCM.Action = function(self, ent, tr) end
+-- Use the custom evaluation function with index and key arguments
+gtOptionsCM.Evaluate = function(self, ent, idx, key)
+  local tLine = conContextMenu:Select(idx); if(not tLine) then
+    asmlib.LogInstance("Skip "..asmlib.GetReport(idx),gsOptionsLG); return end
+  local sKey, bTrans, fHandle = tLine[1], tLine[2], tLine[3]
+  if(bTrans) then -- Transfer to SERVER
+    self:MsgStart()
+      netWriteEntity(ent)
+      netWriteUInt(idx, 8)
+    self:MsgEnd()
+  else -- Call on the CLIENT
+    local oPly = LocalPlayer()
+    local oTr  = oPly:GetEyeTrace()
+    local bS, vE = pcall(fHandle,ent,oPly,oTr,key); if(not bS) then
+      asmlib.LogInstance("Request "..asmlib.GetReport2(sKey,idx).." fail: "..vE,gsOptionsLG); return end
+    if(bS and not vE) then asmlib.LogInstance("Failure "..asmlib.GetReport2(sKey,idx),gsOptionsLG); return end
+  end
+end
+-- What to happen on the server with our entity
+gtOptionsCM.Receive = function(self, len, ply)
+  local ent = netReadEntity()
+  local idx = netReadUInt(8)
+  local oTr = ply:GetEyeTrace()
+  local tLine = conContextMenu:Select(idx); if(not tLine) then
+    asmlib.LogInstance("Mismatch "..asmlib.GetReport(idx),gsOptionsLG); return end
+  if(not self:Filter(ent, ply)) then return end
+  if(not propertiesCanBeTargeted(ent, ply)) then return end
+  local sKey, fHandle = tLine[1], tLine[3] -- Menu function handler
+  local bS, vE = pcall(fHandle, ent, ply, oTr, sKey); if(not bS) then
+    asmlib.LogInstance("Request "..asmlib.GetReport2(sKey,idx).." fail: "..vE,gsOptionsLG); return end
+  if(bS and not vE) then asmlib.LogInstance("Failure "..asmlib.GetReport2(sKey,idx),gsOptionsLG); return end
+end
+-- Register the track assembly setup options in the context menu
+propertiesAdd(gsOptionsCM, gtOptionsCM)
+
+------ INITIALIZE DB ------
 asmlib.CreateTable("PIECES",{
     Timer = gaTimerSet[1],
     Index = {{1},{2},{3},{1,4},{1,2},{2,4},{1,2,3}},

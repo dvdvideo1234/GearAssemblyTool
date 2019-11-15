@@ -48,8 +48,8 @@ local gsModeDataB = asmlib.GetOpVar("MODE_DATABASE")
 local gsNoID      = asmlib.GetOpVar("MISS_NOID")
 local gsNoMD      = asmlib.GetOpVar("MISS_NOMD")
 local gsNoAV      = asmlib.GetOpVar("MISS_NOAV")
-local SMode       = asmlib.GetOpVar("CONTAIN_STACK_MODE")
-local CType       = asmlib.GetOpVar("CONTAIN_CONSTRAINT_TYPE")
+local conStackMod = asmlib.MakeContainer("STACK_MODE")
+local conConstTyp = asmlib.MakeContainer("CONSTRAINT_TYPE")
 local gsSymRev    = asmlib.GetOpVar("OPSYM_REVSIGN")
 local gsSymDir    = asmlib.GetOpVar("OPSYM_DIRECTORY")
 local gsLimitName = asmlib.GetOpVar("CVAR_LIMITNAME")
@@ -119,7 +119,7 @@ if(CLIENT) then
   languageAdd("tool."..gsToolNameL..".category", "Construction")
   concommandAdd(gsToolPrefL.."resetvars", asmlib.GetActionCode("RESET_VARIABLES"))
   concommandAdd(gsToolPrefL.."openframe", asmlib.GetActionCode("OPEN_FRAME"))
-  
+
   -- Listen for changes to the localify language and reload the tool's menu to update the localizations
   cvarsRemoveChangeCallback(varLanguage:GetName(), gsToolPrefL.."lang")
   cvarsAddChangeCallback(varLanguage:GetName(), function(sNam, vO, vN)
@@ -419,8 +419,8 @@ function TOOL:LeftClick(stTrace)
   local bnderrmod = self:GetBoundErrorMode()
   local trorang   = self:GetTraceOriginAngle()
   local fnmodel   = model:GetFileFromFilename()
-  local stmode    = asmlib.GetCorrectID(self:GetStackMode(),SMode)
-  local contyp    = asmlib.GetCorrectID(self:GetContrType(),CType)
+  local stmode    = asmlib.GetCorrectID(self:GetStackMode(),conStackMod)
+  local contyp    = asmlib.GetCorrectID(self:GetContrType(),conConstTyp)
   local aninfo , eBase   = self:GetAnchor()
   local rotpivt, rotpivh = self:GetRotatePivot()
   local nextx  , nexty  , nextz   = self:GetPosOffsets()
@@ -477,7 +477,7 @@ function TOOL:LeftClick(stTrace)
 
   if(not hdRec) then return asmlib.StatusLog(false,self:GetStatus(stTrace,"TOOL:LeftClick(Prop): Holder model not a piece")) end
   -- Stacking when the mode is within borders and count is more than one
-  if(asmlib.CheckButtonPly(ply,IN_SPEED) and count > 1 and stmode >= 1 and stmode <= SMode:GetSize()) then
+  if(asmlib.CheckButtonPly(ply,IN_SPEED) and count > 1 and stmode >= 1 and stmode <= conStackMod:GetSize()) then
     local stSpawn = asmlib.GetEntitySpawn(ply,trEnt,rotpivt,rotpivh,model,igntyp,trorang,nextx,nexty,nextz,nextpic,nextyaw,nextrol)
     if(not stSpawn) then return asmlib.StatusLog(false,self:GetStatus(stTrace,"TOOL:LeftClick(Stack): Failed to retrieve spawn data")) end
     local ePieceO, ePieceN = trEnt, nil
@@ -565,10 +565,10 @@ function TOOL:RightClick(stTrace)
     asmlib.PrintNotifyPly(ply,"Model: "..fnModel.." selected !","GENERIC")
     return asmlib.StatusLog(true,"TOOL:RightClick(DUCK): Success <"..fnModel..">")
   else -- If neither is pressed changes the stack mode
-    local stmode = asmlib.GetCorrectID(self:GetStackMode(),SMode)
-          stmode = asmlib.GetCorrectID(stmode + 1,SMode)
+    local stmode = asmlib.GetCorrectID(self:GetStackMode(),conStackMod)
+          stmode = asmlib.GetCorrectID(stmode + 1,conStackMod)
     asmlib.ConCommandPly(ply,"stmode",stmode)
-    asmlib.PrintNotifyPly(ply,"Stack Mode: "..SMode:Select(stmode).." !","UNDO")
+    asmlib.PrintNotifyPly(ply,"Stack Mode: "..conStackMod:Select(stmode).." !","UNDO")
     return true
   end
 end
@@ -805,7 +805,7 @@ function TOOL:DrawToolScreen(w, h)
   local NoAV  = "N/A"
   local trEnt = stTrace.Entity
   local trOrig, trModel, trRake, trRad
-  local stmode = asmlib.GetCorrectID(self:GetStackMode(),SMode)
+  local stmode = asmlib.GetCorrectID(self:GetStackMode(),conStackMod)
   if(trEnt and trEnt:IsValid()) then
     if(asmlib.IsOther(trEnt)) then return end
           trModel = trEnt:GetModel()
@@ -823,7 +823,7 @@ function TOOL:DrawToolScreen(w, h)
   scrTool:DrawText("Anc: "..self:GetAnchor("anchor"),"an")
   scrTool:DrawText("Rake: "..tostring(trRake or NoAV).." > "..tostring(asmlib.RoundValue(hdRec.Rake,0.01) or NoAV),"y")
   scrTool:DrawText("Frac: "..tostring(nFrac).." > "..tostring(trRad or gsNoID).."/"..tostring(hdRad))
-  scrTool:DrawText("Mode: "..SMode:Select(stmode),"r")
+  scrTool:DrawText("Mode: "..conStackMod:Select(stmode),"r")
   scrTool:DrawText("Date: "..tostring(asmlib.GetDate()),"w")
   self:DrawRatioVisual(scrTool,trRad,hdRad,10)
 end
@@ -904,22 +904,22 @@ function TOOL.BuildCPanel(CPanel)
   asmlib.LogInstance(gsToolNameU.." Found #"..tostring(iCnt-1).." piece items.")
 
   -- http://wiki.garrysmod.com/page/Category:DComboBox
-  local ConID = asmlib.GetCorrectID(asmlib.GetAsmVar("contyp","STR"),CType)
+  local ConID = asmlib.GetCorrectID(asmlib.GetAsmVar("contyp","STR"),conConstTyp)
   local pConsType = vguiCreate("DComboBox")
         pConsType:SetPos(2, CurY)
         pConsType:SetTall(18)
         pConsType:SetTooltip(asmlib.GetPhrase("tool."..gsToolNameL..".contyp"))
-        pConsType:SetValue(CType:Select(ConID).Name or ("<"..CType:GetInfo()..">"))
+        pConsType:SetValue(conConstTyp:Select(ConID).Name or ("<"..conConstTyp:GetInfo()..">"))
         CurY = CurY + pConsType:GetTall() + 2
   local iCnt = 1
-  local Val = CType:Select(iCnt)
+  local Val = conConstTyp:Select(iCnt)
   while(Val) do
     pConsType:AddChoice(Val.Name)
     pConsType.OnSelect = function(pnSelf,iID,anyVal)
       RunConsoleCommand(gsToolPrefL.."contyp",iID)
     end
     iCnt = iCnt + 1
-    Val = CType:Select(iCnt)
+    Val = conConstTyp:Select(iCnt)
   end
   pConsType:ChooseOptionID(ConID)
   CPanel:AddItem(pConsType)
