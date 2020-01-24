@@ -1,0 +1,55 @@
+@name Teeth Mesher
+@inputs Mesh:wirelink
+@outputs 
+@persist [P1 M1 P2 M2 MM DD PD]:vector [E1 E2 Chip]:entity
+@trigger 
+
+if(first() || dupefinished())
+{
+    print(_HUD_PRINTTALK, "----------------------------")
+    Chip = entity() 
+    E1 = Chip:isConstrainedTo("weld")
+    E2 = Mesh:entity()
+    holoCreate(1,vec(0,0,0), 0.1*vec(1,1,1))
+    holoColor(1,vec(255,0,0))
+    holoCreate(2,vec(0,0,0), 0.1*vec(1,1,1))
+    holoColor(2,vec(0,255,0))
+    holoCreate(3,vec(0,0,0), 0.1*vec(1,1,1))
+    holoColor(3,vec(255,0,0))
+    holoCreate(4,vec(0,0,0), 0.1*vec(1,1,1))
+    holoColor(4,vec(0,255,0))
+    holoCreate(5,vec(0,0,0), 0.1*vec(1,1,1))
+    holoColor(5,vec(255,255,0))
+    holoCreate(6,vec(0,0,0), 0.1*vec(1,1,1))
+    holoColor(6,vec(0,255,255))
+    E1:setRenderMode(4)
+    E1:setColor(vec(255,255,255),150)
+    E2:setRenderMode(4)
+    E2:setColor(vec(255,255,255),150)
+    M1 = E1:massCenterL()
+    M2 = E2:massCenterL()    
+    print(_HUD_PRINTTALK,"P1: <"+toString(M1)+">")
+    print(_HUD_PRINTTALK,"M1: <"+E1:model()+">")
+    print(_HUD_PRINTTALK,"P2: <"+toString(M2)+">")
+    print(_HUD_PRINTTALK,"M2: <"+E2:model()+">")
+    M1 = E1:massCenter()
+    M2 = E2:massCenter()
+    MM = ((M2 - M1) / 2)
+    OL = MM:length()
+    print(_HUD_PRINTTALK,"OL: <"+toString(OL)+">")
+    DD = vec(5, 0, 1)
+} 
+
+M1 = E1:massCenter()
+P1 = E1:pos()
+M2 = E2:massCenter()
+P2 = E2:pos()
+MM = ((M2 + M1) / 2)
+PD = M1 + DD:rotate(E1:angles())
+
+holoPos(1,P1)
+holoPos(2,M1)
+holoPos(3,P2)
+holoPos(4,M2)
+holoPos(5,MM)
+holoPos(6,PD)
