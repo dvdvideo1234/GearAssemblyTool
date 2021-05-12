@@ -13,6 +13,7 @@ local LocalPlayer           = LocalPlayer
 local GetConVar             = GetConVar
 local RunConsoleCommand     = RunConsoleCommand
 local osDate                = os and os.date
+local gameGetWorld          = game and game.GetWorld
 local hookAdd               = hook and hook.Add
 local mathFloor             = math and math.floor
 local mathClamp             = math and math.Clamp
@@ -123,7 +124,8 @@ TOOL.ClientConVar = {
   [ "maxstatts" ] = "3",
   [ "nocollide" ] = "0",
   [ "ignphysgn" ] = "0",
-  [ "ghosthold" ] = "0"
+  [ "ghosthold" ] = "0",
+  [ "upspanchor"] = "0"
 }
 
 function TOOL:GetModel()
@@ -173,6 +175,10 @@ end
 
 function TOOL:GetGhostHolder()
   return ((self:GetClientNumber("ghosthold") or 0) ~= 0)
+end
+
+function TOOL:GetUpSpawnAnchor()
+  return ((self:GetClientNumber("upspanchor") or 0) ~= 0)
 end
 
 function TOOL:GetNoCollide()
@@ -248,45 +254,61 @@ function TOOL:GetBoundErrorMode()
   return asmlib.GetAsmVar("bnderrmod","STR")
 end
 
+function TOOL:GetAnchor()
+  local svEnt = self:GetEnt(1)
+  local siAnc = (self:GetClientInfo("anchor") or gsNoAnchor)
+  if(svEnt) then
+    if(not svEnt:IsWorld()) then
+      if(not svEnt:IsValid()) then svEnt = nil end
+    end
+  end; return siAnc, svEnt
+end
+
 function TOOL:SetAnchor(stTrace)
   self:ClearAnchor(true)
   if(not stTrace) then return asmlib.StatusLog(false,"TOOL:SetAnchor(): Trace invalid") end
   if(not stTrace.Hit) then return asmlib.StatusLog(false,"TOOL:SetAnchor(): Trace not hit") end
-  local trEnt = stTrace.Entity
-  if(not (trEnt and trEnt:IsValid())) then return asmlib.StatusLog(false,"TOOL:SetAnchor(): Trace no entity") end
-  local phEnt = trEnt:GetPhysicsObject()
-  if(not (phEnt and phEnt:IsValid())) then return asmlib.StatusLog(false,"TOOL:SetAnchor(): Trace no physics") end
-  local plPly = self:GetOwner()
-  if(not (plPly and plPly:IsValid())) then return asmlib.StatusLog(false,"TOOL:SetAnchor(): Player invalid") end
-  local sAnchor = trEnt:EntIndex()..gsSymRev..trEnt:GetModel():GetFileFromFilename()
-  trEnt:SetRenderMode(RENDERMODE_TRANSALPHA)
-  trEnt:SetColor(conPalette:Select("an"))
-  self:SetObject(1,trEnt,stTrace.HitPos,phEnt,stTrace.PhysicsBone,stTrace.HitNormal)
-  asmlib.ConCommandPly(plPly,"anchor",sAnchor)
-  asmlib.PrintNotifyPly(plPly,"Anchor: Set "..sAnchor.." !","UNDO")
-  return asmlib.StatusLog(true,"TOOL:SetAnchor("..sAnchor..")")
+  local oPly = self:GetOwner(); if(not (oPly and oPly:IsValid())) then
+    return asmlib.StatusLog(false,"TOOL:SetAnchor(): Player invalid") end
+  if(stTrace.HitWorld) then
+    local sAnchor = "0"..gsSymRev.."worldspawn.mdl"
+    self:SetObject(1,gameGetWorld(),stTrace.HitPos,phEnt,stTrace.PhysicsBone,stTrace.HitNormal)
+    asmlib.ConCommandPly(oPly,"anchor",sAnchor)
+    asmlib.PrintNotifyPly(oPly,"Anchor: Set "..sAnchor.." !","UNDO")
+    return asmlib.StatusLog(true,"TOOL:SetAnchor("..sAnchor..")")
+  else
+    local trEnt = stTrace.Entity
+    if(not (trEnt and trEnt:IsValid())) then return asmlib.StatusLog(false,"TOOL:SetAnchor(): Trace no entity") end
+    local phEnt = trEnt:GetPhysicsObject()
+    if(not (phEnt and phEnt:IsValid())) then return asmlib.StatusLog(false,"TOOL:SetAnchor(): Trace no physics") end
+    local sAnchor = trEnt:EntIndex()..gsSymRev..trEnt:GetModel():GetFileFromFilename()
+    trEnt:SetRenderMode(RENDERMODE_TRANSALPHA)
+    trEnt:SetColor(conPalette:Select("an"))
+    self:SetObject(1,trEnt,stTrace.HitPos,phEnt,stTrace.PhysicsBone,stTrace.HitNormal)
+    asmlib.ConCommandPly(oPly,"anchor",sAnchor)
+    asmlib.PrintNotifyPly(oPly,"Anchor: Set "..sAnchor.." !","UNDO")
+    return asmlib.StatusLog(true,"TOOL:SetAnchor("..sAnchor..")")
+  end
 end
 
 function TOOL:ClearAnchor(bMute)
-  local svEnt, plPly = self:GetEnt(1), self:GetOwner()
+  local oPly = self:GetOwner()
+  local siAnc, svEnt = self:GetAnchor()
   if(CLIENT) then return end; self:ClearObjects()
-  asmlib.ConCommandPly(plPly,"anchor",gsNoAnchor)
-  if(svEnt and svEnt:IsValid()) then
-    svEnt:SetColor(conPalette:Select("w"))
-    svEnt:SetRenderMode(RENDERMODE_TRANSALPHA)
+  asmlib.ConCommandPly(oPly,"anchor",gsNoAnchor)
+  if(svEnt) then
+    if(not svEnt:IsWorld()) then
+      if(svEnt and svEnt:IsValid()) then
+        svEnt:SetColor(conPalette:Select("w"))
+        svEnt:SetRenderMode(RENDERMODE_TRANSALPHA)
+      end
+    end
     if(not bMute) then
-      local sAnchor = svEnt:EntIndex()..gsSymRev..svEnt:GetModel():GetFileFromFilename()
-      asmlib.PrintNotifyPly(plPly,"Anchor: Cleaned "..sAnchor.." !","CLEANUP") end
+      asmlib.PrintNotifyPly(oPly,"Anchor: Cleaned "..siAnc.." !","CLEANUP") end
   end; return asmlib.StatusLog(true,"TOOL:ClearAnchor("..tostring(bMute).."): Anchor cleared")
 end
 
-function TOOL:GetAnchor()
-  local svEnt = self:GetEnt(1)
-  if(not (svEnt and svEnt:IsValid())) then svEnt = nil end
-  return (self:GetClientInfo("anchor") or gsNoAnchor), svEnt
-end
-
-function TOOL:GetStatus(stTrace,anyMessage,hdEnt)
+function TOOL:GetStatus(stTrace,saMsg,hdEnt)
   local iMaxlog = asmlib.GetOpVar("LOG_MAXLOGS")
   if(not (iMaxlog > 0)) then return "Status N/A" end
   local ply, sDelim  = self:GetOwner(), "\n"
@@ -294,7 +316,7 @@ function TOOL:GetStatus(stTrace,anyMessage,hdEnt)
   local sFleLog = asmlib.GetOpVar("LOG_LOGFILE")
   local sSpace  = (" "):rep(6 + tostring(iMaxlog):len())
   local rotpivt, rotpivh = self:GetRotatePivot()
-  local aninfo , anEnt   = self:GetAnchor()
+  local siAnc , anEnt   = self:GetAnchor()
   local nextx  , nexty  , nextz   = self:GetPosOffsets()
   local nextpic, nextyaw, nextrol = self:GetAngOffsets()
   local hdModel, trModel, trRec   = self:GetModel()
@@ -305,7 +327,7 @@ function TOOL:GetStatus(stTrace,anyMessage,hdEnt)
     trRec   = asmlib.CacheQueryPiece(trModel)
   end
   local sDu = ""
-        sDu = sDu..tostring(anyMessage)..sDelim
+        sDu = sDu..tostring(saMsg)..sDelim
         sDu = sDu..sSpace.."Dumping logs state:"..sDelim
         sDu = sDu..sSpace.."  LogsMax:        <"..tostring(iMaxlog)..">"..sDelim
         sDu = sDu..sSpace.."  LogsCur:        <"..tostring(iCurLog)..">"..sDelim
@@ -349,6 +371,7 @@ function TOOL:GetStatus(stTrace,anyMessage,hdEnt)
         sDu = sDu..sSpace.."  HD.SkinBG:      <"..tostring(self:GetBodyGroupSkin())..">"..sDelim
         sDu = sDu..sSpace.."  HD.StackAtempt: <"..tostring(self:GetStackAttempts())..">"..sDelim
         sDu = sDu..sSpace.."  HD.IgnorePG:    <"..tostring(self:GetIgnorePhysgun())..">"..sDelim
+        sDu = sDu..sSpace.."  HD.UpSpAnchor:  <"..tostring(self:GetUpSpawnAnchor())..">"..sDelim
         sDu = sDu..sSpace.."  HD.DeltaRot:    <"..tostring(self:GetDeltaRotation())..">"..sDelim
         sDu = sDu..sSpace.."  HD.TrOrgAngle:  <"..tostring(self:GetTraceOriginAngle())..">"..sDelim
         sDu = sDu..sSpace.."  HD.ModDataBase: <"..gsModeDataB..","..tostring(asmlib.GetAsmVar("modedb" ,"STR"))..">"..sDelim
@@ -362,19 +385,11 @@ function TOOL:GetStatus(stTrace,anyMessage,hdEnt)
         sDu = sDu..sSpace.."  HD.MaxFrequent: <"..tostring(asmlib.GetAsmVar("maxfruse" ,"INT"))..">"..sDelim
         sDu = sDu..sSpace.."  HD.MaxTrMargin: <"..tostring(asmlib.GetAsmVar("maxtrmarg","FLT"))..">"..sDelim
         sDu = sDu..sSpace.."  HD.RotatePivot: {"..tostring(rotpivt)..", "..tostring(rotpivh).."}"..sDelim
-        sDu = sDu..sSpace.."  HD.Anchor:      {"..tostring(anEnt or gsNoAV).."}<"..tostring(aninfo)..">"..sDelim
+        sDu = sDu..sSpace.."  HD.Anchor:      {"..tostring(anEnt or gsNoAV).."}<"..tostring(siAnc)..">"..sDelim
         sDu = sDu..sSpace.."  HD.AngOffsets:  ["..tostring(nextx)..","..tostring(nexty)..","..tostring(nextz).."]"..sDelim
         sDu = sDu..sSpace.."  HD.PosOffsets:  ["..tostring(nextpic)..","..tostring(nextyaw)..","..tostring(nextrol).."]"..sDelim
   if(hdEnt and hdEnt:IsValid()) then hdEnt:Remove() end
   return sDu
-end
-
-function TOOL:ValidateTrace(stTrace)
-  if(not asmlib.IsPhysTrace(stTrace)) then
-    return asmlib.StatusLog(false, "TOOL:ValidateTrace(): Trace no physics") end
-  if(asmlib.IsOther(stTrace.Entity)) then
-    return asmlib.StatusLog(false, "TOOL:ValidateTrace(): Trace is other") end
-  return asmlib.StatusLog(true,"TOOL:ValidateTrace(): Trace validated")
 end
 
 function TOOL:LeftClick(stTrace)
@@ -407,14 +422,28 @@ function TOOL:LeftClick(stTrace)
   local fnmodel   = model:GetFileFromFilename()
   local stmode    = asmlib.GetCorrectID(self:GetStackMode(),SMode)
   local contyp    = asmlib.GetCorrectID(self:GetContrType(),CType)
-  local aninfo , eBase   = self:GetAnchor()
+  local siAnc  , anEnt   = self:GetAnchor()
   local rotpivt, rotpivh = self:GetRotatePivot()
   local nextx  , nexty  , nextz   = self:GetPosOffsets()
   local nextpic, nextyaw, nextrol = self:GetAngOffsets()
 
+  -- Update the anchor entity automatically when enabled
+  if(self:GetUpSpawnAnchor()) then
+    if(anEnt ~= trEnt) then
+      self:SetAnchor(stTrace)
+      siAnc, anEnt = self:GetAnchor()
+    end
+  end
+
   -- General spawning when we do not apply neither mesh
   if(not asmlib.CheckButtonPly(ply,IN_SPEED) and not asmlib.CheckButtonPly(ply,IN_DUCK)) then
-    if(not (eBase and eBase:IsValid()) and (trEnt and trEnt:IsValid())) then eBase = trEnt end
+    if(anEnt) then -- Check if there is an anchor available
+      if(not anEnt:IsWorld()) then -- Check all other cases that are not world
+        if(not anEnt:IsValid() and (trEnt and trEnt:IsValid())) then anEnt = trEnt end
+      end -- When anchor is not the world and it is invalid use the trace
+    else -- When the anchor is missing we just use the trace entity
+      if(trEnt and trEnt:IsValid()) then anEnt = trEnt end
+    end
     local vPos, vAxis = stTrace.HitPos, Vector()
     local aAng = asmlib.GetNormalAngle(ply, stTrace, angsnap)
     local stSpawn = asmlib.GetNormalSpawn(ply,vPos,aAng,model,rotpivh,trorang,nextx,nexty,nextz,nextpic,nextyaw,nextrol)
@@ -428,30 +457,23 @@ function TOOL:LeftClick(stTrace)
     asmlib.UndoCratePly(gsUndoPrefN..fnmodel.." ( World spawn )")
     if(not asmlib.ApplyPhysicalSettings(ePiece,ignphysgn,freeze,gravity)) then
       return asmlib.StatusLog(false,self:GetStatus(stTrace,"TOOL:LeftClick(World): Failed to apply physical settings",ePiece)) end
-    if(not asmlib.ApplyPhysicalAnchor(ePiece,eBase,stTrace.HitPos,vAxis,contyp,nocollide,forcelim,torquelim,friction)) then
+    if(not asmlib.ApplyPhysicalAnchor(ePiece,anEnt,stTrace.HitPos,vAxis,contyp,nocollide,forcelim,torquelim,friction)) then
       return asmlib.StatusLog(false,self:GetStatus(stTrace,"TOOL:LeftClick(World): Failed to apply physical anchor",ePiece)) end
     asmlib.UndoAddEntityPly(ePiece)
     asmlib.UndoFinishPly(ply)
     return asmlib.StatusLog(true,"TOOL:LeftClick(World): Success")
   end
 
-  if(not self:ValidateTrace(stTrace)) then
-    return asmlib.StatusLog(false,self:GetStatus(stTrace,"TOOL:LeftClick(): Trace not valid")) end
-
-  local bsModel = "N/A"
-  local trModel = trEnt:GetModel()
-  if(eBase and eBase:IsValid()) then bsModel = eBase:GetModel() end
-
   --No need stacking relative to non-persistent props or using them...
   local hdRec   = asmlib.CacheQueryPiece(model)
-  local trRec   = asmlib.CacheQueryPiece(trModel)
+  local trRec   = asmlib.CacheQueryPiece(trEnt:GetModel())
 
   if(not trRec) then return asmlib.StatusLog(false,self:GetStatus(stTrace,"TOOL:LeftClick(Prop): Trace model not a piece")) end
 
   -- Applies the physics or anchor on the piece selected
   if(asmlib.CheckButtonPly(ply,IN_DUCK)) then -- USE: Use the valid trace as a piece
     if(asmlib.CheckButtonPly(ply,IN_USE)) then -- The user must click on the gear surface to apply
-      if(not asmlib.ApplyPhysicalAnchor(ePiece,eBase,stTrace.HitPos,stTrace.HitNormal,contyp,nocollide,forcelim,torquelim,friction)) then
+      if(not asmlib.ApplyPhysicalAnchor(ePiece,anEnt,stTrace.HitPos,stTrace.HitNormal,contyp,nocollide,forcelim,torquelim,friction)) then
         return asmlib.StatusLog(false,self:GetStatus(stTrace,"TOOL:LeftClick(World): Failed to apply physical anchor",ePiece)) end
     else -- Model
       if(not asmlib.ApplyPhysicalSettings(trEnt,ignphysgn,freeze,gravity)) then
@@ -476,7 +498,7 @@ function TOOL:LeftClick(stTrace)
       if(ePieceN) then
         if(not asmlib.ApplyPhysicalSettings(ePieceN,ignphysgn,freeze,gravity)) then
           return asmlib.StatusLog(false,self:GetStatus(stTrace,"TOOL:LeftClick(Stack): Failed to apply physical settings",ePiece)) end
-        if(not asmlib.ApplyPhysicalAnchor(ePieceN,eBase,stSpawn.SPos,stSpawn.DAng:Up(),contyp,nocollide,forcelim,torquelim,friction)) then
+        if(not asmlib.ApplyPhysicalAnchor(ePieceN,anEnt,stSpawn.SPos,stSpawn.DAng:Up(),contyp,nocollide,forcelim,torquelim,friction)) then
           return asmlib.StatusLog(false,self:GetStatus(stTrace,"TOOL:LeftClick(Stack): Failed to apply physical anchor",ePiece)) end
         asmlib.UndoAddEntityPly(ePieceN)
         if(stmode == 1) then
@@ -509,7 +531,7 @@ function TOOL:LeftClick(stTrace)
     if(ePiece) then
       if(not asmlib.ApplyPhysicalSettings(ePiece,ignphysgn,freeze,gravity)) then
         return asmlib.StatusLog(false,self:GetStatus(stTrace,"TOOL:LeftClick(Snap): Failed to apply physical settings",ePiece)) end
-      if(not asmlib.ApplyPhysicalAnchor(ePiece,eBase,stSpawn.SPos,stSpawn.DAng:Up(),contyp,nocollide,forcelim,freeze,gravity,torquelim,friction)) then
+      if(not asmlib.ApplyPhysicalAnchor(ePiece,anEnt,stSpawn.SPos,stSpawn.DAng:Up(),contyp,nocollide,forcelim,freeze,gravity,torquelim,friction)) then
         return asmlib.StatusLog(false,self:GetStatus(stTrace,"TOOL:LeftClick(Snap): Failed to apply physical anchor",ePiece)) end
       asmlib.UndoCratePly(gsUndoPrefN..fnmodel.." ( Snap prop )")
       asmlib.UndoAddEntityPly(ePiece)
@@ -536,26 +558,33 @@ function TOOL:RightClick(stTrace)
     end
   elseif(asmlib.CheckButtonPly(ply,IN_SPEED)) then -- Controls anchor selection
     if(stTrace.HitWorld) then
-      self:ClearAnchor(false); return asmlib.StatusLog(true,"TOOL:RightClick(SPEED): Anchor cleared")
+      if(self:GetUpSpawnAnchor()) then
+        local siAnc, anEnt = self:GetAnchor()
+        if(anEnt and anEnt:IsWorld()) then
+          self:ClearAnchor(false); return asmlib.StatusLog(true,"TOOL:RightClick(SPEED): Anchor cleared")
+        else
+          self:SetAnchor(stTrace); return asmlib.StatusLog(true,"TOOL:RightClick(SPEED): Anchor set")
+        end
+      else
+        self:ClearAnchor(false); return asmlib.StatusLog(true,"TOOL:RightClick(SPEED): Anchor cleared")
+      end
     elseif(trEnt and trEnt:IsValid()) then
-      if(not self:ValidateTrace(stTrace)) then
-        return asmlib.StatusLog(false,self:GetStatus(stTrace,"TOOL:RightClick(SPEED): Trace not valid")) end
       self:SetAnchor(stTrace); return asmlib.StatusLog(true,"TOOL:RightClick(SPEED): Anchor set")
     else return asmlib.StatusLog(true,self:GetStatus(stTrace,"TOOL:RightClick(SPEED): Invalid action",trEnt)) end
   elseif(asmlib.CheckButtonPly(ply,IN_DUCK)) then -- Controls model selection
-    if(not self:ValidateTrace(stTrace)) then
-      return asmlib.StatusLog(false,self:GetStatus(stTrace,"TOOL:RightClick(DUCK): Trace not valid")) end
-    local trModel = trEnt:GetModel()
-    local fnModel = trModel:GetFileFromFilename()
-    asmlib.ConCommandPly(ply,"model",trModel)
-    asmlib.PrintNotifyPly(ply,"Model: "..fnModel.." selected !","GENERIC")
-    return asmlib.StatusLog(true,"TOOL:RightClick(DUCK): Success <"..fnModel..">")
+    if(trEnt and trEnt:IsValid()) then
+      local trModel = trEnt:GetModel()
+      local fnModel = trModel:GetFileFromFilename()
+      asmlib.ConCommandPly(ply,"model",trModel)
+      asmlib.PrintNotifyPly(ply,"Model: "..fnModel.." selected !","GENERIC")
+      return asmlib.StatusLog(true,"TOOL:RightClick(DUCK): Success <"..fnModel..">")
+    end
   else -- If neither is pressed changes the stack mode
     local stmode = asmlib.GetCorrectID(self:GetStackMode(),SMode)
           stmode = asmlib.GetCorrectID(stmode + 1,SMode)
     asmlib.ConCommandPly(ply,"stmode",stmode)
     asmlib.PrintNotifyPly(ply,"Stack Mode: "..SMode:Select(stmode).." !","UNDO")
-    return true
+    return asmlib.StatusLog(true,"TOOL:RightClick(MODE): Success")
   end
 end
 
@@ -563,6 +592,7 @@ function TOOL:Reload(stTrace)
   if(CLIENT) then return true end
   if(not stTrace) then return false end
   local ply = self:GetOwner()
+  local trEnt = stTrace.Entity
   if(asmlib.CheckButtonPly(ply,IN_SPEED) and stTrace.HitWorld) then
     asmlib.SetLogControl(self:GetLogLines(),self:GetLogFile())
     if(self:GetExportDB()) then
@@ -571,12 +601,12 @@ function TOOL:Reload(stTrace)
       asmlib.ConCommandPly(ply, "exportdb", 0)
     end; return asmlib.StatusLog(true,"TOOL:Reload(World): Success")
   end
-  if(not self:ValidateTrace(stTrace)) then
-    return asmlib.StatusLog(false,self:GetStatus(stTrace,"TOOL:Reload(Prop): Trace not valid")) end
-  local trEnt = stTrace.Entity
-  local trRec = asmlib.CacheQueryPiece(trEnt:GetModel())
-  if(trRec) then trEnt:Remove()
-    return asmlib.StatusLog(true,"TOOL:Reload(Prop): Removed a piece") end
+  if(trEnt and trEnt:IsValid()) then
+    local trRec = asmlib.CacheQueryPiece(trEnt:GetModel())
+    if(asmlib.IsHere(trRec) and trEnt:GetCreator() == ply) then trEnt:Remove()
+      return asmlib.StatusLog(true,"TOOL:Reload(Prop): Removed a piece")
+    end
+  end
   return asmlib.StatusLog(false,"TOOL:Reload(): Nothing removed")
 end
 
@@ -587,6 +617,7 @@ function TOOL:Holster()
 end
 
 function TOOL:UpdateGhost(ePiece, oPly)
+  if(not asmlib.IsInit()) then return end
   if(not (ePiece and ePiece:IsValid())) then return end
   local stTrace = asmlib.CacheTracePly(oPly)
   if(not stTrace) then return end
@@ -659,7 +690,7 @@ function TOOL:DrawTextSpawn(oScreen, sCol, sMeth, tArgs)
   for ID = 1, #arK, 1 do local def = arK[ID]
     local key, typ, inf = def[1], def[2], tostring(def[3] or "")
     local cnv = ((not asmlib.IsEmptyString(inf)) and (" > "..inf) or "")
-    if(not asmlib.IsExistent(typ)) then oScreen:DrawText(tostring(key))
+    if(not asmlib.IsHere(typ)) then oScreen:DrawText(tostring(key))
     else local typ, val = tostring(typ or ""), tostring(stS[key] or "")
       oScreen:DrawText("<"..key.."> "..typ..": "..val..cnv) end
   end
@@ -966,6 +997,8 @@ function TOOL.BuildCPanel(CPanel)
            pItem:SetTooltip(languageGetPhrase("tool."..gsToolNameL..".freeze"))
   pItem = CPanel:CheckBox(languageGetPhrase("tool."..gsToolNameL..".ignphysgn_con"), gsToolPrefL.."ignphysgn")
            pItem:SetTooltip(languageGetPhrase("tool."..gsToolNameL..".ignphysgn"))
+  pItem = CPanel:CheckBox(languageGetPhrase("tool."..gsToolNameL..".upspanchor_con"), gsToolPrefL.."upspanchor")
+           pItem:SetTooltip(languageGetPhrase("tool."..gsToolNameL..".upspanchor"))
   pItem = CPanel:CheckBox(languageGetPhrase("tool."..gsToolNameL..".gravity_con"), gsToolPrefL.."gravity")
            pItem:SetTooltip(languageGetPhrase("tool."..gsToolNameL..".gravity"))
   pItem = CPanel:CheckBox(languageGetPhrase("tool."..gsToolNameL..".trorang_con"), gsToolPrefL.."trorang")

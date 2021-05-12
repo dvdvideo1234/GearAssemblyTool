@@ -9,19 +9,19 @@
      3 [24-09-17 19:58:04] CLIENT > GEARASSEMBLY [LUA] CreateTable: Created GEARASSEMBLY_PIECES
      4 [24-09-17 19:58:04] CLIENT > GEARASSEMBLY [LUA] Init: DB CATEGORY from LUA
      5 [24-09-17 19:58:04] CLIENT > GEARASSEMBLY [LUA] Init: DB PIECES from LUA
-     6 [24-09-17 19:58:04] CLIENT > GEARASSEMBLY [LUA] DefaultType: Skip nil <nil> [Old Gmod 10]
-     7 [24-09-17 19:58:04] CLIENT > GEARASSEMBLY [LUA] DefaultType: Skip nil <nil> [PHX Spotted Flat]
-     8 [24-09-17 19:58:04] CLIENT > GEARASSEMBLY [LUA] DefaultType: Skip nil <nil> [PHX Regular Small]
-     9 [24-09-17 19:58:04] CLIENT > GEARASSEMBLY [LUA] DefaultType: Skip nil <nil> [PHX Regular Medium]
-    10 [24-09-17 19:58:04] CLIENT > GEARASSEMBLY [LUA] DefaultType: Skip nil <nil> [PHX Regular Big]
-    11 [24-09-17 19:58:04] CLIENT > GEARASSEMBLY [LUA] DefaultType: Skip nil <nil> [PHX Regular Flat]
-    12 [24-09-17 19:58:04] CLIENT > GEARASSEMBLY [LUA] DefaultType: Skip nil <nil> [PHX Vertical]
-    13 [24-09-17 19:58:04] CLIENT > GEARASSEMBLY [LUA] DefaultType: Skip nil <nil> [PHX Teeth Flat]
-    14 [24-09-17 19:58:04] CLIENT > GEARASSEMBLY [LUA] DefaultType: Skip nil <nil> [PHX Spotted Rack]
-    15 [24-09-17 19:58:04] CLIENT > GEARASSEMBLY [LUA] DefaultType: Skip nil <nil> [PHX Bevel]
-    16 [24-09-17 19:58:04] CLIENT > GEARASSEMBLY [LUA] DefaultType: Skip nil <nil> [Black Regular Medium]
-    17 [24-09-17 19:58:04] CLIENT > GEARASSEMBLY [LUA] DefaultType: Skip nil <nil> [Black Regular Small]
-    18 [24-09-17 19:58:04] CLIENT > GEARASSEMBLY [LUA] DefaultType: Skip nil <nil> [Propeller]
+     6 [24-09-17 19:58:04] CLIENT > GEARASSEMBLY [LUA] Categorize: Skip nil <nil> [Old Gmod 10]
+     7 [24-09-17 19:58:04] CLIENT > GEARASSEMBLY [LUA] Categorize: Skip nil <nil> [PHX Spotted Flat]
+     8 [24-09-17 19:58:04] CLIENT > GEARASSEMBLY [LUA] Categorize: Skip nil <nil> [PHX Regular Small]
+     9 [24-09-17 19:58:04] CLIENT > GEARASSEMBLY [LUA] Categorize: Skip nil <nil> [PHX Regular Medium]
+    10 [24-09-17 19:58:04] CLIENT > GEARASSEMBLY [LUA] Categorize: Skip nil <nil> [PHX Regular Big]
+    11 [24-09-17 19:58:04] CLIENT > GEARASSEMBLY [LUA] Categorize: Skip nil <nil> [PHX Regular Flat]
+    12 [24-09-17 19:58:04] CLIENT > GEARASSEMBLY [LUA] Categorize: Skip nil <nil> [PHX Vertical]
+    13 [24-09-17 19:58:04] CLIENT > GEARASSEMBLY [LUA] Categorize: Skip nil <nil> [PHX Teeth Flat]
+    14 [24-09-17 19:58:04] CLIENT > GEARASSEMBLY [LUA] Categorize: Skip nil <nil> [PHX Spotted Rack]
+    15 [24-09-17 19:58:04] CLIENT > GEARASSEMBLY [LUA] Categorize: Skip nil <nil> [PHX Bevel]
+    16 [24-09-17 19:58:04] CLIENT > GEARASSEMBLY [LUA] Categorize: Skip nil <nil> [Black Regular Medium]
+    17 [24-09-17 19:58:04] CLIENT > GEARASSEMBLY [LUA] Categorize: Skip nil <nil> [Black Regular Small]
+    18 [24-09-17 19:58:04] CLIENT > GEARASSEMBLY [LUA] Categorize: Skip nil <nil> [Propeller]
     19 [24-09-17 19:58:10] CLIENT > GEARASSEMBLY [LUA] ImportDSV(clock_@PIECES): Success
     20 [24-09-17 19:58:10] CLIENT > GEARASSEMBLY [LUA] ProcessDSV: Success
     21 [24-09-17 19:58:10] CLIENT > GEARASSEMBLY [LUA] InitLocalify: Using code <en>
