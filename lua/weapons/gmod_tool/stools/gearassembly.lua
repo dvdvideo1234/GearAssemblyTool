@@ -427,23 +427,25 @@ function TOOL:LeftClick(stTrace)
   local nextx  , nexty  , nextz   = self:GetPosOffsets()
   local nextpic, nextyaw, nextrol = self:GetAngOffsets()
 
-  -- Update the anchor entity automatically when enabled
-  if(self:GetUpSpawnAnchor()) then
-    if(anEnt ~= trEnt) then
-      self:SetAnchor(stTrace)
-      siAnc, anEnt = self:GetAnchor()
-    end
-  end
-
   -- General spawning when we do not apply neither mesh
   if(not asmlib.CheckButtonPly(ply,IN_SPEED) and not asmlib.CheckButtonPly(ply,IN_DUCK)) then
+
+    -- Update the anchor entity automatically when enabled
+    if(self:GetUpSpawnAnchor()) then -- Read the auto-update flag
+      if(anEnt ~= trEnt) then -- When the anchor needs to be changed
+        self:SetAnchor(stTrace) -- Update anchor with current trace
+        siAnc, anEnt = self:GetAnchor() -- Export anchor to locals
+      end -- This needs to be triggered only when the user is not meshing
+    end -- When the flag is not enabled must not automatically update anchor
+
     if(anEnt) then -- Check if there is an anchor available
       if(not anEnt:IsWorld()) then -- Check all other cases that are not world
         if(not anEnt:IsValid() and (trEnt and trEnt:IsValid())) then anEnt = trEnt end
       end -- When anchor is not the world and it is invalid use the trace
     else -- When the anchor is missing we just use the trace entity
-      if(trEnt and trEnt:IsValid()) then anEnt = trEnt end
-    end
+      if(trEnt and trEnt:IsValid()) then anEnt = trEnt end -- Switch-a-roo
+    end -- If there is something wrong with the anchor entity use the trace
+
     local vPos, vAxis = stTrace.HitPos, Vector()
     local aAng = asmlib.GetNormalAngle(ply, stTrace, angsnap)
     local stSpawn = asmlib.GetNormalSpawn(ply,vPos,aAng,model,rotpivh,trorang,nextx,nexty,nextz,nextpic,nextyaw,nextrol)
@@ -464,9 +466,12 @@ function TOOL:LeftClick(stTrace)
     return asmlib.StatusLog(true,"TOOL:LeftClick(World): Success")
   end
 
-  --No need stacking relative to non-persistent props or using them...
-  local hdRec   = asmlib.CacheQueryPiece(model)
-  local trRec   = asmlib.CacheQueryPiece(trEnt:GetModel())
+  -- If the trace entity is not valid we cannot manipulate it
+  if(not (trEnt and trEnt:IsValid())) then return asmlib.StatusLog(false,self:GetStatus(stTrace,"TOOL:LeftClick(Prop): Trace invalid")) end
+
+  -- No need stacking relative to non-persistent props or using them...
+  local hdRec = asmlib.CacheQueryPiece(model)
+  local trRec = asmlib.CacheQueryPiece(trEnt:GetModel())
 
   if(not trRec) then return asmlib.StatusLog(false,self:GetStatus(stTrace,"TOOL:LeftClick(Prop): Trace model not a piece")) end
 
