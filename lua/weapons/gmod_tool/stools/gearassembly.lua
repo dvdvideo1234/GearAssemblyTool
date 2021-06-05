@@ -70,7 +70,7 @@ end
 
 if(CLIENT) then
   TOOL.Information = {
-    { name = "info",  stage = 1   },
+    { name = "info",  stage = 0   },
     { name = "left"         },
     { name = "right"        },
     { name = "right_use",   icon2 = "gui/e.png" },
@@ -80,6 +80,9 @@ if(CLIENT) then
   languageAdd("tool."..gsToolNameL..".category", "Construction")
   concommandAdd(gsToolPrefL.."resetvars", asmlib.GetActionCode("RESET_VARIABLES"))
   concommandAdd(gsToolPrefL.."openframe", asmlib.GetActionCode("OPEN_FRAME"))
+
+  asmlib.SetOpVar("STORE_TOOLOBJ", TOOL)
+  asmlib.SetOpVar("STORE_CONVARS", TOOL:BuildConVarList())
 end
 
 if(SERVER) then
@@ -850,19 +853,21 @@ function TOOL:DrawToolScreen(w, h)
   self:DrawRatioVisual(scrTool,trRad,hdRad,10)
 end
 
-local ConVarList = TOOL:BuildConVarList()
+-- Enter `spawnmenu_reload` in the console to reload the panel
 function TOOL.BuildCPanel(CPanel)
+  local devmode = asmlib.GetAsmVar("devmode", "BUL")
   local CurY, pItem = 0 -- pItem is the current panel created
           CPanel:SetName(languageGetPhrase("tool."..gsToolNameL..".name"))
   pItem = CPanel:Help   (languageGetPhrase("tool."..gsToolNameL..".desc"));  CurY = CurY + pItem:GetTall() + 2
 
-  pItem = CPanel:AddControl( "ComboBox",{
-              MenuButton = 1,
-              Folder     = gsToolNameL,
-              Options    = {["#Default"] = ConVarList},
-              CVars      = tableGetKeys(ConVarList)}); CurY = CurY + pItem:GetTall() + 2
+  local pComboPresets = vguiCreate("ControlPresets", CPanel)
+        pComboPresets:SetPreset(gsToolNameL)
+        pComboPresets:AddOption("Default", asmlib.GetOpVar("STORE_CONVARS"))
+        for key, val in pairs(tableGetKeys(asmlib.GetOpVar("STORE_CONVARS"))) do
+          pComboPresets:AddConVar(val) end
+  CPanel:AddItem(pComboPresets)
 
-  local Panel = asmlib.CacheQueryPanel()
+  local Panel = asmlib.CacheQueryPanel(devmode)
   if(not Panel) then return asmlib.StatusPrint(nil,"TOOL:BuildCPanel: Panel population empty") end
   local defTable = asmlib.GetOpVar("DEFTABLE_PIECES")
   local catTypes = asmlib.GetOpVar("TABLE_CATEGORIES")
