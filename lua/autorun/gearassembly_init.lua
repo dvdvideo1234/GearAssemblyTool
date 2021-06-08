@@ -70,11 +70,9 @@ asmlib.MakeAsmConvar("maxforce" , 100000,  {0}, gnServerControled, "Maximum forc
 asmlib.MakeAsmConvar("maxtorque", 100000,  {0}, gnServerControled, "Maximum torque limit when creating constraints")
 asmlib.MakeAsmConvar("maxstcnt" , 200, {1,400}, gnServerControled, "Maximum pieces to spawn in stack mode")
 
-if(SERVER) then
-  asmlib.MakeAsmConvar("bnderrmod", "LOG", nil    , gnServerControled, "Unreasonable position error handling mode")
-  asmlib.MakeAsmConvar("maxfruse" ,  50  , {1,100}, gnServerControled, "Maximum frequent pieces to be listed")
-  asmlib.MakeAsmConvar("*sbox_max"..gsLimitName, 1500, {0}, gnServerControled, "Maximum number of gears to be spawned")
-end
+asmlib.MakeAsmConvar("bnderrmod", "LOG", nil    , gnServerControled, "Unreasonable position error handling mode")
+asmlib.MakeAsmConvar("maxfruse" ,  50  , {1,100}, gnServerControled, "Maximum frequent pieces to be listed")
+asmlib.MakeAsmConvar("*sbox_max"..gsLimitName, 1500, {0}, gnServerControled, "Maximum number of gears to be spawned")
 
 ------ CONFIGURE INTERNALS -----
 asmlib.SetOpVar("MODE_DATABASE", asmlib.GetAsmVar("modedb"   ,"STR"))
@@ -185,7 +183,7 @@ if(CLIENT) then
   asmlib.SetAction("OPEN_FRAME",
     function(oPly,oCom,oArgs)
       local frUsed, nCount = asmlib.GetFrequentModels(oArgs[1])
-      if(not asmlib.IsExistent(frUsed)) then
+      if(not asmlib.IsHere(frUsed)) then
         return asmlib.StatusLog(nil,"OPEN_FRAME: Retrieving most frequent models failed ["..tostring(oArgs[1]).."]") end
       local defTable = asmlib.GetOpVar("DEFTABLE_PIECES"); if(not defTable) then
         return StatusLog(nil,"OPEN_FRAME: Missing definition for table PIECES") end
@@ -236,7 +234,8 @@ if(CLIENT) then
       xyPos.y = (scrH / 4)
       xySiz.x = 750
       xySiz.y = mathFloor(xySiz.x / (1 + nRatio))
-      pnFrame:SetTitle(languageGetPhrase("tool."..gsToolNameL..".pn_routine_hd")..oPly:GetName().." {"..asmlib.GetOpVar("TOOL_VERSION").."}")
+      pnFrame:SetTitle(languageGetPhrase("tool."..gsToolNameL..".pn_routine_hd").." "
+        ..oPly:GetName().." {"..asmlib.GetOpVar("TOOL_VERSION").."}")
       pnFrame:SetVisible(true)
       pnFrame:SetDraggable(true)
       pnFrame:SetDeleteOnClose(true)
@@ -305,7 +304,7 @@ if(CLIENT) then
       pnModelPanel.LayoutEntity = function(pnSelf, oEnt)
         if(pnSelf.bAnimated) then pnSelf:RunAnimation() end
         local uiBox = asmlib.CacheBoxLayout(oEnt,40)
-        if(not asmlib.IsExistent(uiBox)) then
+        if(not asmlib.IsHere(uiBox)) then
           return asmlib.StatusLog(nil,"OPEN_FRAME: pnModelPanel.LayoutEntity: Box invalid") end
         local stSpawn = asmlib.GetNormalSpawn(oPly,asmlib.GetOpVar("VEC_ZERO"),uiBox.Ang,oEnt:GetModel())
         if(not stSpawn) then
@@ -371,7 +370,7 @@ if(CLIENT) then
                       pnModelPanel:SetModel(uiMod)
         local uiEnt = pnModelPanel:GetEntity()
         local uiBox = asmlib.CacheBoxLayout(uiEnt,0,nRatio,nRatio-1)
-        if(not asmlib.IsExistent(uiBox)) then
+        if(not asmlib.IsHere(uiBox)) then
           return asmlib.StatusLog(nil,"OPEN_FRAME: ListView.OnRowSelected: Box invalid for <"..uiMod..">") end
         pnModelPanel:SetLookAt(uiBox.Eye); pnModelPanel:SetCamPos(uiBox.Cam)
         asmlib.ConCommandPly(oPly, "model" ,uiMod)
@@ -679,11 +678,11 @@ asmlib.CreateTable("PIECES",{
     Trigs = {
       Record = function()
         local trClass = GetOpVar("TRACE_CLASS")
-        arLine[2] = DisableString(arLine[2],asmlib.GetCategory(),"TYPE")
+        arLine[2] = DisableString(arLine[2],asmlib.Categorize(),"TYPE")
         arLine[3] = DisableString(arLine[3],ModelToName(arLine[1]),"MODEL")
         arLine[8] = DisableString(arLine[8],nil,nil)
         if(IsString(arLine[8]) and (arLine[8] ~= "NULL")
-           and not trClass[arLine[8]] and not IsEmptyString(arLine[8])) then
+           and not trClass[arLine[8]] and not IsBlank(arLine[8])) then
           trClass[arLine[8]] = true -- Register the class provided
           LogInstance("InsertRecord: Register trace <"..tostring(arLine[8])..">")
         end -- Add the special class to the trace list
@@ -692,36 +691,36 @@ asmlib.CreateTable("PIECES",{
     Cache = {
       Record = function(makTab, tCache, snPK, arLine, vSrc)
       local snPrimaryKey = MatchType(defTable,arLine[1],1)
-        if(not IsExistent(snPrimaryKey)) then -- If primary key becomes a number
+        if(not IsHere(snPrimaryKey)) then -- If primary key becomes a number
           return StatusLog(nil,"InsertRecord: Cannot match primary key "
                               ..sTable.." <"..tostring(arLine[1]).."> to "
                               ..defTable[1][1].." for "..tostring(snPrimaryKey)) end
         local tCache = libCache[defTable.Name]
-        if(not IsExistent(tCache)) then
+        if(not IsHere(tCache)) then
           return StatusLog(false,"InsertRecord: Cache not allocated for "..defTable.Name) end
         if(sTable == "PIECES") then
           local stData = tCache[snPrimaryKey]
           if(not stData) then
             tCache[snPrimaryKey] = {}; stData = tCache[snPrimaryKey] end
-          if(not IsExistent(stData.Kept)) then stData.Kept = 1        end
-          if(not IsExistent(stData.Type)) then stData.Type = arLine[2] end
-          if(not IsExistent(stData.Name)) then stData.Name = arLine[3] end
-          if(not IsExistent(stData.Unit)) then stData.Unit = arLine[8] end
-          if(not IsExistent(stData.Slot)) then stData.Slot = snPrimaryKey end
-          if(not IsExistent(stData.Rake)) then stData.Rake = MatchType(defTable,arLine[4],4) end
-          if(not IsExistent(stData.Rake)) then
+          if(not IsHere(stData.Kept)) then stData.Kept = 1        end
+          if(not IsHere(stData.Type)) then stData.Type = arLine[2] end
+          if(not IsHere(stData.Name)) then stData.Name = arLine[3] end
+          if(not IsHere(stData.Unit)) then stData.Unit = arLine[8] end
+          if(not IsHere(stData.Slot)) then stData.Slot = snPrimaryKey end
+          if(not IsHere(stData.Rake)) then stData.Rake = MatchType(defTable,arLine[4],4) end
+          if(not IsHere(stData.Rake)) then
             return StatusLog(nil,"InsertRecord: Cannot match "
                                 ..sTable.." <"..tostring(arLine[4]).."> to "
                                 ..defTable[4][1].." for "..tostring(snPrimaryKey))
           end
           local stPOA = RegisterPOA(stData,arLine[5],arLine[6],arLine[7])
-          if(not IsExistent(stPOA)) then
+          if(not IsHere(stPOA)) then
             return StatusLog(nil,"InsertRecord: Cannot process offset for "..tostring(snPrimaryKey)) end
           end
       end
       ExportDSV = function(oFile, makTab, tCache, fPref, sDelim, vSrc)
         local tCache = libCache[defTable.Name]
-        if(not IsExistent(tCache)) then F:Flush(); F:Close()
+        if(not IsHere(tCache)) then F:Flush(); F:Close()
           return StatusLog(false,"ExportDSV("..sPref
                   .."): Table <"..defTable.Name.."> cache not allocated") end
         if(sTable == "PIECES") then
@@ -781,20 +780,20 @@ else
   asmlib.LogInstance("Init: DB PIECES from LUA")
   local PIECES = asmlib.GetBuilderNick("PIECES"); asmlib.ModelToNameRule("CLR")
   if(asmlib.GetAsmVar("devmode" ,"BUL")) then
-    asmlib.GetCategory("Develop random")
+    asmlib.Categorize("Develop random")
     PIECES:Record({"models/props_wasteland/wheel02b.mdl",   "Development", "Dev1", 45, "65, 0, 0", "0.29567885398865,0.3865530192852,-0.36239844560623", "-90, 90, 180"})
   end
-  asmlib.GetCategory("Old Gmod 10")
+  asmlib.Categorize("Old Gmod 10")
   PIECES:Record({"models/props_phx/mechanics/medgear.mdl", "#", "#", 0, "-0.01517273113131500,  0.0090782083570957, 3.5684652328491", "24.173, 0, 0", ""})
   PIECES:Record({"models/props_phx/mechanics/biggear.mdl", "#", "#", 0, "-0.00017268359079026, -0.0035230871289968, 3.5217847824097", "33.811, 0, 0", ""})
   PIECES:Record({"models/props_phx/mechanics/slider1.mdl", "#", "#", 0, " 0.17126856744289000, -0.1066822558641400, 3.5165667533875", " 3.000, 0, 0", "90,-90,180"})
   PIECES:Record({"models/props_phx/mechanics/slider2.mdl", "#", "#", 0, " 0.17126856744289000, -0.1066822558641400, 3.5165667533875", " 3.000, 0, 0", "90,-90,180"})
-  asmlib.GetCategory("PHX Spotted Flat")
+  asmlib.Categorize("PHX Spotted Flat")
   PIECES:Record({"models/props_phx/gears/spur9.mdl" , "#", "#", 0, "-0.0015837327810004,  0.000161714502610270, 2.8354094028473", " 7.467, 0, 0", ""})
   PIECES:Record({"models/props_phx/gears/spur12.mdl", "#", "#", 0, "-0.0015269597060978,  0.000214137573493640, 2.8405227661133", " 9.703, 0, 0", ""})
   PIECES:Record({"models/props_phx/gears/spur24.mdl", "#", "#", 0, "-0.0011573693482205,  0.000182285642949860, 2.8103637695313", "18.381, 0, 0", ""})
   PIECES:Record({"models/props_phx/gears/spur36.mdl", "#", "#", 0, "-0.0012206265237182, -8.6402214947157e-005, 2.7949125766754", "27.119, 0, 0", ""})
-  asmlib.GetCategory("PHX Regular Small")
+  asmlib.Categorize("PHX Regular Small")
   PIECES:Record({"models/mechanics/gears/gear12x6_small.mdl" , "#", "#", 0, " 2.5334677047795e-005,  0.007706293836236000, 1.5820281505585", " 6.708, 0, 0", ""})
   PIECES:Record({"models/mechanics/gears/gear16x6_small.mdl" , "#", "#", 0, " 5.0195762923977e-007, -3.5567546774473e-007, 1.5833348035812", " 9.600, 0, 0", ""})
   PIECES:Record({"models/mechanics/gears/gear24x6_small.mdl" , "#", "#", 0, " 0.000744899793062360, -0.000149385989061560, 1.5826840400696", "13.567, 0, 0", ""})
@@ -804,7 +803,7 @@ else
   PIECES:Record({"models/mechanics/gears/gear12x24_small.mdl", "#", "#", 0, " 0.006947830319404600,  0.002904084511101200, 6.0784306526184", " 6.708, 0, 0", ""})
   PIECES:Record({"models/mechanics/gears/gear16x24_small.mdl", "#", "#", 0, "-0.000453756365459410,  0.006951440125703800, 6.0618972778320", " 9.600, 0, 0", ""})
   PIECES:Record({"models/mechanics/gears/gear24x24_small.mdl", "#", "#", 0, "-0.013954215683043000,  0.000910685281269250, 6.0729651451111", "13.567, 0, 0", ""})
-  asmlib.GetCategory("PHX Regular Medium")
+  asmlib.Categorize("PHX Regular Medium")
   PIECES:Record({"models/mechanics/gears/gear12x6.mdl" , "#", "#", 0, " 3.8183276274140e-007,  2.8411110974957e-007, 03.1666665077209", "13.20, 0, 0", ""})
   PIECES:Record({"models/mechanics/gears/gear16x6.mdl" , "#", "#", 0, " 1.2454452189559e-006, -5.1244381893412e-007, 03.1666696071625", "19.10, 0, 0", ""})
   PIECES:Record({"models/mechanics/gears/gear24x6.mdl" , "#", "#", 0, " 0.001489854301326000, -0.000298895174637440, 03.1653680801392", "26.96, 0, 0", ""})
@@ -814,7 +813,7 @@ else
   PIECES:Record({"models/mechanics/gears/gear12x24.mdl", "#", "#", 0, " 8.2542783275130e-007,  8.7331630993503e-007, 12.1666622161870", "13.20, 0, 0", ""})
   PIECES:Record({"models/mechanics/gears/gear16x24.mdl", "#", "#", 0, " 8.6996135451045e-007, -2.8219722025824e-007, 12.1666593551640", "19.10, 0, 0", ""})
   PIECES:Record({"models/mechanics/gears/gear24x24.mdl", "#", "#", 0, "-0.009472424164414400, -0.006620032247155900, 12.1501836776730", "26.96, 0, 0", ""})
-  asmlib.GetCategory("PHX Regular Big")
+  asmlib.Categorize("PHX Regular Big")
   PIECES:Record({"models/mechanics/gears/gear12x24_large.mdl", "#", "#", 0, " 1.6508556655026e-006,  1.7466326198701e-006, 24.333324432373", "26.196, 0, 0", ""})
   PIECES:Record({"models/mechanics/gears/gear12x12_large.mdl", "#", "#", 0, " 3.6818344142375e-006,  3.3693649470479e-007, 12.333333015442", "26.196, 0, 0", ""})
   PIECES:Record({"models/mechanics/gears/gear12x6_large.mdl" , "#", "#", 0, " 3.8200619201234e-007,  4.0919746879808e-007, 6.3333339691162", "26.196, 0, 0", ""})
@@ -824,7 +823,7 @@ else
   PIECES:Record({"models/mechanics/gears/gear24x24_large.mdl", "#", "#", 0, " 1.0641871313055e-006, -3.3355117921019e-006, 24.333333969116", "53.600, 0, 0", ""})
   PIECES:Record({"models/mechanics/gears/gear24x12_large.mdl", "#", "#", 0, "-6.2653803922785e-008, -3.8585267247981e-006, 12.000000000000", "53.600, 0, 0", ""})
   PIECES:Record({"models/mechanics/gears/gear24x6_large.mdl" , "#", "#", 0, " 1.0842279607459e-006, -3.8418565964093e-006, 6.3333292007446", "53.600, 0, 0", ""})
-  asmlib.GetCategory("PHX Regular Flat")
+  asmlib.Categorize("PHX Regular Flat")
   PIECES:Record({"models/Mechanics/gears2/gear_12t1.mdl", "#", "#", 0, " 0.02477267012000100, -0.00390978017821910,  3.7019141529981e-008", "14, 0, 0", ""})
   PIECES:Record({"models/mechanics/gears2/gear_12t3.mdl", "#", "#", 0, "-0.00028943095821887,  0.01085923984646800,  0.002960268640890700", "14, 0, 0", ""})
   PIECES:Record({"models/mechanics/gears2/gear_12t2.mdl", "#", "#", 0, "-0.01700693927705300,  0.00306556094437840, -0.000570227275602520", "14, 0, 0", ""})
@@ -843,12 +842,12 @@ else
   PIECES:Record({"models/mechanics/gears2/gear_60t1.mdl", "#", "#", 0, " 0.01799790561199200, -0.00836088601499800,  0.000236688618315380", "62, 0, 0", ""})
   PIECES:Record({"models/mechanics/gears2/gear_60t2.mdl", "#", "#", 0, "-0.00778029020875690,  0.00776998186483980, -0.000112452820758340", "62, 0, 0", ""})
   PIECES:Record({"models/mechanics/gears2/gear_60t3.mdl", "#", "#", 0, "-0.00085410091560334,  0.00534614734351630, -0.000295745179755610", "62, 0, 0", ""})
-  asmlib.GetCategory("PHX Vertical")
+  asmlib.Categorize("PHX Vertical")
   PIECES:Record({"models/Mechanics/gears2/vert_18t1.mdl", "#", "#", 90, "-9.3372744913722e-007, -1.4464712876361e-006, -1.4973667860031", "19.78, 0, 5.6", ""})
   PIECES:Record({"models/mechanics/gears2/vert_12t1.mdl", "#", "#", 90, "-6.1126132777645e-007,  4.6880626314305e-007, -1.4130713939667", "13.78, 0, 5.6", ""})
   PIECES:Record({"models/mechanics/gears2/vert_24t1.mdl", "#", "#", 90, "-0.004672059323638700, -0.009078560397028900, -1.5481045246124", "25.78, 0, 5.6", ""})
   PIECES:Record({"models/mechanics/gears2/vert_36t1.mdl", "#", "#", 90, " 0.004358193371444900, -0.000180053510121070, -1.6056708097458", "37.78, 0, 5.6", ""})
-  asmlib.GetCategory("PHX Teeth Flat")
+  asmlib.Categorize("PHX Teeth Flat")
   PIECES:Record({"models/mechanics/gears2/pinion_20t1.mdl", "#", "#", 0, "-0.0310611166059970, 0.68289417028427, 0.00010814304550877", "2.55, 0, 0", "0,90,0"})
   PIECES:Record({"models/mechanics/gears2/pinion_20t2.mdl", "#", "#", 0, "-0.0308688133955000, 0.68287181854248, 0.00033729249844328", "2.55, 0, 0", "0,90,0"})
   PIECES:Record({"models/mechanics/gears2/pinion_20t3.mdl", "#", "#", 0, "-0.0308684334158900, 0.68287181854248, 0.00067511270754039", "2.55, 0, 0", "0,90,0"})
@@ -858,19 +857,19 @@ else
   PIECES:Record({"models/mechanics/gears2/pinion_80t1.mdl", "#", "#", 0, "-0.0180192049592730, 0.68289333581924, 0.00052548095118254", "2.55, 0, 0", "0,90,0"})
   PIECES:Record({"models/mechanics/gears2/pinion_80t2.mdl", "#", "#", 0, "-0.0178730152547360, 0.68288779258728, 0.00107426801696420", "2.55, 0, 0", "0,90,0"})
   PIECES:Record({"models/mechanics/gears2/pinion_80t3.mdl", "#", "#", 0, "-0.0180220548063520, 0.68289351463318, 0.00210226024501030", "2.55, 0, 0", "0,90,0"})
-  asmlib.GetCategory("PHX Spotted Rack")
+  asmlib.Categorize("PHX Spotted Rack")
   PIECES:Record({"models/props_phx/gears/rack9.mdl" , "#", "#", 0, " 2.7, 0, 0", "-0.00016037904424593, -0.137806907296180, 2.3622412681580", "90,180,180"})
   PIECES:Record({"models/props_phx/gears/rack18.mdl", "#", "#", 0, " 2.7, 0, 0", " 0.02291502803564100,  2.260936260223400, 2.3429780006409", "90,180,180"})
   PIECES:Record({"models/props_phx/gears/rack36.mdl", "#", "#", 0, " 2.7, 0, 0", " 0.01365591119974900, -0.019220048561692, 2.3991346359253", "90,180,180"})
   PIECES:Record({"models/props_phx/gears/rack70.mdl", "#", "#", 0, " 2.7, 0, 0", "-0.01785501651465900,  0.201563835144040, 2.3644349575043", "90,180,180"})
-  asmlib.GetCategory("PHX Bevel")
+  asmlib.Categorize("PHX Bevel")
   PIECES:Record({"models/mechanics/gears2/bevel_12t1.mdl", "#", "#", 45, "-0.002645550761371900, -0.0061479024589062, -0.87438750267029", "12.2, 0, 1.3", ""})
   PIECES:Record({"models/Mechanics/gears2/bevel_18t1.mdl", "#", "#", 45, "-0.033187858760357000,  0.0065126456320286, -1.05252802371980", "17.3, 0, 1.3", ""})
   PIECES:Record({"models/mechanics/gears2/bevel_24t1.mdl", "#", "#", 45, "-0.001187232206575600,  0.0026002936065197, -0.86795377731323", "23.3, 0, 1.3", ""})
   PIECES:Record({"models/mechanics/gears2/bevel_36t1.mdl", "#", "#", 45, " 0.000668477558065210,  0.0034906349610537, -0.86690950393677", "34.8, 0, 1.3", ""})
   PIECES:Record({"models/mechanics/gears2/bevel_48t1.mdl", "#", "#", 45, "-0.012435931712389000, -0.0129251489415760, -0.73237001895905", "46.7, 0, 1.3", ""})
   PIECES:Record({"models/mechanics/gears2/bevel_60t1.mdl", "#", "#", 45, "-9.5774739747867e-005,  0.0057542459107935, -0.73121488094330", "58.6, 0, 1.3", ""})
-  asmlib.GetCategory("Black Regular Medium")
+  asmlib.Categorize("Black Regular Medium")
   PIECES:Record({"models/gears/gear1_m_12.mdl" , "#", "#", 0, "-0.014979394152761000,  0.004799870774149900, -0.000382247671950610", " 7.684, 0, 0", ""})
   PIECES:Record({"models/gears/gear1_m_18.mdl" , "#", "#", 0, "-0.002106353640556300, -0.005328254308551500,  0.000875713478308170", "11.576, 0, 0", ""})
   PIECES:Record({"models/gears/gear1_m_24.mdl" , "#", "#", 0, "-0.007063865195959800,  0.009610753506422000, -0.000153392858919690", "15.663, 0, 0", ""})
@@ -886,7 +885,7 @@ else
   PIECES:Record({"models/gears/gear1_m3_24.mdl", "#", "#", 0, "-0.005681079346686600, -0.001288813189603400, -0.002004494192078700", "15.663, 0, 0", ""})
   PIECES:Record({"models/gears/gear1_m3_30.mdl", "#", "#", 0, "-0.000856459722854200,  0.003441185690462600,  0.001592476852238200", "19.603, 0, 0", ""})
   PIECES:Record({"models/gears/gear1_m3_36.mdl", "#", "#", 0, " 0.007684207521379000,  0.002827123273164000,  0.000343827065080400", "23.656, 0, 0", ""})
-  asmlib.GetCategory("Black Regular Small")
+  asmlib.Categorize("Black Regular Small")
   PIECES:Record({"models/gears/gear1_s_12.mdl" , "#", "#", 0, " 0.0038407891988754,  0.01433348096907100, -5.8103839961632e-008", " 3.913, 0, 0", ""})
   PIECES:Record({"models/gears/gear1_s_18.mdl" , "#", "#", 0, "-0.0022506208624691,  0.00285101705230770,  0.000125224818475540", " 5.886, 0, 0", ""})
   PIECES:Record({"models/gears/gear1_s_24.mdl" , "#", "#", 0, "-0.0139679908752440, -0.02164526097476500, -0.000825085153337570", " 7.917, 0, 0", ""})
@@ -902,7 +901,7 @@ else
   PIECES:Record({"models/gears/gear1_s3_24.mdl", "#", "#", 0, " 0.0073104859329760, -0.00477525778114800,  0.001730017247609800", " 7.917, 0, 0", ""})
   PIECES:Record({"models/gears/gear1_s3_30.mdl", "#", "#", 0, " 0.0016155475750566, -0.01016659941524300, -0.000659143610391770", " 9.849, 0, 0", ""})
   PIECES:Record({"models/gears/gear1_s3_36.mdl", "#", "#", 0, " 0.0145232733339070,  0.01204503700137100,  0.000544754613656550", "11.848, 0, 0", ""})
-  asmlib.GetCategory("SProps",[[function(m)
+  asmlib.Categorize("SProps",[[function(m)
     local function conv(x) return " "..x:sub(2,2):upper() end
     local r = m:gsub("models/sprops/mechanics/","")
     local s = r:find("/")
@@ -984,12 +983,21 @@ else
   PIECES:Record({"models/sprops/mechanics/racks/rack_72t_l.mdl", "#", "#", 0, " 3.8322218642861e-006,  5.0654783990467e-005, -0.67414307594299", "2.100, 0, 0", "90,180,180"})
   PIECES:Record({"models/sprops/mechanics/racks/rack_84t_l.mdl", "#", "#", 0, " 3.9428311282563e-008,  6.2194543716032e-005, -0.67440587282181", "2.100, 0, 0", "90,180,180"})
   PIECES:Record({"models/sprops/mechanics/racks/rack_96t_l.mdl", "#", "#", 0, "-7.7476306614699e-006,  3.5831995774060e-005, -0.67460036277771", "2.100, 0, 0", "90,180,180"})
-  asmlib.GetCategory("Propeller")
-  PIECES:Record({"models/gears/gear_3.mdl"   , "#", "#", 0  , "-8.8830764966019e-009,  1.7266756913159e-005, 4.0000004768372", "1.903, 0, 0", ""})
-  PIECES:Record({"models/gears/gear_6.mdl"   , "#", "#", 0  , " 6.2004239964608e-008,  7.2985351096122e-009, 3.9999983310699", "3.098, 0, 0", ""})
-  PIECES:Record({"models/gears/gear_12.mdl"  , "#", "#", 0  , " 2.1442920328241e-008,  2.5950571469480e-008, 4.0000009536743", "5.234, 0, 0", ""})
-  PIECES:Record({"models/gears/gear_24.mdl"  , "#", "#", 0  , "-2.3349744537882e-007, -1.7496104192105e-006, 3.9999997615814", "9.470, 0, 0", ""})
-  PIECES:Record({"models/gears/planet_16.mdl", "#", "#", 180, " 2.1667046894436e-006, -1.2715023558485e-006, 5.6510457992554", "9.523, 0, 0", ""})
+  asmlib.Categorize("Propeller")
+  PIECES:Record({"models/gears/helical_6.mdl"    , "#", "#", 0  , " 2.48447804551690e-07, -9.58015036189860e-08, 4.0000004768372", "4.200, 0, 0"     , ""})
+  PIECES:Record({"models/gears/helical_6r.mdl"   , "#", "#", 0  , "-2.87977172774840e-07, -1.39041389957130e-07, 4.0000004768372", "4.200, 0, 0"     , ""})
+  PIECES:Record({"models/gears/helical_6_16.mdl" , "#", "#", 0  , " 7.52797362224560e-08, -2.95731990007650e-08, 8.0000000000000", "4.200, 0, 0"     , ""})
+  PIECES:Record({"models/gears/helical_6r_16.mdl", "#", "#", 0  , " 2.35953294236420e-07, -1.33545920988350e-08, 8.0000009536743", "4.200, 0, 0"     , ""})
+  PIECES:Record({"models/gears/gear_s_8.mdl"     , "#", "#", 0  , " 3.53677513942330e-08,  8.13063216753560e-09, 1.9999996423721", "2.653, 0, 0"     , ""})
+  PIECES:Record({"models/gears/gear_s_9.mdl"     , "#", "#", 0  , "-0.001760814455337800,  0.003144135465845500, 1.9984290599823", "2.970, 0, 0"     , ""})
+  PIECES:Record({"models/gears/gear_s_10.mdl"    , "#", "#", 0  , " 2.12924753384410e-08, -1.79166281810690e-08, 2.0000000000000", "3.295, 0, 0"     , ""})
+  PIECES:Record({"models/gears/planet_s_26.mdl"  , "#", "#", 180, " 2.16198554880980e-06, -6.05122522756570e-06, 2.2488708496094", "8.820, 0, 1.254" , ""})
+  PIECES:Record({"models/gears/planet_s_27.mdl"  , "#", "#", 180, " 0.008610227145254600,  0.000774295593146230, 2.0545327663422", "9.200, 0, 1.450" , ""})
+  PIECES:Record({"models/gears/gear_3.mdl"       , "#", "#", 0  , "-8.8830764966019e-009,  1.7266756913159e-005, 4.0000004768372", "1.903, 0, 0"     , ""})
+  PIECES:Record({"models/gears/gear_6.mdl"       , "#", "#", 0  , " 6.2004239964608e-008,  7.2985351096122e-009, 3.9999983310699", "3.098, 0, 0"     , ""})
+  PIECES:Record({"models/gears/gear_12.mdl"      , "#", "#", 0  , " 2.1442920328241e-008,  2.5950571469480e-008, 4.0000009536743", "5.234, 0, 0"     , ""})
+  PIECES:Record({"models/gears/gear_24.mdl"      , "#", "#", 0  , "-2.3349744537882e-007, -1.7496104192105e-006, 3.9999997615814", "9.470, 0, 0"     , ""})
+  PIECES:Record({"models/gears/planet_16.mdl"    , "#", "#", 180, " 2.1667046894436e-006, -1.2715023558485e-006, 5.6510457992554", "9.310, 0, -1.615", ""})
   if(gsMoDB == "SQL") then sqlCommit() end
 end
 
