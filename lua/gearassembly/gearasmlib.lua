@@ -1493,7 +1493,7 @@ function PrintNotifyPly(pPly,sText,sNotifType)
   if(not IsPlayer(pPly)) then
     return StatusLog(false,"PrintNotifyPly: Player <"..tostring(pPly)"> invalid") end
   if(SERVER) then -- Send notification to client that something happened
-    pPly:SendLua("GAMEMODE:AddNotify(\""..sText.."\", NOTIFY_"..sNotifType..", 6)")
+    pPly:SendLua("notification.AddLegacy(\""..sText.."\", NOTIFY_"..sNotifType..", 6)")
     pPly:SendLua("surface.PlaySound(\"ambient/water/drip"..mathRandom(1, 4)..".wav\")")
   end; return StatusLog(true,"PrintNotifyPly: Success")
 end

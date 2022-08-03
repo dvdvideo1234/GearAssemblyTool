@@ -2,7 +2,7 @@
 set hookInpFile=tmp.lua
 
 :: The name of the modify file
-set hookOutFile=trackassembly_init.lua
+set hookOutFile=gearassembly_init.lua
 
 :: Current path of this batch file
 set hookBasPath=%~dp0
