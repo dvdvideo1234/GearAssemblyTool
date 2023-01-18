@@ -16,6 +16,7 @@ local osDate                = os and os.date
 local gameGetWorld          = game and game.GetWorld
 local hookAdd               = hook and hook.Add
 local mathFloor             = math and math.floor
+local mathMax               = math and math.max
 local mathClamp             = math and math.Clamp
 local vguiCreate            = vgui and vgui.Create
 local fileExists            = file and file.Exists
@@ -70,11 +71,13 @@ end
 
 if(CLIENT) then
   TOOL.Information = {
-    { name = "info",  stage = 0   },
-    { name = "left"         },
-    { name = "right"        },
-    { name = "right_use",   icon2 = "gui/e.png" },
-    { name = "reload"       }
+    {name = "info"     , stage = 0   },
+    {name = "left"     , stage = 0, icon = "gui/lmb.png"},
+    {name = "right"    , stage = 0, icon = "gui/rmb.png"},
+    {name = "right_use", stage = 0, icon = "gui/rmb.png",   icon2 = "gui/e.png" },
+    {name = "reload"   , stage = 0, icon = "gui/r.png"  },
+    {name = "stmode.1" , stage = 0, op = 1, icon = "icon16/cog.png"},
+    {name = "stmode.2" , stage = 0, op = 2, icon = "icon16/cog.png"}
   }
   languageAdd("tool."..gsToolNameL..".category", "Construction")
   concommandAdd(gsToolPrefL.."resetvars", asmlib.GetActionCode("RESET_VARIABLES"))
@@ -270,13 +273,13 @@ function TOOL:SetAnchor(stTrace)
   self:ClearAnchor(true)
   if(not stTrace) then return asmlib.StatusLog(false,"TOOL:SetAnchor(): Trace invalid") end
   if(not stTrace.Hit) then return asmlib.StatusLog(false,"TOOL:SetAnchor(): Trace not hit") end
-  local oPly = self:GetOwner(); if(not (oPly and oPly:IsValid())) then
+  local user = self:GetOwner(); if(not (user and user:IsValid())) then
     return asmlib.StatusLog(false,"TOOL:SetAnchor(): Player invalid") end
   if(stTrace.HitWorld) then
     local sAnchor = "0"..gsSymRev.."worldspawn.mdl"
     self:SetObject(1,gameGetWorld(),stTrace.HitPos,phEnt,stTrace.PhysicsBone,stTrace.HitNormal)
-    asmlib.ConCommandPly(oPly,"anchor",sAnchor)
-    asmlib.PrintNotifyPly(oPly,"Anchor: Set "..sAnchor.." !","UNDO")
+    asmlib.ConCommandPly(user,"anchor",sAnchor)
+    asmlib.PrintNotifyPly(user,"Anchor: Set "..sAnchor.." !","UNDO")
     return asmlib.StatusLog(true,"TOOL:SetAnchor("..sAnchor..")")
   else
     local trEnt = stTrace.Entity
@@ -287,17 +290,17 @@ function TOOL:SetAnchor(stTrace)
     trEnt:SetRenderMode(RENDERMODE_TRANSALPHA)
     trEnt:SetColor(conPalette:Select("an"))
     self:SetObject(1,trEnt,stTrace.HitPos,phEnt,stTrace.PhysicsBone,stTrace.HitNormal)
-    asmlib.ConCommandPly(oPly,"anchor",sAnchor)
-    asmlib.PrintNotifyPly(oPly,"Anchor: Set "..sAnchor.." !","UNDO")
+    asmlib.ConCommandPly(user,"anchor",sAnchor)
+    asmlib.PrintNotifyPly(user,"Anchor: Set "..sAnchor.." !","UNDO")
     return asmlib.StatusLog(true,"TOOL:SetAnchor("..sAnchor..")")
   end
 end
 
 function TOOL:ClearAnchor(bMute)
-  local oPly = self:GetOwner()
+  local user = self:GetOwner()
   local siAnc, svEnt = self:GetAnchor()
   if(CLIENT) then return end; self:ClearObjects()
-  asmlib.ConCommandPly(oPly,"anchor",gsNoAnchor)
+  asmlib.ConCommandPly(user,"anchor",gsNoAnchor)
   if(svEnt) then
     if(not svEnt:IsWorld()) then
       if(svEnt and svEnt:IsValid()) then
@@ -306,14 +309,14 @@ function TOOL:ClearAnchor(bMute)
       end
     end
     if(not bMute) then
-      asmlib.PrintNotifyPly(oPly,"Anchor: Cleaned "..siAnc.." !","CLEANUP") end
+      asmlib.PrintNotifyPly(user,"Anchor: Cleaned "..siAnc.." !","CLEANUP") end
   end; return asmlib.StatusLog(true,"TOOL:ClearAnchor("..tostring(bMute).."): Anchor cleared")
 end
 
 function TOOL:GetStatus(stTrace,saMsg,hdEnt)
   local iMaxlog = asmlib.GetOpVar("LOG_MAXLOGS")
   if(not (iMaxlog > 0)) then return "Status N/A" end
-  local ply, sDelim  = self:GetOwner(), "\n"
+  local user, sDelim  = self:GetOwner(), "\n"
   local iCurLog = asmlib.GetOpVar("LOG_CURLOGS")
   local sFleLog = asmlib.GetOpVar("LOG_LOGFILE")
   local sSpace  = (" "):rep(6 + tostring(iMaxlog):len())
@@ -337,12 +340,12 @@ function TOOL:GetStatus(stTrace,saMsg,hdEnt)
         sDu = sDu..sSpace.."  MaxProps:       <"..tostring(GetConVar("sbox_maxprops"):GetInt())..">"..sDelim
         sDu = sDu..sSpace.."  MaxPieces:      <"..tostring(GetConVar("sbox_max"..gsLimitName):GetInt())..">"..sDelim
         sDu = sDu..sSpace.."Dumping player keys:"..sDelim
-        sDu = sDu..sSpace.."  Player:         <"..tostring(ply:SteamID())..">{"..ply:Nick().."}"..sDelim
-        sDu = sDu..sSpace.."  IN.USE:         <"..tostring(asmlib.CheckButtonPly(ply,IN_USE))..">"..sDelim
-        sDu = sDu..sSpace.."  IN.DUCK:        <"..tostring(asmlib.CheckButtonPly(ply,IN_DUCK))..">"..sDelim
-        sDu = sDu..sSpace.."  IN.SPEED:       <"..tostring(asmlib.CheckButtonPly(ply,IN_SPEED))..">"..sDelim
-        sDu = sDu..sSpace.."  IN.RELOAD:      <"..tostring(asmlib.CheckButtonPly(ply,IN_RELOAD))..">"..sDelim
-        sDu = sDu..sSpace.."  IN.SCORE:       <"..tostring(asmlib.CheckButtonPly(ply,IN_SCORE))..">"..sDelim
+        sDu = sDu..sSpace.."  Player:         <"..tostring(user:SteamID())..">{"..user:Nick().."}"..sDelim
+        sDu = sDu..sSpace.."  IN.USE:         <"..tostring(asmlib.CheckButtonPly(user,IN_USE))..">"..sDelim
+        sDu = sDu..sSpace.."  IN.DUCK:        <"..tostring(asmlib.CheckButtonPly(user,IN_DUCK))..">"..sDelim
+        sDu = sDu..sSpace.."  IN.SPEED:       <"..tostring(asmlib.CheckButtonPly(user,IN_SPEED))..">"..sDelim
+        sDu = sDu..sSpace.."  IN.RELOAD:      <"..tostring(asmlib.CheckButtonPly(user,IN_RELOAD))..">"..sDelim
+        sDu = sDu..sSpace.."  IN.SCORE:       <"..tostring(asmlib.CheckButtonPly(user,IN_SCORE))..">"..sDelim
         sDu = sDu..sSpace.."Dumping trace data state:"..sDelim
         sDu = sDu..sSpace.."  Trace:          <"..tostring(stTrace)..">"..sDelim
         sDu = sDu..sSpace.."  TR.Hit:         <"..tostring(stTrace and stTrace.Hit or gsNoAV)..">"..sDelim
@@ -402,7 +405,7 @@ function TOOL:LeftClick(stTrace)
   if(not stTrace.Hit) then
     return asmlib.StatusLog(false,"TOOL:LeftClick(): Trace not hit") end
   local trEnt     = stTrace.Entity
-  local ply       = self:GetOwner()
+  local user      = self:GetOwner()
   local mass      = self:GetMass()
   local model     = self:GetModel()
   local count     = self:GetCount()
@@ -430,7 +433,7 @@ function TOOL:LeftClick(stTrace)
   local nextpic, nextyaw, nextrol = self:GetAngOffsets()
 
   -- General spawning when we do not apply neither mesh
-  if(not asmlib.CheckButtonPly(ply,IN_SPEED) and not asmlib.CheckButtonPly(ply,IN_DUCK)) then
+  if(not asmlib.CheckButtonPly(user,IN_SPEED) and not asmlib.CheckButtonPly(user,IN_DUCK)) then
 
     -- Update the anchor entity automatically when enabled
     if(self:GetUpSpawnAnchor()) then -- Read the auto-update flag
@@ -449,10 +452,10 @@ function TOOL:LeftClick(stTrace)
     end -- If there is something wrong with the anchor entity use the trace
 
     local vPos, vAxis = stTrace.HitPos, Vector()
-    local aAng = asmlib.GetNormalAngle(ply, stTrace, angsnap)
-    local stSpawn = asmlib.GetNormalSpawn(ply,vPos,aAng,model,rotpivh,trorang,nextx,nexty,nextz,nextpic,nextyaw,nextrol)
+    local aAng = asmlib.GetNormalAngle(user, stTrace, angsnap)
+    local stSpawn = asmlib.GetNormalSpawn(user,vPos,aAng,model,rotpivh,trorang,nextx,nexty,nextz,nextpic,nextyaw,nextrol)
     if(not stSpawn) then return asmlib.StatusLog(false,self:GetStatus(stTrace,"TOOL:LeftClick(World): Normal spawn failed")) end
-    local ePiece = asmlib.MakePiece(ply,model,stTrace.HitPos,ANG_ZERO,mass,bgskids,conPalette:Select("w"),bnderrmod)
+    local ePiece = asmlib.MakePiece(user,model,stTrace.HitPos,ANG_ZERO,mass,bgskids,conPalette:Select("w"),bnderrmod)
     if(not ePiece) then return asmlib.StatusLog(false,self:GetStatus(stTrace,"TOOL:LeftClick(World): Making piece failed")) end
     if(spnflat) then vAxis:Set(stTrace.HitNormal)
       asmlib.ApplySpawnFlat(ePiece,stSpawn,stTrace.HitNormal)
@@ -464,7 +467,7 @@ function TOOL:LeftClick(stTrace)
     if(not asmlib.ApplyPhysicalAnchor(ePiece,anEnt,stTrace.HitPos,vAxis,contyp,nocollide,forcelim,torquelim,friction)) then
       return asmlib.StatusLog(false,self:GetStatus(stTrace,"TOOL:LeftClick(World): Failed to apply physical anchor",ePiece)) end
     asmlib.UndoAddEntityPly(ePiece)
-    asmlib.UndoFinishPly(ply)
+    asmlib.UndoFinishPly(user)
     return asmlib.StatusLog(true,"TOOL:LeftClick(World): Success")
   end
 
@@ -478,8 +481,8 @@ function TOOL:LeftClick(stTrace)
   if(not trRec) then return asmlib.StatusLog(false,self:GetStatus(stTrace,"TOOL:LeftClick(Prop): Trace model not a piece")) end
 
   -- Applies the physics or anchor on the piece selected
-  if(asmlib.CheckButtonPly(ply,IN_DUCK)) then -- USE: Use the valid trace as a piece
-    if(asmlib.CheckButtonPly(ply,IN_USE)) then -- The user must click on the gear surface to apply
+  if(asmlib.CheckButtonPly(user,IN_DUCK)) then -- USE: Use the valid trace as a piece
+    if(asmlib.CheckButtonPly(user,IN_USE)) then -- The user must click on the gear surface to apply
       if(not asmlib.ApplyPhysicalAnchor(ePiece,anEnt,stTrace.HitPos,stTrace.HitNormal,contyp,nocollide,forcelim,torquelim,friction)) then
         return asmlib.StatusLog(false,self:GetStatus(stTrace,"TOOL:LeftClick(World): Failed to apply physical anchor",ePiece)) end
     else -- Model
@@ -492,8 +495,8 @@ function TOOL:LeftClick(stTrace)
 
   if(not hdRec) then return asmlib.StatusLog(false,self:GetStatus(stTrace,"TOOL:LeftClick(Prop): Holder model not a piece")) end
   -- Stacking when the mode is within borders and count is more than one
-  if(asmlib.CheckButtonPly(ply,IN_SPEED) and count > 1 and stmode >= 1 and stmode <= SMode:GetSize()) then
-    local stSpawn = asmlib.GetEntitySpawn(ply,trEnt,rotpivt,rotpivh,model,igntyp,trorang,nextx,nexty,nextz,nextpic,nextyaw,nextrol)
+  if(asmlib.CheckButtonPly(user,IN_SPEED) and count > 1 and stmode >= 1 and stmode <= SMode:GetSize()) then
+    local stSpawn = asmlib.GetEntitySpawn(user,trEnt,rotpivt,rotpivh,model,igntyp,trorang,nextx,nexty,nextz,nextpic,nextyaw,nextrol)
     if(not stSpawn) then return asmlib.StatusLog(false,self:GetStatus(stTrace,"TOOL:LeftClick(Stack): Failed to retrieve spawn data")) end
     local ePieceO, ePieceN = trEnt, nil
     local aIter  , aStart  = ePieceO:GetAngles(), ePieceO:GetAngles()
@@ -501,7 +504,7 @@ function TOOL:LeftClick(stTrace)
     asmlib.UndoCratePly(gsUndoPrefN..fnmodel.." ( Stack #"..tostring(count).." )")
     while(iNdex > 0) do
       local sIterat = "["..tostring(iNdex).."]"
-      ePieceN = asmlib.MakePiece(ply,model,stSpawn.SPos,stSpawn.SAng,mass,bgskids,conPalette:Select("w"),bnderrmod)
+      ePieceN = asmlib.MakePiece(user,model,stSpawn.SPos,stSpawn.SAng,mass,bgskids,conPalette:Select("w"),bnderrmod)
       if(ePieceN) then
         if(not asmlib.ApplyPhysicalSettings(ePieceN,ignphysgn,freeze,gravity)) then
           return asmlib.StatusLog(false,self:GetStatus(stTrace,"TOOL:LeftClick(Stack): Failed to apply physical settings",ePiece)) end
@@ -509,32 +512,32 @@ function TOOL:LeftClick(stTrace)
           return asmlib.StatusLog(false,self:GetStatus(stTrace,"TOOL:LeftClick(Stack): Failed to apply physical anchor",ePiece)) end
         asmlib.UndoAddEntityPly(ePieceN)
         if(stmode == 1) then
-          stSpawn = asmlib.GetEntitySpawn(ply,ePieceN,rotpivt,rotpivh,model,igntyp,trorang,nextx,nexty,nextz,nextpic,nextyaw,nextrol)
+          stSpawn = asmlib.GetEntitySpawn(user,ePieceN,rotpivt,rotpivh,model,igntyp,trorang,nextx,nexty,nextz,nextpic,nextyaw,nextrol)
         elseif(stmode == 2) then
           aIter:RotateAroundAxis(stSpawn.TAng:Up(),-dRot)
           trEnt:SetAngles(aIter)
-          stSpawn = asmlib.GetEntitySpawn(ply,trEnt,rotpivt,rotpivh,model,igntyp,trorang,nextx,nexty,nextz,nextpic,nextyaw,nextrol)
+          stSpawn = asmlib.GetEntitySpawn(user,trEnt,rotpivt,rotpivh,model,igntyp,trorang,nextx,nexty,nextz,nextpic,nextyaw,nextrol)
         end
         if(not stSpawn) then -- Look both ways in a one way street :D
-          asmlib.PrintNotifyPly(ply,"Cannot obtain spawn data!","ERROR")
-          asmlib.UndoFinishPly(ply,sIterat)
+          asmlib.PrintNotifyPly(user,"Cannot obtain spawn data!","ERROR")
+          asmlib.UndoFinishPly(user,sIterat)
           return asmlib.StatusLog(false,self:GetStatus(stTrace,"TOOL:LeftClick(Stack)"..sIterat..": Stacking has invalid user data"))
         end -- Spawn data is valid for the current iteration iNdex
         ePieceO, iNdex, iTrys = ePieceN, (iNdex - 1), maxstatts
       else iTrys = iTrys - 1 end
       if(iTrys <= 0) then
-        asmlib.UndoFinishPly(ply,sIterat) --  Make it shoot but throw the error
+        asmlib.UndoFinishPly(user,sIterat) --  Make it shoot but throw the error
         return asmlib.StatusLog(true,self:GetStatus(stTrace,"TOOL:LeftClick(Stack)"..sIterat..": All stack attempts failed"))
       end -- We still have enough memory to preform the stacking
     end
     trEnt:SetAngles(aStart)
-    asmlib.UndoFinishPly(ply)
+    asmlib.UndoFinishPly(user)
     return asmlib.StatusLog(true,"TOOL:LeftClick(Stack): Success")
   end
   -- Mesh holder gear to the trace one when stack count is one
-  local stSpawn = asmlib.GetEntitySpawn(ply,trEnt,rotpivt,rotpivh,model,igntyp,trorang,nextx,nexty,nextz,nextpic,nextyaw,nextrol)
+  local stSpawn = asmlib.GetEntitySpawn(user,trEnt,rotpivt,rotpivh,model,igntyp,trorang,nextx,nexty,nextz,nextpic,nextyaw,nextrol)
   if(stSpawn) then
-    local ePiece = asmlib.MakePiece(ply,model,stSpawn.SPos,stSpawn.SAng,mass,bgskids,conPalette:Select("w"),bnderrmod)
+    local ePiece = asmlib.MakePiece(user,model,stSpawn.SPos,stSpawn.SAng,mass,bgskids,conPalette:Select("w"),bnderrmod)
     if(ePiece) then
       if(not asmlib.ApplyPhysicalSettings(ePiece,ignphysgn,freeze,gravity)) then
         return asmlib.StatusLog(false,self:GetStatus(stTrace,"TOOL:LeftClick(Snap): Failed to apply physical settings",ePiece)) end
@@ -542,7 +545,7 @@ function TOOL:LeftClick(stTrace)
         return asmlib.StatusLog(false,self:GetStatus(stTrace,"TOOL:LeftClick(Snap): Failed to apply physical anchor",ePiece)) end
       asmlib.UndoCratePly(gsUndoPrefN..fnmodel.." ( Snap prop )")
       asmlib.UndoAddEntityPly(ePiece)
-      asmlib.UndoFinishPly(ply)
+      asmlib.UndoFinishPly(user)
       return asmlib.StatusLog(true,"TOOL:LeftClick(Snap): Success")
     end
   end
@@ -557,13 +560,13 @@ function TOOL:RightClick(stTrace)
   if(not stTrace.Hit) then
     return asmlib.StatusLog(false,"TOOL:RightClick(): Trace not hit") end
   local trEnt = stTrace.Entity
-  local ply   = self:GetOwner()
-  if(asmlib.CheckButtonPly(ply,IN_USE)) then
+  local user  = self:GetOwner()
+  if(asmlib.CheckButtonPly(user,IN_USE)) then
     if(stTrace.HitWorld) then -- Open frequent pieces frame
-      asmlib.ConCommandPly(ply,"openframe",asmlib.GetAsmVar("maxfruse" ,"INT"))
+      asmlib.ConCommandPly(user,"openframe",asmlib.GetAsmVar("maxfruse" ,"INT"))
       return asmlib.StatusLog(true,"TOOL:RightClick(World): Success open frame")
     end
-  elseif(asmlib.CheckButtonPly(ply,IN_SPEED)) then -- Controls anchor selection
+  elseif(asmlib.CheckButtonPly(user,IN_SPEED)) then -- Controls anchor selection
     if(stTrace.HitWorld) then
       if(self:GetUpSpawnAnchor()) then
         local siAnc, anEnt = self:GetAnchor()
@@ -578,39 +581,45 @@ function TOOL:RightClick(stTrace)
     elseif(trEnt and trEnt:IsValid()) then
       self:SetAnchor(stTrace); return asmlib.StatusLog(true,"TOOL:RightClick(SPEED): Anchor set")
     else return asmlib.StatusLog(true,self:GetStatus(stTrace,"TOOL:RightClick(SPEED): Invalid action",trEnt)) end
-  elseif(asmlib.CheckButtonPly(ply,IN_DUCK)) then -- Controls model selection
+  elseif(asmlib.CheckButtonPly(user,IN_DUCK)) then -- Controls model selection
     if(trEnt and trEnt:IsValid()) then
       local trModel = trEnt:GetModel()
       local fnModel = trModel:GetFileFromFilename()
-      asmlib.ConCommandPly(ply,"model",trModel)
-      asmlib.PrintNotifyPly(ply,"Model: "..fnModel.." selected !","GENERIC")
+      asmlib.ConCommandPly(user,"model",trModel)
+      asmlib.PrintNotifyPly(user,"Model: "..fnModel.." selected !","GENERIC")
       return asmlib.StatusLog(true,"TOOL:RightClick(DUCK): Success <"..fnModel..">")
     end
   else -- If neither is pressed changes the stack mode
     local stmode = asmlib.GetCorrectID(self:GetStackMode(),SMode)
           stmode = asmlib.GetCorrectID(stmode + 1,SMode)
-    asmlib.ConCommandPly(ply,"stmode",stmode)
-    asmlib.PrintNotifyPly(ply,"Stack Mode: "..SMode:Select(stmode).." !","UNDO")
+    asmlib.ConCommandPly(user, "stmode", stmode)
+    self:SetOperation(stmode); self:SetStage(0)
+    asmlib.PrintNotifyPly(user,"Stack Mode: "..SMode:Select(stmode).." !","UNDO")
     return asmlib.StatusLog(true,"TOOL:RightClick(MODE): Success")
   end
+end
+
+function TOOL:Deploy()
+  local stmode = asmlib.GetCorrectID(self:GetStackMode(),SMode)
+  self:SetOperation(stmode); self:SetStage(0)
 end
 
 function TOOL:Reload(stTrace)
   if(CLIENT) then return true end
   if(not stTrace) then return false end
-  local ply = self:GetOwner()
+  local user  = self:GetOwner()
   local trEnt = stTrace.Entity
-  if(asmlib.CheckButtonPly(ply,IN_SPEED) and stTrace.HitWorld) then
+  if(asmlib.CheckButtonPly(user,IN_SPEED) and stTrace.HitWorld) then
     asmlib.SetLogControl(self:GetLogLines(),self:GetLogFile())
     if(self:GetExportDB()) then
       asmlib.LogInstance("TOOL:Reload(World): Exporting DB")
       asmlib.ExportDSV("PIECES")
-      asmlib.ConCommandPly(ply, "exportdb", 0)
+      asmlib.ConCommandPly(user, "exportdb", 0)
     end; return asmlib.StatusLog(true,"TOOL:Reload(World): Success")
   end
   if(trEnt and trEnt:IsValid()) then
     local trRec = asmlib.CacheQueryPiece(trEnt:GetModel())
-    if(asmlib.IsHere(trRec) and trEnt:GetCreator() == ply) then trEnt:Remove()
+    if(asmlib.IsHere(trRec) and trEnt:GetCreator() == user) then trEnt:Remove()
       return asmlib.StatusLog(true,"TOOL:Reload(Prop): Removed a piece")
     end
   end
@@ -666,12 +675,12 @@ end
 function TOOL:Think()
   local model = self:GetModel()
   if(utilIsValidModel(model)) then -- Check model validation
-    local ply = self:GetOwner()
-    local gho = self.GhostEntity
+    local user = self:GetOwner()
+    local ghos = self.GhostEntity
     if(self:GetGhostHolder()) then
-      if (not (gho and gho:IsValid() and gho:GetModel() == model)) then
+      if (not (ghos and ghos:IsValid() and ghos:GetModel() == model)) then
         self:MakeGhostEntity(model,VEC_ZERO,ANG_ZERO)
-      end; self:UpdateGhost(self.GhostEntity, ply) -- In client single player the ghost is skipped
+      end; self:UpdateGhost(self.GhostEntity, user) -- In client single player the ghost is skipped
     else self:ReleaseGhostEntity() end -- Delete the ghost entity when ghosting is disabled
     if(CLIENT and inputIsKeyDown(KEY_LALT) and inputIsKeyDown(KEY_E)) then
       local pnFrame = asmlib.GetOpVar("PANEL_FREQUENT_MODELS")
@@ -688,10 +697,10 @@ end
  * tArgs   > Text draw arguments
 ]]--
 function TOOL:DrawTextSpawn(oScreen, sCol, sMeth, tArgs)
-  local ply = LocalPlayer()
-  local stS = asmlib.CacheSpawnPly(ply)
-  local arK = asmlib.GetOpVar("STRUCT_SPAWN")
-  local w,h = oScreen:GetSize()
+  local user = LocalPlayer()
+  local stS  = asmlib.CacheSpawnPly(user)
+  local arK  = asmlib.GetOpVar("STRUCT_SPAWN")
+  local w, h = oScreen:GetSize()
   oScreen:SetTextEdge(w - 500,0)
   oScreen:DrawText("Spawn debug information",sCol,sMeth,tArgs)
   for ID = 1, #arK, 1 do local def = arK[ID]
@@ -728,8 +737,8 @@ function TOOL:DrawHUD()
     asmlib.SetOpVar("MONITOR_GAME", hudMonitor)
     asmlib.LogInstance("DrawHUD: Create screen")
   end; hudMonitor:SetColor()
-  local oPly = LocalPlayer()
-  local stTrace = asmlib.CacheTracePly(oPly)
+  local user = LocalPlayer()
+  local stTrace = asmlib.CacheTracePly(user)
   if(not stTrace) then return end
   if(not self:GetAdviser()) then return end
   local trEnt, trHit = stTrace.Entity, stTrace.HitPos
@@ -738,11 +747,11 @@ function TOOL:DrawHUD()
   local rotpivt, rotpivh = self:GetRotatePivot()
   local nextx  , nexty  , nextz   = self:GetPosOffsets()
   local nextpic, nextyaw, nextrol = self:GetAngOffsets()
-  local plyrad  = asmlib.CacheRadiusPly(oPly, trHit, 1)
-  if(trEnt and trEnt:IsValid() and asmlib.CheckButtonPly(oPly,IN_SPEED)) then
+  local plyrad  = asmlib.CacheRadiusPly(user, trHit, 1)
+  if(trEnt and trEnt:IsValid() and asmlib.CheckButtonPly(user,IN_SPEED)) then
     if(asmlib.IsOther(trEnt)) then return end
     local igntyp  = self:GetIgnoreType()
-    local stSpawn = asmlib.GetEntitySpawn(oPly,trEnt,rotpivt,rotpivh,model,igntyp,trorang,
+    local stSpawn = asmlib.GetEntitySpawn(user,trEnt,rotpivt,rotpivh,model,igntyp,trorang,
                                             nextx,nexty,nextz,nextpic,nextyaw,nextrol)
     if(not stSpawn) then return end
     local Tp =  trEnt:GetPos():ToScreen()
@@ -759,8 +768,8 @@ function TOOL:DrawHUD()
     if(not self:GetDeveloperMode()) then return end
     self:DrawTextSpawn(hudMonitor, "k","SURF",{"Trebuchet18"})
   else
-    local aAng = asmlib.GetNormalAngle(oPly, stTrace, angsnap)
-    local stSpawn = asmlib.GetNormalSpawn(oPly,trHit,aAng,model,rotpivh,trorang,nextx,nexty,nextz,nextpic,nextyaw,nextrol)
+    local aAng = asmlib.GetNormalAngle(user, stTrace, angsnap)
+    local stSpawn = asmlib.GetNormalSpawn(user,trHit,aAng,model,rotpivh,trorang,nextx,nexty,nextz,nextpic,nextyaw,nextrol)
     if(not stSpawn) then return false end
     local Op = self:DrawUCS(hudMonitor, stSpawn.OPos, stSpawn.F:AngleEx(stSpawn.U), plyrad, "y", true)
     if(not spnflat) then
@@ -776,21 +785,21 @@ function TOOL:DrawHUD()
 end
 
 function TOOL:DrawRatioVisual(oScreen,nTrR,nHdR,nDeep)
-  local hDeep = mathFloor((nDeep or 0) / 2)
-  if(hDeep <= 2) then return end
-  local nW, nH = oScreen:GetSize()
+  local iW = mathMax(tonumber(nDeep) or 0, 0)
+  if(iW < 0) then return end
+  local iD, nW, nH = (2 * iW), oScreen:GetSize()
   local dx, dy, dw, dh = oScreen:GetTextState(0,0,0,2)
   if(nTrR) then
     local nCen = mathFloor((nTrR / ( nTrR + nHdR )) * nW)
-    oScreen:DrawRect({x=0,y=dh},{x=nDeep,y=nH},"y")               -- Trace Teeth
-    oScreen:DrawRect({x=nDeep,y=dh},{x=nCen-hDeep,y=nH},"g")      -- Trace Gear
-    oScreen:DrawRect({x=nCen-hDeep,y=dh},{x=nCen+hDeep,y=nH},"y") -- Mesh position
-    oScreen:DrawRect({x=nCen+hDeep,y=dh},{x=nW-nDeep,y=nH},"m")   -- Holds Gear
-    oScreen:DrawRect({x=nW-nDeep,y=dh},{x=nW,y=nH},"y")           -- Holds Teeth
+    oScreen:DrawRect({x=0,y=dh},{x=iD,y=nH},"y")               -- Trace Teeth
+    oScreen:DrawRect({x=iD,y=dh},{x=nCen-iW,y=nH},"g")      -- Trace Gear
+    oScreen:DrawRect({x=nCen-iW,y=dh},{x=nCen+iW,y=nH},"y") -- Mesh position
+    oScreen:DrawRect({x=nCen+iW,y=dh},{x=nW-iD,y=nH},"m")   -- Holds Gear
+    oScreen:DrawRect({x=nW-iD,y=dh},{x=nW,y=nH},"y")           -- Holds Teeth
   else
-    oScreen:DrawRect({x=0,y=dh},{x=nDeep,y=nH},"y")               -- Holds Teeth
-    oScreen:DrawRect({x=nDeep,y=dh},{x=nW-nDeep,y=nH},"g")        -- Holds
-    oScreen:DrawRect({x=nW-nDeep,y=dh},{x=nW,y=nH},"y")           -- Holds Teeth
+    oScreen:DrawRect({x=0,y=dh},{x=iD,y=nH},"y")               -- Holds Teeth
+    oScreen:DrawRect({x=iD,y=dh},{x=nW-iD,y=nH},"g")        -- Holds
+    oScreen:DrawRect({x=nW-iD,y=dh},{x=nW,y=nH},"y")           -- Holds Teeth
   end
 end
 
@@ -849,7 +858,7 @@ function TOOL:DrawToolScreen(w, h)
   scrTool:DrawText("Frac: "..tostring(nFrac).." > "..tostring(trRad or gsNoID).."/"..tostring(hdRad))
   scrTool:DrawText("Mode: "..SMode:Select(stmode),"r")
   scrTool:DrawText("Date: "..tostring(asmlib.GetDate()),"w")
-  self:DrawRatioVisual(scrTool,trRad,hdRad,10)
+  self:DrawRatioVisual(scrTool,trRad,hdRad,4)
 end
 
 -- Enter `spawnmenu_reload` in the console to reload the panel

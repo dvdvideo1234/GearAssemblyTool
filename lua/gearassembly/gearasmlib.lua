@@ -92,6 +92,7 @@ local fileDelete              = file and file.Delete
 local fileCreateDir           = file and file.CreateDir
 local mathPi                  = math and math.pi
 local mathAbs                 = math and math.abs
+local mathMax                 = math and math.max
 local mathSin                 = math and math.sin
 local mathCos                 = math and math.cos
 local mathCeil                = math and math.ceil
