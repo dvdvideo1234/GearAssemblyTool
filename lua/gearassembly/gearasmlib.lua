@@ -430,8 +430,6 @@ function InitBase(sName,sPurpose)
   SetOpVar("PATTEM_WORKSHID", "^%d+$")
   SetOpVar("TABLE_WSIDADDON", {})
   if(CLIENT) then
-    SetOpVar("LOCALIFY_AUTO","en")
-    SetOpVar("LOCALIFY_TABLE",{})
     SetOpVar("TABLE_CATEGORIES",{})
     SetOpVar("STRUCT_SPAWN",{
       {"--- Origin ---"},
@@ -2987,7 +2985,8 @@ function MakePiece(pPly,sModel,vPos,aAng,nMass,sBgSkIDs,clColor,sMode)
   if(not (phPiece and phPiece:IsValid())) then ePiece:Remove()
     return StatusLog(nil,"MakePiece: Entity phys object invalid") end
   phPiece:EnableMotion(false); ePiece.owner = pPly -- Some SPPs actually use this value
-  local Mass = (tonumber(nMass) or 1); phPiece:SetMass((Mass >= 1) and Mass or 1)
+  local nMass = mathMax(0, (tonumber(nMass) or 0))
+  if(nMass > 0) then phPiece:SetMass(nMass) end
   local BgSk = GetOpVar("OPSYM_DIRECTORY"):Explode(sBgSkIDs or "")
   ePiece:SetSkin(mathClamp(tonumber(BgSk[2]) or 0,0,ePiece:SkinCount()-1))
   if(not AttachBodyGroups(ePiece,BgSk[1] or "")) then ePiece:Remove()
@@ -3169,30 +3168,5 @@ function SetAsmVarCallback(sName, sType, sHash, fHand)
       end; LogInstance("SetAsmVarCallback("..sName.."): <"..tostring(aVal)..">")
       SetOpVar(sHash, aVal) -- Make sure we write down the processed value in the hashes
     end, sLong.."_call")
-  end
-end
-
-function SetLocalify(sCode, sPhrase, sDetail)
-  if(not IsString(sCode)) then
-    return StatusLog(nil,"SetLocalify: Language code <"..tostring(sCode).."> invalid") end
-  if(not IsString(sPhrase)) then
-    return StatusLog(nil,"SetLocalify: Phrase words <"..tostring(sPhrase).."> invalid") end
-  local tPool = GetOpVar("LOCALIFY_TABLE")
-  if(not IsHere(tPool[sCode])) then tPool[sCode] = {}; end
-  tPool[sCode][sPhrase] = tostring(sDetail)
-end
-
-function InitLocalify(sCode) -- https://en.wikipedia.org/wiki/List_of_ISO_639-1_codes
-  local tPool = GetOpVar("LOCALIFY_TABLE") -- ( Column "ISO 639-1" )
-  local auCod = GetOpVar("LOCALIFY_AUTO")
-  local suCod = tostring(sCode or "") -- English is used when missing
-  local auLng, suLng = tPool[auCod], tPool[suCod]
-  if(not IsHere(suLng)) then
-    LogInstance("InitLocalify: Missing code <"..suCod..">")
-    suCod, suLng = auCod, auLng
-  end; LogInstance("InitLocalify: Using code <"..auCod..">")
-  for phrase, default in pairs(auLng) do
-    local abrev = suLng[phrase] or default
-    languageAdd(phrase, abrev)
   end
 end

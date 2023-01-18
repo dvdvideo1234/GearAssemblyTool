@@ -76,7 +76,6 @@ if(CLIENT) then
     { name = "right_use",   icon2 = "gui/e.png" },
     { name = "reload"       }
   }
-  asmlib.InitLocalify(GetConVar("gmod_language"):GetString())
   languageAdd("tool."..gsToolNameL..".category", "Construction")
   concommandAdd(gsToolPrefL.."resetvars", asmlib.GetActionCode("RESET_VARIABLES"))
   concommandAdd(gsToolPrefL.."openframe", asmlib.GetActionCode("OPEN_FRAME"))
@@ -140,7 +139,7 @@ function TOOL:GetCount()
 end
 
 function TOOL:GetMass()
-  return math.Clamp(self:GetClientNumber("mass"),1,asmlib.GetAsmVar("maxmass","FLT"))
+  return math.Clamp(self:GetClientNumber("mass"),0,asmlib.GetAsmVar("maxmass","FLT"))
 end
 
 function TOOL:GetDeveloperMode()
@@ -959,8 +958,7 @@ function TOOL.BuildCPanel(CPanel)
         pText.OnKeyCodeTyped = function(pnSelf, nKeyEnum)
           if(nKeyEnum == KEY_TAB) then
             local sTX = asmlib.GetPropBodyGroup()..gsSymDir..asmlib.GetPropSkin()
-            pnSelf:SetText(sTX)
-            pnSelf:SetValue(sTX)
+            pnSelf:SetText(sTX); pnSelf:SetValue(sTX)
           elseif(nKeyEnum == KEY_ENTER) then
             local sTX = pnSelf:GetValue() or ""
             RunConsoleCommand(gsToolPrefL.."bgskids",sTX)
@@ -968,7 +966,7 @@ function TOOL.BuildCPanel(CPanel)
         end; CurY = CurY + pText:GetTall() + 2
   CPanel:AddItem(pText)
 
-  pItem = CPanel:NumSlider(languageGetPhrase("tool."..gsToolNameL..".mass_con"), gsToolPrefL.."mass", 1, asmlib.GetAsmVar("maxmass","FLT")  , 0)
+  pItem = CPanel:NumSlider(languageGetPhrase("tool."..gsToolNameL..".mass_con"), gsToolPrefL.."mass", 0, asmlib.GetAsmVar("maxmass","FLT")  , 3)
            pItem:SetTooltip(languageGetPhrase("tool."..gsToolNameL..".mass"))
   pItem = CPanel:NumSlider(languageGetPhrase("tool."..gsToolNameL..".count_con"), gsToolPrefL.."count", 1, asmlib.GetAsmVar("maxstcnt" , "INT"), 0)
            pItem:SetTooltip(languageGetPhrase("tool."..gsToolNameL..".count"))

@@ -1,0 +1,4 @@
+[hook "startcommit"]
+	cmdline = data\\gearassembly\\tools\\hooks\\pre-commit.bat
+	wait = true
+	show = true
