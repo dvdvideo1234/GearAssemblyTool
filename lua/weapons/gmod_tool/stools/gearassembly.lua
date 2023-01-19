@@ -271,8 +271,8 @@ function TOOL:GetBoundErrorMode()
 end
 
 function TOOL:Deploy()
-  local stmode = asmlib.GetCorrectID(self:GetStackMode(),SMode)
-  self:SetOperation(stmode)
+  if(CLIENT) then return end
+  self:SetOperation(asmlib.GetCorrectID(self:GetStackMode(),SMode))
 end
 
 function TOOL:GetAnchor()
