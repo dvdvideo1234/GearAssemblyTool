@@ -1,116 +1,179 @@
+------ LOCALIZNG FUNCTIONS ---
+local tonumber                      = tonumber
+local tostring                      = tostring
+local Vector                        = Vector
+local Angle                         = Angle
+local IsValid                       = IsValid
+local sqlBegin                      = sql and sql.Begin
+local sqlCommit                     = sql and sql.Commit
+local bitBor                        = bit and bit.bor
+local mathFloor                     = math and math.floor
+local vguiCreate                    = vgui and vgui.Create
+local fileExists                    = file and file.Exists
+local controlpanelGet               = controlpanel and controlpanel.Get
+local surfaceCreateFont             = surface and surface.CreateFont
+local surfaceScreenWidth            = surface and surface.ScreenWidth
+local surfaceScreenHeight           = surface and surface.ScreenHeight
+local languageGetPhrase             = language and language.GetPhrase
+local cvarsAddChangeCallback        = cvars and cvars.AddChangeCallback
+local cvarsRemoveChangeCallback     = cvars and cvars.RemoveChangeCallback
+local duplicatorStoreEntityModifier = duplicator and duplicator.StoreEntityModifier
+
 ------ INCLUDE LIBRARY ------
 if(SERVER) then
   AddCSLuaFile("gearassembly/gearasmlib.lua")
 end
 include("gearassembly/gearasmlib.lua")
 
------- LOCALIZNG FUNCTIONS ---
-local tonumber             = tonumber
-local tostring             = tostring
-local Vector               = Vector
-local Angle                = Angle
-local IsValid              = IsValid
-local bitBor               = bit and bit.bor
-local mathFloor            = math and math.floor
-local vguiCreate           = vgui and vgui.Create
-local fileExists           = file and file.Exists
-local surfaceScreenWidth   = surface and surface.ScreenWidth
-local surfaceScreenHeight  = surface and surface.ScreenHeight
-local languageGetPhrase    = language and language.GetPhrase
-local duplicatorStoreEntityModifier = duplicator and duplicator.StoreEntityModifier
-
 ------ MODULE POINTER -------
-local asmlib = gearasmlib
+local asmlib = gearasmlib; if(not asmlib) then -- Module present
+  ErrorNoHalt("INIT: Gear assembly tool module fail"); return end
 
 ------ CONFIGURE ASMLIB ------
 asmlib.InitBase("gear","assembly")
-asmlib.SetOpVar("TOOL_VERSION","5.228")
+asmlib.SetOpVar("TOOL_VERSION","5.229")
 asmlib.SetIndexes("V",1,2,3)
 asmlib.SetIndexes("A",1,2,3)
 asmlib.SetIndexes("S",4,5,6,7)
-asmlib.SetOpVar("CONTAIN_STACK_MODE",asmlib.MakeContainer("Stack Mode"))
-asmlib.SetOpVar("CONTAIN_CONSTRAINT_TYPE",asmlib.MakeContainer("Constraint Type"))
+asmlib.SetOpVar("CONTAIN_STACK_MODE",asmlib.GetContainer("Stack Mode"))
+asmlib.SetOpVar("CONTAIN_CONSTRAINT_TYPE",asmlib.GetContainer("Constraint Type"))
 
------- VARIABLE FLAGS ------
--- Client and server have independent value
-local gnIndependentUsed = bitBor(FCVAR_ARCHIVE, FCVAR_ARCHIVE_XBOX, FCVAR_NOTIFY, FCVAR_PRINTABLEONLY)
--- Server tells the client what value to use
-local gnServerControled = bitBor(FCVAR_ARCHIVE, FCVAR_ARCHIVE_XBOX, FCVAR_NOTIFY, FCVAR_REPLICATED, FCVAR_PRINTABLEONLY)
+------------ CONFIGURE GLOBAL INIT OPVARS ------------
 
------- CONFIGURE LOGGING ------
-asmlib.SetOpVar("LOG_DEBUGEN", false)
-asmlib.MakeAsmVar("logsmax"  , "0" , {0}  , gnIndependentUsed, "Maximum logging lines to be printed")
-asmlib.MakeAsmVar("logfile"  , "0" , {0,1}, gnIndependentUsed, "Output the logs in a dedicated file")
-asmlib.SetLogControl(asmlib.GetAsmVar("logsmax","INT"),asmlib.GetAsmVar("logfile","STR"))
-asmlib.SettingsLogs("SKIP"); asmlib.SettingsLogs("ONLY")
-
------- CONFIGURE NON-REPLICATED CVARS ----- Client's got a mind of its own
-asmlib.MakeAsmVar("modedb"   , "LUA",    nil  , gnIndependentUsed, "Database operating mode")
-asmlib.MakeAsmVar("devmode"  , "0"  , {0, 1  }, gnIndependentUsed, "Toggle developer mode on/off server side")
-asmlib.MakeAsmVar("maxtrmarg", "0.02",{0.0001}, gnIndependentUsed, "Maximum time to avoid performing new traces")
-asmlib.MakeAsmVar("timermode", "CQT@1800@1@1" , nil, gnIndependentUsed, "Cache management setting when DB mode is SQL")
-
------- CONFIGURE REPLICATED CVARS ----- Server tells the client what value to use
-asmlib.MakeAsmVar("maxmass"  , "50000" ,  {1}, gnServerControled, "Maximum mass to be applied on a piece")
-asmlib.MakeAsmVar("maxlinear", "250"   ,  {1}, gnServerControled, "Maximum linear offset of the piece")
-asmlib.MakeAsmVar("maxfrict" , "100000",  {0}, gnServerControled, "Maximum friction limit when creating constraints")
-asmlib.MakeAsmVar("maxforce" , "100000",  {0}, gnServerControled, "Maximum force limit when creating constraints")
-asmlib.MakeAsmVar("maxtorque", "100000",  {0}, gnServerControled, "Maximum torque limit when creating constraints")
-asmlib.MakeAsmVar("maxstcnt" , "200", {1,400}, gnServerControled, "Maximum pieces to spawn in stack mode")
-
-CreateConVar("sbox_max"..asmlib.GetOpVar("CVAR_LIMITNAME"), "1500", gnServerControled, "Maximum number of gears to be spawned")
-asmlib.MakeAsmVar("bnderrmod", "LOG", nil    , gnServerControled, "Unreasonable position error handling mode")
-asmlib.MakeAsmVar("maxfruse" , "50" , {1,100}, gnServerControled, "Maximum frequent pieces to be listed")
-
------- CONFIGURE INTERNALS -----
-asmlib.SetOpVar("MODE_DATABASE", asmlib.GetAsmVar("modedb"   ,"STR"))
-asmlib.SetOpVar("TRACE_MARGIN" , asmlib.GetAsmVar("maxtrmarg","FLT"))
-
------- GLOBAL VARIABLES -------
+local gtInitLogs  = asmlib.GetOpVar("LOG_INIT")
 local gsLimitName = asmlib.GetOpVar("CVAR_LIMITNAME")
 local gsToolPrefL = asmlib.GetOpVar("TOOLNAME_PL")
 local gsToolNameL = asmlib.GetOpVar("TOOLNAME_NL")
 local gsToolNameU = asmlib.GetOpVar("TOOLNAME_NU")
 local gsFullDSV   = asmlib.GetOpVar("DIRPATH_BAS")..asmlib.GetOpVar("DIRPATH_DSV")..
                     asmlib.GetInstPref()..asmlib.GetOpVar("TOOLNAME_PU")
-local gaTimerSet  = asmlib.GetOpVar("OPSYM_DIRECTORY"):Explode(asmlib.GetAsmVar("timermode","STR"))
-local conPalette  = asmlib.MakeContainer("Colours"); asmlib.SetOpVar("CONTAINER_PALETTE", conPalette)
-      conPalette:Insert("r" ,Color(255, 0 , 0 ,255))
-      conPalette:Insert("g" ,Color( 0 ,255, 0 ,255))
-      conPalette:Insert("b" ,Color( 0 , 0 ,255,255))
-      conPalette:Insert("c" ,Color( 0 ,255,255,255))
-      conPalette:Insert("m" ,Color(255, 0 ,255,255))
-      conPalette:Insert("y" ,Color(255,255, 0 ,255))
-      conPalette:Insert("w" ,Color(255,255,255,255))
-      conPalette:Insert("k" ,Color( 0 , 0 , 0 ,255))
-      conPalette:Insert("gh",Color(255,255,255,150)) -- self.GhostEntity
-      conPalette:Insert("an",Color(180,255,150,255)) -- Selected anchor
-      conPalette:Insert("tx",Color(161,161,161,255)) -- Panel names color
-      conPalette:Insert("db",Color(220,164, 52,255)) -- Database mode
 
--------- CALLBACKS ----------
-asmlib.SetAsmVarCallback("maxtrmarg", "FLT", "TRACE_MARGIN")
-asmlib.SetAsmVarCallback("logsmax"  , "INT", "LOG_MAXLOGS" , function(v) return mathFloor(tonumber(v) or 0) end)
-asmlib.SetAsmVarCallback("logfile"  , "INT", "LOG_LOGFILE" , tobool)
+------ VARIABLE FLAGS ------
+
+local varLanguage = GetConVar("gmod_language")
+-- Client and server have independent value
+local gnIndependentUsed = bitBor(FCVAR_ARCHIVE, FCVAR_ARCHIVE_XBOX, FCVAR_NOTIFY, FCVAR_PRINTABLEONLY)
+-- Server tells the client what value to use
+local gnServerControled = bitBor(FCVAR_ARCHIVE, FCVAR_ARCHIVE_XBOX, FCVAR_NOTIFY, FCVAR_REPLICATED, FCVAR_PRINTABLEONLY)
+
+------------ BORDERS ------------
+
+asmlib.SetBorder("non-neg", 0)
+asmlib.SetBorder("sbox_max"..gsLimitName , 0)
+asmlib.SetBorder(gsToolPrefL.."devmode"  , 0, 1)
+asmlib.SetBorder(gsToolPrefL.."maxtrmarg", 0, 1)
+asmlib.SetBorder(gsToolPrefL.."endsvlock", 0, 1)
+asmlib.SetBorder(gsToolPrefL.."incsnpang", 0, gnMaxRot)
+asmlib.SetBorder(gsToolPrefL.."incsnplin", 0, 250)
+asmlib.SetBorder(gsToolPrefL.."logfile"  , 0, 1)
+asmlib.SetBorder(gsToolPrefL.."logsmax"  , 0, 100000)
+asmlib.SetBorder(gsToolPrefL.."maxforce" , 0)
+asmlib.SetBorder(gsToolPrefL.."maxfrict" , 0)
+asmlib.SetBorder(gsToolPrefL.."maxtorque", 0)
+asmlib.SetBorder(gsToolPrefL.."maxstcnt" , 1)
+asmlib.SetBorder(gsToolPrefL.."maxfruse" , 1, 150)
+asmlib.SetBorder(gsToolPrefL.."maxlinear", 0)
+asmlib.SetBorder(gsToolPrefL.."maxmass"  , 1)
+
+------ CONFIGURE LOGGING ------
+asmlib.SetOpVar("LOG_DEBUGEN", false)
+asmlib.MakeAsmConvar("logsmax"  , 0 , nil, gnIndependentUsed, "Maximum logging lines to be printed")
+asmlib.MakeAsmConvar("logfile"  , 0 , nil, gnIndependentUsed, "Output the logs in a dedicated file")
+asmlib.SetLogControl(asmlib.GetAsmConvar("logsmax","INT"),asmlib.GetAsmConvar("logfile","BUL"))
+asmlib.SettingsLogs("SKIP"); asmlib.SettingsLogs("ONLY")
+
+------ CONFIGURE NON-REPLICATED CVARS ----- Client's got a mind of its own
+asmlib.MakeAsmConvar("modedb"   , "LUA", nil, gnIndependentUsed, "Database operating mode")
+asmlib.MakeAsmConvar("devmode"  , 0    , nil, gnIndependentUsed, "Toggle developer mode on/off server side")
+asmlib.MakeAsmConvar("maxtrmarg", 0.02 , nil, gnIndependentUsed, "Maximum time to avoid performing new traces")
+asmlib.MakeAsmConvar("timermode", "CQT@1800@1@1", nil, gnIndependentUsed, "Cache management setting when DB mode is SQL")
+
+------ CONFIGURE REPLICATED CVARS ----- Server tells the client what value to use
+asmlib.MakeAsmConvar("endsvlock", 0     , nil, gnServerControled, "Toggle the DSV external database file update on/off")
+asmlib.MakeAsmConvar("maxmass"  , 50000 , nil, gnServerControled, "Maximum mass to be applied on a piece")
+asmlib.MakeAsmConvar("maxlinear", 250   , nil, gnServerControled, "Maximum linear offset of the piece")
+asmlib.MakeAsmConvar("maxfrict" , 100000, nil, gnServerControled, "Maximum friction limit when creating constraints")
+asmlib.MakeAsmConvar("maxforce" , 100000, nil, gnServerControled, "Maximum force limit when creating constraints")
+asmlib.MakeAsmConvar("maxtorque", 100000, nil, gnServerControled, "Maximum torque limit when creating constraints")
+asmlib.MakeAsmConvar("maxstcnt" , 200,    nil, gnServerControled, "Maximum pieces to spawn in stack mode")
+
+asmlib.MakeAsmConvar("*sbox_max"..gsLimitName, 1500, nil, gnServerControled, "Maximum number of gears to be spawned")
+asmlib.MakeAsmConvar("bnderrmod", "LOG", nil, gnServerControled, "Unreasonable position error handling mode")
+asmlib.MakeAsmConvar("maxfruse" ,  50  , nil, gnServerControled, "Maximum frequent pieces to be listed")
+
+------ CONFIGURE INTERNALS -----
+asmlib.SetOpVar("MODE_DATABASE", asmlib.GetAsmConvar("modedb"   ,"STR"))
+asmlib.SetOpVar("TRACE_MARGIN" , asmlib.GetAsmConvar("maxtrmarg","FLT"))
+
+------ GLOBAL VARIABLES -------
+local gsMoDB     = asmlib.GetOpVar("MODE_DATABASE")
+local gaTimerSet = asmlib.GetOpVar("OPSYM_DIRECTORY"):Explode(asmlib.GetAsmConvar("timermode","STR"))
+local conPalette = asmlib.GetContainer("COLORS_LIST")
+      conPalette:Record("r" ,Color(255, 0 , 0 ,255))
+      conPalette:Record("g" ,Color( 0 ,255, 0 ,255))
+      conPalette:Record("b" ,Color( 0 , 0 ,255,255))
+      conPalette:Record("c" ,Color( 0 ,255,255,255))
+      conPalette:Record("m" ,Color(255, 0 ,255,255))
+      conPalette:Record("y" ,Color(255,255, 0 ,255))
+      conPalette:Record("w" ,Color(255,255,255,255))
+      conPalette:Record("k" ,Color( 0 , 0 , 0 ,255))
+      conPalette:Record("gh",Color(255,255,255,150)) -- self.GhostEntity
+      conPalette:Record("an",Color(180,255,150,255)) -- Selected anchor
+      conPalette:Record("tx",Color(161,161,161,255)) -- Panel names color
+      conPalette:Record("db",Color(220,164, 52,255)) -- Database mode
+
+------------ CALLBACKS ------------
+
+local conCallBack = asmlib.GetContainer("CALLBAC_FUNC")
+      conCallBack:Push({"maxtrmarg", function(sVar, vOld, vNew)
+        local nM = (tonumber(vNew) or 0); nM = ((nM > 0) and nM or 0)
+        asmlib.SetOpVar("TRACE_MARGIN", nM)
+      end})
+      conCallBack:Push({"logsmax", function(sVar, vOld, vNew)
+        local nM = asmlib.BorderValue((tonumber(vNew) or 0), "non-neg")
+        asmlib.SetOpVar("LOG_MAXLOGS", nM)
+      end})
+      conCallBack:Push({"logfile", function(sVar, vOld, vNew)
+        asmlib.IsFlag("en_logging_file", tobool(vNew))
+      end})
+      conCallBack:Push({"endsvlock", function(sVar, vOld, vNew)
+        asmlib.IsFlag("en_dsv_datalock", tobool(vNew))
+      end})
+      conCallBack:Push({"timermode", function(sVar, vOld, vNew)
+        local arTim = gsSymDir:Explode(vNew)
+        local mkTab, ID = asmlib.GetBuilderID(1), 1
+        while(mkTab) do local sTim = arTim[ID]
+          local defTab = mkTab:GetDefinition(); mkTab:TimerSetup(sTim)
+          asmlib.LogInstance("Timer apply "..asmlib.GetReport2(defTab.Nick,sTim),gtInitLogs)
+          ID = ID + 1; mkTab = asmlib.GetBuilderID(ID) -- Next table on the list
+        end; asmlib.LogInstance("Timer update "..asmlib.GetReport(vNew),gtInitLogs)
+      end})
+
+for iD = 1, conCallBack:GetSize() do
+  local set = conCallBack:Select(iD)
+  local nam = asmlib.GetAsmConvar(set[1], "NAM")
+  cvarsRemoveChangeCallback(nam, nam.."_init")
+  cvarsAddChangeCallback(nam, set[2], nam.."_init")
+end
 
 ------ CONFIGURE TOOL -----
 local SMode = asmlib.GetOpVar("CONTAIN_STACK_MODE")
-      SMode:Insert(1,"Forward direction")
-      SMode:Insert(2,"Around trace pivot")
+      SMode:Push("Forward direction")
+      SMode:Push("Around trace pivot")
 
 local CType = asmlib.GetOpVar("CONTAIN_CONSTRAINT_TYPE")
-      CType:Insert(1 ,{Name = "Free Spawn"  , Make = nil                                    })
-      CType:Insert(2 ,{Name = "Parent Piece", Make = nil                                    })
-      CType:Insert(3 ,{Name = "Weld Piece"  , Make = constraint and constraint.Weld         })
-      CType:Insert(4 ,{Name = "Axis Piece"  , Make = constraint and constraint.Axis         })
-      CType:Insert(5 ,{Name = "Ball-Sock HM", Make = constraint and constraint.Ballsocket   })
-      CType:Insert(6 ,{Name = "Ball-Sock TM", Make = constraint and constraint.Ballsocket   })
-      CType:Insert(7 ,{Name = "AdvBS Lock X", Make = constraint and constraint.AdvBallsocket})
-      CType:Insert(8 ,{Name = "AdvBS Lock Y", Make = constraint and constraint.AdvBallsocket})
-      CType:Insert(9 ,{Name = "AdvBS Lock Z", Make = constraint and constraint.AdvBallsocket})
-      CType:Insert(10,{Name = "AdvBS Spin X", Make = constraint and constraint.AdvBallsocket})
-      CType:Insert(11,{Name = "AdvBS Spin Y", Make = constraint and constraint.AdvBallsocket})
-      CType:Insert(12,{Name = "AdvBS Spin Z", Make = constraint and constraint.AdvBallsocket})
+      CType:Push({Name = "Free Spawn"  , Make = nil                                    })
+      CType:Push({Name = "Parent Piece", Make = nil                                    })
+      CType:Push({Name = "Weld Piece"  , Make = constraint and constraint.Weld         })
+      CType:Push({Name = "Axis Piece"  , Make = constraint and constraint.Axis         })
+      CType:Push({Name = "Ball-Sock HM", Make = constraint and constraint.Ballsocket   })
+      CType:Push({Name = "Ball-Sock TM", Make = constraint and constraint.Ballsocket   })
+      CType:Push({Name = "AdvBS Lock X", Make = constraint and constraint.AdvBallsocket})
+      CType:Push({Name = "AdvBS Lock Y", Make = constraint and constraint.AdvBallsocket})
+      CType:Push({Name = "AdvBS Lock Z", Make = constraint and constraint.AdvBallsocket})
+      CType:Push({Name = "AdvBS Spin X", Make = constraint and constraint.AdvBallsocket})
+      CType:Push({Name = "AdvBS Spin Y", Make = constraint and constraint.AdvBallsocket})
+      CType:Push({Name = "AdvBS Spin Z", Make = constraint and constraint.AdvBallsocket})
 
 if(SERVER) then
   asmlib.SetAction("DUPE_PHYS_SETTINGS",
@@ -130,10 +193,34 @@ end
 
 if(CLIENT) then
 
+  surfaceCreateFont("DebugSpawnGA",{
+    font = "Courier New", size = 14,
+    weight = 600
+  })
+
+  -- Listen for changes to the localify language and reload the tool's menu to update the localizations
+  cvarsRemoveChangeCallback(varLanguage:GetName(), gsToolPrefL.."lang")
+  cvarsAddChangeCallback(varLanguage:GetName(), function(sNam, vO, vN)
+    local sLog, bS, vOut, fUser, fAdmn = "*UPDATE_CONTROL_PANEL("..vO.."/"..vN..")"
+    local oTool = asmlib.GetOpVar("STORE_TOOLOBJ"); if(not asmlib.IsHere(oTool)) then
+      asmlib.LogInstance("Tool object missing", sLog); return end
+    -- Retrieve the control panel from the tool main tab
+    local fCont = oTool.BuildCPanel -- Function is the tool populator
+    local pCont = controlpanelGet(gsToolNameL); if(not IsValid(pCont)) then
+      asmlib.LogInstance("Control invalid", sLog); return end
+    -- Wipe the panel so it is clear of contents sliders buttons and stuff
+    pCont:ClearControls()
+    -- Panels are cleared and we change the language utilizing localify
+    bS, vOut = pcall(fCont, pCont) if(not bS) then
+      asmlib.LogInstance("Control fail: "..vOut, sLog); return
+    else asmlib.LogInstance("Control: "..asmlib.GetReport(pCont.Name), sLog) end
+  end, gsToolPrefL.."lang")
+
+
   asmlib.SetAction("RESET_VARIABLES",
     function(oPly,oCom,oArgs)
-      local devmode = asmlib.GetAsmVar("devmode" ,"BUL")
-      local bgskids = asmlib.GetAsmVar("bgskids", "STR")
+      local devmode = asmlib.GetAsmConvar("devmode" ,"BUL")
+      local bgskids = asmlib.GetAsmConvar("bgskids", "STR")
       asmlib.LogInstance("RESET_VARIABLES: {"..tostring(devmode)..asmlib.GetOpVar("OPSYM_DISABLE")..tostring(bgskids).."}")
       asmlib.ConCommandPly(oPly,"nextx"    , 0)
       asmlib.ConCommandPly(oPly,"nexty"    , 0)
@@ -146,7 +233,7 @@ if(CLIENT) then
       asmlib.ConCommandPly(oPly,"deltarot" , 360)
       if(not devmode) then
         return asmlib.StatusLog(nil,"RESET_VARIABLES: Developer mode disabled") end
-      asmlib.SetLogControl(asmlib.GetAsmVar("logsmax" , "INT"), asmlib.GetAsmVar("logfile" , "STR"))
+      asmlib.SetLogControl(asmlib.GetAsmConvar("logsmax" , "INT"), asmlib.GetAsmConvar("logfile" , "BUL"))
       if(bgskids == "reset cvars") then -- Reset also the maximum spawned pieces
         oPly:ConCommand("sbox_max"..asmlib.GetOpVar("CVAR_LIMITNAME").." 1500\n")
         local anchor = asmlib.GetOpVar("MISS_NOID")..
@@ -205,12 +292,12 @@ if(CLIENT) then
         return StatusLog(nil,"OPEN_FRAME: Missing definition for table PIECES") end
       local pnFrame = vguiCreate("DFrame"); if(not IsValid(pnFrame)) then
         pnFrame:Remove(); return asmlib.StatusLog(nil,"OPEN_FRAME: Failed to create base frame") end
-      local pnElements = asmlib.MakeContainer("FREQ_VGUI")
-            pnElements:Insert(1,{Label = { "DButton"    ,languageGetPhrase("tool."..gsToolNameL..".pn_export_lb") , languageGetPhrase("tool."..gsToolNameL..".pn_export")}})
-            pnElements:Insert(2,{Label = { "DListView"  ,languageGetPhrase("tool."..gsToolNameL..".pn_routine_lb"), languageGetPhrase("tool."..gsToolNameL..".pn_routine")}})
-            pnElements:Insert(3,{Label = { "DModelPanel",languageGetPhrase("tool."..gsToolNameL..".pn_display_lb"), languageGetPhrase("tool."..gsToolNameL..".pn_display")}})
-            pnElements:Insert(4,{Label = { "DTextEntry" ,languageGetPhrase("tool."..gsToolNameL..".pn_pattern_lb"), languageGetPhrase("tool."..gsToolNameL..".pn_pattern")}})
-            pnElements:Insert(5,{Label = { "DComboBox"  ,languageGetPhrase("tool."..gsToolNameL..".pn_srchcol_lb"), languageGetPhrase("tool."..gsToolNameL..".pn_srchcol")}})
+      local pnElements = asmlib.GetContainer("FREQ_VGUI")
+            pnElements:Push({Label = { "DButton"    ,languageGetPhrase("tool."..gsToolNameL..".pn_export_lb") , languageGetPhrase("tool."..gsToolNameL..".pn_export")}})
+            pnElements:Push({Label = { "DListView"  ,languageGetPhrase("tool."..gsToolNameL..".pn_routine_lb"), languageGetPhrase("tool."..gsToolNameL..".pn_routine")}})
+            pnElements:Push({Label = { "DModelPanel",languageGetPhrase("tool."..gsToolNameL..".pn_display_lb"), languageGetPhrase("tool."..gsToolNameL..".pn_display")}})
+            pnElements:Push({Label = { "DTextEntry" ,languageGetPhrase("tool."..gsToolNameL..".pn_pattern_lb"), languageGetPhrase("tool."..gsToolNameL..".pn_pattern")}})
+            pnElements:Push({Label = { "DComboBox"  ,languageGetPhrase("tool."..gsToolNameL..".pn_srchcol_lb"), languageGetPhrase("tool."..gsToolNameL..".pn_srchcol")}})
       ------------ Manage the invalid panels -------------------
       local iNdex, iSize, sItem, vItem = 1, pnElements:GetSize(), "", nil
       while(iNdex <= iSize) do
@@ -279,7 +366,7 @@ if(CLIENT) then
       pnButton:SetVisible(true)
       pnButton.DoClick = function()
         asmlib.LogInstance("OPEN_FRAME: Button.DoClick: <"..pnButton:GetText().."> clicked")
-        if(asmlib.GetAsmVar("exportdb", "BUL")) then
+        if(asmlib.GetAsmConvar("exportdb", "BUL")) then
           asmlib.LogInstance("OPEN_FRAME: Button Exporting DB")
           asmlib.ExportCategory(3)
           asmlib.ExportDSV("PIECES")
@@ -424,8 +511,9 @@ if(fileExists(gsFullDSV.."PIECES.txt", "DATA")) then
   asmlib.LogInstance("Init: DB PIECES from DSV")
   asmlib.ImportDSV("PIECES",true)
 else
+  if(gsMoDB == "SQL") then sqlBegin() end
   asmlib.LogInstance("Init: DB PIECES from LUA")
-  if(asmlib.GetAsmVar("devmode" ,"BUL")) then
+  if(asmlib.GetAsmConvar("devmode" ,"BUL")) then
     asmlib.Categorize("Develop random")
     asmlib.InsertRecord({"models/props_wasteland/wheel02b.mdl",   "Development", "Dev1", 45, "65, 0, 0", "0.29567885398865,0.3865530192852,-0.36239844560623", "@-90, 90, 180"})
   end
@@ -645,6 +733,7 @@ else
   asmlib.InsertRecord({"models/gears/gear_12.mdl"      , "#", "#", 0  , "5.234, 0, 0", " 2.1442920328241e-008,  2.5950571469480e-008, 4.0000009536743" , ""})
   asmlib.InsertRecord({"models/gears/gear_24.mdl"      , "#", "#", 0  , "9.470, 0, 0", "-2.3349744537882e-007, -1.7496104192105e-006, 3.9999997615814" , ""})
   asmlib.InsertRecord({"models/gears/planet_16.mdl"    , "#", "#", 180, "9.310, 0, -1.615", " 2.1667046894436e-006, -1.2715023558485e-006, 5.6510457992554" , ""})
+  if(gsMoDB == "SQL") then sqlCommit() end
 end
 
 asmlib.PrintInstance("Ver."..asmlib.GetOpVar("TOOL_VERSION"))
