@@ -1530,6 +1530,7 @@ function SetButtonSlider(cPanel, sVar, nMin, nMax, nDec, tBtn)
   pPanel:UpdateColours(tSkin)
   pPanel:ApplySchemeSettings()
   cPanel:AddItem(pPanel)
+  return pPanel
 end
 
 function SetCheckBox(cPanel, sVar)
