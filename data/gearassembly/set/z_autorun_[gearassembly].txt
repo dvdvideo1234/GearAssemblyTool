@@ -70,10 +70,10 @@ if(asmlib) then
    * This is used if you want to make internal categories for your addon
    * You must make a function as a string under the hash of your addon
    * The function must take only one argument and that is the model
-   * For every sub-category of your track pieces, you must return a table
+   * For every sub-category of your gear pieces, you must return a table
    * with that much elements or return a /nil/ value to add the piece to
    * the root of your branch. You can also return a second value if you
-   * want to override the track piece name.
+   * want to override the gear piece name.
   ]]--
   local myCategory ={
     [myType] = {Txt = [[
@@ -119,7 +119,7 @@ if(asmlib) then
    * TYPE   > This string is the name of the type your stuff will reside in the panel
    *          Disabling this, makes it use the value of the /DEFAULT_TYPE/ variable
    *          If it is empty uses the string /TYPE/, so make sure you fill this
-   * NAME   > This is the name of your track piece. Put /#/ here to be auto-generated from
+   * NAME   > This is the name of your gear piece. Put /#/ here to be auto-generated from
    *          the model ( from the last slash to the file extension )
    * AMESH  > This is the meshing additional angle it is mandatory and represents
    *          the base angle of the teeth when meshing gears. For example bevels have 45.
@@ -145,7 +145,7 @@ if(asmlib) then
    * sTable > The table you want to sync
    * tData  > A data table like the one described above
    * bRepl  > If set to /true/, makes the API to replace the repeating models with
-              these of your addon. This is nice when you are constantly updating your track packs
+              these of your addon. This is nice when you are constantly updating your gear packs
               If set to /false/ keeps the current model in the
               database and ignores yours if they are the same file.
    * sPref  > An export file custom prefix. For synchronizing it must be related to your addon
@@ -157,7 +157,7 @@ if(asmlib) then
    * sDelim > The delimiter used by the server/client ( default is a tab symbol )
   ]]--
   if(not asmlib.SynchronizeDSV("PIECES", myTable, true, myPrefix)) then
-    myError("Failed to synchronize track pieces: "..myScript)
+    myError("Failed to synchronize gear pieces: "..myScript)
   else -- You are saving me from all the work for manually generating these
     if(not asmlib.TranslateDSV("PIECES", myPrefix)) then
       myError("Failed to translate DSV into Lua: "..myScript) end

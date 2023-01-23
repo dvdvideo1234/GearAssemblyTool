@@ -1,5 +1,5 @@
 -- Test in CMD:
--- ..\..\bin\lua.exe go.lua "E:\Documents\Lua-Projs\SVN\TrackAssemblyTool_GIT_master\lua\autorun\trackassembly_init.lua" "Rev." "UNX"
+-- ..\..\bin\lua.exe go.lua "E:\Documents\Lua-Projs\SVN\TrackAssemblyTool_GIT_master\lua\autorun\gearassembly_init.lua" "Rev." "UNX"
 -- Call in CMD: Script { LUA_PATH, LOG_FILE }
 -- Work: pre-commit.bat E:\Documents\Lua-Projs\Lua\Bin D:\WindowsTemp\tmp.txt
 -- Home:

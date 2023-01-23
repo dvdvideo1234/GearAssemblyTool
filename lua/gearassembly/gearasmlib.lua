@@ -1494,17 +1494,16 @@ function SetNumSlider(cPanel, sVar, vDig, vMin, vMax, vDev)
 end
 
 function SetButtonSlider(cPanel, sVar, nMin, nMax, nDec, tBtn)
-  local tSkin, sY, dY = cPanel:GetSkin(), 22, 2
+  local tSkin = cPanel:GetSkin()
   local sTool = GetOpVar("TOOLNAME_NL")
   local tConv = GetOpVar("STORE_CONVARS")
-  local iWpan = GetOpVar("WIDTH_CPANEL")
   local syDis = GetOpVar("OPSYM_DISABLE")
   local syRev = GetOpVar("OPSYM_REVSIGN")
   local sKey, sNam, bExa = GetNameExp(sVar)
   local sBase = (bExa and sNam or ("tool."..sTool.."."..sNam))
   local pPanel = vguiCreate("gearassembly_BIS", cPanel); if(not IsValid(pPanel)) then
     LogInstance("Base invalid"); return nil end
-  pPanel:SetDelta(1, 1); pPanel:SetParent(cPanel)
+  pPanel:SetParent(cPanel)
   pPanel:SetSlider(sKey, languageGetPhrase(sBase.."_con"), languageGetPhrase(sBase))
   pPanel:Configure(nMin, nMax, tConv[sKey], nDec)
   for iD = 1, #tBtn do
@@ -1520,15 +1519,17 @@ function SetButtonSlider(cPanel, sVar, nMin, nMax, nDec, tBtn)
     pPanel:SetButton(sTxt, sTip)
     pPanel:SetAction(vBtn.L, vBtn.R)
   end
-  pPanel:SetPadding(nil, nil, 8)
-  pPanel:IsAutoResize(true)
-  pPanel.Slider:SetDark(true)
-  pPanel:Dock(TOP); pPanel:SetWide()
+  pPanel:SetDelta(1, 8)
+  pPanel:SetPadding(0, 0)
+  pPanel:IsAutoResize(true, false)
+  pPanel:Dock(TOP)
   pPanel:SizeToChildren(true, false)
   pPanel:SizeToContentsY()
   pPanel:InvalidateChildren()
   pPanel:UpdateColours(tSkin)
   pPanel:ApplySchemeSettings()
+  pPanel:SetWide(260)
+  pPanel:UpdateView()
   cPanel:AddItem(pPanel)
   return pPanel
 end
@@ -3503,7 +3504,7 @@ function ApplyPhysicalSettings(ePiece,bPi,bFr,bGr)
   if(not (pyPiece and pyPiece:IsValid())) then -- Cannot manipulate invalid physics
     return StatusLog(false,"ApplyPhysicalSettings: Piece physical object invalid for <"..tostring(ePiece)..">") end
   local arSettings = {bPi,bFr,bGr}  -- Initialize dupe settings using this array
-  ePiece.PhysgunDisabled = bPi          -- If enabled stop the player from grabbing the track piece
+  ePiece.PhysgunDisabled = bPi          -- If enabled stop the player from grabbing the gear piece
   ePiece:SetUnFreezable(bPi)            -- If enabled stop the player from hitting reload to mess it all up
   ePiece:SetMoveType(MOVETYPE_VPHYSICS) -- Moves and behaves like a normal prop
   -- Delay the freeze by a tiny amount because on physgun snap the piece
