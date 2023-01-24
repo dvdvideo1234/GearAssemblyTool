@@ -6,7 +6,7 @@
 
 ## IF YOU HAPPEN TO FIND REUPLOADS WITH DIFFERENT ORIGIN REPORT THEM TO ME IMMIDEATELY !!!
 
-![GearAssemblyTool](https://raw.githubusercontent.com/dvdvideo1234/GearAssemblyTool/master/data/pictures/screenshot.jpg)
+![GearAssemblyTool](https://raw.githubusercontent.com/dvdvideo1234/GearAssemblyTool/master/data/gearassembly/tools/pictures/screenshot.jpg)
 
 ## Description
 This script can give you the ability to connect prop-segmented gear pieces fast.
@@ -55,7 +55,7 @@ after that extract it in `..\GarrysMod\garrysmod\addons` and you are practically
   * PHX spur (spotted, small, medium, big, flat) (INCLUDED)
   * PHX bevel (regular, vertical) (INCLUDED)
   * PHX rack (spotted, flat) (INCLUDED)
-  * [Black spur](https://steamcommunity.com/sharedfiles/filedetails/?id=564582559) (small, medium)
+  * [Black spur](https://steamcommunity.com/sharedfiles/filedetails/?id=2944086886) (small, medium)
   * [SProps](https://steamcommunity.com/sharedfiles/filedetails/?id=173482196) (small spur, large spur, rack, bevel)
   * [Propeller pack](https://steamcommunity.com/sharedfiles/filedetails/?id=686701650)
 
@@ -143,7 +143,8 @@ used for all internal position calculations and it is proper origin to relate th
 world space distances between the mass-centers and positions are displayed with yellow lines.
 The magenta line represents the distance vector between holder and origin the green trace and origin.
 If you are still confused about this, please take a look at the diagram below:
-![ref_ga_coords](https://raw.githubusercontent.com/dvdvideo1234/GearAssemblyTool/master/data/pictures/coordinates.jpg)
+
+![ref_ga_coords](https://raw.githubusercontent.com/dvdvideo1234/GearAssemblyTool/master/data/gearassembly/tools/pictures/coordinates.jpg)
 
 #### May I put your script in a third-party website?
 *Distribution ownership is like the Track Assembly Tool, so DO NOT UPLOAD THIS TO ANY OTHER SITES !*
