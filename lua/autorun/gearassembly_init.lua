@@ -31,7 +31,7 @@ local asmlib = gearasmlib; if(not asmlib) then -- Module present
 
 ------ CONFIGURE ASMLIB ------
 asmlib.InitBase("gear","assembly")
-asmlib.SetOpVar("TOOL_VERSION","5.236")
+asmlib.SetOpVar("TOOL_VERSION","5.237")
 asmlib.SetIndexes("V",1,2,3)
 asmlib.SetIndexes("A",1,2,3)
 asmlib.SetIndexes("S",4,5,6,7)
@@ -488,71 +488,68 @@ if(CLIENT) then
           end; pnMenu:Open()
         end -- Process only the right mouse button
       end -- Populate the tables for every database
-      local iD, makTab = 1, asmlib.GetBuilderID(1)
-      while(makTab) do
-        local pnTable = vguiCreate("DPanel")
-        if(not IsValid(pnTable)) then pnFrame:Close()
-          asmlib.LogInstance("OPEN_EXTERNDB: Category invalid"); return nil end
-        local defTab = makTab:GetDefinition()
-        pnTable:SetParent(pnSheet)
-        pnTable:DockMargin(xyDsz.x, xyDsz.y, xyDsz.x, xyDsz.y)
-        pnTable:DockPadding(xyDsz.x, xyDsz.y, xyDsz.x, xyDsz.y)
-        pnTable:Dock(FILL)
-        local tInfo = pnSheet:AddSheet(defTab.Nick, pnTable, asmlib.ToIcon(defTab.Name))
-        tInfo.Tab:SetTooltip(languageGetPhrase("tool."..gsToolNameL..".pn_externdb").." "..defTab.Nick)
-        local tFile = fileFind(fDSV:format("*", defTab.Nick), "DATA")
-        if(asmlib.IsTable(tFile) and tFile[1]) then
-          local nF, nW, nH = #tFile, pnFrame:GetSize()
-          xySiz.x, xyPos.x, xyPos.y = (nW - 6 * xyDsz.x), xyDsz.x, xyDsz.y
-          xySiz.y = (((nH - 6 * xyDsz.y) - ((nF -1) * xyDsz.y) - 52) / nF)
-          for iP = 1, nF do local sCur = tFile[iP]
-            local pnManage = vguiCreate("DButton")
-            if(not IsValid(pnSheet)) then pnFrame:Close()
-              asmlib.LogInstance("OPEN_EXTERNDB.Button: Invalid ["..tostring(iP).."]"); return nil end
-            local nS, nE = sCur:upper():find(sPrU..defTab.Nick);
-            if(nS and nE) then
-              local sPref = sCur:sub(1, nS - 1)
-              local sFile = fDSV:format(sPref, defTab.Nick)
-              pnManage:SetParent(pnTable)
-              pnManage:SetPos(xyPos.x, xyPos.y)
-              pnManage:SetSize(xySiz.x, xySiz.y)
-              pnManage:SetFont("Trebuchet24")
-              pnManage:SetText(sPref)
-              pnManage:SetTooltip(languageGetPhrase("tool."..gsToolNameL..".pn_externdb_lb").." "..sFile)
-              pnManage.DoRightClick = function(pnSelf)
-                local pnMenu = vguiCreate("DMenu")
-                if(not IsValid(pnMenu)) then pnFrame:Close()
-                  asmlib.LogInstance("OPEN_EXTERNDB.Button: Menu invalid"); return nil end
-                local iO, tOptions = 1, {
-                  function() SetClipboardText(pnSelf:GetText()) end,
-                  function() SetClipboardText(sDsv) end,
-                  function() SetClipboardText(defTab.Nick) end,
-                  function() SetClipboardText(sFile) end,
-                  function() SetClipboardText(asmlib.GetDateTime(fileTime(sFile, "DATA"))) end,
-                  function() SetClipboardText(tostring(fileSize(sFile, "DATA")).."B") end,
-                  function() asmlib.SetAsmConvar(oPly, "*luapad", gsToolNameL) end,
-                  function() fileDelete(sFile)
-                    asmlib.LogInstance("OPEN_EXTERNDB.Button: Deleted "..asmlib.GetReport1(sFile))
-                    if(defTab.Nick == "PIECES") then local sCat = fDSV:format(sPref,"CATEGORY")
-                      if(fileExists(sCat,"DATA")) then fileDelete(sCat)
-                        asmlib.LogInstance("OPEN_EXTERNDB.Button: Deleted "..asmlib.GetReport1(sCat)) end
-                    end; pnManage:Remove()
-                  end
-                }
-                while(tOptions[iO]) do local sO = tostring(iO)
-                  local sDescr = languageGetPhrase("tool."..gsToolNameL..".pn_externdb_bt"..sO)
-                  pnMenu:AddOption(sDescr, tOptions[iO]):SetIcon(asmlib.ToIcon("pn_externdb_bt"..sO))
-                  iO = iO + 1 -- Loop trough the functions list and add to the menu
-                end; pnMenu:Open()
-              end
-            else asmlib.LogInstance("OPEN_EXTERNDB.Button: File missing ["..tostring(iP).."]") end
-            xyPos.y = xyPos.y + xySiz.y + xyDsz.y
-          end
-        else
-          asmlib.LogInstance("OPEN_EXTERNDB: Missing <"..defTab.Nick..">")
+      local pnTable = vguiCreate("DPanel")
+      if(not IsValid(pnTable)) then pnFrame:Close()
+        asmlib.LogInstance("OPEN_EXTERNDB: Category invalid"); return nil end
+      local defTab = asmlib.GetOpVar("DEFTABLE_PIECES")
+      pnTable:SetParent(pnSheet)
+      pnTable:DockMargin(xyDsz.x, xyDsz.y, xyDsz.x, xyDsz.y)
+      pnTable:DockPadding(xyDsz.x, xyDsz.y, xyDsz.x, xyDsz.y)
+      pnTable:Dock(FILL)
+      local tInfo = pnSheet:AddSheet(defTab.Nick, pnTable, asmlib.ToIcon(defTab.Name))
+      tInfo.Tab:SetTooltip(languageGetPhrase("tool."..gsToolNameL..".pn_externdb").." "..defTab.Nick)
+      local tFile = fileFind(fDSV:format("*", defTab.Nick), "DATA")
+      if(asmlib.IsTable(tFile) and tFile[1]) then
+        local nF, nW, nH = #tFile, pnFrame:GetSize()
+        xySiz.x, xyPos.x, xyPos.y = (nW - 6 * xyDsz.x), xyDsz.x, xyDsz.y
+        xySiz.y = (((nH - 6 * xyDsz.y) - ((nF -1) * xyDsz.y) - 52) / nF)
+        for iP = 1, nF do local sCur = tFile[iP]
+          local pnManage = vguiCreate("DButton")
+          if(not IsValid(pnSheet)) then pnFrame:Close()
+            asmlib.LogInstance("OPEN_EXTERNDB.Button: Invalid ["..tostring(iP).."]"); return nil end
+          local nS, nE = sCur:upper():find(sPrU..defTab.Nick);
+          if(nS and nE) then
+            local sPref = sCur:sub(1, nS - 1)
+            local sFile = fDSV:format(sPref, defTab.Nick)
+            pnManage:SetParent(pnTable)
+            pnManage:SetPos(xyPos.x, xyPos.y)
+            pnManage:SetSize(xySiz.x, xySiz.y)
+            pnManage:SetFont("Trebuchet24")
+            pnManage:SetText(sPref)
+            pnManage:SetTooltip(languageGetPhrase("tool."..gsToolNameL..".pn_externdb_lb").." "..sFile)
+            pnManage.DoRightClick = function(pnSelf)
+              local pnMenu = vguiCreate("DMenu")
+              if(not IsValid(pnMenu)) then pnFrame:Close()
+                asmlib.LogInstance("OPEN_EXTERNDB.Button: Menu invalid"); return nil end
+              local iO, tOptions = 1, {
+                function() SetClipboardText(pnSelf:GetText()) end,
+                function() SetClipboardText(sDsv) end,
+                function() SetClipboardText(defTab.Nick) end,
+                function() SetClipboardText(sFile) end,
+                function() SetClipboardText(asmlib.GetDateTime(fileTime(sFile, "DATA"))) end,
+                function() SetClipboardText(tostring(fileSize(sFile, "DATA")).."B") end,
+                function() asmlib.SetAsmConvar(oPly, "*luapad", gsToolNameL) end,
+                function() fileDelete(sFile)
+                  asmlib.LogInstance("OPEN_EXTERNDB.Button: Deleted "..asmlib.GetReport1(sFile))
+                  if(defTab.Nick == "PIECES") then local sCat = fDSV:format(sPref,"CATEGORY")
+                    if(fileExists(sCat,"DATA")) then fileDelete(sCat)
+                      asmlib.LogInstance("OPEN_EXTERNDB.Button: Deleted "..asmlib.GetReport1(sCat)) end
+                  end; pnManage:Remove()
+                end
+              }
+              while(tOptions[iO]) do local sO = tostring(iO)
+                local sDescr = languageGetPhrase("tool."..gsToolNameL..".pn_externdb_bt"..sO)
+                pnMenu:AddOption(sDescr, tOptions[iO]):SetIcon(asmlib.ToIcon("pn_externdb_bt"..sO))
+                iO = iO + 1 -- Loop trough the functions list and add to the menu
+              end; pnMenu:Open()
+            end
+          else asmlib.LogInstance("OPEN_EXTERNDB.Button: File missing ["..tostring(iP).."]") end
+          xyPos.y = xyPos.y + xySiz.y + xyDsz.y
         end
-        iD = (iD + 1); makTab = asmlib.GetBuilderID(iD)
-      end; pnFrame:SetVisible(true); pnFrame:Center(); pnFrame:MakePopup()
+      else
+        asmlib.LogInstance("OPEN_EXTERNDB: Missing <"..defTab.Nick..">")
+      end
+      pnFrame:SetVisible(true); pnFrame:Center(); pnFrame:MakePopup()
       conElements:Push(pnFrame); asmlib.LogInstance("OPEN_EXTERNDB: Success"); return nil
     end) -- Read client configuration
 
@@ -561,7 +558,7 @@ if(CLIENT) then
       local frUsed, nCount = asmlib.GetFrequentModels(oArgs[1])
       if(not asmlib.IsHere(frUsed)) then
         asmlib.LogInstance("OPEN_FRAME: Retrieving most frequent models failed ["..tostring(oArgs[1]).."]"); return nil end
-      local defTable = asmlib.GetOpVar("DEFTABLE_PIECES"); if(not defTable) then
+      local defTab = asmlib.GetOpVar("DEFTABLE_PIECES"); if(not defTab) then
         asmlib.LogInstance("OPEN_FRAME: Missing definition for table PIECES"); return nil end
       local pnFrame = vguiCreate("DFrame"); if(not IsValid(pnFrame)) then
         pnFrame:Remove(); asmlib.LogInstance("OPEN_FRAME: Failed to create base frame"); return nil end
@@ -648,10 +645,10 @@ if(CLIENT) then
       pnComboBox:SetSize(xySiz.x,xySiz.y)
       pnComboBox:SetVisible(true)
       pnComboBox:SetValue(languageGetPhrase("tool."..gsToolNameL..".pn_srchcol_lb"))
-      pnComboBox:AddChoice(languageGetPhrase("tool."..gsToolNameL..".pn_srchcol_lb1"),defTable[1][1])
-      pnComboBox:AddChoice(languageGetPhrase("tool."..gsToolNameL..".pn_srchcol_lb2"),defTable[2][1])
-      pnComboBox:AddChoice(languageGetPhrase("tool."..gsToolNameL..".pn_srchcol_lb3"),defTable[3][1])
-      pnComboBox:AddChoice(languageGetPhrase("tool."..gsToolNameL..".pn_srchcol_lb4"),defTable[4][1])
+      pnComboBox:AddChoice(languageGetPhrase("tool."..gsToolNameL..".pn_srchcol_lb1"),defTab[1][1])
+      pnComboBox:AddChoice(languageGetPhrase("tool."..gsToolNameL..".pn_srchcol_lb2"),defTab[2][1])
+      pnComboBox:AddChoice(languageGetPhrase("tool."..gsToolNameL..".pn_srchcol_lb3"),defTab[3][1])
+      pnComboBox:AddChoice(languageGetPhrase("tool."..gsToolNameL..".pn_srchcol_lb4"),defTab[4][1])
       pnComboBox.OnSelect = function(pnSelf, nInd, sVal, anyData)
         asmlib.LogInstance("OPEN_FRAME: ComboBox.OnSelect: ID #"..nInd.."<"..sVal..">"..tostring(anyData))
         pnSelf:SetValue(sVal)
