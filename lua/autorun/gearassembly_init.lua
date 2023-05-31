@@ -31,7 +31,7 @@ local asmlib = gearasmlib; if(not asmlib) then -- Module present
 
 ------ CONFIGURE ASMLIB ------
 asmlib.InitBase("gear","assembly")
-asmlib.SetOpVar("TOOL_VERSION","5.235")
+asmlib.SetOpVar("TOOL_VERSION","5.236")
 asmlib.SetIndexes("V",1,2,3)
 asmlib.SetIndexes("A",1,2,3)
 asmlib.SetIndexes("S",4,5,6,7)
@@ -179,15 +179,15 @@ if(SERVER) then
   asmlib.SetAction("DUPE_PHYS_SETTINGS",
     function(oPly,oEnt,tData) -- Duplicator wrapper
       if(not asmlib.ApplyPhysicalSettings(oEnt,tData[1],tData[2],tData[3])) then
-        return asmlib.StatusLog(nil,"DUPE_PHYS_SETTINGS: Failed to apply physical settings on "..tostring(oEnt)) end
-      return asmlib.StatusLog(nil,"DUPE_PHYS_SETTINGS: Success")
+        asmlib.LogInstance("DUPE_PHYS_SETTINGS: Failed to apply physical settings on "..tostring(oEnt)); return nil end
+      asmlib.LogInstance("DUPE_PHYS_SETTINGS: Success"); return nil
     end)
 
   asmlib.SetAction("PLAYER_QUIT",
     function(oPly) -- Clear player cache when disconnects
       if(not asmlib.CacheClearPly(oPly)) then
-        return asmlib.StatusLog(nil,"PLAYER_QUIT: Failed swiping stuff "..tostring(oPly)) end
-      return asmlib.StatusLog(nil,"PLAYER_QUIT: Success")
+        asmlib.LogInstance("PLAYER_QUIT: Failed swiping stuff "..tostring(oPly)); return nil end
+      asmlib.LogInstance("PLAYER_QUIT: Success"); return nil
     end)
 end
 
@@ -232,7 +232,7 @@ if(CLIENT) then
       asmlib.ConCommandPly(oPly,"rotpivh"  , 0)
       asmlib.ConCommandPly(oPly,"deltarot" , 360)
       if(not devmode) then
-        return asmlib.StatusLog(nil,"RESET_VARIABLES: Developer mode disabled") end
+        asmlib.LogInstance("RESET_VARIABLES: Developer mode disabled"); return nil end
       asmlib.SetLogControl(asmlib.GetAsmConvar("logsmax" , "INT"), asmlib.GetAsmConvar("logfile" , "BUL"))
       if(bgskids == "reset cvars") then -- Reset also the maximum spawned pieces
         oPly:ConCommand("sbox_max"..asmlib.GetOpVar("CVAR_LIMITNAME").." 1500\n")
@@ -279,19 +279,292 @@ if(CLIENT) then
          asmlib.RemoveDSV("PIECES",vPr)
          asmlib.LogInstance("RESET_VARIABLES: Match <"..vPr..">")
         end
-      else return asmlib.StatusLog(nil,"RESET_VARIABLES: Command <"..bgskids.."> skipped") end
-      return asmlib.StatusLog(nil,"RESET_VARIABLES: Success")
+      else asmlib.LogInstance("RESET_VARIABLES: Command <"..bgskids.."> skipped"); return nil end
+      asmlib.LogInstance("RESET_VARIABLES: Success"); return nil
     end)
+
+  asmlib.SetAction("OPEN_EXTERNDB", -- Must have the same parameters as the hook
+    function(oPly,oCom,oArgs)
+      local scrW = surfaceScreenWidth()
+      local scrH = surfaceScreenHeight()
+      local sVer = asmlib.GetOpVar("TOOL_VERSION")
+      local xyPos, nAut  = asmlib.NewXY(scrW/4,scrH/4), (gnRatio - 1)
+      local xyDsz, xyTmp = asmlib.NewXY(5,5), asmlib.NewXY()
+      local xySiz = asmlib.NewXY(nAut * scrW, nAut * scrH)
+      local pnFrame = vguiCreate("DFrame"); if(not IsValid(pnFrame)) then
+        asmlib.LogInstance("OPEN_EXTERNDB: Frame invalid"); return nil end
+      pnFrame:SetPos(xyPos.x, xyPos.y)
+      pnFrame:SetSize(xySiz.x, xySiz.y)
+      pnFrame:SetTitle(languageGetPhrase("tool."..gsToolNameL..".pn_externdb_hd").." "..oPly:Nick().." {"..sVer.."}")
+      pnFrame:SetDraggable(true)
+      pnFrame:SetDeleteOnClose(false)
+      pnFrame.OnClose = function(pnSelf)
+        local iK = conElements:Find(pnSelf) -- Find panel key index
+        if(IsValid(pnSelf)) then pnSelf:Remove() end -- Delete the valid panel
+        if(asmlib.IsHere(iK)) then conElements:Pull(iK) end -- Pull the key out
+      end
+      local pnSheet = vguiCreate("DPropertySheet")
+      if(not IsValid(pnSheet)) then pnFrame:Close()
+        asmlib.LogInstance("OPEN_EXTERNDB: Sheet invalid"); return nil end
+      pnSheet:SetParent(pnFrame)
+      pnSheet:Dock(FILL)
+      local sOff = asmlib.GetOpVar("OPSYM_DISABLE")
+      local sMis = asmlib.GetOpVar("MISS_NOAV")
+      local sLib = asmlib.GetOpVar("NAME_LIBRARY")
+      local sBas = asmlib.GetOpVar("DIRPATH_BAS")
+      local sSet = asmlib.GetOpVar("DIRPATH_SET")
+      local sPrU = asmlib.GetOpVar("TOOLNAME_PU")
+      local sRev = asmlib.GetOpVar("OPSYM_REVISION")
+      local sDsv = sBas..asmlib.GetOpVar("DIRPATH_DSV")
+      local fDSV = sDsv..("%s"..sPrU.."%s.txt")
+      local sNam = (sBas..sSet..sLib.."_dsv.txt")
+      local pnDSV = vguiCreate("DPanel")
+      if(not IsValid(pnDSV)) then pnFrame:Close()
+        asmlib.LogInstance("OPEN_EXTERNDB: DSV list invalid"); return nil end
+      pnDSV:SetParent(pnSheet)
+      pnDSV:DockMargin(xyDsz.x, xyDsz.y, xyDsz.x, xyDsz.y)
+      pnDSV:DockPadding(xyDsz.x, xyDsz.y, xyDsz.x, xyDsz.y)
+      pnDSV:Dock(FILL)
+      local tInfo = pnSheet:AddSheet("DSV", pnDSV, asmlib.ToIcon("dsvlist_extdb"))
+      tInfo.Tab:SetTooltip(languageGetPhrase("tool."..gsToolNameL..".pn_externdb").." DSV")
+      local sDel, nB, nW, nH = "\t", 22, pnFrame:GetSize()
+      xyPos.x, xyPos.y = xyDsz.x, xyDsz.y
+      xySiz.x = (nW - 6 * xyDsz.x)
+      xySiz.y = ((nH - 6 * xyDsz.y) - 52)
+      local wAct = mathFloor(((gnRatio - 1) / 10) * xySiz.x)
+      local wUse, wSrc = mathFloor(xySiz.x - wAct), (xySiz.x * nAut)
+      local pnListView = vguiCreate("DListView")
+      if(not IsValid(pnListView)) then pnFrame:Close()
+        asmlib.LogInstance("OPEN_EXTERNDB: List view invalid"); return nil end
+      xySiz.y = xySiz.y - 3*xyDsz.y - 2*nB
+      pnListView:SetParent(pnDSV)
+      pnListView:SetVisible(true)
+      pnListView:SetSortable(false)
+      pnListView:SetMultiSelect(false)
+      pnListView:SetPos(xyPos.x, xyPos.y)
+      pnListView:SetSize(xySiz.x, xySiz.y)
+      pnListView:SetName(languageGetPhrase("tool."..gsToolNameL..".pn_ext_dsv_lb"))
+      pnListView:SetTooltip(languageGetPhrase("tool."..gsToolNameL..".pn_ext_dsv_hd"))
+      pnListView:AddColumn(languageGetPhrase("tool."..gsToolNameL..".pn_ext_dsv_1")):SetFixedWidth(wAct)
+      pnListView:AddColumn(languageGetPhrase("tool."..gsToolNameL..".pn_ext_dsv_2")):SetFixedWidth(wUse - wSrc)
+      pnListView:AddColumn(languageGetPhrase("tool."..gsToolNameL..".pn_ext_dsv_3")):SetFixedWidth(wSrc)
+      -- Rext entry to inport/export to list view
+      xyPos.y = xyPos.y + xySiz.y + xyDsz.y
+      xySiz.y = nB -- Genral Y-size of elements
+      local tpText = {Size = #pnListView.Columns}
+      for iC = 1, tpText.Size do
+        local pC = pnListView.Columns[iC]
+        local cW = math.min(pC:GetMinWidth(), pC:GetMaxWidth())
+        if(iC == 1 or iC == tpText.Size) then
+          xySiz.x = cW - (xyDsz.x / 2)
+        else xySiz.x = cW - xyDsz.x end; pC:SetWide(cW)
+        local pnText = vguiCreate("DTextEntry")
+        if(not IsValid(pnText)) then pnFrame:Close()
+          asmlib.LogInstance("OPEN_EXTERNDB: Text entry active invalid", sLog); return nil end
+        pnText:SetParent(pnDSV)
+        pnText:SetEditable(true)
+        pnText:SetPos(xyPos.x, xyPos.y)
+        pnText:SetSize(xySiz.x, xySiz.y)
+        pnText:SetTooltip(languageGetPhrase("tool."..gsToolNameL..".pn_externdb_ttt").." "
+                        ..languageGetPhrase("tool."..gsToolNameL..".pn_ext_dsv_"..iC))
+        xyPos.x = xyPos.x + xySiz.x + xyDsz.x; tpText[iC] = pnText
+        pnText.OnEnter = function(pnSelf)
+          local nID, pnRow = pnListView:GetSelectedLine()
+          local tDat, sMis = {}, asmlib.GetOpVar("MISS_NOAV")
+          for iV = 1, tpText.Size do tDat[iV] = tpText[iV]:GetValue() end
+          -- Active line. Contains X/V
+          tDat[1] = tostring(tDat[1] or "X")
+          tDat[1] = (tDat[1]:Trim():upper():sub(1,1))
+          tDat[1] = ((tDat[1] == "V") and "V" or "X")
+          -- Database unique prefix. Contains non-spaces
+          tDat[2] = tostring(tDat[2] or "")
+          tDat[2] = tDat[2]:Trim():gsub("[^%w]","_")
+          -- Additional information. It can be anything
+          tDat[3] = tostring(tDat[3] or ""):Trim()
+          tDat[3] = (asmlib.IsBlank(tDat[3]) and sMis or tDat[3])
+          if(not asmlib.IsBlank(tDat[1]) and not asmlib.IsBlank(tDat[2])) then
+          if(nID and nID > 0 and pnRow and not tpText[1].m_NewDSV) then local iU = 1
+            while(pnRow.Columns[iU]) do pnRow:SetColumnText(iU, tDat[iU]); iU = iU + 1 end
+          else pnListView:AddLine(tDat[1], tDat[2], tDat[3]):SetTooltip(tDat[3])
+          end; end; for iV = 1, tpText.Size do tpText[iV]:SetValue(""); tpText[iV]:SetText("") end
+        end
+      end
+      -- Import button. when clicked loads file into the panel
+      local pnImport = vguiCreate("DButton")
+      if(not IsValid(pnImport)) then pnFrame:Close()
+        asmlib.LogInstance("OPEN_EXTERNDB: Import button invalid", sLog); return nil end
+      xyPos.x = pnListView:GetPos()
+      xyPos.y = xyPos.y + xySiz.y + xyDsz.y
+      xySiz.x = ((pnListView:GetWide() - xyDsz.x) / 2)
+      pnImport:SetPos(xyPos.x, xyPos.y)
+      pnImport:SetSize(xySiz.x, xySiz.y)
+      pnImport:SetParent(pnDSV)
+      pnImport:SetFont("Trebuchet24")
+      pnImport:SetText(languageGetPhrase("tool."..gsToolNameL..".pn_externdb_bti"))
+      pnImport:SetTooltip(languageGetPhrase("tool."..gsToolNameL..".pn_externdb_bti_tp"))
+      pnImport.DoRightClick = function() end
+      pnImport.DoClick = function(pnSelf)
+        if(not fileExists(sNam, "DATA")) then fileWrite(sNam, "") end
+        local oDSV = fileOpen(sNam, "rb", "DATA"); if(not oDSV) then pnFrame:Close()
+          asmlib.LogInstance("OPEN_EXTERNDB: DSV list missing"); return nil end; pnListView:Clear()
+        local sLine, bEOF, bAct = "", false, true
+        while(not bEOF) do
+          sLine, bEOF = asmlib.GetStringFile(oDSV)
+          if(not asmlib.IsBlank(sLine)) then local sKey, sPrg
+            if(sLine:sub(1,1) ~= sOff) then bAct = true else
+              bAct, sLine = false, sLine:sub(2,-1):Trim() end
+            local nS, nE = sLine:find("%s+")
+            if(nS and nE) then
+              sKey = sLine:sub(1, nS-1)
+              sPrg = sLine:sub(nE+1,-1)
+            else sKey, sPrg = sLine, sMis end
+            pnListView:AddLine((bAct and "V" or "X"), sKey, sPrg):SetTooltip(sPrg)
+          end
+        end; oDSV:Close()
+      end; pnImport:DoClick()
+      -- Expot button. When clicked loads contents into the file
+      local pnExport = vguiCreate("DButton")
+      if(not IsValid(pnExport)) then pnFrame:Close()
+        asmlib.LogInstance("OPEN_EXTERNDB: Export button invalid", sLog); return nil end
+      xyPos.x = xyPos.x + xySiz.x + xyDsz.x
+      pnExport:SetPos(xyPos.x, xyPos.y)
+      pnExport:SetSize(xySiz.x, xySiz.y)
+      pnExport:SetParent(pnDSV)
+      pnExport:SetFont("Trebuchet24")
+      pnExport:SetText(languageGetPhrase("tool."..gsToolNameL..".pn_externdb_bte"))
+      pnExport:SetTooltip(languageGetPhrase("tool."..gsToolNameL..".pn_externdb_bte_tp"))
+      pnExport.DoRightClick = function() end
+      pnExport.DoClick = function(pnSelf)
+        local oDSV = fileOpen(sNam, "wb", "DATA")
+        if(not oDSV) then pnFrame:Close()
+          asmlib.LogInstance("OPEN_EXTERNDB: DSV list missing"..".ListView"); return nil end
+        local tLine = pnListView:GetLines()
+        for iK, pnCur in pairs(tLine) do
+          local sAct = ((pnCur:GetColumnText(1) == "V") and "" or sOff)
+          local sPrf = pnCur:GetColumnText(2)
+          local sPth = pnCur:GetColumnText(3)
+          if(not asmlib.IsBlank(sPth)) then sPth = sDel..sPth end
+          oDSV:Write(sAct..sPrf..sPth.."\n")
+        end; oDSV:Flush(); oDSV:Close()
+      end
+      local function convRow(pnRow)
+        local sSep = asmlib.GetOpVar("OPSYM_VERTDIV")
+        local sAct = pnRow:GetColumnText(1) -- Active
+        local sPrf = pnRow:GetColumnText(2) -- PK
+        local sPth = pnRow:GetColumnText(3) -- Path
+        if(not asmlib.IsBlank(sPth)) then sPth = sSep..sPth end
+        return (sAct..sSep..sPrf..sPth) -- Divided
+      end
+      local function excgRow(pnRow)
+        for iV = 1, tpText.Size do
+          local ptx = tpText[iV] -- Pick a panel
+          local str = pnRow:GetColumnText(iV)
+          ptx:SetValue(str); ptx:SetText(str)
+        end -- Exchange data with list view and text
+      end
+      pnListView.OnRowRightClick = function(pnSelf, nIndex, pnLine)
+        if(inputIsMouseDown(MOUSE_RIGHT)) then
+          local pnMenu = vguiCreate("DMenu")
+          if(not IsValid(pnMenu)) then pnFrame:Close()
+            asmlib.LogInstance("OPEN_EXTERNDB: Menu invalid"..".ListView"); return nil end
+          local mX, mY = inputGetCursorPos()
+          local iO, tOptions = 1, {
+            function()
+              local cC, cX, cY = 0, pnSelf:ScreenToLocal(mX, mY)
+              while(cX > 0) do cC = (cC + 1); cX = (cX - pnSelf:ColumnWidth(cC))
+              end; local nID, pnRow = pnSelf:GetSelectedLine()
+              if(nID and nID > 0 and pnRow) then SetClipboardText(pnRow:GetColumnText(cC)) end
+            end,
+            function() SetClipboardText(convRow(pnLine)) end,
+            function() pnLine:SetColumnText(1, ((pnLine:GetColumnText(1) == "V") and "X" or "V")) end,
+            function() excgRow(pnLine); tpText[1].m_NewDSV = false end,
+            function() excgRow(pnLine); tpText[1].m_NewDSV = true  end,
+            function() pnSelf:RemoveLine(nIndex) end
+          }
+          while(tOptions[iO]) do local sO = tostring(iO)
+            local sDescr = languageGetPhrase("tool."..gsToolNameL..".pn_externdb_cm"..sO)
+            pnMenu:AddOption(sDescr, tOptions[iO]):SetIcon(asmlib.ToIcon("pn_externdb_cm"..sO))
+            iO = iO + 1 -- Loop trough the functions list and add to the menu
+          end; pnMenu:Open()
+        end -- Process only the right mouse button
+      end -- Populate the tables for every database
+      local iD, makTab = 1, asmlib.GetBuilderID(1)
+      while(makTab) do
+        local pnTable = vguiCreate("DPanel")
+        if(not IsValid(pnTable)) then pnFrame:Close()
+          asmlib.LogInstance("OPEN_EXTERNDB: Category invalid"); return nil end
+        local defTab = makTab:GetDefinition()
+        pnTable:SetParent(pnSheet)
+        pnTable:DockMargin(xyDsz.x, xyDsz.y, xyDsz.x, xyDsz.y)
+        pnTable:DockPadding(xyDsz.x, xyDsz.y, xyDsz.x, xyDsz.y)
+        pnTable:Dock(FILL)
+        local tInfo = pnSheet:AddSheet(defTab.Nick, pnTable, asmlib.ToIcon(defTab.Name))
+        tInfo.Tab:SetTooltip(languageGetPhrase("tool."..gsToolNameL..".pn_externdb").." "..defTab.Nick)
+        local tFile = fileFind(fDSV:format("*", defTab.Nick), "DATA")
+        if(asmlib.IsTable(tFile) and tFile[1]) then
+          local nF, nW, nH = #tFile, pnFrame:GetSize()
+          xySiz.x, xyPos.x, xyPos.y = (nW - 6 * xyDsz.x), xyDsz.x, xyDsz.y
+          xySiz.y = (((nH - 6 * xyDsz.y) - ((nF -1) * xyDsz.y) - 52) / nF)
+          for iP = 1, nF do local sCur = tFile[iP]
+            local pnManage = vguiCreate("DButton")
+            if(not IsValid(pnSheet)) then pnFrame:Close()
+              asmlib.LogInstance("OPEN_EXTERNDB.Button: Invalid ["..tostring(iP).."]"); return nil end
+            local nS, nE = sCur:upper():find(sPrU..defTab.Nick);
+            if(nS and nE) then
+              local sPref = sCur:sub(1, nS - 1)
+              local sFile = fDSV:format(sPref, defTab.Nick)
+              pnManage:SetParent(pnTable)
+              pnManage:SetPos(xyPos.x, xyPos.y)
+              pnManage:SetSize(xySiz.x, xySiz.y)
+              pnManage:SetFont("Trebuchet24")
+              pnManage:SetText(sPref)
+              pnManage:SetTooltip(languageGetPhrase("tool."..gsToolNameL..".pn_externdb_lb").." "..sFile)
+              pnManage.DoRightClick = function(pnSelf)
+                local pnMenu = vguiCreate("DMenu")
+                if(not IsValid(pnMenu)) then pnFrame:Close()
+                  asmlib.LogInstance("OPEN_EXTERNDB.Button: Menu invalid"); return nil end
+                local iO, tOptions = 1, {
+                  function() SetClipboardText(pnSelf:GetText()) end,
+                  function() SetClipboardText(sDsv) end,
+                  function() SetClipboardText(defTab.Nick) end,
+                  function() SetClipboardText(sFile) end,
+                  function() SetClipboardText(asmlib.GetDateTime(fileTime(sFile, "DATA"))) end,
+                  function() SetClipboardText(tostring(fileSize(sFile, "DATA")).."B") end,
+                  function() asmlib.SetAsmConvar(oPly, "*luapad", gsToolNameL) end,
+                  function() fileDelete(sFile)
+                    asmlib.LogInstance("OPEN_EXTERNDB.Button: Deleted "..asmlib.GetReport1(sFile))
+                    if(defTab.Nick == "PIECES") then local sCat = fDSV:format(sPref,"CATEGORY")
+                      if(fileExists(sCat,"DATA")) then fileDelete(sCat)
+                        asmlib.LogInstance("OPEN_EXTERNDB.Button: Deleted "..asmlib.GetReport1(sCat)) end
+                    end; pnManage:Remove()
+                  end
+                }
+                while(tOptions[iO]) do local sO = tostring(iO)
+                  local sDescr = languageGetPhrase("tool."..gsToolNameL..".pn_externdb_bt"..sO)
+                  pnMenu:AddOption(sDescr, tOptions[iO]):SetIcon(asmlib.ToIcon("pn_externdb_bt"..sO))
+                  iO = iO + 1 -- Loop trough the functions list and add to the menu
+                end; pnMenu:Open()
+              end
+            else asmlib.LogInstance("OPEN_EXTERNDB.Button: File missing ["..tostring(iP).."]") end
+            xyPos.y = xyPos.y + xySiz.y + xyDsz.y
+          end
+        else
+          asmlib.LogInstance("OPEN_EXTERNDB: Missing <"..defTab.Nick..">")
+        end
+        iD = (iD + 1); makTab = asmlib.GetBuilderID(iD)
+      end; pnFrame:SetVisible(true); pnFrame:Center(); pnFrame:MakePopup()
+      conElements:Push(pnFrame); asmlib.LogInstance("OPEN_EXTERNDB: Success"); return nil
+    end) -- Read client configuration
 
   asmlib.SetAction("OPEN_FRAME",
     function(oPly,oCom,oArgs)
       local frUsed, nCount = asmlib.GetFrequentModels(oArgs[1])
       if(not asmlib.IsHere(frUsed)) then
-        return asmlib.StatusLog(nil,"OPEN_FRAME: Retrieving most frequent models failed ["..tostring(oArgs[1]).."]") end
+        asmlib.LogInstance("OPEN_FRAME: Retrieving most frequent models failed ["..tostring(oArgs[1]).."]"); return nil end
       local defTable = asmlib.GetOpVar("DEFTABLE_PIECES"); if(not defTable) then
-        return StatusLog(nil,"OPEN_FRAME: Missing definition for table PIECES") end
+        asmlib.LogInstance("OPEN_FRAME: Missing definition for table PIECES"); return nil end
       local pnFrame = vguiCreate("DFrame"); if(not IsValid(pnFrame)) then
-        pnFrame:Remove(); return asmlib.StatusLog(nil,"OPEN_FRAME: Failed to create base frame") end
+        pnFrame:Remove(); asmlib.LogInstance("OPEN_FRAME: Failed to create base frame"); return nil end
       local pnElements = asmlib.GetContainer("FREQ_VGUI")
             pnElements:Push({Label = { "DButton"    ,languageGetPhrase("tool."..gsToolNameL..".pn_export_lb") , languageGetPhrase("tool."..gsToolNameL..".pn_export")}})
             pnElements:Push({Label = { "DListView"  ,languageGetPhrase("tool."..gsToolNameL..".pn_routine_lb"), languageGetPhrase("tool."..gsToolNameL..".pn_routine")}})
@@ -312,7 +585,7 @@ if(CLIENT) then
             asmlib.LogInstance("OPEN_FRAME: Deleted entry "..sItem.."ID #"..tonumber(iNdex))
             iNdex = iNdex + 1
           end; pnFrame:Remove()
-          return StatusLog(nil,"OPEN_FRAME: Invalid panel created. Frame removed")
+          asmlib.LogInstance("OPEN_FRAME: Invalid panel created. Frame removed"); return nil
         end
         vItem.Panel:SetName(vItem.Label[2])
         vItem.Panel:SetTooltip(vItem.Label[3])
@@ -364,15 +637,6 @@ if(CLIENT) then
       pnButton:SetPos(xyPos.x, xyPos.y)
       pnButton:SetSize(xySiz.x, xySiz.y)
       pnButton:SetVisible(true)
-      pnButton.DoClick = function()
-        asmlib.LogInstance("OPEN_FRAME: Button.DoClick: <"..pnButton:GetText().."> clicked")
-        if(asmlib.GetAsmConvar("exportdb", "BUL")) then
-          asmlib.LogInstance("OPEN_FRAME: Button Exporting DB")
-          asmlib.ExportCategory(3)
-          asmlib.ExportDSV("PIECES")
-          asmlib.ConCommandPly(oPly, "exportdb", 0)
-        end
-      end
       ------------- ComboBox ---------------
       xyPos.x, xyPos.y = pnButton:GetPos()
       xyTmp.x, xyTmp.y = pnButton:GetSize()
@@ -407,10 +671,10 @@ if(CLIENT) then
         if(pnSelf.bAnimated) then pnSelf:RunAnimation() end
         local uiBox = asmlib.CacheBoxLayout(oEnt,40)
         if(not asmlib.IsHere(uiBox)) then
-          return asmlib.StatusLog(nil,"OPEN_FRAME: pnModelPanel.LayoutEntity: Box invalid") end
+          asmlib.LogInstance("OPEN_FRAME: pnModelPanel.LayoutEntity: Box invalid"); return nil end
         local stSpawn = asmlib.GetNormalSpawn(oPly,asmlib.GetOpVar("VEC_ZERO"),uiBox.Ang,oEnt:GetModel())
         if(not stSpawn) then
-          return asmlib.StatusLog(nil,"OPEN_FRAME: pnModelPanel.LayoutEntity: Spawn data fail") end
+          asmlib.LogInstance("OPEN_FRAME: pnModelPanel.LayoutEntity: Spawn data fail"); return nil end
         asmlib.ApplySpawnFlat(oEnt, stSpawn, asmlib.GetOpVar("VEC_UP"))
               stSpawn.SPos:Set(uiBox.Cen)
               stSpawn.SPos:Rotate(stSpawn.SAng)
@@ -432,15 +696,6 @@ if(CLIENT) then
       pnTextEntry:SetPos(xyPos.x,xyPos.y)
       pnTextEntry:SetSize(xySiz.x,xySiz.y)
       pnTextEntry:SetVisible(true)
-      pnTextEntry.OnEnter = function(pnSelf)
-        local sName, sField = pnComboBox:GetSelected()
-              sName    = tostring(sName  or "")
-              sField   = tostring(sField or "")
-        local sPattern = tostring(pnSelf:GetValue() or "")
-        if(not asmlib.UpdateListView(pnListView,frUsed,nCount,sField,sPattern)) then
-          return asmlib.StatusLog(nil,"OPEN_FRAME: TextEntry.OnEnter: Failed to update ListView {"..sName.."#"..sField.."#"..sPattern.."}")
-        end
-      end
       ------------ ListView --------------
       xyPos.x, xyPos.y = pnButton:GetPos()
       xyTmp.x, xyTmp.y = pnButton:GetSize()
@@ -468,21 +723,43 @@ if(CLIENT) then
       pnListView:AddColumn(languageGetPhrase("tool."..gsToolNameL..".pn_routine_lb3")):SetFixedWidth(wTyp) -- (3)
       pnListView:AddColumn(languageGetPhrase("tool."..gsToolNameL..".pn_routine_lb4")):SetFixedWidth(wNam) -- (4)
       pnListView.OnRowSelected = function(pnSelf, nIndex, pnLine)
-        local uiMod = pnLine:GetColumnText(5) -- Forth index is actually the model in the table
-                      pnModelPanel:SetModel(uiMod)
-        local uiEnt = pnModelPanel:GetEntity()
-        local uiBox = asmlib.CacheBoxLayout(uiEnt,0,nRatio,nRatio-1)
-        if(not asmlib.IsHere(uiBox)) then
-          return asmlib.StatusLog(nil,"OPEN_FRAME: ListView.OnRowSelected: Box invalid for <"..uiMod..">") end
+        local uiMod = pnLine:GetColumnText(5); pnModelPanel:SetModel(uiMod) -- Forth index is actually the model in the table
+        local uiEnt = pnModelPanel:GetEntity(); if(not (uiEnt and uiEnt:IsValid())) then -- The entity is validated first
+          asmlib.LogInstance("OPEN_FRAME: ListView.OnRowSelected: Model entity invalid "..asmlib.GetReport(uiMod)); return nil end
+        uiEnt:SetModel(uiMod); uiEnt:SetModelName(uiMod) -- Apply the model on the model panel even for changed compiled model paths
+        local uiBox = asmlib.CacheBoxLayout(uiEnt,0,nRatio,nRatio-1); if(not asmlib.IsHere(uiBox)) then
+          asmlib.LogInstance("OPEN_FRAME: ListView.OnRowSelected: Box invalid for <"..uiMod..">"); return nil end
         pnModelPanel:SetLookAt(uiBox.Eye); pnModelPanel:SetCamPos(uiBox.Cam)
-        asmlib.ConCommandPly(oPly, "model" ,uiMod)
+        asmlib.ConCommandPly(oPly, "model" ,uiMod); SetClipboardText(uiMod)
       end -- Copy the line model to the clipboard so it can be pasted with Ctrl+V
-      pnListView.OnRowRightClick = function(pnSelf, nIndex, pnLine) SetClipboardText(pnLine:GetColumnText(5)) end
+      pnListView.OnRowRightClick = function(pnSelf, nIndex, pnLine)
+        local cC, cX, cY = 0, inputGetCursorPos(); cX, cY = pnSelf:ScreenToLocal(cX, cY)
+        while(cX > 0) do cC = (cC + 1); cX = (cX - pnSelf:ColumnWidth(cC)) end
+        SetClipboardText(pnLine:GetColumnText(cC))
+      end
       if(not asmlib.UpdateListView(pnListView,frUsed,nCount)) then
-        return asmlib.StatusLog(nil,"OPEN_FRAME: ListView.OnRowSelected: Populate the list view failed") end
-      ------------ Show the completed panel --------------
+        asmlib.LogInstance("OPEN_FRAME: ListView.OnRowSelected: Populate the list view failed"); return nil end
+      -- The button dababase export by type uses the current active type in the ListView line
+      pnButton.DoClick = function()
+        asmlib.LogInstance("OPEN_FRAME: Button.DoClick: <"..pnButton:GetText().."> clicked")
+        if(asmlib.GetAsmConvar("exportdb", "BUL")) then
+          asmlib.LogInstance("OPEN_FRAME: Button Exporting DB")
+          asmlib.ExportCategory(3)
+          asmlib.ExportDSV("PIECES")
+          asmlib.ConCommandPly(oPly, "exportdb", 0)
+        end
+      end
+      -- Leave the TextEntry here so it can access and update the local ListView reference
+      pnTextEntry.OnEnter = function(pnSelf)
+        local sPat = tostring(pnSelf:GetValue() or "")
+        local sAbr, sCol = pnComboBox:GetSelected() -- Returns two values
+              sAbr, sCol = tostring(sAbr or ""), tostring(sCol or "")
+        if(not asmlib.UpdateListView(pnListView,frUsed,nCount,sCol,sPat)) then
+          asmlib.LogInstance("OPEN_FRAME: TextEntry.OnEnter: Failed to update ListView {"..sName.."#"..sField.."#"..sPattern.."}"); return nil
+        end
+      end
       pnFrame:SetVisible(true); pnFrame:Center(); pnFrame:MakePopup()
-      return asmlib.StatusLog(nil,"OPEN_FRAME: Success")
+      asmlib.LogInstance("OPEN_FRAME: Success"); return nil
     end)
 end
 
