@@ -685,8 +685,10 @@ function InitBase(sName,sPurpose)
   SetOpVar("OPSYM_DISABLE","#")
   SetOpVar("OPSYM_REVSIGN","@")
   SetOpVar("OPSYM_DIVIDER","_")
+  SetOpVar("OPSYM_VERTDIV","|")
   SetOpVar("OPSYM_DIRECTORY","/")
   SetOpVar("OPSYM_SEPARATOR",",")
+  SetOpVar("FORM_CONCMD", "%s %s")
   SetOpVar("FORM_VREPORT1","{%s}")
   SetOpVar("FORM_VREPORT2","{%s}|%s|")
   SetOpVar("FORM_VREPORT3","{%s}|%s|%s|")
@@ -1973,14 +1975,6 @@ function CacheTracePly(pPly)
   end; return stData["REZ"]
 end
 
-function ConCommandPly(pPly,sCvar,snValue)
-  if(not IsPlayer(pPly)) then
-    return StatusLog(nil,"ConCommandPly: Player <"..tostring(pPly).."> invalid") end
-  if(not IsString(sCvar)) then -- Make it like so the space will not be forgotten
-    return StatusLog(nil,"ConCommandPly: Convar {"..type(sCvar).."}<"..tostring(sCvar).."> not string") end
-  return pPly:ConCommand(GetOpVar("TOOLNAME_PL")..sCvar.." "..tostring(snValue).."\n")
-end
-
 function PrintNotifyPly(pPly,sText,sNotifType)
   if(not IsPlayer(pPly)) then
     return StatusLog(false,"PrintNotifyPly: Player <"..tostring(pPly)"> invalid") end
@@ -2296,7 +2290,8 @@ function CreateTable(sTable,defTable,bDelete,bReload)
   local iCnt, defCol = 1, nil
   SetOpVar("DEFTABLE_"..sTable,defTable)
   defTable.Size = #defTable
-  defTable.Name = GetOpVar("TOOLNAME_PU")..sTable
+  defTable.Nick = sTable:upper()
+  defTable.Name = GetOpVar("TOOLNAME_PU")..defTable.Nick
   while(defTable[iCnt]) do
     defCol    = defTable[iCnt]
     defCol[3] = DefaultString(tostring(defCol[3] or symDis), symDis)

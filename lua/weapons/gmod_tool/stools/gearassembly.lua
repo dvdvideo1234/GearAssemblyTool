@@ -72,6 +72,7 @@ local gsToolPrefU = asmlib.GetOpVar("TOOLNAME_PU")
 local gsToolNameU = asmlib.GetOpVar("TOOLNAME_NU")
 local gsNoAnchor  = gsNoID..gsSymRev..gsNoMD
 local conPalette  = asmlib.GetContainer("COLORS_LIST")
+local conElements = asmlib.GetContainer("LIST_VGUI")
 
 if(not asmlib.ProcessDSV()) then -- Default tab delimiter
   asmlib.LogInstance("Processing data list failed <"..gsDataRoot..gsLibName.."_dsv.txt>")
@@ -129,6 +130,7 @@ if(CLIENT) then
   languageAdd("tool."..gsToolNameL..".category", "Construction")
   concommandAdd(gsToolPrefL.."resetvars", asmlib.GetActionCode("RESET_VARIABLES"))
   concommandAdd(gsToolPrefL.."openframe", asmlib.GetActionCode("OPEN_FRAME"))
+  concommandAdd(gsToolPrefL.."openextdb", asmlib.GetActionCode("OPEN_EXTERNDB"))
 
   asmlib.SetOpVar("STORE_TOOLOBJ", TOOL)
   asmlib.SetOpVar("STORE_CONVARS", TOOL:BuildConVarList())
@@ -294,7 +296,7 @@ function TOOL:SetAnchor(stTrace)
   if(stTrace.HitWorld) then
     local sAnchor = "0"..gsSymRev.."worldspawn.mdl"
     self:SetObject(1,gameGetWorld(),stTrace.HitPos,phEnt,stTrace.PhysicsBone,stTrace.HitNormal)
-    asmlib.ConCommandPly(user,"anchor",sAnchor)
+    asmlib.SetAsmConvar(user,"anchor",sAnchor)
     asmlib.PrintNotifyPly(user,"Anchor: Set "..sAnchor.." !","UNDO")
     return asmlib.StatusLog(true,"TOOL:SetAnchor("..sAnchor..")")
   else
@@ -306,7 +308,7 @@ function TOOL:SetAnchor(stTrace)
     trEnt:SetRenderMode(RENDERMODE_TRANSALPHA)
     trEnt:SetColor(conPalette:Select("an"))
     self:SetObject(1,trEnt,stTrace.HitPos,phEnt,stTrace.PhysicsBone,stTrace.HitNormal)
-    asmlib.ConCommandPly(user,"anchor",sAnchor)
+    asmlib.SetAsmConvar(user,"anchor",sAnchor)
     asmlib.PrintNotifyPly(user,"Anchor: Set "..sAnchor.." !","UNDO")
     return asmlib.StatusLog(true,"TOOL:SetAnchor("..sAnchor..")")
   end
@@ -317,7 +319,7 @@ function TOOL:ClearAnchor(bMute)
   local siAnc, svEnt = self:GetAnchor()
   if(CLIENT) then return end
   self:ClearObjects(); self:Deploy()
-  asmlib.ConCommandPly(user,"anchor",gsNoAnchor)
+  asmlib.SetAsmConvar(user,"anchor",gsNoAnchor)
   if(svEnt) then
     if(not svEnt:IsWorld()) then
       if(svEnt and svEnt:IsValid()) then
@@ -580,7 +582,7 @@ function TOOL:RightClick(stTrace)
   local user  = self:GetOwner()
   if(asmlib.CheckButtonPly(user,IN_USE)) then
     if(stTrace.HitWorld) then -- Open frequent pieces frame
-      asmlib.ConCommandPly(user,"openframe",asmlib.GetAsmConvar("maxfruse" ,"INT"))
+      asmlib.SetAsmConvar(user,"openframe",asmlib.GetAsmConvar("maxfruse" ,"INT"))
       return asmlib.StatusLog(true,"TOOL:RightClick(World): Success open frame")
     end
   elseif(asmlib.CheckButtonPly(user,IN_SPEED)) then -- Controls anchor selection
@@ -602,14 +604,14 @@ function TOOL:RightClick(stTrace)
     if(trEnt and trEnt:IsValid()) then
       local trModel = trEnt:GetModel()
       local fnModel = trModel:GetFileFromFilename()
-      asmlib.ConCommandPly(user,"model",trModel)
+      asmlib.SetAsmConvar(user,"model",trModel)
       asmlib.PrintNotifyPly(user,"Model: "..fnModel.." selected !","GENERIC")
       return asmlib.StatusLog(true,"TOOL:RightClick(DUCK): Success <"..fnModel..">")
     end
   else -- If neither is pressed changes the stack mode
     local stmode = asmlib.GetCorrectID(self:GetStackMode(),SMode)
           stmode = asmlib.GetCorrectID(stmode + 1,SMode)
-    asmlib.ConCommandPly(user, "stmode", stmode)
+    asmlib.SetAsmConvar(user, "stmode", stmode)
     self:SetOperation(stmode)
     asmlib.PrintNotifyPly(user,"Stack Mode: "..SMode:Select(stmode).." !","UNDO")
     return asmlib.StatusLog(true,"TOOL:RightClick(MODE): Success")
@@ -621,15 +623,21 @@ function TOOL:Reload(stTrace)
   if(not stTrace) then return false end
   local user  = self:GetOwner()
   local trEnt = stTrace.Entity
-  if(asmlib.CheckButtonPly(user,IN_SPEED) and stTrace.HitWorld) then
-    asmlib.SetLogControl(self:GetLogLines(),self:GetLogFile())
-    if(self:GetExportDB()) then
-      asmlib.LogInstance("TOOL:Reload(World): Exporting DB")
-      asmlib.ExportDSV("PIECES")
-      asmlib.ConCommandPly(user, "exportdb", 0)
+  if(stTrace.HitWorld) then
+    if(user:IsAdmin()) then
+      if(self:GetDeveloperMode()) then
+        asmlib.SetLogControl(self:GetLogLines(),self:GetLogFile()) end
+      if(self:GetExportDB()) then
+        if(asmlib.CheckButtonPly(user,IN_USE)) then
+          asmlib.SetAsmConvar(user, "openextdb")
+          asmlib.LogInstance("TOOL:Reload(World) Success open expdb")
+        else
+          asmlib.LogInstance("TOOL:Reload(World): Exporting DB")
+          asmlib.ExportDSV("PIECES")
+        end; asmlib.SetAsmConvar(user, "exportdb", 0)
+      end
     end; return asmlib.StatusLog(true,"TOOL:Reload(World): Success")
-  end
-  if(trEnt and trEnt:IsValid()) then
+  elseif(trEnt and trEnt:IsValid()) then
     local trRec = asmlib.CacheQueryPiece(trEnt:GetModel())
     if(asmlib.IsHere(trRec) and (asmlib.GetOwner(trEnt) == user or user:IsAdmin())) then
       trEnt:Remove(); return asmlib.StatusLog(true,"TOOL:Reload(Prop): Removed a piece") end
@@ -692,10 +700,18 @@ function TOOL:Think()
         self:MakeGhostEntity(model,VEC_ZERO,ANG_ZERO)
       end; self:UpdateGhost(self.GhostEntity, user) -- In client single player the ghost is skipped
     else self:ReleaseGhostEntity() end -- Delete the ghost entity when ghosting is disabled
-    if(CLIENT and inputIsKeyDown(KEY_LALT) and inputIsKeyDown(KEY_E)) then
-      local pnFrame = asmlib.GetOpVar("PANEL_FREQUENT_MODELS")
-      if(pnFrame and IsValid(pnFrame)) then pnFrame.OnClose() end -- That was a /close call/ :D
-    end -- Shortcut for closing the routine pieces
+    if(CLIENT) then
+      local bO = asmlib.IsFlag("old_close_frame", asmlib.IsFlag("new_close_frame"))
+      local bN = asmlib.IsFlag("new_close_frame", inputIsKeyDown(KEY_E))
+      if(not bO and bN and inputIsKeyDown(KEY_LALT)) then
+        local oD = conElements:Pull() -- Retrieve a panel from the stack
+        if(asmlib.IsTable(oD)) then oD = oD[1] -- Extract panel from table
+          if(IsValid(oD)) then oD:SetVisible(false) end -- Make it invisible
+        else -- The temporary reference is not table then close it
+          if(IsValid(oD)) then oD:Close() end -- A `close` call, get it :D
+        end -- Shortcut for closing the routine pieces
+      end -- Front trigget for closing panels
+    end -- This is client closing the routine pieces
   end
 end
 
@@ -801,15 +817,15 @@ function TOOL:DrawRatioVisual(oScreen,nTrR,nHdR,nDeep)
   local dx, dy, dw, dh = oScreen:GetTextState(0,0,0,2)
   if(nTrR) then
     local nCen = mathFloor((nTrR / ( nTrR + nHdR )) * nW)
-    oScreen:DrawRect({x=0,y=dh},{x=iD,y=nH},"y")               -- Trace Teeth
+    oScreen:DrawRect({x=0,y=dh},{x=iD,y=nH},"y")            -- Trace Teeth
     oScreen:DrawRect({x=iD,y=dh},{x=nCen-iW,y=nH},"g")      -- Trace Gear
     oScreen:DrawRect({x=nCen-iW,y=dh},{x=nCen+iW,y=nH},"y") -- Mesh position
     oScreen:DrawRect({x=nCen+iW,y=dh},{x=nW-iD,y=nH},"m")   -- Holds Gear
-    oScreen:DrawRect({x=nW-iD,y=dh},{x=nW,y=nH},"y")           -- Holds Teeth
+    oScreen:DrawRect({x=nW-iD,y=dh},{x=nW,y=nH},"y")        -- Holds Teeth
   else
-    oScreen:DrawRect({x=0,y=dh},{x=iD,y=nH},"y")               -- Holds Teeth
+    oScreen:DrawRect({x=0,y=dh},{x=iD,y=nH},"y")            -- Holds Teeth
     oScreen:DrawRect({x=iD,y=dh},{x=nW-iD,y=nH},"g")        -- Holds
-    oScreen:DrawRect({x=nW-iD,y=dh},{x=nW,y=nH},"y")           -- Holds Teeth
+    oScreen:DrawRect({x=nW-iD,y=dh},{x=nW,y=nH},"y")        -- Holds Teeth
   end
 end
 
