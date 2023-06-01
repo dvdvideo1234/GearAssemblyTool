@@ -847,8 +847,7 @@ function TOOL:DrawToolScreen(w, h)
   local stTrace = asmlib.CacheTracePly(LocalPlayer())
   if(not stTrace) then
     scrTool:DrawText("Trace status: Invalid","r","SURF",{"Trebuchet24"})
-    scrTool:DrawTextAdd("  ["..(tInfo[1] or gsNoID).."]","an")
-    return
+    scrTool:DrawTextAdd("  ["..(tInfo[1] or gsNoID).."]","an"); return
   end
   scrTool:DrawText("Trace status: Valid","g","SURF",{"Trebuchet24"})
   scrTool:DrawTextAdd("  ["..(tInfo[1] or gsNoID).."]","an")
@@ -876,12 +875,12 @@ function TOOL:DrawToolScreen(w, h)
     end
   end
   local hdRad = asmlib.RoundValue(asmlib.AbsVector(hdRec.Offs.P),0.01)
-  local nFrac = asmlib.RoundValue((trRad or 0) / hdRad,0.01)
+  local nProp = asmlib.RoundValue((trRad or 0) / hdRad,0.01)
   scrTool:DrawText("TM: "..(trModel or NoAV),"g")
   scrTool:DrawText("HM: "..(model:GetFileFromFilename() or NoAV),"m")
   scrTool:DrawText("Anc: "..self:GetAnchor("anchor"),"an")
   scrTool:DrawText("Rake: "..tostring(trRake or NoAV).." > "..tostring(asmlib.RoundValue(hdRec.Rake,0.01) or NoAV),"y")
-  scrTool:DrawText("Frac: "..tostring(nFrac).." > "..tostring(trRad or gsNoID).."/"..tostring(hdRad))
+  scrTool:DrawText("Prop: "..tostring(nProp).." > "..tostring(trRad or gsNoID).."/"..tostring(hdRad))
   scrTool:DrawText("Mode: "..SMode:Select(stmode),"r")
   scrTool:DrawText("Date: "..tostring(asmlib.GetDateTime()),"w")
   self:DrawRatioVisual(scrTool,trRad,hdRad,4)
