@@ -10,6 +10,16 @@ local bitBor                        = bit and bit.bor
 local mathFloor                     = math and math.floor
 local vguiCreate                    = vgui and vgui.Create
 local fileExists                    = file and file.Exists
+local fileFind                      = file and file.Find
+local fileRead                      = file and file.Read
+local fileWrite                     = file and file.Write
+local fileDelete                    = file and file.Delete
+local fileTime                      = file and file.Time
+local fileSize                      = file and file.Size
+local fileOpen                      = file and file.Open
+local inputIsKeyDown                = input and input.IsKeyDown
+local inputIsMouseDown              = input and input.IsMouseDown
+local inputGetCursorPos             = input and input.GetCursorPos
 local controlpanelGet               = controlpanel and controlpanel.Get
 local surfaceCreateFont             = surface and surface.CreateFont
 local surfaceScreenWidth            = surface and surface.ScreenWidth
@@ -31,7 +41,7 @@ local asmlib = gearasmlib; if(not asmlib) then -- Module present
 
 ------ CONFIGURE ASMLIB ------
 asmlib.InitBase("gear","assembly")
-asmlib.SetOpVar("TOOL_VERSION","5.237")
+asmlib.SetOpVar("TOOL_VERSION","5.238")
 asmlib.SetIndexes("V",1,2,3)
 asmlib.SetIndexes("A",1,2,3)
 asmlib.SetIndexes("S",4,5,6,7)
@@ -40,11 +50,13 @@ asmlib.SetOpVar("CONTAIN_CONSTRAINT_TYPE",asmlib.GetContainer("Constraint Type")
 
 ------------ CONFIGURE GLOBAL INIT OPVARS ------------
 
+local gnRatio     = asmlib.GetOpVar("GOLDEN_RATIO")
 local gtInitLogs  = asmlib.GetOpVar("LOG_INIT")
 local gsLimitName = asmlib.GetOpVar("CVAR_LIMITNAME")
 local gsToolPrefL = asmlib.GetOpVar("TOOLNAME_PL")
 local gsToolNameL = asmlib.GetOpVar("TOOLNAME_NL")
 local gsToolNameU = asmlib.GetOpVar("TOOLNAME_NU")
+local gsToolPrefU = asmlib.GetOpVar("TOOLNAME_PU")
 local gsFullDSV   = asmlib.GetOpVar("DIRPATH_BAS")..asmlib.GetOpVar("DIRPATH_DSV")..
                     asmlib.GetInstPref()..asmlib.GetOpVar("TOOLNAME_PU")
 
@@ -106,9 +118,10 @@ asmlib.SetOpVar("MODE_DATABASE", asmlib.GetAsmConvar("modedb"   ,"STR"))
 asmlib.SetOpVar("TRACE_MARGIN" , asmlib.GetAsmConvar("maxtrmarg","FLT"))
 
 ------ GLOBAL VARIABLES -------
-local gsMoDB     = asmlib.GetOpVar("MODE_DATABASE")
-local gaTimerSet = asmlib.GetOpVar("OPSYM_DIRECTORY"):Explode(asmlib.GetAsmConvar("timermode","STR"))
-local conPalette = asmlib.GetContainer("COLORS_LIST")
+local gsMoDB      = asmlib.GetOpVar("MODE_DATABASE")
+local gaTimerSet  = asmlib.GetOpVar("OPSYM_DIRECTORY"):Explode(asmlib.GetAsmConvar("timermode","STR"))
+local conElements = asmlib.GetContainer("LIST_VGUI")
+local conPalette  = asmlib.GetContainer("COLORS_LIST")
       conPalette:Record("r" ,Color(255, 0 , 0 ,255))
       conPalette:Record("g" ,Color( 0 ,255, 0 ,255))
       conPalette:Record("b" ,Color( 0 , 0 ,255,255))
@@ -216,21 +229,70 @@ if(CLIENT) then
     else asmlib.LogInstance("Control: "..asmlib.GetReport(pCont.Name), sLog) end
   end, gsToolPrefL.."lang")
 
+  -- http://www.famfamfam.com/lab/icons/silk/preview.php
+  asmlib.ToIcon(gsToolPrefU.."PIECES"        , "database_connect")
+  asmlib.ToIcon(gsToolPrefL.."context_menu"  , "database_gear"   )
+  asmlib.ToIcon("subfolder_item"   , "folder"          )
+  asmlib.ToIcon("pn_externdb_bt1"  , "database"        )
+  asmlib.ToIcon("pn_externdb_bt2"  , "folder_database" )
+  asmlib.ToIcon("pn_externdb_bt3"  , "database_table"  )
+  asmlib.ToIcon("pn_externdb_bt4"  , "database_link"   )
+  asmlib.ToIcon("pn_externdb_bt5"  , "time_go"         )
+  asmlib.ToIcon("pn_externdb_bt6"  , "compress"        )
+  asmlib.ToIcon("pn_externdb_bt7"  , "database_edit"   )
+  asmlib.ToIcon("pn_externdb_bt8"  , "database_delete" )
+  asmlib.ToIcon("pn_externdb_cm1"  , "database_key"    )
+  asmlib.ToIcon("pn_externdb_cm2"  , "database_go"     )
+  asmlib.ToIcon("pn_externdb_cm3"  , "database_connect")
+  asmlib.ToIcon("pn_externdb_cm4"  , "database_edit"   )
+  asmlib.ToIcon("pn_externdb_cm5"  , "database_add"    )
+  asmlib.ToIcon("pn_externdb_cm6"  , "database_delete" )
+  asmlib.ToIcon("pn_srchcol_lb1"   , "brick"           )
+  asmlib.ToIcon("pn_srchcol_lb2"   , "package"         )
+  asmlib.ToIcon("pn_srchcol_lb3"   , "tag_green"       )
+  asmlib.ToIcon("pn_srchcol_lb4"   , "arrow_refresh"   )
+  asmlib.ToIcon("model"            , "brick"           )
+  asmlib.ToIcon("mass"             , "basket_put"      )
+  asmlib.ToIcon("bgskids"          , "layers"          )
+  asmlib.ToIcon("phyname"          , "wand"            )
+  asmlib.ToIcon("ignphysgn"        , "lightning_go"    )
+  asmlib.ToIcon("freeze"           , "lock"            )
+  asmlib.ToIcon("gravity"          , "ruby_put"        )
+  asmlib.ToIcon("weld"             , "wrench"          )
+  asmlib.ToIcon("nocollide"        , "shape_group"     )
+  asmlib.ToIcon("nocollidew"       , "world_go"        )
+  asmlib.ToIcon("dsvlist_extdb"    , "database_go"     )
+  asmlib.ToIcon("workmode_snap"    , "plugin"          ) -- General spawning and snapping mode
+  asmlib.ToIcon("workmode_cross"   , "chart_line"      ) -- Ray cross intersect interpolation
+  asmlib.ToIcon("workmode_curve"   , "vector"          ) -- Catmull-Rom curve line segment fitting
+  asmlib.ToIcon("workmode_over"    , "shape_move_back" ) -- Trace normal ray location piece flip-spawn
+  asmlib.ToIcon("workmode_turn"    , "arrow_turn_right") -- Produces smoother turns with Bezier curve
+  asmlib.ToIcon("property_type"    , "package_green"     )
+  asmlib.ToIcon("property_name"    , "note"              )
+  asmlib.ToIcon("modedb_lua"       , "database_lightning")
+  asmlib.ToIcon("modedb_sql"       , "database_link"     )
+  asmlib.ToIcon("timermode_cqt"    , "time_go"           )
+  asmlib.ToIcon("timermode_obj"    , "clock_go"          )
+  asmlib.ToIcon("bnderrmod_off"    , "shape_square"      )
+  asmlib.ToIcon("bnderrmod_log"    , "shape_square_edit" )
+  asmlib.ToIcon("bnderrmod_hint"   , "shape_square_go"   )
+  asmlib.ToIcon("bnderrmod_generic", "shape_square_link" )
+  asmlib.ToIcon("bnderrmod_error"  , "shape_square_error")
 
   asmlib.SetAction("RESET_VARIABLES",
     function(oPly,oCom,oArgs)
       local devmode = asmlib.GetAsmConvar("devmode" ,"BUL")
       local bgskids = asmlib.GetAsmConvar("bgskids", "STR")
       asmlib.LogInstance("RESET_VARIABLES: {"..tostring(devmode)..asmlib.GetOpVar("OPSYM_DISABLE")..tostring(bgskids).."}")
-      asmlib.ConCommandPly(oPly,"nextx"    , 0)
-      asmlib.ConCommandPly(oPly,"nexty"    , 0)
-      asmlib.ConCommandPly(oPly,"nextz"    , 0)
-      asmlib.ConCommandPly(oPly,"nextpic"  , 0)
-      asmlib.ConCommandPly(oPly,"nextyaw"  , 0)
-      asmlib.ConCommandPly(oPly,"nextrol"  , 0)
-      asmlib.ConCommandPly(oPly,"rotpivt"  , 0)
-      asmlib.ConCommandPly(oPly,"rotpivh"  , 0)
-      asmlib.ConCommandPly(oPly,"deltarot" , 360)
+      asmlib.SetAsmConvar(oPly,"nextx"    , 0)
+      asmlib.SetAsmConvar(oPly,"nexty"    , 0)
+      asmlib.SetAsmConvar(oPly,"nextz"    , 0)
+      asmlib.SetAsmConvar(oPly,"nextpic"  , 0)
+      asmlib.SetAsmConvar(oPly,"nextyaw"  , 0)
+      asmlib.SetAsmConvar(oPly,"nextrol"  , 0)
+      asmlib.SetAsmConvar(oPly,"rotpivt"  , 0)
+      asmlib.SetAsmConvar(oPly,"rotpivh"  , 0)
+      asmlib.SetAsmConvar(oPly,"deltarot" , 360)
       if(not devmode) then
         asmlib.LogInstance("RESET_VARIABLES: Developer mode disabled"); return nil end
       asmlib.SetLogControl(asmlib.GetAsmConvar("logsmax" , "INT"), asmlib.GetAsmConvar("logfile" , "BUL"))
@@ -239,39 +301,39 @@ if(CLIENT) then
         local anchor = asmlib.GetOpVar("MISS_NOID")..
                        asmlib.GetOpVar("OPSYM_REVSIGN")..
                        asmlib.GetOpVar("MISS_NOMD")
-        asmlib.ConCommandPly(oPly, "mass"     , "250")
-        asmlib.ConCommandPly(oPly, "model"    , "models/props_phx/gears/spur9.mdl")
-        asmlib.ConCommandPly(oPly, "nextx"    , "0")
-        asmlib.ConCommandPly(oPly, "nexty"    , "0")
-        asmlib.ConCommandPly(oPly, "nextz"    , "0")
-        asmlib.ConCommandPly(oPly, "count"    , "1")
-        asmlib.ConCommandPly(oPly, "anchor"   , anchor)
-        asmlib.ConCommandPly(oPly, "contyp"   , "1")
-        asmlib.ConCommandPly(oPly, "stmode"   , "1")
-        asmlib.ConCommandPly(oPly, "freeze"   , "0")
-        asmlib.ConCommandPly(oPly, "adviser"  , "1")
-        asmlib.ConCommandPly(oPly, "igntyp"   , "0")
-        asmlib.ConCommandPly(oPly, "angsnap"  , "0")
-        asmlib.ConCommandPly(oPly, "rotpivt"  , "0")
-        asmlib.ConCommandPly(oPly, "rotpivh"  , "0")
-        asmlib.ConCommandPly(oPly, "gravity"  , "1")
-        asmlib.ConCommandPly(oPly, "nextpic"  , "0")
-        asmlib.ConCommandPly(oPly, "nextyaw"  , "0")
-        asmlib.ConCommandPly(oPly, "nextrol"  , "0")
-        asmlib.ConCommandPly(oPly, "trorang"  , "0")
-        asmlib.ConCommandPly(oPly, "bgskids"  , "")
-        asmlib.ConCommandPly(oPly, "spnflat"  , "0")
-        asmlib.ConCommandPly(oPly, "exportdb" , "0")
-        asmlib.ConCommandPly(oPly, "friction" , "0")
-        asmlib.ConCommandPly(oPly, "forcelim" , "0")
-        asmlib.ConCommandPly(oPly, "torquelim", "0")
-        asmlib.ConCommandPly(oPly, "deltarot" , "360")
-        asmlib.ConCommandPly(oPly, "maxstatts", "3")
-        asmlib.ConCommandPly(oPly, "nocollide", "0")
-        asmlib.ConCommandPly(oPly, "nophysgun", "0")
-        asmlib.ConCommandPly(oPly, "ghosthold", "0")
-        asmlib.ConCommandPly(oPly, "modedb"   , "LUA")
-        asmlib.ConCommandPly(oPly, "timermode", "CQT@1800@1@1")
+        asmlib.SetAsmConvar(oPly, "mass"     , "250")
+        asmlib.SetAsmConvar(oPly, "model"    , "models/props_phx/gears/spur9.mdl")
+        asmlib.SetAsmConvar(oPly, "nextx"    , "0")
+        asmlib.SetAsmConvar(oPly, "nexty"    , "0")
+        asmlib.SetAsmConvar(oPly, "nextz"    , "0")
+        asmlib.SetAsmConvar(oPly, "count"    , "1")
+        asmlib.SetAsmConvar(oPly, "anchor"   , anchor)
+        asmlib.SetAsmConvar(oPly, "contyp"   , "1")
+        asmlib.SetAsmConvar(oPly, "stmode"   , "1")
+        asmlib.SetAsmConvar(oPly, "freeze"   , "0")
+        asmlib.SetAsmConvar(oPly, "adviser"  , "1")
+        asmlib.SetAsmConvar(oPly, "igntyp"   , "0")
+        asmlib.SetAsmConvar(oPly, "angsnap"  , "0")
+        asmlib.SetAsmConvar(oPly, "rotpivt"  , "0")
+        asmlib.SetAsmConvar(oPly, "rotpivh"  , "0")
+        asmlib.SetAsmConvar(oPly, "gravity"  , "1")
+        asmlib.SetAsmConvar(oPly, "nextpic"  , "0")
+        asmlib.SetAsmConvar(oPly, "nextyaw"  , "0")
+        asmlib.SetAsmConvar(oPly, "nextrol"  , "0")
+        asmlib.SetAsmConvar(oPly, "trorang"  , "0")
+        asmlib.SetAsmConvar(oPly, "bgskids"  , "")
+        asmlib.SetAsmConvar(oPly, "spnflat"  , "0")
+        asmlib.SetAsmConvar(oPly, "exportdb" , "0")
+        asmlib.SetAsmConvar(oPly, "friction" , "0")
+        asmlib.SetAsmConvar(oPly, "forcelim" , "0")
+        asmlib.SetAsmConvar(oPly, "torquelim", "0")
+        asmlib.SetAsmConvar(oPly, "deltarot" , "360")
+        asmlib.SetAsmConvar(oPly, "maxstatts", "3")
+        asmlib.SetAsmConvar(oPly, "nocollide", "0")
+        asmlib.SetAsmConvar(oPly, "nophysgun", "0")
+        asmlib.SetAsmConvar(oPly, "ghosthold", "0")
+        asmlib.SetAsmConvar(oPly, "modedb"   , "LUA")
+        asmlib.SetAsmConvar(oPly, "timermode", "CQT@1800@1@1")
         asmlib.PrintInstance("RESET_VARIABLES: Variables reset complete")
       elseif(bgskids:sub(1,7) == "delete ") then
         local tPref = (" "):Explode(bgskids:sub(8,-1))
@@ -288,9 +350,9 @@ if(CLIENT) then
       local scrW = surfaceScreenWidth()
       local scrH = surfaceScreenHeight()
       local sVer = asmlib.GetOpVar("TOOL_VERSION")
-      local xyPos, nAut  = asmlib.NewXY(scrW/4,scrH/4), (gnRatio - 1)
-      local xyDsz, xyTmp = asmlib.NewXY(5,5), asmlib.NewXY()
-      local xySiz = asmlib.NewXY(nAut * scrW, nAut * scrH)
+      local xyPos, nAut  = {x=scrW/4, y=scrH/4}, (gnRatio - 1)
+      local xyDsz, xyTmp = {x=5, y=5}, {x=0, y=0}
+      local xySiz = {x=nAut * scrW, y=nAut * scrH}
       local pnFrame = vguiCreate("DFrame"); if(not IsValid(pnFrame)) then
         asmlib.LogInstance("OPEN_EXTERNDB: Frame invalid"); return nil end
       pnFrame:SetPos(xyPos.x, xyPos.y)
@@ -392,7 +454,7 @@ if(CLIENT) then
       -- Import button. when clicked loads file into the panel
       local pnImport = vguiCreate("DButton")
       if(not IsValid(pnImport)) then pnFrame:Close()
-        asmlib.LogInstance("OPEN_EXTERNDB: Import button invalid", sLog); return nil end
+        asmlib.LogInstance("OPEN_EXTERNDB: Import button invalid"); return nil end
       xyPos.x = pnListView:GetPos()
       xyPos.y = xyPos.y + xySiz.y + xyDsz.y
       xySiz.x = ((pnListView:GetWide() - xyDsz.x) / 2)
@@ -425,7 +487,7 @@ if(CLIENT) then
       -- Expot button. When clicked loads contents into the file
       local pnExport = vguiCreate("DButton")
       if(not IsValid(pnExport)) then pnFrame:Close()
-        asmlib.LogInstance("OPEN_EXTERNDB: Export button invalid", sLog); return nil end
+        asmlib.LogInstance("OPEN_EXTERNDB: Export button invalid"); return nil end
       xyPos.x = xyPos.x + xySiz.x + xyDsz.x
       pnExport:SetPos(xyPos.x, xyPos.y)
       pnExport:SetSize(xySiz.x, xySiz.y)
@@ -437,7 +499,7 @@ if(CLIENT) then
       pnExport.DoClick = function(pnSelf)
         local oDSV = fileOpen(sNam, "wb", "DATA")
         if(not oDSV) then pnFrame:Close()
-          asmlib.LogInstance("OPEN_EXTERNDB: DSV list missing"..".ListView"); return nil end
+          asmlib.LogInstance("OPEN_EXTERNDB.ListView: DSV list missing"); return nil end
         local tLine = pnListView:GetLines()
         for iK, pnCur in pairs(tLine) do
           local sAct = ((pnCur:GetColumnText(1) == "V") and "" or sOff)
@@ -466,7 +528,7 @@ if(CLIENT) then
         if(inputIsMouseDown(MOUSE_RIGHT)) then
           local pnMenu = vguiCreate("DMenu")
           if(not IsValid(pnMenu)) then pnFrame:Close()
-            asmlib.LogInstance("OPEN_EXTERNDB: Menu invalid"..".ListView"); return nil end
+            asmlib.LogInstance("OPEN_EXTERNDB.ListView: Menu invalid"); return nil end
           local mX, mY = inputGetCursorPos()
           local iO, tOptions = 1, {
             function()
@@ -528,7 +590,21 @@ if(CLIENT) then
                 function() SetClipboardText(sFile) end,
                 function() SetClipboardText(asmlib.GetDateTime(fileTime(sFile, "DATA"))) end,
                 function() SetClipboardText(tostring(fileSize(sFile, "DATA")).."B") end,
-                function() asmlib.SetAsmConvar(oPly, "*luapad", gsToolNameL) end,
+                function()
+                  if(luapad) then
+                    asmlib.LogInstance("OPEN_EXTERNDB.Button: Edit "..asmlib.GetReport1(sFile))
+                    if(luapad.Frame) then luapad.Frame:SetVisible(true)
+                    else asmlib.SetAsmConvar(oPly, "*luapad", gsToolNameL) end
+                    luapad.AddTab("["..defTab.Nick.."]"..pnSelf:GetText(), fileRead(sFile, "DATA"), sDsv);
+                    if(defTab.Nick == "PIECES") then local sCat = fDSV:format(sPref, "CATEGORY")
+                      if(fileExists(sCat,"DATA")) then
+                        luapad.AddTab("[CATEGORY]"..pnSelf:GetText(), fileRead(sCat, "DATA"), sDsv);
+                      end
+                    end
+                    luapad.Frame:SetVisible(true); luapad.Frame:Center()
+                    luapad.Frame:MakePopup(); conElements:Push({luapad.Frame})
+                  end
+                end,
                 function() fileDelete(sFile)
                   asmlib.LogInstance("OPEN_EXTERNDB.Button: Deleted "..asmlib.GetReport1(sFile))
                   if(defTab.Nick == "PIECES") then local sCat = fDSV:format(sPref,"CATEGORY")
@@ -548,8 +624,7 @@ if(CLIENT) then
         end
       else
         asmlib.LogInstance("OPEN_EXTERNDB: Missing <"..defTab.Nick..">")
-      end
-      pnFrame:SetVisible(true); pnFrame:Center(); pnFrame:MakePopup()
+      end; pnFrame:SetVisible(true); pnFrame:Center(); pnFrame:MakePopup()
       conElements:Push(pnFrame); asmlib.LogInstance("OPEN_EXTERNDB: Success"); return nil
     end) -- Read client configuration
 
@@ -596,17 +671,15 @@ if(CLIENT) then
       local pnModelPanel = pnElements:Select(3).Panel
       local pnTextEntry  = pnElements:Select(4).Panel
       local pnComboBox   = pnElements:Select(5).Panel
-      local nRatio       = asmlib.GetOpVar("GOLDEN_RATIO")
       local xyZero       = {x =  0, y = 20} -- The start location of left-top
       local xyDelta      = {x = 10, y = 10} -- Distance between panels
       local xySiz        = {x =  0, y =  0} -- Current panel size
       local xyPos        = {x =  0, y =  0} -- Current panel position
       local xyTmp        = {x =  0, y =  0} -- Temporary coordinate
       ------------ Frame --------------
-      xyPos.x = (scrW / 4)
-      xyPos.y = (scrH / 4)
-      xySiz.x = 750
-      xySiz.y = mathFloor(xySiz.x / (1 + nRatio))
+      xySiz.x = (scrW / gnRatio) -- This defines the size of the frame
+      xyPos.x, xyPos.y = (scrW / 4), (scrH / 4)
+      xySiz.y = mathFloor(xySiz.x / (1 + gnRatio))
       pnFrame:SetTitle(languageGetPhrase("tool."..gsToolNameL..".pn_routine_hd")..oPly:GetName().." {"..asmlib.GetOpVar("TOOL_VERSION").."}")
       pnFrame:SetVisible(true)
       pnFrame:SetDraggable(true)
@@ -621,14 +694,14 @@ if(CLIENT) then
           pnElements:Select(iNdex).Panel:Remove()
           pnElements:Delete(iNdex); iNdex = iNdex + 1
         end; pnFrame:Remove()
-        asmlib.SetOpVar("PANEL_FREQUENT_MODELS",nil)
         asmlib.LogInstance("OPEN_FRAME: Frame.OnClose: Form removed")
-      end; asmlib.SetOpVar("PANEL_FREQUENT_MODELS",pnFrame)
+      end
       ------------ Button --------------
+      xyTmp.x, xyTmp.y = pnFrame:GetSize()
+      xySiz.x = (xyTmp.x / (8.5 * gnRatio)) -- Display properly the name
+      xySiz.y = (xySiz.x / (1.5 * gnRatio)) -- Used by combo-box and text-box
       xyPos.x = xyZero.x + xyDelta.x
       xyPos.y = xyZero.y + xyDelta.y
-      xySiz.x = 55 -- Display properly the name
-      xySiz.y = 25 -- Used by combo-box and text-box
       pnButton:SetParent(pnFrame)
       pnButton:SetText(pnElements:Select(1).Label[2])
       pnButton:SetPos(xyPos.x, xyPos.y)
@@ -638,8 +711,7 @@ if(CLIENT) then
       xyPos.x, xyPos.y = pnButton:GetPos()
       xyTmp.x, xyTmp.y = pnButton:GetSize()
       xyPos.x = xyPos.x + xyTmp.x + xyDelta.x
-      xySiz.x = nRatio * xyTmp.x
-      xySiz.y = xyTmp.y
+      xySiz.x, xySiz.y = (gnRatio * xyTmp.x), xyTmp.y
       pnComboBox:SetParent(pnFrame)
       pnComboBox:SetPos(xyPos.x,xyPos.y)
       pnComboBox:SetSize(xySiz.x,xySiz.y)
@@ -654,9 +726,9 @@ if(CLIENT) then
         pnSelf:SetValue(sVal)
       end
       ------------ ModelPanel --------------
-      xySiz.x = 250 -- Display model properly
       xyTmp.x, xyTmp.y = pnFrame:GetSize()
       xyPos.x, xyPos.y = pnComboBox:GetPos()
+      xySiz.x = (xyTmp.x / (1.9 * gnRatio)) -- Display the model properly
       xyPos.x = xyTmp.x - xySiz.x - xyDelta.x
       xySiz.y = xyTmp.y - xyPos.y - xyDelta.y
       --------------------------------------
@@ -680,7 +752,7 @@ if(CLIENT) then
         oEnt:SetAngles(stSpawn.SAng)
         oEnt:SetPos(stSpawn.SPos)
       end
-      ------------ TextEntry --------------
+      ------------- TextEntry -------------
       xyPos.x, xyPos.y = pnComboBox:GetPos()
       xyTmp.x, xyTmp.y = pnComboBox:GetSize()
       xyPos.x = xyPos.x + xyTmp.x + xyDelta.x
@@ -724,10 +796,10 @@ if(CLIENT) then
         local uiEnt = pnModelPanel:GetEntity(); if(not (uiEnt and uiEnt:IsValid())) then -- The entity is validated first
           asmlib.LogInstance("OPEN_FRAME: ListView.OnRowSelected: Model entity invalid "..asmlib.GetReport(uiMod)); return nil end
         uiEnt:SetModel(uiMod); uiEnt:SetModelName(uiMod) -- Apply the model on the model panel even for changed compiled model paths
-        local uiBox = asmlib.CacheBoxLayout(uiEnt,0,nRatio,nRatio-1); if(not asmlib.IsHere(uiBox)) then
+        local uiBox = asmlib.CacheBoxLayout(uiEnt,0,gnRatio,gnRatio-1); if(not asmlib.IsHere(uiBox)) then
           asmlib.LogInstance("OPEN_FRAME: ListView.OnRowSelected: Box invalid for <"..uiMod..">"); return nil end
         pnModelPanel:SetLookAt(uiBox.Eye); pnModelPanel:SetCamPos(uiBox.Cam)
-        asmlib.ConCommandPly(oPly, "model" ,uiMod); SetClipboardText(uiMod)
+        asmlib.SetAsmConvar(oPly, "model" ,uiMod); SetClipboardText(uiMod)
       end -- Copy the line model to the clipboard so it can be pasted with Ctrl+V
       pnListView.OnRowRightClick = function(pnSelf, nIndex, pnLine)
         local cC, cX, cY = 0, inputGetCursorPos(); cX, cY = pnSelf:ScreenToLocal(cX, cY)
@@ -743,7 +815,7 @@ if(CLIENT) then
           asmlib.LogInstance("OPEN_FRAME: Button Exporting DB")
           asmlib.ExportCategory(3)
           asmlib.ExportDSV("PIECES")
-          asmlib.ConCommandPly(oPly, "exportdb", 0)
+          asmlib.SetAsmConvar(oPly, "exportdb", 0)
         end
       end
       -- Leave the TextEntry here so it can access and update the local ListView reference
@@ -756,7 +828,7 @@ if(CLIENT) then
         end
       end
       pnFrame:SetVisible(true); pnFrame:Center(); pnFrame:MakePopup()
-      asmlib.LogInstance("OPEN_FRAME: Success"); return nil
+      conElements:Push(pnFrame); asmlib.LogInstance("OPEN_FRAME: Success"); return nil
     end)
 end
 
