@@ -111,7 +111,7 @@ TOOL.ClientConVar = {
   [ "maxstatts" ] = 3,
   [ "nocollide" ] = 0,
   [ "incsnpang" ] = 5,
-  [ "incsnplin" ] = 5,
+  [ "incsnplin" ] = 0.1,
   [ "ignphysgn" ] = 0,
   [ "ghosthold" ] = 0,
   [ "upspanchor"] = 0
@@ -1004,7 +1004,7 @@ function TOOL.BuildCPanel(CPanel)
 
   asmlib.SetNumSlider(CPanel, "mass", iMaxDec, 0, asmlib.GetAsmConvar("maxmass","FLT"))
   asmlib.SetNumSlider(CPanel, "count", 0, 1, asmlib.GetAsmConvar("maxstcnt" , "INT"))
-  asmlib.SetNumSlider(CPanel, "angsnap", iMaxDec, 0, gnMaxRot)
+  asmlib.SetNumSlider(CPanel, "angsnap", iMaxDec, 0, gnMaxRot, 15)
   asmlib.SetButton(CPanel, "resetvars")
   local tBAng = { -- Button interactove slider ( angle offsets )
     {N="<>"  , T = "#", -- Left click to decrease, right to increase

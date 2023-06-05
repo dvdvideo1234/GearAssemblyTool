@@ -8,7 +8,11 @@ local sqlBegin                      = sql and sql.Begin
 local sqlCommit                     = sql and sql.Commit
 local bitBor                        = bit and bit.bor
 local mathFloor                     = math and math.floor
+local mathNormalizeAngle            = math and math.NormalizeAngle
 local vguiCreate                    = vgui and vgui.Create
+local guiOpenURL                    = gui and gui.OpenURL
+local guiMouseX                     = gui and gui.MouseX
+local guiMouseY                     = gui and gui.MouseY
 local fileExists                    = file and file.Exists
 local fileFind                      = file and file.Find
 local fileRead                      = file and file.Read
@@ -41,7 +45,7 @@ local asmlib = gearasmlib; if(not asmlib) then -- Module present
 
 ------ CONFIGURE ASMLIB ------
 asmlib.InitBase("gear","assembly")
-asmlib.SetOpVar("TOOL_VERSION","5.237")
+asmlib.SetOpVar("TOOL_VERSION","5.238")
 asmlib.SetIndexes("V",1,2,3)
 asmlib.SetIndexes("A",1,2,3)
 asmlib.SetIndexes("S",4,5,6,7)
@@ -50,6 +54,9 @@ asmlib.SetOpVar("CONTAIN_CONSTRAINT_TYPE",asmlib.GetContainer("Constraint Type")
 
 ------------ CONFIGURE GLOBAL INIT OPVARS ------------
 
+local caP, caY, caR = asmlib.GetIndexes("A")
+local gvVectorUP  = asmlib.GetOpVar("VEC_UP")
+local gnVectorZR  = asmlib.GetOpVar("VEC_ZERO")
 local gnRatio     = asmlib.GetOpVar("GOLDEN_RATIO")
 local gtInitLogs  = asmlib.GetOpVar("LOG_INIT")
 local gsLimitName = asmlib.GetOpVar("CVAR_LIMITNAME")
@@ -629,122 +636,109 @@ if(CLIENT) then
     end) -- Read client configuration
 
   asmlib.SetAction("OPEN_FRAME",
-    function(oPly,oCom,oArgs)
-      local frUsed, nCount = asmlib.GetFrequentModels(oArgs[1])
-      if(not asmlib.IsHere(frUsed)) then
-        asmlib.LogInstance("OPEN_FRAME: Retrieving most frequent models failed ["..tostring(oArgs[1]).."]"); return nil end
+    function(oPly,oCom,oArgs) local sLog = "*OPEN_FRAME"
+      local frUsed, nCount = asmlib.GetFrequentModels(oArgs[1]); if(not asmlib.IsHere(frUsed)) then
+        asmlib.LogInstance("Retrieving most frequent models failed ["..tostring(oArgs[1]).."]",sLog); return nil end
       local defTab = asmlib.GetOpVar("DEFTABLE_PIECES"); if(not defTab) then
-        asmlib.LogInstance("OPEN_FRAME: Missing definition for table PIECES"); return nil end
+        asmlib.LogInstance("Missing definition for table PIECES",sLog); return nil end
       local pnFrame = vguiCreate("DFrame"); if(not IsValid(pnFrame)) then
-        pnFrame:Remove(); asmlib.LogInstance("OPEN_FRAME: Failed to create base frame"); return nil end
-      local pnElements = asmlib.GetContainer("FREQ_VGUI")
-            pnElements:Push({Label = { "DButton"    ,languageGetPhrase("tool."..gsToolNameL..".pn_export_lb") , languageGetPhrase("tool."..gsToolNameL..".pn_export")}})
-            pnElements:Push({Label = { "DListView"  ,languageGetPhrase("tool."..gsToolNameL..".pn_routine_lb"), languageGetPhrase("tool."..gsToolNameL..".pn_routine")}})
-            pnElements:Push({Label = { "DModelPanel",languageGetPhrase("tool."..gsToolNameL..".pn_display_lb"), languageGetPhrase("tool."..gsToolNameL..".pn_display")}})
-            pnElements:Push({Label = { "DTextEntry" ,languageGetPhrase("tool."..gsToolNameL..".pn_pattern_lb"), languageGetPhrase("tool."..gsToolNameL..".pn_pattern")}})
-            pnElements:Push({Label = { "DComboBox"  ,languageGetPhrase("tool."..gsToolNameL..".pn_srchcol_lb"), languageGetPhrase("tool."..gsToolNameL..".pn_srchcol")}})
-      ------------ Manage the invalid panels -------------------
-      local iNdex, iSize, sItem, vItem = 1, pnElements:GetSize(), "", nil
-      while(iNdex <= iSize) do
-        vItem = pnElements:Select(iNdex)
-        vItem.Panel = vguiCreate(vItem.Label[1],pnFrame)
-        if(not IsValid(vItem.Panel)) then
-          asmlib.LogInstance("OPEN_FRAME: Failed to create ID #"..tonumber(iNdex))
-          iNdex, vItem = 1, nil
-          while(iNdex <= iSize) do vItem, sItem = pnElements:Select(iNdex), ""
-            if(IsValid(vItem.Panel)) then vItem.Panel:Remove(); sItem = "and panel " end
-            pnElements:Delete(iNdex)
-            asmlib.LogInstance("OPEN_FRAME: Deleted entry "..sItem.."ID #"..tonumber(iNdex))
-            iNdex = iNdex + 1
-          end; pnFrame:Remove()
-          asmlib.LogInstance("OPEN_FRAME: Invalid panel created. Frame removed"); return nil
-        end
-        vItem.Panel:SetName(vItem.Label[2])
-        vItem.Panel:SetTooltip(vItem.Label[3])
-        iNdex = iNdex + 1
-      end
-      ------ Screen resolution and elements -------
+        asmlib.LogInstance("Frame invalid",sLog); return nil end
+      ------------ Screen resolution and configuration ------------
       local scrW         = surfaceScreenWidth()
       local scrH         = surfaceScreenHeight()
-      local pnButton     = pnElements:Select(1).Panel
-      local pnListView   = pnElements:Select(2).Panel
-      local pnModelPanel = pnElements:Select(3).Panel
-      local pnTextEntry  = pnElements:Select(4).Panel
-      local pnComboBox   = pnElements:Select(5).Panel
+      local sVersion     = asmlib.GetOpVar("TOOL_VERSION")
       local xyZero       = {x =  0, y = 20} -- The start location of left-top
       local xyDelta      = {x = 10, y = 10} -- Distance between panels
       local xySiz        = {x =  0, y =  0} -- Current panel size
       local xyPos        = {x =  0, y =  0} -- Current panel position
       local xyTmp        = {x =  0, y =  0} -- Temporary coordinate
-      ------------ Frame --------------
+      ------------ Frame ------------
       xySiz.x = (scrW / gnRatio) -- This defines the size of the frame
       xyPos.x, xyPos.y = (scrW / 4), (scrH / 4)
       xySiz.y = mathFloor(xySiz.x / (1 + gnRatio))
-      pnFrame:SetTitle(languageGetPhrase("tool."..gsToolNameL..".pn_routine_hd")..oPly:GetName().." {"..asmlib.GetOpVar("TOOL_VERSION").."}")
+      pnFrame:SetTitle(languageGetPhrase("tool."..gsToolNameL..".pn_routine_hd").." "..oPly:Nick().." {"..sVersion.."}")
       pnFrame:SetVisible(true)
       pnFrame:SetDraggable(true)
-      pnFrame:SetDeleteOnClose(true)
+      pnFrame:SetDeleteOnClose(false)
       pnFrame:SetPos(xyPos.x, xyPos.y)
       pnFrame:SetSize(xySiz.x, xySiz.y)
-      pnFrame.OnClose = function()
-        pnFrame:SetVisible(false)
-        local iNdex, iSize = 1, pnElements:GetSize()
-        while(iNdex <= iSize) do -- All panels are valid
-          asmlib.LogInstance("OPEN_FRAME: Frame.OnClose: Delete #"..iNdex)
-          pnElements:Select(iNdex).Panel:Remove()
-          pnElements:Delete(iNdex); iNdex = iNdex + 1
-        end; pnFrame:Remove()
-        asmlib.LogInstance("OPEN_FRAME: Frame.OnClose: Form removed")
+      pnFrame.OnClose = function(pnSelf)
+        local iK = conElements:Find(pnSelf) -- Find panel key index
+        if(IsValid(pnSelf)) then pnSelf:Remove() end -- Delete the valid panel
+        if(asmlib.IsHere(iK)) then conElements:Pull(iK) end -- Pull the key out
       end
-      ------------ Button --------------
+      ------------ Button ------------
       xyTmp.x, xyTmp.y = pnFrame:GetSize()
       xySiz.x = (xyTmp.x / (8.5 * gnRatio)) -- Display properly the name
       xySiz.y = (xySiz.x / (1.5 * gnRatio)) -- Used by combo-box and text-box
       xyPos.x = xyZero.x + xyDelta.x
       xyPos.y = xyZero.y + xyDelta.y
+      local pnButton = vguiCreate("DButton")
+      if(not IsValid(pnButton)) then pnFrame:Close()
+        asmlib.LogInstance("Button invalid",sLog); return nil end
       pnButton:SetParent(pnFrame)
-      pnButton:SetText(pnElements:Select(1).Label[2])
       pnButton:SetPos(xyPos.x, xyPos.y)
       pnButton:SetSize(xySiz.x, xySiz.y)
       pnButton:SetVisible(true)
-      ------------- ComboBox ---------------
+      pnButton:SetName(languageGetPhrase("tool."..gsToolNameL..".pn_export_lb"))
+      pnButton:SetText(languageGetPhrase("tool."..gsToolNameL..".pn_export_lb"))
+      pnButton:SetTooltip(languageGetPhrase("tool."..gsToolNameL..".pn_export"))
+      ------------ ComboBox ------------
       xyPos.x, xyPos.y = pnButton:GetPos()
       xyTmp.x, xyTmp.y = pnButton:GetSize()
       xyPos.x = xyPos.x + xyTmp.x + xyDelta.x
       xySiz.x, xySiz.y = (gnRatio * xyTmp.x), xyTmp.y
+      local pnComboBox = vguiCreate("DComboBox")
+      if(not IsValid(pnComboBox)) then pnFrame:Close()
+        asmlib.LogInstance("Combo invalid",sLog); return nil end
       pnComboBox:SetParent(pnFrame)
       pnComboBox:SetPos(xyPos.x,xyPos.y)
       pnComboBox:SetSize(xySiz.x,xySiz.y)
       pnComboBox:SetVisible(true)
+      pnComboBox:SetSortItems(false)
+      pnComboBox:SetName(languageGetPhrase("tool."..gsToolNameL..".pn_srchcol_lb"))
+      pnComboBox:SetTooltip(languageGetPhrase("tool."..gsToolNameL..".pn_srchcol"))
       pnComboBox:SetValue(languageGetPhrase("tool."..gsToolNameL..".pn_srchcol_lb"))
-      pnComboBox:AddChoice(languageGetPhrase("tool."..gsToolNameL..".pn_srchcol_lb1"),defTab[1][1])
-      pnComboBox:AddChoice(languageGetPhrase("tool."..gsToolNameL..".pn_srchcol_lb2"),defTab[2][1])
-      pnComboBox:AddChoice(languageGetPhrase("tool."..gsToolNameL..".pn_srchcol_lb3"),defTab[3][1])
-      pnComboBox:AddChoice(languageGetPhrase("tool."..gsToolNameL..".pn_srchcol_lb4"),defTab[4][1])
+      pnComboBox:AddChoice(languageGetPhrase("tool."..gsToolNameL..".pn_srchcol_lb1"),defTab[1][1], false, asmlib.ToIcon("pn_srchcol_lb1"))
+      pnComboBox:AddChoice(languageGetPhrase("tool."..gsToolNameL..".pn_srchcol_lb2"),defTab[2][1], false, asmlib.ToIcon("pn_srchcol_lb2"))
+      pnComboBox:AddChoice(languageGetPhrase("tool."..gsToolNameL..".pn_srchcol_lb3"),defTab[3][1], false, asmlib.ToIcon("pn_srchcol_lb3"))
+      pnComboBox:AddChoice(languageGetPhrase("tool."..gsToolNameL..".pn_srchcol_lb4"),defTab[4][1], false, asmlib.ToIcon("pn_srchcol_lb4"))
       pnComboBox.OnSelect = function(pnSelf, nInd, sVal, anyData)
-        asmlib.LogInstance("OPEN_FRAME: ComboBox.OnSelect: ID #"..nInd.."<"..sVal..">"..tostring(anyData))
+        asmlib.LogInstance("Selected "..asmlib.GetReport3(nInd,sVal,anyData),sLog..".ComboBox")
         pnSelf:SetValue(sVal)
       end
-      ------------ ModelPanel --------------
+      ------------ ModelPanel ------------
       xyTmp.x, xyTmp.y = pnFrame:GetSize()
       xyPos.x, xyPos.y = pnComboBox:GetPos()
       xySiz.x = (xyTmp.x / (1.9 * gnRatio)) -- Display the model properly
       xyPos.x = xyTmp.x - xySiz.x - xyDelta.x
       xySiz.y = xyTmp.y - xyPos.y - xyDelta.y
-      --------------------------------------
+      ------------------------------------------------
+      local pnModelPanel = vguiCreate("DModelPanel")
+      if(not IsValid(pnModelPanel)) then pnFrame:Close()
+        asmlib.LogInstance("Model display invalid",sLog); return nil end
       pnModelPanel:SetParent(pnFrame)
       pnModelPanel:SetPos(xyPos.x,xyPos.y)
       pnModelPanel:SetSize(xySiz.x,xySiz.y)
       pnModelPanel:SetVisible(true)
+      pnModelPanel:SetMouseInputEnabled(true)
+      pnModelPanel:SetName(languageGetPhrase("tool."..gsToolNameL..".pn_display_lb"))
+      pnModelPanel:SetTooltip(languageGetPhrase("tool."..gsToolNameL..".pn_display"))
       pnModelPanel.LayoutEntity = function(pnSelf, oEnt)
         if(pnSelf.bAnimated) then pnSelf:RunAnimation() end
-        local uiBox = asmlib.CacheBoxLayout(oEnt,40)
-        if(not asmlib.IsHere(uiBox)) then
-          asmlib.LogInstance("OPEN_FRAME: pnModelPanel.LayoutEntity: Box invalid"); return nil end
-        local stSpawn = asmlib.GetNormalSpawn(oPly,asmlib.GetOpVar("VEC_ZERO"),uiBox.Ang,oEnt:GetModel())
-        if(not stSpawn) then
-          asmlib.LogInstance("OPEN_FRAME: pnModelPanel.LayoutEntity: Spawn data fail"); return nil end
-        asmlib.ApplySpawnFlat(oEnt, stSpawn, asmlib.GetOpVar("VEC_UP"))
+        local uiBox = asmlib.CacheBoxLayout(oEnt,40); if(not asmlib.IsHere(uiBox)) then
+          asmlib.LogInstance("Box invalid",sLog..".ModelPanel"); return nil end
+        if(inputIsMouseDown(MOUSE_MIDDLE) and pnSelf:IsHovered()) then
+          if(pnSelf.pcX and pnSelf.pcY) then
+            local nX, nY = guiMouseX(), guiMouseY()
+            aX, aY = (pnSelf.pcX - nX), (pnSelf.pcY - nY)
+            uiBox.Ang[caP] = mathNormalizeAngle(aX)
+            uiBox.Ang[caR] = mathNormalizeAngle(aY)
+          else pnSelf.pcX, pnSelf.pcY = guiMouseX(), guiMouseY() end
+        else pnSelf.pcX, pnSelf.pcY = nil, nil end
+        local stSpawn = asmlib.GetNormalSpawn(oPly, gnVectorZR, uiBox.Ang, oEnt:GetModel())
+        if(not stSpawn) then asmlib.LogInstance("Spawn data fail",sLog..".LayoutEntity"); return nil end
+        asmlib.ApplySpawnFlat(oEnt, stSpawn, gvVectorUP)
               stSpawn.SPos:Set(uiBox.Cen)
               stSpawn.SPos:Rotate(stSpawn.SAng)
               stSpawn.SPos:Mul(-1)
@@ -752,52 +746,63 @@ if(CLIENT) then
         oEnt:SetAngles(stSpawn.SAng)
         oEnt:SetPos(stSpawn.SPos)
       end
-      ------------- TextEntry -------------
+      ------------ TextEntry ------------
       xyPos.x, xyPos.y = pnComboBox:GetPos()
       xyTmp.x, xyTmp.y = pnComboBox:GetSize()
       xyPos.x = xyPos.x + xyTmp.x + xyDelta.x
       xySiz.y = xyTmp.y
-      -------------------------------------
+      ------------------------------------------------
       xyTmp.x, xyTmp.y = pnModelPanel:GetPos()
       xySiz.x = xyTmp.x - xyPos.x - xyDelta.x
-      -------------------------------------
+      ------------------------------------------------
+      local pnTextEntry = vguiCreate("DTextEntry")
+      if(not IsValid(pnTextEntry)) then pnFrame:Close()
+        asmlib.LogInstance("Textbox invalid",sLog); return nil end
       pnTextEntry:SetParent(pnFrame)
       pnTextEntry:SetPos(xyPos.x,xyPos.y)
       pnTextEntry:SetSize(xySiz.x,xySiz.y)
       pnTextEntry:SetVisible(true)
-      ------------ ListView --------------
+      pnTextEntry:SetName(languageGetPhrase("tool."..gsToolNameL..".pn_pattern_lb"))
+      pnTextEntry:SetTooltip(languageGetPhrase("tool."..gsToolNameL..".pn_pattern"))
+      ------------ ListView ------------
       xyPos.x, xyPos.y = pnButton:GetPos()
       xyTmp.x, xyTmp.y = pnButton:GetSize()
       xyPos.y = xyPos.y + xyTmp.y + xyDelta.y
-      ------------------------------------
+      ------------------------------------------------
       xyTmp.x, xyTmp.y = pnTextEntry:GetPos()
       xySiz.x, xySiz.y = pnTextEntry:GetSize()
       xySiz.x = xyTmp.x + xySiz.x - xyDelta.x
-      ------------------------------------
+      ------------------------------------------------
       xyTmp.x, xyTmp.y = pnFrame:GetSize()
       xySiz.y = xyTmp.y - xyPos.y - xyDelta.y
-      ------------------------------------
-      local wUse = mathFloor(0.150 * xySiz.x)
-      local wRak = mathFloor(0.065 * xySiz.x)
-      local wTyp = mathFloor(0.214 * xySiz.x)
+      ------------------------------------------------
+      local wUse = mathFloor(0.120377559 * xySiz.x)
+      local wRak = mathFloor(0.065393857 * xySiz.x)
+      local wTyp = mathFloor(0.314127559 * xySiz.x)
       local wNam = xySiz.x - wUse - wRak - wTyp
+      local pnListView = vguiCreate("DListView")
+      if(not IsValid(pnListView)) then pnFrame:Close()
+        asmlib.LogInstance("List view invalid",sLog); return nil end
       pnListView:SetParent(pnFrame)
       pnListView:SetVisible(false)
       pnListView:SetSortable(true)
       pnListView:SetMultiSelect(false)
       pnListView:SetPos(xyPos.x,xyPos.y)
       pnListView:SetSize(xySiz.x,xySiz.y)
+      pnListView:SetName(languageGetPhrase("tool."..gsToolNameL..".pn_routine_lb"))
+      pnListView:SetTooltip(languageGetPhrase("tool."..gsToolNameL..".pn_routine"))
       pnListView:AddColumn(languageGetPhrase("tool."..gsToolNameL..".pn_routine_lb1")):SetFixedWidth(wUse) -- (1)
       pnListView:AddColumn(languageGetPhrase("tool."..gsToolNameL..".pn_routine_lb2")):SetFixedWidth(wRak) -- (2)
       pnListView:AddColumn(languageGetPhrase("tool."..gsToolNameL..".pn_routine_lb3")):SetFixedWidth(wTyp) -- (3)
       pnListView:AddColumn(languageGetPhrase("tool."..gsToolNameL..".pn_routine_lb4")):SetFixedWidth(wNam) -- (4)
+      pnListView:AddColumn(""):SetFixedWidth(0) -- (5) This is actually the hidden model of the piece used.
       pnListView.OnRowSelected = function(pnSelf, nIndex, pnLine)
-        local uiMod = pnLine:GetColumnText(5); pnModelPanel:SetModel(uiMod) -- Forth index is actually the model in the table
-        local uiEnt = pnModelPanel:GetEntity(); if(not (uiEnt and uiEnt:IsValid())) then -- The entity is validated first
-          asmlib.LogInstance("OPEN_FRAME: ListView.OnRowSelected: Model entity invalid "..asmlib.GetReport(uiMod)); return nil end
+        local uiMod = tostring(pnLine:GetColumnText(5)  or asmlib.GetOpVar("MISS_NOMD")); pnModelPanel:SetModel(uiMod)
+        local uiEnt = pnModelPanel:GetEntity(); if(not (uiEnt and uiEnt:IsValid())) then -- Makes sure the entity is validated first
+          asmlib.LogInstance("Model entity invalid "..asmlib.GetReport(uiMod), sLog..".ListView"); return nil end
         uiEnt:SetModel(uiMod); uiEnt:SetModelName(uiMod) -- Apply the model on the model panel even for changed compiled model paths
         local uiBox = asmlib.CacheBoxLayout(uiEnt,0,gnRatio,gnRatio-1); if(not asmlib.IsHere(uiBox)) then
-          asmlib.LogInstance("OPEN_FRAME: ListView.OnRowSelected: Box invalid for <"..uiMod..">"); return nil end
+          asmlib.LogInstance("Box invalid for <"..uiMod..">",sLog..".ListView"); return nil end
         pnModelPanel:SetLookAt(uiBox.Eye); pnModelPanel:SetCamPos(uiBox.Cam)
         asmlib.SetAsmConvar(oPly, "model" ,uiMod); SetClipboardText(uiMod)
       end -- Copy the line model to the clipboard so it can be pasted with Ctrl+V
@@ -807,15 +812,20 @@ if(CLIENT) then
         SetClipboardText(pnLine:GetColumnText(cC))
       end
       if(not asmlib.UpdateListView(pnListView,frUsed,nCount)) then
-        asmlib.LogInstance("OPEN_FRAME: ListView.OnRowSelected: Populate the list view failed"); return nil end
+        asmlib.LogInstance("Populate the list view failed",sLog); return nil end
       -- The button dababase export by type uses the current active type in the ListView line
-      pnButton.DoClick = function()
-        asmlib.LogInstance("OPEN_FRAME: Button.DoClick: <"..pnButton:GetText().."> clicked")
+      pnButton.DoClick = function(pnSelf)
+        asmlib.LogInstance("Click "..asmlib.GetReport(pnSelf:GetText()), sLog..".Button")
         if(asmlib.GetAsmConvar("exportdb", "BUL")) then
-          asmlib.LogInstance("OPEN_FRAME: Button Exporting DB")
           asmlib.ExportCategory(3)
           asmlib.ExportDSV("PIECES")
           asmlib.SetAsmConvar(oPly, "exportdb", 0)
+          asmlib.LogInstance("Export instance", sLog..".Button")
+        else
+          if(inputIsKeyDown(KEY_LSHIFT)) then
+            local fW = asmlib.GetOpVar("FORM_GITWIKI")
+            guiOpenURL(fW:format("Additional-features"))
+          end
         end
       end
       -- Leave the TextEntry here so it can access and update the local ListView reference
@@ -824,11 +834,11 @@ if(CLIENT) then
         local sAbr, sCol = pnComboBox:GetSelected() -- Returns two values
               sAbr, sCol = tostring(sAbr or ""), tostring(sCol or "")
         if(not asmlib.UpdateListView(pnListView,frUsed,nCount,sCol,sPat)) then
-          asmlib.LogInstance("OPEN_FRAME: TextEntry.OnEnter: Failed to update ListView {"..sName.."#"..sField.."#"..sPattern.."}"); return nil
+          asmlib.LogInstance("Update ListView fail"..asmlib.GetReport3(sAbr,sCol,sPat,sLog..".TextEntry")); return nil
         end
       end
       pnFrame:SetVisible(true); pnFrame:Center(); pnFrame:MakePopup()
-      conElements:Push(pnFrame); asmlib.LogInstance("OPEN_FRAME: Success"); return nil
+      conElements:Push(pnFrame); asmlib.LogInstance("Success",sLog); return nil
     end)
 end
 

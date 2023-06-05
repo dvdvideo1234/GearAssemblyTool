@@ -296,11 +296,6 @@ function GetSign(nVal)
   return (nVal / mathAbs(nVal))
 end
 
--- Returns the sign of a number [-1,0,1]
-function GetSign(nVal)
-  return (nVal / mathAbs(nVal))
-end
-
 -- Gets the date according to the specified format
 function GetDate(vD, fD)
   return osDate(fD or GetOpVar("DATE_FORMAT"), vD)
@@ -695,6 +690,7 @@ function InitBase(sName,sPurpose)
   SetOpVar("FORM_VREPORT4","{%s}|%s|%s|%s|")
   SetOpVar("FORM_VREPORT5","{%s}|%s|%s|%s|%s|")
   SetOpVar("FORM_VREPORT6","{%s}|%s|%s|%s|%s|%s|")
+  SetOpVar("FORM_GITWIKI", "https://github.com/dvdvideo1234/TrackAssemblyTool/wiki/%s")
   SetOpVar("WIDTH_CPANEL", 265)
   SetOpVar("EPSILON_ZERO", 1e-5)
   SetOpVar("GOLDEN_RATIO",1.61803398875)
@@ -1274,20 +1270,18 @@ end
 
 local function AddLineListView(pnListView,frUsed,ivNdex)
   if(not IsHere(pnListView)) then
-    return StatusLog(false,"LineAddListView: Missing panel") end
+    LogInstance("Missing panel"); return false end
   if(not IsValid(pnListView)) then
-    return StatusLog(false,"LineAddListView: Invalid panel") end
+    LogInstance("Invalid panel"); return false end
   if(not IsHere(frUsed)) then
-    return StatusLog(false,"LineAddListView: Missing data") end
-  local iNdex = tonumber(ivNdex)
-  if(not IsHere(iNdex)) then
-    return StatusLog(false,"LineAddListView: Index NAN {"..type(ivNdex).."}<"..tostring(ivNdex)..">") end
-  local tValue = frUsed[iNdex]
-  if(not IsHere(tValue)) then
-    return StatusLog(false,"LineAddListView: Missing data on index #"..tostring(iNdex)) end
+    LogInstance("Missing data"); return false end
+  local iNdex = tonumber(ivNdex); if(not IsHere(iNdex)) then
+    LogInstance("Index mismatch "..GetReport(ivNdex)); return false end
+  local tValue = frUsed[iNdex]; if(not IsHere(tValue)) then
+    LogInstance("Missing data on index #"..tostring(iNdex)); return false end
   local defTable = GetOpVar("DEFTABLE_PIECES")
   if(not IsHere(defTable)) then
-    return StatusLog(false,"LineAddListView: Missing table definition") end
+    LogInstance("Missing table definition"); return false end
   local sModel = tValue.Table[defTable[1][1]]
   local sType  = tValue.Table[defTable[2][1]]
   local sName  = tValue.Table[defTable[3][1]]
@@ -1300,40 +1294,41 @@ end
 
 --[[
  * Updates a VGUI pnListView with a search preformed in the already generated
- * frequently used pieces "frUsed" for the pattern "sPattern" given by the user
- * and a field name selected "sField".
- * On success populates "pnListView" with the search preformed
+ * frequently used pieces "frUsed" for the pattern "sPat" given by the user
+ * and a column name selected `sCol`.
+ * On success populates `pnListView` with the search preformed
  * On fail a parameter is not valid or missing and returns non-success
+ * pnListView -> The panel which must be updated
+ * frUsed     -> The list of the frequently used tracks
+ * nCount     -> The amount of pieces to check
+ * sCol       -> The name of the column it preforms search by
+ * sPat       -> Search pattern to preform the search with
 ]]--
-function UpdateListView(pnListView,frUsed,nCount,sField,sPattern)
+function UpdateListView(pnListView,frUsed,nCount,sCol,sPat)
   if(not (IsHere(frUsed) and IsHere(frUsed[1]))) then
-    return StatusLog(false,"UpdateListView: Missing data") end
-  local nCount = tonumber(nCount) or 0
-  if(nCount <= 0) then
-    return StatusLog(false,"UpdateListView: Count not applicable") end
+    LogInstance("Missing data"); return false end
+  local nCount = (tonumber(nCount) or 0); if(nCount <= 0) then
+    LogInstance("Count not applicable"); return false end
   if(IsHere(pnListView)) then
     if(not IsValid(pnListView)) then
-      return StatusLog(false,"UpdateListView: Invalid ListView") end
-    pnListView:SetVisible(false)
-    pnListView:Clear()
-  else return StatusLog(false,"UpdateListView: Missing ListView") end
-  local sField   = tostring(sField   or "")
-  local sPattern = tostring(sPattern or "")
-  local iNdex, pnRec, sData = 1, nil, nil
-  while(frUsed[iNdex]) do
-    if(IsBlank(sPattern)) then
-      if(not AddLineListView(pnListView,frUsed,iNdex)) then
-        return StatusLog(false,"UpdateListView: Failed to add line on #"..tostring(iNdex)) end
+      LogInstance("Invalid ListView"); return false end
+    pnListView:SetVisible(false); pnListView:Clear()
+  else LogInstance("Missing ListView"); return false end
+  local sCol, iCnt = tostring(sCol or ""), 1
+  local sPat, sDat = tostring(sPat or ""), nil
+  while(frUsed[iCnt]) do
+    if(IsBlank(sPat)) then
+      if(not AddLineListView(pnListView,frUsed,iCnt)) then
+        LogInstance("Failed to add line on #"..tostring(iCnt)); return false end
     else
-      sData = tostring(frUsed[iNdex].Table[sField] or "")
-      if(sData:find(sPattern)) then
-        if(not AddLineListView(pnListView,frUsed,iNdex)) then
-          return StatusLog(false,"UpdateListView: Failed to add line <"
-                   ..sData.."> pattern <"..sPattern.."> on <"..sField.."> #"..tostring(iNdex)) end
+      sDat = tostring(frUsed[iCnt].Table[sCol] or "")
+      if(sDat:find(sPat)) then
+        if(not AddLineListView(pnListView,frUsed,iCnt)) then
+          LogInstance("Failed to add line <"..sDat.."> pattern <"..sPat.."> on <"..sCol.."> #"..tostring(iCnt)); return false end
       end
-    end; iNdex = iNdex + 1
+    end; iCnt = iCnt + 1
   end; pnListView:SetVisible(true)
-  return StatusLog(true,"UpdateListView: Crated #"..tostring(iNdex-1))
+  LogInstance("Crated #"..tostring(iCnt-1)); return true
 end
 
 function GetDirectoryObj(pCurr, vName)
