@@ -651,18 +651,16 @@ function SetIndexes(sType,...)
   return StatusLog(true,"SetIndexes["..sType.."]: Success")
 end
 
-function InitBase(sName,sPurpose)
+function InitBase(sName,sPurp)
   SetOpVar("TYPEMT_STRING",getmetatable("TYPEMT_STRING"))
-  SetOpVar("TYPEMT_SCREEN",{})
-  SetOpVar("TYPEMT_CONTAINER",{})
   if(not IsString(sName)) then
     return StatusPrint(false,"InitBase: Name <"..tostring(sName).."> not string") end
-  if(not IsString(sPurpose)) then
-    return StatusPrint(false,"InitBase: Purpose <"..tostring(sPurpose).."> not string") end
+  if(not IsString(sPurp)) then
+    return StatusPrint(false,"InitBase: Purpose <"..tostring(sPurp).."> not string") end
   if(IsBlank(sName) or tonumber(sName:sub(1,1))) then
     return StatusPrint(false,"InitBase: Name invalid <"..sName..">") end
-  if(IsBlank(sPurpose) or tonumber(sPurpose:sub(1,1))) then
-    return StatusPrint(false,"InitBase: Purpose invalid <"..sPurpose..">") end
+  if(IsBlank(sPurp) or tonumber(sPurp:sub(1,1))) then
+    return StatusPrint(false,"InitBase: Purpose invalid <"..sPurp..">") end
   SetOpVar("TIME_INIT",Time())
   SetOpVar("LOG_MAXLOGS",0)
   SetOpVar("LOG_CURLOGS",0)
@@ -672,8 +670,8 @@ function InitBase(sName,sPurpose)
   SetOpVar("LOG_LOGLAST","")
   SetOpVar("MAX_ROTATION",360)
   SetOpVar("DELAY_FREEZE",0.01)
-  SetOpVar("ANG_ZERO",Angle())
-  SetOpVar("VEC_ZERO",Vector())
+  SetOpVar("ANG_ZERO",Angle(0,0,0))
+  SetOpVar("VEC_ZERO",Vector(0,0,0))
   SetOpVar("VEC_FW",Vector(1,0,0))
   SetOpVar("VEC_RG",Vector(0,-1,1))
   SetOpVar("VEC_UP",Vector(0,0,1))
@@ -697,7 +695,7 @@ function InitBase(sName,sPurpose)
   SetOpVar("DATE_FORMAT","%d-%m-%y")
   SetOpVar("TIME_FORMAT","%H:%M:%S")
   SetOpVar("NAME_INIT",sName:lower())
-  SetOpVar("NAME_PERP",sPurpose:lower())
+  SetOpVar("NAME_PERP",sPurp:lower())
   SetOpVar("NAME_LIBRARY", GetOpVar("NAME_INIT").."asmlib")
   SetOpVar("LOG_INIT",{"*Init", false, 0})
   SetOpVar("TOOLNAME_NL",(GetOpVar("NAME_INIT")..GetOpVar("NAME_PERP")):lower())
@@ -712,6 +710,10 @@ function InitBase(sName,sPurpose)
   SetOpVar("MISS_NOID","N")    -- No ID selected
   SetOpVar("MISS_NOAV","N/A")  -- Not Available
   SetOpVar("MISS_NOMD","X")    -- No model
+  SetOpVar("TYPEMT_SCREEN",{})
+  SetOpVar("TYPEMT_CONTAINER",{})
+  SetOpVar("TYPEMT_VECTOR",getmetatable(GetOpVar("VEC_ZERO")))
+  SetOpVar("TYPEMT_ANGLE" ,getmetatable(GetOpVar("ANG_ZERO")))
   SetOpVar("ARRAY_DECODEPOA",{0,0,0,1,1,1,false})
   SetOpVar("PATTEM_WORKSHID", "^%d+$")
   SetOpVar("TABLE_WSIDADDON", {})
@@ -2530,29 +2532,23 @@ local function TimerRestart(oArea,tKeys,defTable,anyMessage)
   return Spot[Key]
 end
 
-function CacheBoxLayout(oEnt,nRot,nCamX,nCamZ)
+function CacheBoxLayout(oEnt,nCamX,nCamZ)
   if(not (oEnt and oEnt:IsValid())) then
-    return StatusLog(nil,"CacheBoxLayout: Entity invalid <"..tostring(oEnt)..">") end
-  local sMod = oEnt:GetModel()
-  local oRec = CacheQueryPiece(sMod)
-  if(not IsHere(oRec)) then
-    return StatusLog(nil,"CacheBoxLayout: Piece record invalid <"..sMod..">") end
-  local Box = oRec.Layout
-  if(not IsHere(Box)) then
-    local vMin, vMax
-    oRec.Layout = {}; Box = oRec.Layout
-    if    (CLIENT) then vMin, vMax = oEnt:GetRenderBounds()
-    elseif(SERVER) then vMin, vMax = oEnt:OBBMins(), oEnt:OBBMaxs()
-    else return StatusLog(nil,"CacheBoxLayout: Wrong instance") end
-    Box.Ang = Angle () -- Layout entity angle
-    Box.Cen = Vector() -- Layout entity centre
-    Box.Cen:Set(vMax); Box.Cen:Add(vMin); Box.Cen:Mul(0.5)
-    Box.Eye = oEnt:LocalToWorld(Box.Cen) -- Layout camera eye
-    Box.Len = ((vMax - vMin):Length() / 2) -- Layout border sphere radius
-    Box.Cam = Vector(); Box.Cam:Set(Box.Eye)  -- Layout camera position
-    AddVectorXYZ(Box.Cam,Box.Len*(tonumber(nCamX) or 0),0,Box.Len*(tonumber(nCamZ) or 0))
-    LogInstance(tostring(Box.Cen).." # "..tostring(Box.Len))
-  end; Box.Ang[caY] = (tonumber(nRot) or 0) * Time(); return Box
+    LogInstance("Entity invalid <"..tostring(oEnt)..">"); return nil end
+  local sMod = oEnt:GetModel() -- Extract the entity model
+  local oRec = CacheQueryPiece(sMod); if(not IsHere(oRec)) then
+    LogInstance("Record invalid <"..sMod..">"); return nil end
+  local stBox = oRec.Layout; if(not IsHere(stBox)) then
+    oRec.Layout = {}; stBox = oRec.Layout -- Allocated chace layout
+    stBox.Cen, stBox.Ang = oEnt:OBBCenter(), Angle() -- Layout position and angle
+    stBox.Eye = oEnt:LocalToWorld(stBox.Cen) -- Layout camera eye
+    stBox.Len = oEnt:BoundingRadius() -- Use bounding radius as enity size
+    stBox.Cam = Vector(stBox.Eye) -- Layout camera position
+    local nX = stBox.Len * (tonumber(nCamX) or 0) -- Calculate camera X
+    local nZ = stBox.Len * (tonumber(nCamZ) or 0) -- Calculate camera Z
+    AddVectorXYZ(stBox.Cam, nX, 0, nZ) -- Apply calculated camera offsets
+    LogInstance("<"..tostring(stBox.Cen).."><"..tostring(stBox.Len)..">")
+  end; return stBox
 end
 
 --------------------------- PIECE QUERY -----------------------------
