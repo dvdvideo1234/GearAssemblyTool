@@ -46,7 +46,7 @@ local asmlib = gearasmlib; if(not asmlib) then -- Module present
 
 ------ CONFIGURE ASMLIB ------
 asmlib.InitBase("gear","assembly")
-asmlib.SetOpVar("TOOL_VERSION","5.240")
+asmlib.SetOpVar("TOOL_VERSION","5.241")
 asmlib.SetIndexes("V",1,2,3)
 asmlib.SetIndexes("A",1,2,3)
 asmlib.SetIndexes("S",4,5,6,7)
@@ -743,8 +743,7 @@ if(CLIENT) then
         asmlib.ApplySpawnFlat(oEnt, stSpawn, gvVecUp)
         stSpawn.SPos:Set(uiBox.Cen); stSpawn.SPos:Rotate(stSpawn.SAng)
         stSpawn.SPos:Mul(-1); stSpawn.SPos:Add(uiBox.Cen)
-        oEnt:SetAngles(stSpawn.SAng)
-        oEnt:SetPos(stSpawn.SPos)
+        oEnt:SetAngles(stSpawn.SAng); oEnt:SetPos(stSpawn.SPos)
       end
       ------------ TextEntry ------------
       xyPos.x, xyPos.y = pnComboBox:GetPos()
