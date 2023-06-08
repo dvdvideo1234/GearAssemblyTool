@@ -47,8 +47,8 @@ local cvX, cvY, cvZ = asmlib.GetIndexes("V")
 local caP, caY, caR = asmlib.GetIndexes("A")
 
 --- ZERO Objects
-local VEC_ZERO = asmlib.GetOpVar("VEC_ZERO")
-local ANG_ZERO = asmlib.GetOpVar("ANG_ZERO")
+local gvZero = asmlib.GetOpVar("VEC_ZERO")
+local gaZero = asmlib.GetOpVar("ANG_ZERO")
 
 --- Global References
 local gtLogs      = {"TOOL"}
@@ -474,7 +474,7 @@ function TOOL:LeftClick(stTrace)
     local aAng = asmlib.GetNormalAngle(user, stTrace, angsnap)
     local stSpawn = asmlib.GetNormalSpawn(user,vPos,aAng,model,rotpivh,trorang,nextx,nexty,nextz,nextpic,nextyaw,nextrol)
     if(not stSpawn) then return asmlib.StatusLog(false,self:GetStatus(stTrace,"TOOL:LeftClick(World): Normal spawn failed")) end
-    local ePiece = asmlib.MakePiece(user,model,stTrace.HitPos,ANG_ZERO,mass,bgskids,conPalette:Select("w"),bnderrmod)
+    local ePiece = asmlib.MakePiece(user,model,stTrace.HitPos,gaZero,mass,bgskids,conPalette:Select("w"),bnderrmod)
     if(not ePiece) then return asmlib.StatusLog(false,self:GetStatus(stTrace,"TOOL:LeftClick(World): Making piece failed")) end
     if(spnflat) then vAxis:Set(stTrace.HitNormal)
       asmlib.ApplySpawnFlat(ePiece,stSpawn,stTrace.HitNormal)
@@ -697,7 +697,7 @@ function TOOL:Think()
     local ghos = self.GhostEntity
     if(self:GetGhostHolder()) then
       if (not (ghos and ghos:IsValid() and ghos:GetModel() == model)) then
-        self:MakeGhostEntity(model,VEC_ZERO,ANG_ZERO)
+        self:MakeGhostEntity(model,gvZero,gaZero)
       end; self:UpdateGhost(self.GhostEntity, user) -- In client single player the ghost is skipped
     else self:ReleaseGhostEntity() end -- Delete the ghost entity when ghosting is disabled
     if(CLIENT) then

@@ -670,8 +670,8 @@ function InitBase(sName,sPurp)
   SetOpVar("LOG_LOGLAST","")
   SetOpVar("MAX_ROTATION",360)
   SetOpVar("DELAY_FREEZE",0.01)
-  SetOpVar("ANG_ZERO",Angle(0,0,0))
-  SetOpVar("VEC_ZERO",Vector(0,0,0))
+  SetOpVar("ANG_ZERO",Angle())
+  SetOpVar("VEC_ZERO",Vector())
   SetOpVar("VEC_FW",Vector(1,0,0))
   SetOpVar("VEC_RG",Vector(0,-1,1))
   SetOpVar("VEC_UP",Vector(0,0,1))
@@ -3415,10 +3415,9 @@ end
 function SetPosBound(ePiece,vPos,oPly,sMode)
   if(not (ePiece and ePiece:IsValid())) then
     return StatusLog(false,"SetPosBound: Entity invalid") end
-  if(not IsHere(vPos)) then
-    return StatusLog(false,"SetPosBound: Position missing") end
   if(not IsPlayer(oPly)) then
     return StatusLog(false,"SetPosBound: Player <"..tostring(oPly)"> invalid") end
+  local vPos  = Vector(vPos or GetOpVar("VEC_ZERO"))
   local sMode = tostring(sMode or "LOG") -- Error mode is "LOG" by default
   if(sMode == "OFF") then
     ePiece:SetPos(vPos)
@@ -3447,6 +3446,7 @@ function MakePiece(pPly,sModel,vPos,aAng,nMass,sBgSkIDs,clColor,sMode)
   local bcUnit = (IsString(stPiece.Unit) and
     (stPiece.Unit ~= "NULL") and not IsBlank(stPiece.Unit))
   LogInstance("Unit("..tostring(bcUnit)..") <"..tostring(stPiece.Unit or "")..">")
+  local aAng   = Angle(aAng or GetOpVar("ANG_ZERO"))
   local ePiece = bcUnit and entsCreate(stPiece.Unit) or entsCreate("prop_physics")
   if(not (ePiece and ePiece:IsValid())) then
     return StatusLog(nil,"MakePiece: Piece <"..tostring(ePiece).."> invalid") end
@@ -3455,9 +3455,9 @@ function MakePiece(pPly,sModel,vPos,aAng,nMass,sBgSkIDs,clColor,sMode)
   ePiece:SetMoveType(MOVETYPE_VPHYSICS)
   ePiece:SetNotSolid(false)
   ePiece:SetModel(sModel)
-  if(not SetPosBound(ePiece,vPos or GetOpVar("VEC_ZERO"),pPly,sMode)) then
+  if(not SetPosBound(ePiece,vPos,pPly,sMode)) then
     return StatusLog(nil,"MakePiece: "..pPly:Nick().." spawned <"..sModel.."> outside bounds") end
-  ePiece:SetAngles(aAng or GetOpVar("ANG_ZERO"))
+  ePiece:SetAngles(aAng)
   ePiece:SetCreator(pPly)
   ePiece:Spawn()
   ePiece:Activate()

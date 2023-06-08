@@ -46,7 +46,7 @@ local asmlib = gearasmlib; if(not asmlib) then -- Module present
 
 ------ CONFIGURE ASMLIB ------
 asmlib.InitBase("gear","assembly")
-asmlib.SetOpVar("TOOL_VERSION","5.239")
+asmlib.SetOpVar("TOOL_VERSION","5.240")
 asmlib.SetIndexes("V",1,2,3)
 asmlib.SetIndexes("A",1,2,3)
 asmlib.SetIndexes("S",4,5,6,7)
@@ -350,7 +350,6 @@ if(CLIENT) then
       else asmlib.LogInstance("RESET_VARIABLES: Command <"..bgskids.."> skipped"); return nil end
       asmlib.LogInstance("RESET_VARIABLES: Success"); return nil
     end)
-
 
   asmlib.SetAction("OPEN_EXTERNDB", -- Must have the same parameters as the hook
     function(oPly,oCom,oArgs)
