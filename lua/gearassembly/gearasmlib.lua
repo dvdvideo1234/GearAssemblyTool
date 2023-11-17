@@ -339,7 +339,7 @@ function GetOwner(oEnt)
   ows = oEnt.player; if(IsPlayer(ows)) then return ows else ows = nil end
   ows = oEnt.Owner; if(IsPlayer(ows)) then return ows else ows = nil end
   ows = oEnt.owner; if(IsPlayer(ows)) then return ows else ows = nil end
-  if(set) then -- Duplicatior die functions are registered
+  if(set) then -- Duplicator the functions are registered
     set = set.GetCountUpdate; ows = (set.Args and set.Args[1] or nil)
     if(IsPlayer(ows)) then return ows else ows = nil end
     set = set.undo1; ows = (set.Args and set.Args[1] or nil)
@@ -420,7 +420,7 @@ end
  * pFile > The file to read the line of characters from
  * bCons > Keeps data consistency. Enable to skip trim
  * sChar > Custom pattern to be used when trimming
- * Reurns line contents and reaching EOF flag
+ * Returns line contents and reaching EOF flag
  * sLine > The line being read from the file
  * isEOF > Flag indicating pointer reached EOF
 ]]
@@ -455,7 +455,7 @@ function WorkshopID(sKey, sID)
       end -- Report overwrite value is present in the list
     else -- The number does not meet the format
       LogInstance("("..sKey..") Mismatch "..GetReport2(sWS, sID))
-    end -- Rerurn the current value under the specified key
+    end -- Return the current value under the specified key
   end; return sWS
 end
 
@@ -521,14 +521,14 @@ end
   vMsg > Message being displayed
   vSrc > Name of the sub-routine call (string) or parameter stack (table)
   bCon > Force output in console flag
-  iDbg > Debug table overrive depth
-  tDbg > Debug table overrive
+  iDbg > Debug table override depth
+  tDbg > Debug table override
 ]]
 function LogInstance(vMsg, vSrc, bCon, iDbg, tDbg)
   local nMax = (tonumber(GetOpVar("LOG_MAXLOGS")) or 0)
   if(nMax and (nMax <= 0)) then return end
   local vSrc, bCon, iDbg, tDbg = vSrc, bCon, iDbg, tDbg
-  if(vSrc and IsTable(vSrc)) then -- Recieve the stack as table
+  if(vSrc and IsTable(vSrc)) then -- Receive the stack as table
     vSrc, bCon, iDbg, tDbg = vSrc[1], vSrc[2], vSrc[3], vSrc[4] end
   iDbg = mathFloor(tonumber(iDbg) or 0); iDbg = ((iDbg > 0) and iDbg or nil)
   local tInfo = (iDbg and debugGetinfo(iDbg) or nil) -- Pass stack index
@@ -598,7 +598,7 @@ end
 
 function LogTable(tT, sS, vSrc, bCon, iDbg, tDbg)
   local vSrc, bCon, iDbg, tDbg = vSrc, bCon, iDbg, tDbg
-  if(vSrc and IsTable(vSrc)) then -- Recieve the stack as table
+  if(vSrc and IsTable(vSrc)) then -- Receive the stack as table
     vSrc, bCon, iDbg, tDbg = vSrc[1], vSrc[2], vSrc[3], vSrc[4] end
   local tP = {vSrc, bCon, iDbg, tDbg} -- Normalize parameters
   tP[1], tP[2] = tostring(vSrc or ""), tobool(bCon)
@@ -925,7 +925,7 @@ function GetContainer(sKey, sDef)
   local mData, mID, self = {}, {}, {}
   local mDef = sDef or GetOpVar("KEY_DEFAULT")
   local miTop, miAll, mhCnt = 0, 0, 0
-  -- Returns the container iser information
+  -- Returns the container user information
   function self:GetKey() return mKey end
   -- Returns the largest index in the array part
   function self:GetSize() return miTop end
@@ -937,9 +937,9 @@ function GetContainer(sKey, sDef)
   function self:GetData() return mData end
   -- Returns the container hash ID reference
   function self:GetHashID() return mID end
-  -- Calls a manual collet garbage
+  -- Calls a manual collect garbage
   function self:Collect() collectgarbage(); return self end
-  -- Checkes whenever there are wholes in the array part
+  -- Checks whenever there are wholes in the array part
   function self:IsRagged() return (miAll ~= miTop) end
   -- Reads the data from the container
   function self:Select(nsKey)
@@ -1436,7 +1436,7 @@ function SetComboBoxList(cPanel, sVar)
     end -- Copy the combo box content shown
     pItem.OnSelect = function(pnSelf, nInd, sVal, anyData)
       SetAsmConvar(nil, sVar, anyData)
-    end -- Apply the settinc to the specified variable
+    end -- Apply the setting to the specified variable
     for iD = 1, #tSet do local sI = tSet[iD]
       local sIco = ToIcon(sNam.."_"..sI:lower())
       local sPrv = (sBase.."_"..sI:lower())
@@ -1464,7 +1464,7 @@ function SetNumSlider(cPanel, sVar, vDig, vMin, vMax, vDev)
   -- Read minimum value form the first available
   if(not IsHere(nMin)) then nMin, nDum = GetBorder(sKey)
     if(not IsHere(nMin)) then nMin = GetAsmConvar(sVar, "MIN")
-      if(not IsHere(nMin)) then -- Mininum bound is not located
+      if(not IsHere(nMin)) then -- Minimum bound is not located
         nMin = -mathAbs(2 * mathFloor(GetAsmConvar(sVar, "FLT")))
         LogInstance("(L) Miss "..GetReport1(sKey))
       else LogInstance("(L) Cvar "..GetReport2(sKey, nMin)) end
@@ -2511,7 +2511,7 @@ local function TimerAttach(oArea,tKeys,defTable,anyMessage)
     local nNowTM, tTimer = Time(), defTable.Timer -- See that there is a timer and get "now"
     if(not IsHere(tTimer)) then
       return StatusLog(Spot[Key],"TimerAttach: Missing timer settings") end
-    Spot[Key].Used = nNowTM -- Make the first selected deletable to avoid phantom records
+    Spot[Key].Used = nNowTM -- Make the first selected deleteable to avoid phantom records
     local nLifeTM = tTimer[2]
     if(nLifeTM <= 0) then
       return StatusLog(Spot[Key],"TimerAttach: Timer attachment ignored") end
@@ -2581,10 +2581,10 @@ function CacheBoxLayout(oEnt,nCamX,nCamZ)
   local oRec = CacheQueryPiece(sMod); if(not IsHere(oRec)) then
     LogInstance("Record invalid <"..sMod..">"); return nil end
   local stBox = oRec.Layout; if(not IsHere(stBox)) then
-    oRec.Layout = {}; stBox = oRec.Layout -- Allocated chace layout
+    oRec.Layout = {}; stBox = oRec.Layout -- Allocated cache layout
     stBox.Cen, stBox.Ang = oEnt:OBBCenter(), Angle() -- Layout position and angle
     stBox.Eye = oEnt:LocalToWorld(stBox.Cen) -- Layout camera eye
-    stBox.Len = oEnt:BoundingRadius() -- Use bounding radius as enity size
+    stBox.Len = oEnt:BoundingRadius() -- Use bounding radius as entity size
     stBox.Cam = Vector(stBox.Eye) -- Layout camera position
     local nX = stBox.Len * (tonumber(nCamX) or 0) -- Calculate camera X
     local nZ = stBox.Len * (tonumber(nCamZ) or 0) -- Calculate camera Z
