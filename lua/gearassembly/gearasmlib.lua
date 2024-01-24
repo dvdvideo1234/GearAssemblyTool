@@ -720,8 +720,21 @@ function InitBase(sName,sPurp)
   SetOpVar("TABLE_WSIDADDON", {})
   SetOpVar("TABLE_FLAGS", {})
   SetOpVar("TABLE_CONTAINER",{})
+  SetOpVar("MODELNAM_FILE","%.mdl")
+  SetOpVar("MODELNAM_FUNC",function(x) return " "..x:sub(2,2):upper() end)
+  SetOpVar("QUERY_STORE", {})
+  SetOpVar("TABLE_BORDERS",{})
+  SetOpVar("TABLE_FREQUENT_MODELS",{})
+  SetOpVar("OOP_DEFAULTKEY","(!@<#_$|%^|&>*)DEFKEY(*>&|^%|$_#<@!)")
+  SetOpVar("CVAR_LIMITNAME","asm"..GetOpVar("NAME_INIT").."s")
+  SetOpVar("MODE_DATABASE",GetOpVar("MISS_NOAV"))
+  SetOpVar("HASH_USER_PANEL",GetOpVar("TOOLNAME_PU").."USER_PANEL")
+  SetOpVar("HASH_QUERY_STORE",GetOpVar("TOOLNAME_PU").."QHASH_QUERY")
+  SetOpVar("NAV_PIECE",{})
+  SetOpVar("NAV_PANEL",{})
   if(CLIENT) then
     SetOpVar("FORM_ICONS","icon16/%s.png")
+    SetOpVar("CLIPBOARD_TEXT","")
     SetOpVar("TABLE_SKILLICON",{})
     SetOpVar("TABLE_CATEGORIES",{})
     SetOpVar("STRUCT_SPAWN",{
@@ -746,20 +759,7 @@ function InitBase(sName,sPurp)
       {"--- Offsets ---"},
       {"PNxt", "VEC", "Custom user position"},
       {"ANxt", "ANG", "Custom user angles"}})
-  end
-  SetOpVar("MODELNAM_FILE","%.mdl")
-  SetOpVar("MODELNAM_FUNC",function(x) return " "..x:sub(2,2):upper() end)
-  SetOpVar("QUERY_STORE", {})
-  SetOpVar("TABLE_BORDERS",{})
-  SetOpVar("TABLE_FREQUENT_MODELS",{})
-  SetOpVar("OOP_DEFAULTKEY","(!@<#_$|%^|&>*)DEFKEY(*>&|^%|$_#<@!)")
-  SetOpVar("CVAR_LIMITNAME","asm"..GetOpVar("NAME_INIT").."s")
-  SetOpVar("MODE_DATABASE",GetOpVar("MISS_NOAV"))
-  SetOpVar("HASH_USER_PANEL",GetOpVar("TOOLNAME_PU").."USER_PANEL")
-  SetOpVar("HASH_QUERY_STORE",GetOpVar("TOOLNAME_PU").."QHASH_QUERY")
-  SetOpVar("NAV_PIECE",{})
-  SetOpVar("NAV_PANEL",{})
-  return StatusPrint(true,"InitBase: Success")
+  end; return StatusPrint(true,"InitBase: Success")
 end
 
 ------------- ANGLE ---------------
