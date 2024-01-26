@@ -733,32 +733,12 @@ function InitBase(sName,sPurp)
   SetOpVar("NAV_PIECE",{})
   SetOpVar("NAV_PANEL",{})
   if(CLIENT) then
+    SetOpVar("FORM_DRWSPKY", "%+6s")
+    SetOpVar("FORM_DRAWDBG", "%s{%s}: %s > %s")
     SetOpVar("FORM_ICONS","icon16/%s.png")
     SetOpVar("CLIPBOARD_TEXT","")
     SetOpVar("TABLE_SKILLICON",{})
     SetOpVar("TABLE_CATEGORIES",{})
-    SetOpVar("STRUCT_SPAWN",{
-      {"--- Origin ---"},
-      {"F", "VEC", "Forward direction"},
-      {"R", "VEC", "Right direction"},
-      {"U", "VEC", "Up direction"},
-      {"OPos", "VEC", "Origin position"},
-      {"OAng", "ANG", "Origin angles"},
-      {"SPos", "VEC", "Spawn position"},
-      {"SAng", "ANG", "Spawn angles"},
-      {"DPos", "VEC", "Domain position"},
-      {"DAng", "ANG", "Domain angles"},
-      {"--- Holder ---"},
-      {"HPnt", "VEC", "Radius vector"},
-      {"HOrg", "VEC", "Mass center position"},
-      {"HAng", "ANG", "Custom angles"},
-      {"--- Traced ---"},
-      {"TPnt", "VEC", "Radius vector"},
-      {"TOrg", "VEC", "Mass center position"},
-      {"TAng", "ANG", "Custom angles"},
-      {"--- Offsets ---"},
-      {"PNxt", "VEC", "Custom user position"},
-      {"ANxt", "ANG", "Custom user angles"}})
   end; return StatusPrint(true,"InitBase: Success")
 end
 

@@ -723,18 +723,31 @@ end
  * tArgs   > Text draw arguments
 ]]--
 function TOOL:DrawTextSpawn(oScreen, sCol, sMeth, tArgs)
-  local user = LocalPlayer()
-  local stS  = asmlib.CacheSpawnPly(user)
-  local arK  = asmlib.GetOpVar("STRUCT_SPAWN")
-  local w, h = oScreen:GetSize()
-  oScreen:SetTextEdge(w - 500,0)
-  oScreen:DrawText("Spawn debug information",sCol,sMeth,tArgs)
-  for ID = 1, #arK, 1 do local def = arK[ID]
-    local key, typ, inf = def[1], def[2], tostring(def[3] or "")
-    local cnv = ((not asmlib.IsBlank(inf)) and (" > "..inf) or "")
-    if(not asmlib.IsHere(typ)) then oScreen:DrawText(tostring(key))
-    else local typ, val = tostring(typ or ""), tostring(stS[key] or "")
-      oScreen:DrawText("<"..key.."> "..typ..": "..val..cnv) end
+  local user, iD = LocalPlayer(), 1
+  local stS = asmlib.GetCacheSpawn(user)
+  local arK = asmlib.GetOpVar("STRUCT_SPAWN")
+  local fky = asmlib.GetOpVar("FORM_DRWSPKY")
+  local w,h = oScreen:GetSize()
+  oScreen:SetTextStart(0, 260)
+  oScreen:DrawText(tostring(arK.Name), sCol, sMeth, tArgs)
+  while(arK[iD]) do local def, iK = arK[iD], 1
+    oScreen:DrawText("---- "..tostring(def.Name).." ----")
+    while(def[iK]) do local row = def[iK]
+      if(asmlib.IsHere(row[1])) then
+        local key = tostring(row[1] or "")
+        local typ = tostring(row[2] or "")
+        local inf = tostring(row[3] or "")
+        local foo = arK.Draw[typ]
+        if(foo) then
+          local bs, sr = pcall(foo, oScreen, key, typ, inf, arK, stS)
+          if(not bs) then asmlib.LogInstance(sr, gtLogs); return end
+        else
+          local fmt = asmlib.GetOpVar("FORM_DRAWDBG")
+          local val = tostring(stS[key] or "")
+          oScreen:DrawText(fmt:format(fky:format(key), typ, val, inf))
+        end
+      end; iK = iK + 1
+    end; iD = iD + 1
   end
 end
 
