@@ -723,18 +723,31 @@ end
  * tArgs   > Text draw arguments
 ]]--
 function TOOL:DrawTextSpawn(oScreen, sCol, sMeth, tArgs)
-  local user = LocalPlayer()
-  local stS  = asmlib.CacheSpawnPly(user)
-  local arK  = asmlib.GetOpVar("STRUCT_SPAWN")
-  local w, h = oScreen:GetSize()
-  oScreen:SetTextEdge(w - 500,0)
-  oScreen:DrawText("Spawn debug information",sCol,sMeth,tArgs)
-  for ID = 1, #arK, 1 do local def = arK[ID]
-    local key, typ, inf = def[1], def[2], tostring(def[3] or "")
-    local cnv = ((not asmlib.IsBlank(inf)) and (" > "..inf) or "")
-    if(not asmlib.IsHere(typ)) then oScreen:DrawText(tostring(key))
-    else local typ, val = tostring(typ or ""), tostring(stS[key] or "")
-      oScreen:DrawText("<"..key.."> "..typ..": "..val..cnv) end
+  local user, iD = LocalPlayer(), 1
+  local stS = asmlib.GetCacheSpawn(user)
+  local arK = asmlib.GetOpVar("STRUCT_SPAWN")
+  local fky = asmlib.GetOpVar("FORM_DRWSPKY")
+  local w,h = oScreen:GetSize()
+  oScreen:SetTextStart(0, 260)
+  oScreen:DrawText(tostring(arK.Name), sCol, sMeth, tArgs)
+  while(arK[iD]) do local def, iK = arK[iD], 1
+    oScreen:DrawText("---- "..tostring(def.Name).." ----")
+    while(def[iK]) do local row = def[iK]
+      if(asmlib.IsHere(row[1])) then
+        local key = tostring(row[1] or "")
+        local typ = tostring(row[2] or "")
+        local inf = tostring(row[3] or "")
+        local foo = arK.Draw[typ]
+        if(foo) then
+          local bs, sr = pcall(foo, oScreen, key, typ, inf, arK, stS)
+          if(not bs) then asmlib.LogInstance(sr, gtLogs); return end
+        else
+          local fmt = asmlib.GetOpVar("FORM_DRAWDBG")
+          local val = tostring(stS[key] or "")
+          oScreen:DrawText(fmt:format(fky:format(key), typ, val, inf))
+        end
+      end; iK = iK + 1
+    end; iD = iD + 1
   end
 end
 
@@ -1006,26 +1019,14 @@ function TOOL.BuildCPanel(CPanel)
   asmlib.SetNumSlider(CPanel, "count", 0, 1, asmlib.GetAsmConvar("maxstcnt" , "INT"))
   asmlib.SetNumSlider(CPanel, "angsnap", iMaxDec, 0, gnMaxRot, 15)
   asmlib.SetButton(CPanel, "resetvars")
-  local tBAng = { -- Button interactove slider ( angle offsets )
-    {N="<>"  , T = "#", -- Left click to decrease, right to increase
-      L=function(pB, pS, nS) pS:SetValue(asmlib.GetSnap(nS,-asmlib.GetAsmConvar("incsnpang","FLT"))) end,
-      R=function(pB, pS, nS) pS:SetValue(asmlib.GetSnap(nS, asmlib.GetAsmConvar("incsnpang","FLT"))) end},
-    {N="+/-" , T = "#", L=function(pB, pS, nS) pS:SetValue(-nS) end},
-    {N="@M"  , T = "#", L=function(pB, pS, nS) SetClipboardText(nS) end},
-    {N="@D"  , T = "#", L=function(pB, pS, nS) pS:SetValue(pS:GetDefaultValue()) end},
-    {N="@45" , T = "#", L=function(pB, pS, nS) pS:SetValue(asmlib.GetSign((nS < 0) and nS or (nS+1))* 45) end},
-    {N="@90" , T = "#", L=function(pB, pS, nS) pS:SetValue(asmlib.GetSign((nS < 0) and nS or (nS+1))* 90) end},
-    {N="@135", T = "#", L=function(pB, pS, nS) pS:SetValue(asmlib.GetSign((nS < 0) and nS or (nS+1))*135) end},
-    {N="@180", T = "#", L=function(pB, pS, nS) pS:SetValue(asmlib.GetSign((nS < 0) and nS or (nS+1))*180) end}
-  }
-  local tBpos = { -- Button interactove slider ( position offsets )
-    {N="<>" , T = "#", -- Left click to decrease, right to increase
-      L=function(pB, pS, nS) pS:SetValue(asmlib.GetSnap(nS,-asmlib.GetAsmConvar("incsnplin","FLT"))) end,
-      R=function(pB, pS, nS) pS:SetValue(asmlib.GetSnap(nS, asmlib.GetAsmConvar("incsnplin","FLT"))) end},
-    {N="+/-", T = "#", L=function(pB, pS, nS) pS:SetValue(-nS) end},
-    {N="@M" , T = "#", L=function(pB, pS, nS) SetClipboardText(nS) end},
-    {N="@D" , T = "#", L=function(pB, pS, nS) pS:SetValue(pS:GetDefaultValue()) end}
-  } -- Use the seme initialization table for multiple BIS
+  local tBAng = { -- Button interactive slider ( angle offsets )
+    {N="<>" }, {N="+/-"}, {N="@M"  }, {N="@D"  },
+    {N="@45"}, {N="@90"}, {N="@135"}, {N="@180"}
+  } -- Use the same initialization table for multiple BIS
+  local tBpos = { -- Button interactive slider ( position offsets )
+    {N="<>" }, {N="+/-"}, {N="@M"  }, {N="@D"  },
+    {N="@25"}, {N="@50"}, {N="@75" }, {N="@100"}
+  } -- Use the same initialization table for multiple BIS
   asmlib.SetButtonSlider(CPanel,"rotpivt" ,-gnMaxRot, gnMaxRot, iMaxDec, tBAng)
   asmlib.SetButtonSlider(CPanel,"rotpivh" ,-gnMaxRot, gnMaxRot, iMaxDec, tBAng)
   asmlib.SetButtonSlider(CPanel,"deltarot",-gnMaxRot, gnMaxRot, iMaxDec, tBAng)

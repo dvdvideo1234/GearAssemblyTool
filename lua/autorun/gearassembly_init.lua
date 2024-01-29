@@ -46,7 +46,7 @@ local asmlib = gearasmlib; if(not asmlib) then -- Module present
 
 ------ CONFIGURE ASMLIB ------
 asmlib.InitBase("gear","assembly")
-asmlib.SetOpVar("TOOL_VERSION","5.241")
+asmlib.SetOpVar("TOOL_VERSION","5.248")
 asmlib.SetIndexes("V",1,2,3)
 asmlib.SetIndexes("A",1,2,3)
 asmlib.SetIndexes("S",4,5,6,7)
@@ -193,6 +193,52 @@ local CType = asmlib.GetOpVar("CONTAIN_CONSTRAINT_TYPE")
       CType:Push({Name = "AdvBS Spin X", Make = constraint and constraint.AdvBallsocket})
       CType:Push({Name = "AdvBS Spin Y", Make = constraint and constraint.AdvBallsocket})
       CType:Push({Name = "AdvBS Spin Z", Make = constraint and constraint.AdvBallsocket})
+
+asmlib.SetOpVar("STRUCT_SPAWN",{
+  Name = "Spawn data definition",
+  Draw = {
+    ["RDB"] = function(scr, key, typ, inf, def, spn)
+      local rec, fmt = spn[key], asmlib.GetOpVar("FORM_DRAWDBG")
+      local fky, nav = asmlib.GetOpVar("FORM_DRWSPKY"), asmlib.GetOpVar("MISS_NOAV")
+      local out = (rec and tostring(stringGetFileName(rec.Slot)) or nav)
+      scr:DrawText(fmt:format(fky:format(key), typ, out, inf))
+    end,
+    ["MTX"] = function(scr, key, typ, inf, def, spn)
+      local tab = spn[key]:ToTable()
+      local fmt = asmlib.GetOpVar("FORM_DRAWDBG")
+      local fky = asmlib.GetOpVar("FORM_DRWSPKY")
+      for iR = 1, 4 do
+        local out = asmlib.GetReport2(iR,tableConcat(tab[iR], ","))
+        scr:DrawText(fmt:format(fky:format(key), typ, out, inf))
+      end
+    end,
+  },
+  {Name = "Origin",
+    {"F"   , "VEC", "Forward direction"},
+    {"R"   , "VEC", "Right direction"},
+    {"U"   , "VEC", "Up direction"},
+    {"OPos", "VEC", "Origin position"},
+    {"OAng", "ANG", "Origin angles"},
+    {"SPos", "VEC", "Spawn position"},
+    {"SAng", "ANG", "Spawn angles"},
+    {"DPos", "VEC", "Domain position"},
+    {"DAng", "ANG", "Domain angles"}
+  },
+  {Name = "Holder",
+    {"HPnt", "VEC", "P # Holder radius vector"},
+    {"HOrg", "VEC", "O # Holder mass center position"},
+    {"HAng", "ANG", "A # Holder custom angles"}
+  },
+  {Name = "Traced",
+    {"TPnt", "VEC", "P # Trace radius vector"},
+    {"TOrg", "VEC", "O # Trace mass center position"},
+    {"TAng", "ANG", "A # Trace custom angles"},
+  },
+  {Name = "Offsets",
+    {"PNxt", "VEC", "Custom user position"},
+    {"ANxt", "ANG", "Custom user angles"}
+  }
+})
 
 if(SERVER) then
   asmlib.SetAction("DUPE_PHYS_SETTINGS",
